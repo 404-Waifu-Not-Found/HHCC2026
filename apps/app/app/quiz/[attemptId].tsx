@@ -738,13 +738,27 @@ export default function QuizScreen() {
               onPress={() => {
                 if (cheatSheetId)
                   void exportCheatSheet(cheatSheetId, cheatSheetTitle).catch(
-                    () => setCheatSheetStatus("failed"),
+                    (cause) => {
+                      setCheatSheetStatus("failed");
+                      setError(
+                        cause instanceof Error
+                          ? cause.message
+                          : "The cheat sheet could not be exported.",
+                      );
+                    },
                   );
                 else if (pendingCheatSheetRef.current)
                   void exportCheatSheetPdf(
                     pendingCheatSheetRef.current.pdf,
                     cheatSheetTitle,
-                  ).catch(() => setCheatSheetStatus("failed"));
+                  ).catch((cause) => {
+                    setCheatSheetStatus("failed");
+                    setError(
+                      cause instanceof Error
+                        ? cause.message
+                        : "The cheat sheet could not be exported.",
+                    );
+                  });
                 else if (cheatSheetContextRef.current) {
                   setCheatSheetStatus("preparing");
                   void prepareCheatSheet(
@@ -772,6 +786,14 @@ export default function QuizScreen() {
               {t("returnToLibrary")}
             </PrimaryButton>
           </MotionView>
+          {error ? (
+            <Text
+              accessibilityRole="alert"
+              style={[styles.error, { color: theme.error }]}
+            >
+              {error}
+            </Text>
+          ) : null}
         </FeedbackMotion>
       </Screen>
     );

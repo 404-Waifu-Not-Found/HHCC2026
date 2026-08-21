@@ -123,11 +123,17 @@ export async function exportCheatSheetPdf(
   await FileSystem.writeAsStringAsync(uri, toBase64(bytes), {
     encoding: FileSystem.EncodingType.Base64,
   });
-  if (await Sharing.isAvailableAsync())
-    await Sharing.shareAsync(uri, {
-      mimeType: "application/pdf",
-      dialogTitle: title,
-    });
+  // A simulator (and some managed Android profiles) can report that no
+  // native share target is available. Do not silently swallow that state:
+  // the learner needs an actionable failure instead of believing the PDF was
+  // exported when only a cache file was written.
+  if (!(await Sharing.isAvailableAsync())) {
+    throw new Error("Native sharing is unavailable on this device.");
+  }
+  await Sharing.shareAsync(uri, {
+    mimeType: "application/pdf",
+    dialogTitle: title,
+  });
 }
 
 export async function loadCheatSheetContext(
