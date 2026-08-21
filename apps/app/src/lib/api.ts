@@ -1,6 +1,8 @@
 import type { ZodType } from "zod";
+import { Platform } from "react-native";
 import { authClient } from "./auth-client";
 import { API_ORIGIN } from "./config";
+import { readNativeAuthCookie } from "./request-cookie";
 
 type ApiErrorBody = {
   error?: {
@@ -31,7 +33,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
-  const cookie = authClient.getCookie();
+  const cookie = readNativeAuthCookie(Platform.OS, () => authClient.getCookie());
   if (cookie) headers.set("Cookie", cookie);
   if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const response = await fetch(`${API_ORIGIN}${path}`, {
@@ -61,4 +63,3 @@ export async function apiRequest<T>(
 export function jsonBody(value: unknown): string {
   return JSON.stringify(value);
 }
-

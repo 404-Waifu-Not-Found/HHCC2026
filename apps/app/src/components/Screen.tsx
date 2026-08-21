@@ -11,11 +11,12 @@ export function Screen({
   const { theme } = useSettings();
   const content = <View style={styles.content}>{children}</View>;
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={["top", "left", "right"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={["top", "left", "right", "bottom"]}>
       {scroll ? (
         <ScrollView
           style={styles.flex}
           contentContainerStyle={styles.scrollContent}
+          automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -49,4 +50,3 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(100, 110, 130, 0.3)",
   },
 });
-

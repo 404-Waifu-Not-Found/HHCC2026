@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Mascot } from "./Mascot";
 import { Screen } from "./Screen";
 import { useSettings } from "../providers/SettingsProvider";
@@ -7,9 +7,10 @@ import { typography } from "../theme/tokens";
 
 export function AuthShell({ title, subtitle, children, footer }: PropsWithChildren<{ title: string; subtitle?: string; footer?: ReactNode }>) {
   const { theme } = useSettings();
+  const { width } = useWindowDimensions();
   return (
     <Screen>
-      <View style={styles.page}>
+      <View style={[styles.page, width >= 900 && styles.pageWide]}>
         <View style={styles.intro}>
           <Mascot mood="ready" size={110} />
           <Text style={[styles.brand, { color: theme.text }]}>ClipQuest</Text>
@@ -31,17 +32,19 @@ export function AuthShell({ title, subtitle, children, footer }: PropsWithChildr
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    flexDirection: Platform.OS === "web" ? "row" : "column",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 44,
-    paddingVertical: 30,
+    gap: 28,
+    paddingVertical: 24,
   },
-  intro: { flex: 1, alignItems: "center", maxWidth: 430, gap: 8 },
-  brand: { fontFamily: typography.display, fontSize: 48, letterSpacing: -1.5 },
+  pageWide: { flexDirection: "row", gap: 44, paddingVertical: 30 },
+  intro: { flexShrink: 1, alignItems: "center", width: "100%", maxWidth: 430, gap: 8 },
+  brand: { fontFamily: typography.display, fontSize: 44, letterSpacing: -1.5, textAlign: "center" },
   tagline: { fontFamily: typography.bodyMedium, fontSize: 17, textAlign: "center" },
   card: {
     width: "100%",
+    minWidth: 0,
     maxWidth: 460,
     padding: 26,
     borderRadius: 26,
@@ -51,4 +54,3 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: typography.body, fontSize: 15, lineHeight: 22 },
   form: { gap: 16, marginTop: 22 },
 });
-

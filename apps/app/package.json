@@ -7,7 +7,7 @@
     "dev": "expo start",
     "prepare:web": "node scripts/prepare-web-runtime.mjs",
     "web": "npm run prepare:web && expo start --web",
-    "build": "npm run prepare:web && expo export --platform web",
+    "build": "npm run prepare:web && expo export --platform web && node scripts/finalize-web-output.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "native:prebuild": "expo prebuild",
