@@ -8,6 +8,7 @@ const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const YOUTUBE_AUDIO_CLIENT = "IOS" as const;
 const MAX_TIMED_TEXT_BYTES = 8 * 1024 * 1024;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
+const MAX_OEMBED_BYTES = 64 * 1024;
 
 type YouTubeCaptionTrack = {
   base_url: string;
@@ -32,6 +33,12 @@ type YouTubeTimedTextEvent = {
 class YouTubeCaptionLoadError extends Error {
   constructor(readonly reason: string) {
     super("YouTube captions could not be loaded.");
+  }
+}
+
+class YouTubeMetadataLoadError extends Error {
+  constructor(readonly reason: string) {
+    super("YouTube metadata could not be loaded.");
   }
 }
 
@@ -151,27 +158,70 @@ async function fetchYouTubeWatchPage(sourceVideoId: string): Promise<YouTubeInsp
   const watchUrl = new URL("https://www.youtube.com/watch");
   watchUrl.searchParams.set("v", sourceVideoId);
   watchUrl.searchParams.set("hl", "en");
-  const response = await fetch(watchUrl, {
-    headers: {
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-    },
-    redirect: "error",
-  });
-  if (!response.ok) throw new Error("YouTube watch metadata was unavailable.");
+  let response: Response;
+  try {
+    response = await fetch(watchUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+      },
+      redirect: "error",
+    });
+  } catch {
+    throw new YouTubeMetadataLoadError("watch_fetch_failed");
+  }
+  if (!response.ok) throw new YouTubeMetadataLoadError(`watch_http_${response.status}`);
   const declaredLength = Number.parseInt(response.headers.get("content-length") ?? "", 10);
   if (Number.isFinite(declaredLength) && declaredLength > MAX_WATCH_PAGE_BYTES) {
-    throw new Error("YouTube watch metadata exceeded the size limit.");
+    throw new YouTubeMetadataLoadError("watch_oversize");
   }
   const html = await response.text();
   if (new TextEncoder().encode(html).byteLength > MAX_WATCH_PAGE_BYTES) {
-    throw new Error("YouTube watch metadata exceeded the size limit.");
+    throw new YouTubeMetadataLoadError("watch_oversize");
   }
   const parsed = parseYouTubePlayerResponse(extractYouTubePlayerResponse(html));
-  if (!parsed) throw new Error("YouTube watch metadata was incomplete.");
+  if (!parsed) throw new YouTubeMetadataLoadError("watch_incomplete");
   return parsed;
+}
+
+async function fetchYouTubeOEmbed(sourceVideoId: string): Promise<YouTubeInspectionData> {
+  const videoUrl = `https://www.youtube.com/watch?v=${sourceVideoId}`;
+  const oembedUrl = new URL("https://www.youtube.com/oembed");
+  oembedUrl.searchParams.set("url", videoUrl);
+  oembedUrl.searchParams.set("format", "json");
+  let response: Response;
+  try {
+    response = await fetch(oembedUrl, { headers: { Accept: "application/json" }, redirect: "error" });
+  } catch {
+    throw new YouTubeMetadataLoadError("oembed_fetch_failed");
+  }
+  if (!response.ok) throw new YouTubeMetadataLoadError(`oembed_http_${response.status}`);
+  const declaredLength = Number.parseInt(response.headers.get("content-length") ?? "", 10);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_OEMBED_BYTES) {
+    throw new YouTubeMetadataLoadError("oembed_oversize");
+  }
+  const body = await response.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_OEMBED_BYTES) {
+    throw new YouTubeMetadataLoadError("oembed_oversize");
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    throw new YouTubeMetadataLoadError("oembed_malformed_json");
+  }
+  const record = asRecord(payload);
+  const title = typeof record?.title === "string" ? record.title.trim() : "";
+  if (!title) throw new YouTubeMetadataLoadError("oembed_incomplete");
+  const thumbnailUrl = typeof record?.thumbnail_url === "string" ? record.thumbnail_url : "";
+  return {
+    title,
+    durationSeconds: 0,
+    thumbnails: thumbnailUrl ? [{ url: thumbnailUrl }] : [],
+    tracks: [],
+  };
 }
 
 async function inspectWithInnerTube(sourceVideoId: string): Promise<YouTubeInspectionData | null> {
@@ -312,15 +362,30 @@ export class YouTubeAdapter implements SourceAdapter {
     try {
       let inspected = await inspectWithInnerTube(sourceVideoId);
       let watchPageInspection: YouTubeInspectionData | null = null;
+      let watchPageFailureReason: string | null = null;
       if (!inspected || inspected.tracks.length === 0) {
         try {
           watchPageInspection = await fetchYouTubeWatchPage(sourceVideoId);
           inspected = mergeYouTubeInspection(inspected, watchPageInspection);
-        } catch {
+        } catch (error) {
+          watchPageFailureReason =
+            error instanceof YouTubeMetadataLoadError ? error.reason : "watch_unexpected_error";
           // A usable InnerTube response is sufficient when the public watch page is temporarily unavailable.
         }
       }
-      if (!inspected) throw new Error("YouTube returned incomplete video metadata.");
+      if (!inspected) {
+        try {
+          inspected = await fetchYouTubeOEmbed(sourceVideoId);
+        } catch (error) {
+          console.warn("YouTube metadata fallbacks were exhausted", {
+            sourceVideoId,
+            watchPageFailureReason,
+            oembedFailureReason:
+              error instanceof YouTubeMetadataLoadError ? error.reason : "oembed_unexpected_error",
+          });
+          throw new Error("YouTube returned incomplete video metadata.");
+        }
+      }
 
       let preferredCaptionSegments: TranscriptSegment[] | undefined;
       let preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
@@ -337,6 +402,8 @@ export class YouTubeAdapter implements SourceAdapter {
           } catch (fallbackError) {
             console.warn("YouTube captions were listed but could not be loaded", {
               sourceVideoId,
+              watchPageFailureReason:
+                fallbackError instanceof YouTubeMetadataLoadError ? fallbackError.reason : watchPageFailureReason,
               reason:
                 fallbackError instanceof YouTubeCaptionLoadError
                   ? fallbackError.reason

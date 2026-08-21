@@ -46,6 +46,8 @@ videosRouter.post("/import", async (c) => {
 
   const timestamp = now();
   const videoId = existing?.id ?? createId();
+  const durationSeconds = inspected.durationSeconds || existing?.duration_seconds || 0;
+  const sourceLanguage = inspected.sourceLanguage ?? existing?.source_language ?? null;
   if (existing) {
     await c.env.DB.prepare(
       "UPDATE videos SET original_url = ?, title = ?, thumbnail_remote_url = ?, duration_seconds = ?, source_language = ?, updated_at = ? WHERE id = ? AND owner_id = ?",
@@ -54,8 +56,8 @@ videosRouter.post("/import", async (c) => {
         inspected.canonicalUrl,
         inspected.title,
         inspected.thumbnailUrl,
-        inspected.durationSeconds,
-        inspected.sourceLanguage,
+        durationSeconds,
+        sourceLanguage,
         timestamp,
         videoId,
         user.id,
@@ -73,8 +75,8 @@ videosRouter.post("/import", async (c) => {
         inspected.canonicalUrl,
         inspected.title,
         inspected.thumbnailUrl,
-        inspected.durationSeconds,
-        inspected.sourceLanguage,
+        durationSeconds,
+        sourceLanguage,
         timestamp,
         timestamp,
       )
@@ -90,8 +92,8 @@ videosRouter.post("/import", async (c) => {
       sourceVideoId: inspected.sourceVideoId,
       title: inspected.title,
       thumbnailUrl: `${c.env.APP_ORIGIN}/api/videos/${videoId}/thumbnail`,
-      durationSeconds: inspected.durationSeconds,
-      sourceLanguage: inspected.sourceLanguage,
+      durationSeconds,
+      sourceLanguage,
     },
     captions: {
       available: Boolean(preferredSegments?.length),
