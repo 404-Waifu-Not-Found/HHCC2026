@@ -347,7 +347,7 @@ export const ProgressiveQuizSummarySchema = z
       ? value.resultProtocolVersion === 9 &&
         value.importVersion === "extension-progressive-import-v7" &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.9" &&
+        value.validatorVersion === "validator-local-progressive-v4.10" &&
         value.generationProfile === "concept_first_auto_v5_8" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
