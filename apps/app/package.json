@@ -4,6 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
+    "brand:assets": "node scripts/generate-brand-assets.mjs",
     "dev": "expo start",
     "prepare:web": "node scripts/prepare-web-runtime.mjs",
     "web": "npm run prepare:web && expo start --web",
@@ -61,6 +62,7 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "babel-preset-expo": "~57.0.1",
+    "sharp": "^0.34.5",
     "vitest": "3.2.7"
   }
 }

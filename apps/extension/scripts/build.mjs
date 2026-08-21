@@ -9,8 +9,9 @@ const outputRoot = resolve(root, "dist");
 const extensionOutput = resolve(outputRoot, "clipquest-captions-extension");
 const appIcon = resolve(
   root,
-  "../app/assets/illustrations/clip-explorer-ready.png",
+  "../app/assets/brand/learning-prism.png",
 );
+const generatedIconRoot = resolve(root, "../app/assets/platform/extension");
 
 rmSync(outputRoot, { recursive: true, force: true });
 mkdirSync(resolve(extensionOutput, "icons"), { recursive: true });
@@ -33,10 +34,13 @@ for (const file of [
   cpSync(resolve(root, "src", file), resolve(extensionOutput, file));
 }
 for (const size of [16, 48, 128]) {
-  await sharp(appIcon)
-    .resize(size, size, { fit: "cover" })
-    .png({ compressionLevel: 9 })
-    .toFile(resolve(extensionOutput, `icons/icon-${size}.png`));
+  const generated = resolve(generatedIconRoot, `icon-${size}.png`);
+  cpSync(generated, resolve(extensionOutput, `icons/icon-${size}.png`));
+}
+
+const iconStats = await sharp(appIcon).stats();
+if (iconStats.entropy < 1 || iconStats.isOpaque === false) {
+  throw new Error("Canonical learning prism is blank or not an opaque image.");
 }
 
 JSON.parse(readFileSync(resolve(extensionOutput, "manifest.json"), "utf8"));

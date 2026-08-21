@@ -7,11 +7,13 @@ const config: ExpoConfig = {
   orientation: "portrait",
   scheme: "clipquest",
   userInterfaceStyle: "automatic",
+  icon: "./assets/platform/app-icon-1024.png",
   web: {
     bundler: "metro",
     output: "static",
   },
   ios: {
+    icon: "./assets/platform/app-icon-1024.png",
     supportsTablet: true,
     bundleIdentifier: "cc.ccwu.clipquest",
     infoPlist: {
@@ -21,12 +23,26 @@ const config: ExpoConfig = {
   android: {
     package: "cc.ccwu.clipquest",
     adaptiveIcon: {
-      backgroundColor: "#B8F244",
+      foregroundImage: "./assets/platform/adaptive-icon.png",
+      backgroundColor: "#F7F9F4",
     },
   },
   plugins: [
     "expo-router",
     "expo-secure-store",
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/platform/splash-icon.png",
+        imageWidth: 240,
+        resizeMode: "contain",
+        backgroundColor: "#F7F9F4",
+        dark: {
+          image: "./assets/platform/splash-icon.png",
+          backgroundColor: "#101B15",
+        },
+      },
+    ],
     [
       "expo-notifications",
       {
