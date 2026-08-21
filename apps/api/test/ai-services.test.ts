@@ -200,4 +200,61 @@ describe("gradeShortAnswerWithAi", () => {
     expect(body.tools).toBeUndefined();
     expect(body.messages[0]?.content).toContain("answer-feedback writer");
   });
+
+  it("retries a malformed DeepSeek tool response before failing closed", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: "Reason only" } }],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: "Still no tool" } }],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: "The concise answer communicates the required idea.",
+                  tool_calls: [
+                    {
+                      function: {
+                        name: "grade_answer",
+                        arguments: JSON.stringify({ is_correct: true }),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      gradeShortAnswerWithAi(env, {
+        question: "What does chlorophyll absorb?",
+        learnerAnswer: "It absorbs light.",
+        requiredIdeas: ["chlorophyll absorbs light energy"],
+        acceptableAlternatives: ["light"],
+      }),
+    ).resolves.toEqual({
+      correct: true,
+      reason: "The concise answer communicates the required idea.",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });

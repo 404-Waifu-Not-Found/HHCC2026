@@ -1148,7 +1148,12 @@ export const LocalGenerationCallEventV6Schema = z
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]).default(0),
     classification: z.enum(["primary", "automatic_retry"]),
-    retryKind: z.enum(["transport", "structural"]).optional(),
+    // Resumed v10 clients can carry the legacy automatic_resume label across
+    // a tab/app restart. Keep the live prompt-first contract narrow so older
+    // content/answer repair labels cannot masquerade as structural retries.
+    retryKind: z
+      .enum(["transport", "structural", "automatic_resume"])
+      .optional(),
     outcome: z
       .union([z.literal("complete"), MinimalGenerationFailureCodeSchema])
       .optional(),

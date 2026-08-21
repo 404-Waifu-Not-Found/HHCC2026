@@ -1180,7 +1180,8 @@ export async function readProgressiveGenerationSnapshot(
       latestGenerationSessionId: row.data.latest_generation_session_id,
       nextCallIndex: row.data.next_call_index,
       activeCallDispatchedAt: row.data.active_call_dispatched_at,
-      activeCallLastStreamActivityAt: row.data.active_call_last_stream_activity_at,
+      activeCallLastStreamActivityAt:
+        row.data.active_call_last_stream_activity_at,
       activeCall,
       retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
       previousOutcome: row.data.previous_outcome,
@@ -1253,7 +1254,8 @@ export async function readProgressiveGenerationSnapshot(
     latestGenerationSessionId: row.data.latest_generation_session_id,
     nextCallIndex: row.data.next_call_index,
     activeCallDispatchedAt: row.data.active_call_dispatched_at,
-    activeCallLastStreamActivityAt: row.data.active_call_last_stream_activity_at,
+    activeCallLastStreamActivityAt:
+      row.data.active_call_last_stream_activity_at,
     activeCall,
     retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
     previousOutcome: row.data.previous_outcome,

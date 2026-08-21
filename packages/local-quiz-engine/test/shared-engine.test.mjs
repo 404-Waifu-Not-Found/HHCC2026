@@ -19,7 +19,7 @@ test("local recovery uses a bounded three-attempt policy", () => {
     maxAutomaticRetries: 3,
     maxHotRetriesPerRecoveryCycle: 3,
     maxActiveRecoveryMs: 5 * 60 * 1_000,
-    streamIdleTimeoutMs: 30 * 1_000,
+    streamIdleTimeoutMs: 60 * 1_000,
   });
 });
 

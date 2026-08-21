@@ -58,7 +58,12 @@ const EXTRACTION_TIMEOUT_MS = 55_000;
 // watchdog; this timeout only covers the extension handoff before a call has
 // started.
 const LOCAL_GENERATION_DISPATCH_TIMEOUT_MS = 20_000;
-const LOCAL_GENERATION_IDLE_TIMEOUT_MS = 30_000;
+// A lifecycle "started" event is emitted before DeepSeek begins streaming.
+// Grounded evidence selection can be quiet for well over thirty seconds on a
+// real mobile/network path, so do not abort a healthy call just because no
+// question chunk has arrived yet. The engine still enforces its bounded
+// request and recovery budgets.
+const LOCAL_GENERATION_IDLE_TIMEOUT_MS = 180_000;
 
 type ExtensionReadyMessage = {
   channel: typeof CHANNEL;

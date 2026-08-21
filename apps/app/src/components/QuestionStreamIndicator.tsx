@@ -13,14 +13,20 @@ import { VoxelIcon } from "./VoxelIcon";
 
 export function QuestionStreamIndicator({
   generation,
+  onRetry,
 }: {
   generation: AttemptGenerationAvailability;
+  onRetry?: () => void;
 }) {
-  const { locale, theme } = useSettings();
+  const { locale, theme, t } = useSettings();
   if (generation.state === "ready") return null;
   const count = `${generation.availableQuestions}/${generation.totalQuestions}`;
   const stopped =
     generation.state === "action_required" ||
+    generation.state === "generation_failed";
+  const retryable =
+    generation.state === "cooldown" ||
+    generation.state === "retry_required" ||
     generation.state === "generation_failed";
   const label = generationLabel(generation, count, locale);
   const explanation = stopped
@@ -68,6 +74,24 @@ export function QuestionStreamIndicator({
         >
           <Text style={[styles.actionText, { color: theme.textOnAction }]}>
             {locale === "zh-CN" ? "打开扩展设置" : "Open extension settings"}
+          </Text>
+        </Pressable>
+      ) : null}
+      {retryable && onRetry ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("retry")}
+          onPress={onRetry}
+          style={({ pressed }) => [
+            styles.retryAction,
+            {
+              borderColor: theme.primary,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Text style={[styles.retryActionText, { color: theme.primary }]}>
+            {t("retry")}
           </Text>
         </Pressable>
       ) : null}
@@ -211,5 +235,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyBold,
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
+  },
+  retryAction: {
+    alignSelf: "flex-start",
+    minHeight: 36,
+    justifyContent: "center",
+    borderWidth: borders.standard,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[4],
+    marginTop: spacing[2],
+  },
+  retryActionText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
   },
 });

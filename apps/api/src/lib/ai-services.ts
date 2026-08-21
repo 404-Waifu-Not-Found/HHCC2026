@@ -5,6 +5,8 @@ import type { AppEnv } from "../types";
 import type { LocalShortAnswerRubricV2 } from "@clipquest/contracts";
 
 const AI_RESPONSE_MAX_BYTES = 256 * 1024;
+const SHORT_ANSWER_GRADE_MAX_ATTEMPTS = 3;
+const SHORT_ANSWER_GRADE_RETRY_DELAYS_MS = [250, 750] as const;
 
 const HistoryClassificationSchema = z
   .object({
@@ -240,7 +242,7 @@ export async function classifyHistoryTitles(
   );
 }
 
-export async function gradeShortAnswerWithAi(
+async function requestShortAnswerGradeAttempt(
   env: AppEnv,
   input: ShortAnswerAiGradeInput,
 ): Promise<{ correct: boolean; reason: string }> {
@@ -394,4 +396,54 @@ export async function gradeShortAnswerWithAi(
     };
   }
   return { correct: decision.is_correct, reason: reason.data };
+}
+
+function isRetryableShortAnswerGradeError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.code === "ai_service_invalid" ||
+      error.code === "ai_service_unavailable")
+  );
+}
+
+function waitBeforeShortAnswerGradeRetry(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+export async function gradeShortAnswerWithAi(
+  env: AppEnv,
+  input: ShortAnswerAiGradeInput,
+): Promise<{ correct: boolean; reason: string }> {
+  let lastError: unknown;
+  for (
+    let attempt = 0;
+    attempt < SHORT_ANSWER_GRADE_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      // A missing tool decision or an empty AI reason is a transient AI
+      // contract failure, never a reason to substitute deterministic prose.
+      // Retry the same question a bounded number of times, preserving the
+      // user's requested DeepSeek tool-call grading boundary.
+      return await requestShortAnswerGradeAttempt(env, input);
+    } catch (error) {
+      lastError = error;
+      if (
+        !isRetryableShortAnswerGradeError(error) ||
+        attempt === SHORT_ANSWER_GRADE_MAX_ATTEMPTS - 1
+      ) {
+        throw error;
+      }
+      await waitBeforeShortAnswerGradeRetry(
+        SHORT_ANSWER_GRADE_RETRY_DELAYS_MS[attempt] ?? 750,
+      );
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new ApiError(
+        502,
+        "ai_service_invalid",
+        "The classification service returned no reasoned grading decision.",
+      );
 }

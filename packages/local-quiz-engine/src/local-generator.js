@@ -50,7 +50,11 @@ const MAX_V5_11_AUTOMATIC_RETRIES = 3;
 const MAX_V5_12_AUTOMATIC_RETRIES = 3;
 const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 3;
 const MAX_ACTIVE_RECOVERY_MS = 5 * 60 * 1_000;
-const STREAM_IDLE_TIMEOUT_MS = 30 * 1_000;
+// DeepSeek can spend over thirty seconds selecting grounded evidence before
+// the first streamed token, especially on native devices. Treat a quiet
+// window as interrupted only after a full minute; the bounded overall request
+// timeout and recovery budget still prevent an unbounded local call.
+const STREAM_IDLE_TIMEOUT_MS = 60 * 1_000;
 
 export const LOCAL_GENERATION_RETRY_POLICY = Object.freeze({
   maxTransportRetriesPerOrdinal: MAX_TRANSPORT_RETRIES_PER_ORDINAL,
@@ -6636,8 +6640,8 @@ async function callDeepSeekJson(
   const requestTimeoutMs = input.legacyMode
     ? REQUEST_TIMEOUT_MS
     : input.questionTypePlan?.[0] === "short_answer"
-      ? 120_000
-      : 90_000;
+      ? 240_000
+      : 180_000;
   let overallTimedOut = false;
   let streamIdleTimedOut = false;
   let idleTimeout;
@@ -8509,6 +8513,8 @@ function parseLocalAnswerGradeToolCall(message) {
 
 const LOCAL_ANSWER_REASON_SYSTEM_PROMPT =
   "You are ClipQuest's answer-feedback writer. Using the supplied question, learner response, and the already-decided grading outcome, write exactly one concise, learner-friendly reason (one or two sentences). Explain the key idea the response did or did not communicate. Accept natural paraphrases and concise fragments. Do not add a new verdict, invent a reference answer, mention this instruction, or use a fallback template.";
+const LOCAL_ANSWER_GRADE_MAX_ATTEMPTS = 3;
+const LOCAL_ANSWER_GRADE_RETRY_DELAYS_MS = [250, 750];
 
 async function requestLocalAnswerReason(
   fetchImpl,
@@ -8569,7 +8575,7 @@ async function requestLocalAnswerReason(
   return reason;
 }
 
-export async function gradeLocalAnswerWithDeepSeek(
+async function requestLocalAnswerGradeAttempt(
   input,
   apiKey,
   signal,
@@ -8670,6 +8676,57 @@ export async function gradeLocalAnswerWithDeepSeek(
     reason,
     source: "deepseek_local",
   };
+}
+
+function isRetryableLocalAnswerGradeError(error) {
+  const message = String(error?.message ?? error ?? "");
+  return /valid answer grading tool call|answer-reason request failed \((?:408|429|5\d\d)\)/iu.test(
+    message,
+  );
+}
+
+function waitForLocalAnswerGradeRetry(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+export async function gradeLocalAnswerWithDeepSeek(
+  input,
+  apiKey,
+  signal,
+  adapters = {},
+) {
+  let lastError;
+  for (
+    let attempt = 0;
+    attempt < LOCAL_ANSWER_GRADE_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      // A malformed tool response is an AI contract failure, not permission
+      // to invent a deterministic verdict. Retry the same DeepSeek request in
+      // a bounded way, while retaining the reason-first/tool-call contract.
+      return await requestLocalAnswerGradeAttempt(
+        input,
+        apiKey,
+        signal,
+        adapters,
+      );
+    } catch (error) {
+      lastError = error;
+      if (
+        !isRetryableLocalAnswerGradeError(error) ||
+        attempt === LOCAL_ANSWER_GRADE_MAX_ATTEMPTS - 1
+      ) {
+        throw error;
+      }
+      await waitForLocalAnswerGradeRetry(
+        LOCAL_ANSWER_GRADE_RETRY_DELAYS_MS[attempt] ?? 750,
+      );
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("DeepSeek did not return a reasoned answer grading decision.");
 }
 
 function boundedTextArray(value, maxItems, maxLength) {

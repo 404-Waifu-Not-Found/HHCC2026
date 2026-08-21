@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Platform,
   StyleSheet,
   Text,
@@ -311,6 +312,14 @@ export default function QuizScreen() {
     await applyResume(resumed);
   }, [applyResume, attemptId]);
 
+  const retryGeneration = useCallback(() => {
+    recoveryAttemptedRef.current = false;
+    setError(undefined);
+    void ensureProgressiveAttemptRecovery(attemptId).catch((cause) => {
+      setError(cause instanceof Error ? cause.message : t("quizResumeFailed"));
+    });
+  }, [attemptId, t]);
+
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -432,6 +441,21 @@ export default function QuizScreen() {
   }, [attemptId, t, updateGeneration]);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      // Native generation is intentionally paused while the app is not
+      // foregrounded. Refresh the authoritative attempt and immediately
+      // restart the bounded AI recovery task when the learner returns, rather
+      // than leaving the quiz stranded on a stale retrying snapshot.
+      recoveryAttemptedRef.current = false;
+      void resume().catch(() => undefined);
+      void ensureProgressiveAttemptRecovery(attemptId).catch(() => undefined);
+    });
+    return () => subscription.remove();
+  }, [attemptId, resume]);
+
+  useEffect(() => {
     if (generation?.state !== "action_required") return;
     return subscribeToLocalGenerationClient((client) => {
       if (
@@ -455,7 +479,10 @@ export default function QuizScreen() {
   }, [answer, orderingTouched, question?.type, questionInteractionReady]);
 
   const streamIndicator = generation ? (
-    <QuestionStreamIndicator generation={generation} />
+    <QuestionStreamIndicator
+      generation={generation}
+      onRetry={retryGeneration}
+    />
   ) : undefined;
 
   const submit = async () => {
@@ -493,7 +520,7 @@ export default function QuizScreen() {
           new Promise<never>((_, reject) =>
             setTimeout(
               () => reject(new Error("Local grading timed out.")),
-              12_000,
+              30_000,
             ),
           ),
         ]);
