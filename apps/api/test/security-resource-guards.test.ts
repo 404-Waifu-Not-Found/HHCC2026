@@ -46,6 +46,10 @@ const validationSource = await readFile(
   new URL("../src/lib/validation.ts", import.meta.url),
   "utf8",
 );
+const aiServicesSource = await readFile(
+  new URL("../src/lib/ai-services.ts", import.meta.url),
+  "utf8",
+);
 const libraryOpenSource = await readFile(
   new URL("../../app/src/hooks/useOpenVideoCard.ts", import.meta.url),
   "utf8",
@@ -56,6 +60,13 @@ const securityMigration = await readFile(
 );
 
 describe("security resource guards", () => {
+  it("keeps learner answers and transcript evidence out of Worker AI helpers", () => {
+    expect(aiServicesSource).not.toContain("gradeWrittenAnswer");
+    expect(aiServicesSource).not.toContain("TranscriptSegment");
+    expect(aiServicesSource).not.toContain("learnerAnswer");
+    expect(aiServicesSource).not.toContain("requiredIdeas");
+  });
+
   it("bounds push-token persistence and selects due reviews before tokens", () => {
     expect(pushSource).toContain("MAX_DEVICE_TOKENS_PER_USER");
     expect(pushSource).toContain("isValidExpoPushToken");

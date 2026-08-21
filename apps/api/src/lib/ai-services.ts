@@ -1,14 +1,6 @@
-import { type TranscriptSegment } from "@clipquest/contracts";
 import { z } from "zod";
 import { ApiError } from "./errors";
 import type { AppEnv } from "../types";
-
-const WrittenGradeSchema = z
-  .object({
-    correct: z.boolean(),
-    feedback: z.string().min(1).max(600),
-  })
-  .strict();
 
 const HistoryClassificationSchema = z
   .object({
@@ -56,7 +48,7 @@ async function requestJson<T>(
     throw new ApiError(
       503,
       "ai_service_unavailable",
-      "The answer-grading service is temporarily unavailable.",
+      "The classification service is temporarily unavailable.",
     );
   } finally {
     clearTimeout(timeout);
@@ -65,7 +57,7 @@ async function requestJson<T>(
     throw new ApiError(
       503,
       "ai_service_unavailable",
-      "The answer-grading service is temporarily unavailable.",
+      "The classification service is temporarily unavailable.",
     );
   }
   const outer = z
@@ -84,7 +76,7 @@ async function requestJson<T>(
     throw new ApiError(
       502,
       "ai_service_invalid",
-      "The answer-grading service returned an incomplete response.",
+      "The classification service returned an incomplete response.",
     );
   }
   let decoded: unknown;
@@ -98,44 +90,10 @@ async function requestJson<T>(
     throw new ApiError(
       502,
       "ai_service_invalid",
-      "The answer-grading service returned invalid JSON.",
+      "The classification service returned invalid JSON.",
     );
   }
   return parsed.data;
-}
-
-export async function gradeWrittenAnswer(
-  env: AppEnv,
-  input: {
-    prompt: string;
-    answer: string;
-    requiredIdeas: string[];
-    acceptableAlternatives: string[];
-    evidence: TranscriptSegment[];
-  },
-): Promise<{ correct: boolean; feedback: string }> {
-  return requestJson(
-    env,
-    [
-      {
-        role: "system",
-        content:
-          'Grade using only the supplied rubric and, when present, the cited evidence. Some locally generated quizzes intentionally provide no stored transcript evidence; in that case, use only the rubric and acceptable alternatives. Accept equivalent wording. Do not add outside facts. Return valid JSON exactly like {"correct":true,"feedback":"..."}.',
-      },
-      {
-        role: "user",
-        content: JSON.stringify({
-          question: input.prompt,
-          learnerAnswer: input.answer,
-          requiredIdeas: input.requiredIdeas,
-          acceptableAlternatives: input.acceptableAlternatives,
-          evidence: input.evidence,
-        }),
-      },
-    ],
-    WrittenGradeSchema,
-    400,
-  );
 }
 
 export async function classifyHistoryTitles(
