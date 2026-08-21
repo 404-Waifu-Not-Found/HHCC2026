@@ -18,6 +18,8 @@ import {
   LocalAnswerGradeRequestSchema,
   MAX_COMPLETE_TRANSCRIPT_SEGMENTS,
   TranscriptSegmentSchema,
+  WorkplaceLocalChatEventSchema,
+  type WorkplaceLocalChatEvent,
   type GenerationStage,
   type GenerationFailureCode,
   type LocalConceptQuizQuestionChunk,
@@ -34,14 +36,19 @@ import {
   MINIMUM_CONCEPT_FIRST_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_WORKPLACE_CHAT_EXTENSION_VERSION,
+  WORKPLACE_LOCAL_CHAT_CAPABILITY,
   isCompatibleClipQuestExtensionVersion,
 } from "./extension-compat";
 
 export {
   MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_WORKPLACE_CHAT_EXTENSION_VERSION,
+  WORKPLACE_LOCAL_CHAT_CAPABILITY,
   isCompatibleClipQuestExtensionVersion,
   supportsQuestionStream,
+  supportsWorkplaceChat,
 } from "./extension-compat";
 
 const CHANNEL = "clipquest:captions:v1";
@@ -937,4 +944,157 @@ function parseLocalConceptQuizResult(
     throw new Error("The extension returned an invalid local quiz.");
   }
   return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// Workplace chat
+// ---------------------------------------------------------------------------
+
+const WORKPLACE_TURN_TIMEOUT_MS = 5 * 60 * 1_000;
+
+export type WorkplaceChatTurnInput = {
+  text: string;
+  thread?: readonly {
+    role?: "user" | "assistant";
+    text?: string;
+    parts?: readonly Record<string, unknown>[];
+  }[];
+  recentVideoIds?: readonly string[];
+};
+
+export type WorkplaceChatTurnSummary = {
+  finalText: string;
+  stopReason: string;
+  practiceSet: unknown;
+  toolResults: unknown;
+};
+
+/**
+ * Run a full Workplace study turn through the local ClipQuest extension.
+ *
+ * The DeepSeek key stays inside the extension: this bridge only ever sends the
+ * learner's prompt/thread and receives sanitized {@link WorkplaceLocalChatEvent}
+ * events plus a single terminal result. `onEvent` streams the parsed events;
+ * cancellation flows through `signal` to the background AbortController.
+ */
+export async function requestExtensionWorkplaceChatTurn(
+  input: WorkplaceChatTurnInput,
+  signal: AbortSignal,
+  onEvent: (event: WorkplaceLocalChatEvent) => void = () => undefined,
+): Promise<WorkplaceChatTurnSummary> {
+  const text = typeof input?.text === "string" ? input.text.trim() : "";
+  if (!text) {
+    throw new Error("Enter a message to start a Workplace turn.");
+  }
+  const extension = await detectClipQuestExtension();
+  if (!extension.available) {
+    throw new Error("ClipQuest is not installed.");
+  }
+  if (
+    !isCompatibleClipQuestExtensionVersion(
+      extension.version,
+      MINIMUM_WORKPLACE_CHAT_EXTENSION_VERSION,
+    )
+  ) {
+    throw new Error(
+      `ClipQuest ${MINIMUM_WORKPLACE_CHAT_EXTENSION_VERSION} or newer is required for Workplace chat. Download and reload the current extension.`,
+    );
+  }
+  if (!extension.capabilities.includes(WORKPLACE_LOCAL_CHAT_CAPABILITY)) {
+    throw new Error(
+      `Update ClipQuest. This extension does not support ${WORKPLACE_LOCAL_CHAT_CAPABILITY}.`,
+    );
+  }
+  if (!extension.configured) {
+    throw new Error(
+      "Open ClipQuest from the Chrome toolbar and add your DeepSeek API key.",
+    );
+  }
+  const id = requestId();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      signal.removeEventListener("abort", abort);
+      window.removeEventListener("message", receive);
+      callback();
+    };
+    const abort = () => {
+      // Ask the background AbortController to stop the turn before rejecting.
+      post({ type: "workplace-cancel", requestId: id });
+      finish(() =>
+        reject(
+          signal.reason instanceof Error
+            ? signal.reason
+            : new DOMException(
+                "The Workplace turn was cancelled.",
+                "AbortError",
+              ),
+        ),
+      );
+    };
+    const receive = (event: MessageEvent<unknown>) => {
+      const data =
+        event.data && typeof event.data === "object"
+          ? (event.data as Record<string, unknown>)
+          : null;
+      if (
+        event.source !== window ||
+        event.origin !== window.location.origin ||
+        data?.channel !== CHANNEL ||
+        data?.source !== EXTENSION_SOURCE ||
+        data?.requestId !== id
+      ) {
+        return;
+      }
+      if (data.type === "workplace-accepted") return;
+      if (data.type === "workplace-event") {
+        const parsed = WorkplaceLocalChatEventSchema.safeParse(data.event);
+        // A malformed event never aborts a healthy turn; the terminal result is
+        // authoritative. Only forward well-formed, sanitized events.
+        if (parsed.success) onEvent(parsed.data);
+        return;
+      }
+      if (data.type !== "workplace-result") return;
+      const response = data.response as
+        | {
+            ok?: boolean;
+            error?: string;
+            code?: string;
+            result?: WorkplaceChatTurnSummary;
+          }
+        | undefined;
+      if (!response?.ok) {
+        finish(() =>
+          reject(new Error(response?.error ?? "The Workplace turn failed.")),
+        );
+        return;
+      }
+      finish(() =>
+        resolve(
+          (response.result as WorkplaceChatTurnSummary | undefined) ?? {
+            finalText: "",
+            stopReason: "complete",
+            practiceSet: null,
+            toolResults: [],
+          },
+        ),
+      );
+    };
+    const timeout = setTimeout(() => {
+      post({ type: "workplace-cancel", requestId: id });
+      finish(() => reject(new Error("The Workplace turn timed out.")));
+    }, WORKPLACE_TURN_TIMEOUT_MS);
+    window.addEventListener("message", receive);
+    signal.addEventListener("abort", abort, { once: true });
+    post({
+      type: "workplace-chat",
+      requestId: id,
+      text,
+      thread: input.thread,
+      recentVideoIds: input.recentVideoIds,
+    });
+  });
 }

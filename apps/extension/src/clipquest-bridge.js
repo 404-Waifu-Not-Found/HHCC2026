@@ -8,12 +8,18 @@
   const WEBSITE_SOURCE = "clipquest-website";
   const EXTENSION_SOURCE = "clipquest-extension";
   const LOCAL_AI_PORT = "clipquest-local-ai-v1";
+  const WORKPLACE_AI_PORT = "clipquest-workplace-ai-v1";
   // Keep the page-side generation watchdog informed while the service worker
   // is doing bounded local evidence work or waiting for a slow DeepSeek
   // stream. The port heartbeat alone keeps Chrome's worker alive, but it is
   // invisible to the app and can otherwise look like a disconnected request.
   const HEARTBEAT_INTERVAL_MS = 15_000;
   const MAX_GENERATION_PORT_RECONNECTS = 2;
+  const MAX_WORKPLACE_PORT_RECONNECTS = 2;
+
+  // Track in-flight Workplace turns by requestId so a route departure or an
+  // explicit page cancel can stop the corresponding background turn.
+  const workplaceTurns = new Map();
 
   function post(message) {
     window.postMessage(
@@ -43,6 +49,7 @@
           "cheat-sheet-v1",
           "answer-grading-v1",
           "ensure-source-ready-v1",
+          "workplace-chat-v1",
         ],
       });
     } catch {
@@ -63,6 +70,167 @@
     }
     if (message.type === "ping") {
       void announce();
+      return;
+    }
+    if (
+      message.type === "workplace-cancel" &&
+      typeof message.requestId === "string"
+    ) {
+      workplaceTurns.get(message.requestId)?.cancel();
+      return;
+    }
+    if (
+      message.type === "workplace-tool-result" &&
+      typeof message.requestId === "string" &&
+      typeof message.toolCallId === "string"
+    ) {
+      // The authenticated page answered a bounded tool handshake with owned
+      // library metadata / notes. Relay it to the running background turn.
+      workplaceTurns.get(message.requestId)?.forwardToolResult({
+        type: "tool-result",
+        toolCallId: message.toolCallId,
+        result: message.result,
+      });
+      return;
+    }
+    if (
+      message.type === "workplace-chat" &&
+      typeof message.requestId === "string" &&
+      typeof message.text === "string"
+    ) {
+      const requestId = message.requestId;
+      if (workplaceTurns.has(requestId)) return;
+      let port;
+      let heartbeat;
+      let reconnectTimer;
+      let reconnectAttempts = 0;
+      let settled = false;
+      let acceptedByWorker = false;
+      const outbound = {
+        type: "workplace-chat",
+        requestId,
+        text: message.text,
+        thread: Array.isArray(message.thread) ? message.thread : undefined,
+        recentVideoIds: Array.isArray(message.recentVideoIds)
+          ? message.recentVideoIds
+          : undefined,
+      };
+      const finish = (response) => {
+        if (settled) return;
+        settled = true;
+        workplaceTurns.delete(requestId);
+        if (heartbeat) clearInterval(heartbeat);
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        post({ type: "workplace-result", requestId, response });
+        try {
+          port?.disconnect();
+        } catch {
+          // The port may already be disconnected during worker recovery.
+        }
+      };
+      const send = (payload) => {
+        try {
+          port.postMessage(payload);
+        } catch {
+          scheduleReconnect();
+        }
+      };
+      const startHeartbeat = () => {
+        if (heartbeat) clearInterval(heartbeat);
+        heartbeat = setInterval(() => {
+          try {
+            port.postMessage({ type: "heartbeat", requestId });
+          } catch {
+            scheduleReconnect();
+          }
+        }, HEARTBEAT_INTERVAL_MS);
+      };
+      const handleResponse = (response) => {
+        if (
+          response?.requestId !== undefined &&
+          response.requestId !== requestId
+        )
+          return;
+        if (!acceptedByWorker) {
+          acceptedByWorker = true;
+          // The worker responded at least once: confirm the accepted/ready
+          // handshake to the page before forwarding stream events.
+          post({ type: "workplace-accepted", requestId });
+        }
+        if (response.type === "workplace-event") {
+          post({ type: "workplace-event", requestId, event: response.event });
+          return;
+        }
+        if (response.type === "tool-request") {
+          post({
+            type: "workplace-tool-request",
+            requestId,
+            toolCallId: response.toolCallId,
+            name: response.name,
+            arguments: response.arguments,
+          });
+          return;
+        }
+        if (response.type === "workplace-result") finish(response.response);
+      };
+      function scheduleReconnect() {
+        if (settled || reconnectTimer) return;
+        if (heartbeat) clearInterval(heartbeat);
+        if (reconnectAttempts >= MAX_WORKPLACE_PORT_RECONNECTS) {
+          finish({
+            ok: false,
+            code: "extension_unavailable",
+            error:
+              chrome.runtime.lastError?.message ??
+              "The ClipQuest extension stopped responding.",
+          });
+          return;
+        }
+        reconnectAttempts += 1;
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = undefined;
+          if (settled) return;
+          try {
+            port = chrome.runtime.connect({ name: WORKPLACE_AI_PORT });
+            attachPort(port, false);
+          } catch (error) {
+            finish({
+              ok: false,
+              code: "extension_unavailable",
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "The ClipQuest extension stopped responding.",
+            });
+          }
+        }, reconnectAttempts * 1_000);
+      }
+      function attachPort(nextPort, dispatch) {
+        port = nextPort;
+        port.onMessage.addListener(handleResponse);
+        port.onDisconnect.addListener(scheduleReconnect);
+        startHeartbeat();
+        // A fresh reconnect cannot resume a stateless turn, so only the first
+        // attachment dispatches the request. Bounded reconnects keep the page
+        // watchdog honest and end in a single terminal result either way.
+        if (dispatch) send(outbound);
+      }
+      workplaceTurns.set(requestId, {
+        cancel: () => send({ type: "cancel", requestId }),
+        forwardToolResult: (payload) => send(payload),
+      });
+      try {
+        attachPort(chrome.runtime.connect({ name: WORKPLACE_AI_PORT }), true);
+      } catch (error) {
+        finish({
+          ok: false,
+          code: "extension_unavailable",
+          error:
+            error instanceof Error
+              ? error.message
+              : "The ClipQuest extension could not start Workplace chat.",
+        });
+      }
       return;
     }
     if (

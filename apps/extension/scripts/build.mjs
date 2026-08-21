@@ -11,6 +11,7 @@ import {
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { build as esbuild } from "esbuild";
 import sharp from "sharp";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -53,6 +54,7 @@ for (const file of [
   "popup.css",
   "popup.html",
   "popup.js",
+  "workplace-channel.js",
   "youtube-content.js",
   "youtube-page.js",
   "youtube-quick-open.css",
@@ -75,6 +77,34 @@ for (const name of [
   "clipquest-lockup-on-dark.png",
 ]) {
   cpSync(resolve(appBrandRoot, name), resolve(extensionOutput, "brand", name));
+}
+
+// The Workplace chat orchestrator (`runWorkplaceChatTurn`) shares the same
+// browser/platform-free source as the native clients, but it depends on the
+// strict @clipquest/contracts schemas (and their zod runtime). The unpacked
+// extension cannot resolve a bare module specifier, so bundle this one module
+// into a self-contained ESM file that `workplace-channel.js` imports at runtime.
+await esbuild({
+  entryPoints: [resolve(sharedEngineRoot, "workplace-chat.js")],
+  outfile: resolve(extensionOutput, "workplace-chat.js"),
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  legalComments: "none",
+});
+
+const workplaceChatBundle = readFileSync(
+  resolve(extensionOutput, "workplace-chat.js"),
+  "utf8",
+);
+if (
+  /from\s*["']@clipquest\/contracts["']/.test(workplaceChatBundle) ||
+  !/runWorkplaceChatTurn/.test(workplaceChatBundle)
+) {
+  throw new Error(
+    "The bundled Workplace orchestrator is missing or still references a bare module specifier.",
+  );
 }
 
 const iconStats = await sharp(appIcon).stats();

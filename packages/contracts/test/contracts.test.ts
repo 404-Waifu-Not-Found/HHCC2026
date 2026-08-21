@@ -27,6 +27,11 @@ import {
   PushRegisterResponseSchema,
   PushUnregisterRequestSchema,
   PushUnregisterResponseSchema,
+  WorkplaceCitationSchema,
+  WorkplaceLocalToolCallSchema,
+  WorkplaceMessageSyncRequestSchema,
+  WorkplacePracticeSetSchema,
+  WorkplaceSuggestionsResponseSchema,
   identifyVideoSource,
   questionLimitForSession,
   questionTypePlanForSelection,
@@ -34,6 +39,7 @@ import {
   type LocalConceptQuizChunk,
   type LocalConceptQuizResult,
   type QuizQuestionType,
+  type WorkplaceSuggestionKind,
   masteryStateForScore,
 } from "../src/index";
 
@@ -1097,6 +1103,243 @@ describe("push token lifecycle", () => {
     expect(PushUnregisterResponseSchema.parse({ removed: false })).toEqual({
       removed: false,
     });
+  });
+});
+
+const workplaceVideoId = "44444444-4444-4444-8444-444444444444";
+const workplaceOtherVideoId = "55555555-5555-4555-8555-555555555555";
+const workplaceThreadId = "66666666-6666-4666-8666-666666666666";
+
+function workplaceCitation(videoId = workplaceVideoId) {
+  return {
+    videoId,
+    title: "Ion channel gating",
+    startMs: 1_000,
+    endMs: 5_000,
+    quote:
+      "Ion channels open in response to a voltage change across the membrane.",
+  } as const;
+}
+
+function workplacePracticeSet(overrides: Record<string, unknown> = {}) {
+  const types: QuizQuestionType[] = [
+    "multiple_choice",
+    "true_false",
+    "short_answer",
+    "multiple_choice",
+    "true_false",
+  ];
+  return {
+    questions: types.map((type, index) => localQuestion(type, index)),
+    requestedPolicy: "practice",
+    effectivePolicy: "practice",
+    rationale: "Five questions grounded in your two most recent uploads.",
+    videoIds: [workplaceVideoId],
+    transcriptComplete: true,
+    citations: [workplaceCitation()],
+    ...overrides,
+  };
+}
+
+describe("workplace suggestions", () => {
+  function suggestion(kind: WorkplaceSuggestionKind, videoId: string) {
+    return {
+      kind,
+      videoId,
+      quizId: null,
+      title: "Ion channel basics",
+      reason: "Because it builds on what you watched most recently.",
+    };
+  }
+
+  it("accepts exactly three suggestions covering recent, unmastered, and due", () => {
+    expect(
+      WorkplaceSuggestionsResponseSchema.safeParse({
+        suggestions: [
+          suggestion("recent", workplaceVideoId),
+          suggestion("unmastered", workplaceOtherVideoId),
+          suggestion("due", workplaceThreadId),
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a suggestion count other than three", () => {
+    expect(
+      WorkplaceSuggestionsResponseSchema.safeParse({
+        suggestions: [
+          suggestion("recent", workplaceVideoId),
+          suggestion("unmastered", workplaceOtherVideoId),
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a duplicated suggestion kind even at the correct count", () => {
+    expect(
+      WorkplaceSuggestionsResponseSchema.safeParse({
+        suggestions: [
+          suggestion("recent", workplaceVideoId),
+          suggestion("recent", workplaceOtherVideoId),
+          suggestion("due", workplaceThreadId),
+        ],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("workplace message sync", () => {
+  function validSyncRequest() {
+    return {
+      threadId: workplaceThreadId,
+      clientMessageId: "client-message-1",
+      role: "user" as const,
+      parts: [
+        { type: "text" as const, text: "What should I review today?" },
+        { type: "citation" as const, citation: workplaceCitation() },
+        {
+          type: "tool_status" as const,
+          tool: {
+            name: "find_due_reviews" as const,
+            status: "complete" as const,
+            summary: "Found two videos due for review.",
+            citations: [workplaceCitation()],
+          },
+        },
+        {
+          type: "practice_set" as const,
+          practiceSet: workplacePracticeSet(),
+        },
+      ],
+    };
+  }
+
+  it("accepts user/assistant text, citations, tool status, and a validated practice set", () => {
+    expect(
+      WorkplaceMessageSyncRequestSchema.safeParse(validSyncRequest()).success,
+    ).toBe(true);
+    expect(
+      WorkplaceMessageSyncRequestSchema.safeParse({
+        ...validSyncRequest(),
+        role: "assistant",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("structurally rejects API keys and raw note documents in a persisted payload", () => {
+    expect(
+      WorkplaceMessageSyncRequestSchema.safeParse({
+        ...validSyncRequest(),
+        apiKey: "sk-live-should-never-persist",
+      }).success,
+    ).toBe(false);
+    expect(
+      WorkplaceMessageSyncRequestSchema.safeParse({
+        ...validSyncRequest(),
+        noteDocument: {
+          title: "Full notes",
+          summary: "Everything the model saw.",
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("structurally rejects raw caption arrays and full transcripts on a citation", () => {
+    expect(WorkplaceCitationSchema.safeParse(workplaceCitation()).success).toBe(
+      true,
+    );
+    expect(
+      WorkplaceCitationSchema.safeParse({
+        ...workplaceCitation(),
+        captions: [{ startMs: 0, endMs: 1_000, text: "raw caption segment" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      WorkplaceCitationSchema.safeParse({
+        ...workplaceCitation(),
+        quote: "x".repeat(5_000),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("structurally rejects a hidden answer smuggled onto a validated practice set", () => {
+    expect(
+      WorkplacePracticeSetSchema.safeParse({
+        ...workplacePracticeSet(),
+        hiddenAnswer: "q1",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects credential-shaped keys inside a local tool call's arguments", () => {
+    const validCall = {
+      id: "call-1",
+      name: "search_videos" as const,
+      arguments: { query: "ion channels" },
+    };
+    expect(WorkplaceLocalToolCallSchema.safeParse(validCall).success).toBe(
+      true,
+    );
+    for (const key of [
+      "apiKey",
+      "api_key",
+      "secret",
+      "token",
+      "Authorization",
+    ]) {
+      expect(
+        WorkplaceLocalToolCallSchema.safeParse({
+          ...validCall,
+          arguments: { ...validCall.arguments, [key]: "sk-leak" },
+        }).success,
+      ).toBe(false);
+    }
+  });
+});
+
+describe("workplace practice-set policy", () => {
+  it("requires exactly five ordered questions", () => {
+    const tooFew = workplacePracticeSet({
+      questions: workplacePracticeSet().questions.slice(0, 4),
+    });
+    expect(WorkplacePracticeSetSchema.safeParse(tooFew).success).toBe(false);
+  });
+
+  it("allows a diagnostic request to downgrade to practice but never upgrades practice into diagnostic", () => {
+    expect(
+      WorkplacePracticeSetSchema.safeParse(
+        workplacePracticeSet({
+          requestedPolicy: "diagnostic",
+          effectivePolicy: "practice",
+        }),
+      ).success,
+    ).toBe(true);
+    expect(
+      WorkplacePracticeSetSchema.safeParse(
+        workplacePracticeSet({
+          requestedPolicy: "diagnostic",
+          effectivePolicy: "diagnostic",
+        }),
+      ).success,
+    ).toBe(true);
+    expect(
+      WorkplacePracticeSetSchema.safeParse(
+        workplacePracticeSet({
+          requestedPolicy: "practice",
+          effectivePolicy: "diagnostic",
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("requires every citation to ground into one of the practice set's owned video IDs", () => {
+    expect(
+      WorkplacePracticeSetSchema.safeParse(
+        workplacePracticeSet({
+          citations: [workplaceCitation(workplaceOtherVideoId)],
+        }),
+      ).success,
+    ).toBe(false);
   });
 });
 
