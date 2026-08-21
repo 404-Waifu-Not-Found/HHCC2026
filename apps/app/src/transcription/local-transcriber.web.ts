@@ -86,7 +86,7 @@ export async function getLocalModelStatus(): Promise<ModelStatus> {
 export async function removeLocalModel(): Promise<boolean> {
   const removed = await caches.delete("clipquest-whisper-v1");
   const keys = await AsyncStorage.getAllKeys();
-  await AsyncStorage.removeMany(keys.filter((key) => key.startsWith("clipquest:transcript-checkpoint:")));
+  await AsyncStorage.multiRemove(keys.filter((key) => key.startsWith("clipquest:transcript-checkpoint:")));
   return removed;
 }
 

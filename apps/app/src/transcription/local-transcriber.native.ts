@@ -94,7 +94,7 @@ export async function removeLocalModel(): Promise<boolean> {
   if (MODEL_DIR.exists) MODEL_DIR.delete();
   await AsyncStorage.removeItem(PAUSED_MODEL_DOWNLOAD_KEY);
   const keys = await AsyncStorage.getAllKeys();
-  await AsyncStorage.removeMany(keys.filter((key) => key.startsWith("clipquest:transcript-checkpoint:")));
+  await AsyncStorage.multiRemove(keys.filter((key) => key.startsWith("clipquest:transcript-checkpoint:")));
   return existed;
 }
 
