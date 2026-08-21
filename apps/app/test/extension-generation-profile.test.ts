@@ -310,4 +310,21 @@ describe("extension generation profile compatibility", () => {
     );
     expect(source).toContain("saveImportedVideo(session.user.id, imported)");
   });
+
+  it("stops source-unavailable recovery instead of offering a no-op retry", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/generation/progressive-continuation.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain('"source_unavailable"');
+    expect(source).toContain(
+      'reasonCode === "source_unavailable"\n          ? "generation_failed"',
+    );
+    expect(source).toContain(
+      "The video source is unavailable for local recovery.",
+    );
+  });
 });

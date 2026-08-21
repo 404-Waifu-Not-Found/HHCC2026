@@ -723,9 +723,11 @@ async function runAutomaticRecovery(
     const state =
       reasonCode === "credential_required" || reasonCode === "billing_required"
         ? "action_required"
-        : automatic && !groundedExhausted && !compatibilityExhausted
-          ? "cooldown"
-          : "generation_failed";
+        : reasonCode === "source_unavailable"
+          ? "generation_failed"
+          : automatic && !groundedExhausted && !compatibilityExhausted
+            ? "cooldown"
+            : "generation_failed";
     const nextRecoveryAt =
       state === "cooldown"
         ? Date.now() +
@@ -867,25 +869,37 @@ async function acquireContinuationTranscript(
       "This Android beta requires a public YouTube video with usable captions.",
     );
   }
-  const media = await apiRequest(
-    "/api/media/resolve",
-    {
-      method: "POST",
-      body: jsonBody({ videoId: imported.video.id }),
+  let media: { mediaUrl: string };
+  let result: Awaited<ReturnType<typeof transcribeLocally>>;
+  try {
+    media = await apiRequest(
+      "/api/media/resolve",
+      {
+        method: "POST",
+        body: jsonBody({ videoId: imported.video.id }),
+        signal,
+      },
+      MediaResolveResponseSchema,
+    );
+    result = await transcribeLocally({
+      ownerUserId,
+      videoId: imported.video.id,
+      mediaUrl: media.mediaUrl,
+      durationSeconds: imported.video.durationSeconds,
+      language: imported.video.sourceLanguage,
       signal,
-    },
-    MediaResolveResponseSchema,
-  );
-  const result = await transcribeLocally({
-    ownerUserId,
-    videoId: imported.video.id,
-    mediaUrl: media.mediaUrl,
-    durationSeconds: imported.video.durationSeconds,
-    language: imported.video.sourceLanguage,
-    signal,
-    onPhase: () => undefined,
-    onProgress: () => undefined,
-  });
+      onPhase: () => undefined,
+      onProgress: () => undefined,
+    });
+  } catch (cause) {
+    if (signal.aborted) throw cause;
+    throw new LocalGenerationRequestError(
+      cause instanceof Error
+        ? cause.message
+        : "The video source is unavailable for local recovery.",
+      "source_unavailable",
+    );
+  }
   const inferredDurationSeconds = Math.max(
     1,
     Math.ceil(
