@@ -2,7 +2,49 @@ import { describe, expect, it } from "vitest";
 import {
   hasDistinctAdaptiveRetry,
   parseQuestionEvidence,
+  shortAnswerModelAnswer,
 } from "../src/routes/quizzes";
+
+describe("short-answer model answer", () => {
+  it("surfaces the first acceptable alternative of a stored rubric", () => {
+    expect(
+      shortAnswerModelAnswer({
+        type: "short_answer",
+        rubric_json: JSON.stringify({
+          requiredIdeas: ["reconstructing the idea strengthens access"],
+          acceptableAlternatives: [
+            "  Recalling an idea rebuilds it and strengthens later access.  ",
+            "Effortful retrieval strengthens memory.",
+          ],
+        }),
+      }),
+    ).toBe("Recalling an idea rebuilds it and strengthens later access.");
+  });
+
+  it("returns null for other question types, missing rubrics, and malformed JSON", () => {
+    expect(
+      shortAnswerModelAnswer({ type: "multiple_choice", rubric_json: "{}" }),
+    ).toBeNull();
+    expect(
+      shortAnswerModelAnswer({ type: "short_answer", rubric_json: null }),
+    ).toBeNull();
+    expect(
+      shortAnswerModelAnswer({
+        type: "short_answer",
+        rubric_json: "{not json",
+      }),
+    ).toBeNull();
+    expect(
+      shortAnswerModelAnswer({
+        type: "short_answer",
+        rubric_json: JSON.stringify({
+          requiredIdeas: ["x"],
+          acceptableAlternatives: [],
+        }),
+      }),
+    ).toBeNull();
+  });
+});
 
 describe("local extension quiz evidence", () => {
   it("accepts an intentionally empty evidence list", () => {
