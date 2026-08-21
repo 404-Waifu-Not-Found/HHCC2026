@@ -1,0 +1,99 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.000] SOURCE_STARTED videoId="V2381lUhqc0"
+[00:02.976] CAPTIONS_COMPLETE videoId="V2381lUhqc0" title="Earth Science: Crash Course History of Science #20" language="en" durationSeconds=808 segmentCount=224 sourceSegmentCount=224 characterCount=13742 transcriptFingerprint="7d40de17" acquisition="youtube_local_ytdlp"
+[00:02.977] PLAN_REQUESTED questionCount=5 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:06.812] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:06.848] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:09.879] QUESTION_ACCEPTED ordinal=1 concept="Buffon's cooling earth theory" prompt="What process did the Earth undergo over time?"
+[00:09.879] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=3067 inputTokens=9693 outputTokens=154 reasoningTokens=0
+[00:09.879] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f995377b-cd13-434e-be1d-b9f86fa341e4"
+[00:09.886] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:09.906] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:12.370] QUESTION_ACCEPTED ordinal=2 concept="fossils as historical evidence" prompt="By the late seventeenth century, some European naturalists, such as Robert Hooke, argued that natural objects like fossils should be used like historical texts to shed light on the future of human environments."
+[00:12.371] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2484 inputTokens=10360 outputTokens=191 reasoningTokens=0
+[00:12.371] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f995377b-cd13-434e-be1d-b9f86fa341e4"
+[00:12.382] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:12.408] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:14.570] QUESTION_ACCEPTED ordinal=3 concept="catastrophism in Earth history" prompt="What event did William Whiston propose as the cause of the Flood of Noah?"
+[00:14.571] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2188 inputTokens=9893 outputTokens=118 reasoningTokens=0
+[00:14.571] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f995377b-cd13-434e-be1d-b9f86fa341e4"
+[00:14.588] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:14.637] AI_CALL_STARTED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:17.030] QUESTION_ACCEPTED ordinal=4 concept="mining and colonization relationship" prompt="In Europe, mining expanded together with colonization."
+[00:17.031] AI_CALL_COMPLETED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2442 inputTokens=10072 outputTokens=97 reasoningTokens=0
+[00:17.031] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f995377b-cd13-434e-be1d-b9f86fa341e4"
+[00:17.045] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:17.078] AI_CALL_STARTED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:19.276] QUESTION_ACCEPTED ordinal=5 concept="eighteenth-century French thinkers and Earth's age" prompt="What role did several eighteenth-century French thinkers play in the study of fossils and the age of the earth?"
+[00:19.277] AI_CALL_COMPLETED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2231 inputTokens=10342 outputTokens=177 reasoningTokens=0
+[00:19.277] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="f995377b-cd13-434e-be1d-b9f86fa341e4"
+[00:19.279] BANK_COMPLETE accepted=5 requested=5 aiCalls=5 retryCount=0 generationElapsedMs=12512 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: Buffon's cooling earth theory
+Prompt: What process did the Earth undergo over time?
+Retry prompt: Which process did Buffon propose that the Earth experienced?
+A. The Earth was progressively cooling.
+B. The Earth remained at a constant temperature.
+C. The Earth experienced alternating warming and cooling cycles.
+D. The Earth was progressively heating up.
+Correct answer: A. The Earth was progressively cooling.
+Explanation: Buffon argued that the Earth was progressively cooling, and during this cooling it passed through phases or epochs.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=5a678cb45526b435bafa59a83fe68be234a456cb487b656602183eff721cf352
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — TRUE_FALSE
+Concept: fossils as historical evidence
+Prompt: By the late seventeenth century, some European naturalists, such as Robert Hooke, argued that natural objects like fossils should be used like historical texts to shed light on the future of human environments.
+Retry prompt: In the late seventeenth century, some European naturalists, including Robert Hooke, proposed that fossils, like historical texts, could reveal information about early human environments.
+Correct answer: False
+Correction: By the late seventeenth century, some European naturalists, such as Robert Hooke, argued that natural objects like fossils should be used like historical texts to shed light on early human environments.
+Explanation: The false statement changes the direction of inquiry: the naturalists used fossils to understand past environments, not future ones.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=38f09f5e9acd826b68fc6688b8d20a22d08c8e1c3a97eead0dfaea8879a4a04d
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 3 — MULTIPLE_CHOICE
+Concept: catastrophism in Earth history
+Prompt: What event did William Whiston propose as the cause of the Flood of Noah?
+Retry prompt: Which cause did William Whiston assign to the Flood of Noah?
+A. A sudden shift in Earth's axis
+B. A volcanic eruption
+C. A comet hitting Earth
+D. A massive earthquake
+Correct answer: C. A comet hitting Earth
+Explanation: Whiston proposed that a comet striking Earth caused the Flood of Noah, illustrating his catastrophist explanation of Earth's history.
+AI provenance: call=2 attempt=1 classification=primary fingerprint=bea2fbcd99161855a9ea56cb5261e20db6cf912a0d538dd5fa613fde36d7c5e7
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 4 — TRUE_FALSE
+Concept: mining and colonization relationship
+Prompt: In Europe, mining expanded together with colonization.
+Retry prompt: In Europe, the growth of mining accompanied the growth of colonization.
+Correct answer: True
+Correction: In Europe, mining expanded together with colonization.
+Explanation: In Europe, mining took off along with colonization, indicating that the two developments occurred together.
+AI provenance: call=3 attempt=1 classification=primary fingerprint=cde4c18dc5c3960997195686aabe35fe02ab67d6b6a1ef8a8cd1033f8b0ffbeb
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 5 — SHORT_ANSWER
+Concept: eighteenth-century French thinkers and Earth's age
+Prompt: What role did several eighteenth-century French thinkers play in the study of fossils and the age of the earth?
+Retry prompt: How did several eighteenth-century French thinkers contribute to the study of fossils and the age of the earth?
+Reference answer: They speculated about fossils and found ways to calculate the age of the earth.
+Rubric ideas: They speculated about fossils and found ways to calculate the age of the earth.
+Short-answer mode: proposition
+Explanation: These thinkers speculated about fossils and developed methods to calculate the age of the earth, setting the stage for later evolutionary theories.
+AI provenance: call=4 attempt=1 classification=primary fingerprint=a6fa673aee4e4f82517033dbc8fb901ba849c20c1b9a2eab51815650ac7fa002
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:19.279] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="The Earth was progressively cooling."
+[00:21.728] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="Your response correctly identifies that the Earth was progressively cooling over time." matchedIdeas=["The Earth was progressively cooling."] source="deepseek_local"
+[00:21.728] GRADE_STARTED ordinal=2 questionType="true_false" response="False"
+[00:24.483] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Your response correctly identifies that the statement is false because Hooke and others used fossils to understand past environments, not future ones." matchedIdeas=["Learner correctly identified the statement as False","The correction is that fossils shed light on early human environments, not the future"] source="deepseek_local"
+[00:24.483] GRADE_STARTED ordinal=3 questionType="multiple_choice" response="A comet hitting Earth"
+[00:26.428] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="Your response correctly identifies that William Whiston proposed a comet hitting Earth as the cause of the Flood of Noah." matchedIdeas=["A comet hitting Earth"] source="deepseek_local"
+[00:26.428] GRADE_STARTED ordinal=4 questionType="true_false" response="True"
+[00:28.580] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your response correctly identifies that mining expansion in Europe was tied to colonization." matchedIdeas=["Mining expanded together with colonization in Europe"] source="deepseek_local"
+[00:28.580] GRADE_STARTED ordinal=5 questionType="short_answer" response="They speculated about fossils and found ways to calculate the age of the earth."
+[00:31.137] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="Your response correctly captures the key role of these thinkers: they speculated about fossils and developed methods for calculating the earth's age." matchedIdeas=["They speculated about fossils and found ways to calculate the age of the earth."] source="deepseek_local"

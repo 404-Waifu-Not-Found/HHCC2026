@@ -1,0 +1,1972 @@
+{
+  "runId": "457117ff-148a-46fa-b9ca-dc8da4eed4c8",
+  "source": {
+    "videoId": "JoscDcbAjbY",
+    "title": "Electricity: Crash Course History of Science #27",
+    "language": "en",
+    "durationSeconds": 742,
+    "segments": [
+      {
+        "id": "youtube-json3-0-5279",
+        "startMs": 5279,
+        "endMs": 10420,
+        "text": "Like thermodynamics, the history of electrical physics has its roots in pre-industrial questions"
+      },
+      {
+        "id": "youtube-json3-1-10420",
+        "startMs": 10420,
+        "endMs": 15690,
+        "text": "that converged in the nineteenth century. These questions became a research paradigm,"
+      },
+      {
+        "id": "youtube-json3-2-15690",
+        "startMs": 15690,
+        "endMs": 21630,
+        "text": "driven by a whole crew of researchers… And they led to a power system that reshaped the"
+      },
+      {
+        "id": "youtube-json3-3-21630",
+        "startMs": 21630,
+        "endMs": 23960,
+        "text": "world. Time to get tingly!"
+      },
+      {
+        "id": "youtube-json3-5-32770",
+        "startMs": 32770,
+        "endMs": 36750,
+        "text": "The study of electricity goes all the way back to antiquity. Like, for a long time,"
+      },
+      {
+        "id": "youtube-json3-6-36750",
+        "startMs": 36750,
+        "endMs": 41789,
+        "text": "people knew that lightning is the powerful release of energy caused when two clouds are"
+      },
+      {
+        "id": "youtube-json3-7-41789",
+        "startMs": 41789,
+        "endMs": 43660,
+        "text": "in love and make a baby cloud."
+      },
+      {
+        "id": "youtube-json3-8-43660",
+        "startMs": 43660,
+        "endMs": 44890,
+        "text": "But that's hard to study."
+      },
+      {
+        "id": "youtube-json3-9-44890",
+        "startMs": 44890,
+        "endMs": 48820,
+        "text": "Much easier to study, however, was static electricity, or the electrical charge produced"
+      },
+      {
+        "id": "youtube-json3-10-48839",
+        "startMs": 48839,
+        "endMs": 53989,
+        "text": "by stationary friction: it waits for you to pet your cat, and then shocks you!"
+      },
+      {
+        "id": "youtube-json3-11-53989",
+        "startMs": 53989,
+        "endMs": 58649,
+        "text": "But for centuries, natural historians didn’t really have any good ideas about how to more"
+      },
+      {
+        "id": "youtube-json3-12-58649",
+        "startMs": 58649,
+        "endMs": 60659,
+        "text": "deeply understand this phenomenon."
+      },
+      {
+        "id": "youtube-json3-13-60659",
+        "startMs": 60659,
+        "endMs": 65960,
+        "text": "For one, they had no concept of current, or electricity as a flow of electrical charge."
+      },
+      {
+        "id": "youtube-json3-14-65960",
+        "startMs": 65960,
+        "endMs": 69710,
+        "text": "Current can happen either by the movement of negatively charged subatomic particles"
+      },
+      {
+        "id": "youtube-json3-15-69710",
+        "startMs": 69710,
+        "endMs": 75420,
+        "text": "called electrons through wires, or by the movement of charged molecules called ions."
+      },
+      {
+        "id": "youtube-json3-16-75420",
+        "startMs": 75420,
+        "endMs": 78160,
+        "text": "And these people didn't know either of those things existed."
+      },
+      {
+        "id": "youtube-json3-17-78240",
+        "startMs": 78240,
+        "endMs": 83200,
+        "text": "Secondly, the relationship between electricity and magnetism, which are intimately linked,"
+      },
+      {
+        "id": "youtube-json3-18-83200",
+        "startMs": 83200,
+        "endMs": 84200,
+        "text": "was a mystery."
+      },
+      {
+        "id": "youtube-json3-19-84200",
+        "startMs": 84200,
+        "endMs": 88770,
+        "text": "And, third, a lot of experimentation into these phenomenon basically amounted to weird"
+      },
+      {
+        "id": "youtube-json3-20-88770",
+        "startMs": 88770,
+        "endMs": 91479,
+        "text": "parlor tricks that had no obvious uses."
+      },
+      {
+        "id": "youtube-json3-21-91479",
+        "startMs": 91479,
+        "endMs": 96420,
+        "text": "English natural philosopher Francis Hauksbee, for example, found out in the early 1700s"
+      },
+      {
+        "id": "youtube-json3-22-96420",
+        "startMs": 96420,
+        "endMs": 102289,
+        "text": "that spinning a glass globe produced electricity—thus creating one of the first electrical generators."
+      },
+      {
+        "id": "youtube-json3-23-102289",
+        "startMs": 102289,
+        "endMs": 107900,
+        "text": "Then, in 1729, two amateur scholars named Stephen Gray and Granville Wheler discovered"
+      },
+      {
+        "id": "youtube-json3-24-107900",
+        "startMs": 107900,
+        "endMs": 112210,
+        "text": "that electricity could be communicated over long distances by contact."
+      },
+      {
+        "id": "youtube-json3-25-112210",
+        "startMs": 112210,
+        "endMs": 118109,
+        "text": "This was an important first step toward researching currents. But mostly it was an excuse to conduct"
+      },
+      {
+        "id": "youtube-json3-26-118109",
+        "startMs": 118109,
+        "endMs": 120859,
+        "text": "totally ethical scientific demonstrations…"
+      },
+      {
+        "id": "youtube-json3-27-120859",
+        "startMs": 120859,
+        "endMs": 125649,
+        "text": "like suspending a young boy from the ceiling, charging him up, and then watching him attract"
+      },
+      {
+        "id": "youtube-json3-28-125649",
+        "startMs": 125649,
+        "endMs": 127979,
+        "text": "objects with different body parts."
+      },
+      {
+        "id": "youtube-json3-29-127979",
+        "startMs": 127979,
+        "endMs": 132690,
+        "text": "And we can’t forget statesman, encyclopedist, and infamous knowitall Ben Franklin."
+      },
+      {
+        "id": "youtube-json3-30-132690",
+        "startMs": 132690,
+        "endMs": 137069,
+        "text": "He witnessed one of these flying-boy demonstrations in Boston, then went home to Philadelphia"
+      },
+      {
+        "id": "youtube-json3-31-137069",
+        "startMs": 137069,
+        "endMs": 139330,
+        "text": "and waited for a thunderstorm."
+      },
+      {
+        "id": "youtube-json3-32-139330",
+        "startMs": 139330,
+        "endMs": 145810,
+        "text": "As the story goes, in 1752, he flew his kite in a storm and succeeded in “drawing off”"
+      },
+      {
+        "id": "youtube-json3-33-145810",
+        "startMs": 145810,
+        "endMs": 147480,
+        "text": "electrical fire."
+      },
+      {
+        "id": "youtube-json3-34-147480",
+        "startMs": 147480,
+        "endMs": 152370,
+        "text": "Inspired by this incident, he developed the lightning rod. But no real epistemic knowledge."
+      },
+      {
+        "id": "youtube-json3-35-152370",
+        "startMs": 152370,
+        "endMs": 157010,
+        "text": "One of the first modern electrical physicists was Italian physician Luigi Galvani."
+      },
+      {
+        "id": "youtube-json3-36-157010",
+        "startMs": 157010,
+        "endMs": 163069,
+        "text": "In the late 1700s, his assistant accidentally caused a frog’s leg to twitch with a spark"
+      },
+      {
+        "id": "youtube-json3-37-163069",
+        "startMs": 163069,
+        "endMs": 165590,
+        "text": "from a nearby electrostatic generator."
+      },
+      {
+        "id": "youtube-json3-38-165590",
+        "startMs": 165590,
+        "endMs": 170970,
+        "text": "Inspired by this chance observation, he conducted many freaky experiments with frogs."
+      },
+      {
+        "id": "youtube-json3-39-170970",
+        "startMs": 170970,
+        "endMs": 176370,
+        "text": "After much frog-shocking, he theorized the existence of animal electricity, or the electrical"
+      },
+      {
+        "id": "youtube-json3-40-176370",
+        "startMs": 176370,
+        "endMs": 178520,
+        "text": "basis of nerve impulses."
+      },
+      {
+        "id": "youtube-json3-41-178520",
+        "startMs": 178520,
+        "endMs": 182620,
+        "text": "That inspired one young woman who was remarkably well informed about contemporary science:"
+      },
+      {
+        "id": "youtube-json3-42-182620",
+        "startMs": 182620,
+        "endMs": 187629,
+        "text": "in 1818, Mary Shelley published what would become a very famous book about a man zapped"
+      },
+      {
+        "id": "youtube-json3-43-187629",
+        "startMs": 187629,
+        "endMs": 191220,
+        "text": "to life by a Galvani-esque Doctor Frankenstein."
+      },
+      {
+        "id": "youtube-json3-44-191220",
+        "startMs": 191220,
+        "endMs": 196180,
+        "text": "Galvani also inspired his colleague, Italian physicist and chemist Alessandro Volta, to"
+      },
+      {
+        "id": "youtube-json3-45-196180",
+        "startMs": 196180,
+        "endMs": 198560,
+        "text": "push his work on nerves further."
+      },
+      {
+        "id": "youtube-json3-46-198560",
+        "startMs": 198560,
+        "endMs": 203549,
+        "text": "And Volta became a rockstar of electrical physics when he created the first practical"
+      },
+      {
+        "id": "youtube-json3-47-203549",
+        "startMs": 203549,
+        "endMs": 208739,
+        "text": "method of generating electricity—the first battery, known as the voltaic pile"
+      },
+      {
+        "id": "youtube-json3-48-208739",
+        "startMs": 208739,
+        "endMs": 211810,
+        "text": "So ThoughtBubble, let's make some sparks fly!"
+      },
+      {
+        "id": "youtube-json3-49-211810",
+        "startMs": 211810,
+        "endMs": 216560,
+        "text": "Volta’s battery evolved from humble origins. The first iterations were made of two different"
+      },
+      {
+        "id": "youtube-json3-50-216560",
+        "startMs": 216560,
+        "endMs": 220909,
+        "text": "metals separated by a brine-soaked cloth or piece of cardboard."
+      },
+      {
+        "id": "youtube-json3-51-220909",
+        "startMs": 220909,
+        "endMs": 226840,
+        "text": "But Volta kept improving the pile. In 1800, he stacked pairs of copper and zinc discs,"
+      },
+      {
+        "id": "youtube-json3-52-226840",
+        "startMs": 226840,
+        "endMs": 230459,
+        "text": "again separated by briny cloth or cardboard."
+      },
+      {
+        "id": "youtube-json3-53-230459",
+        "startMs": 230459,
+        "endMs": 235599,
+        "text": "When he connected the top and bottom of the pile, it generated a steady electric current"
+      },
+      {
+        "id": "youtube-json3-54-235599",
+        "startMs": 235599,
+        "endMs": 237760,
+        "text": "that could be carried by a wire."
+      },
+      {
+        "id": "youtube-json3-55-237760",
+        "startMs": 237760,
+        "endMs": 241329,
+        "text": "Volta had created the first stable source of electrical current!"
+      },
+      {
+        "id": "youtube-json3-56-241329",
+        "startMs": 241329,
+        "endMs": 245650,
+        "text": "This type of two-metal battery fulfilled the world’s scant electrical needs throughout"
+      },
+      {
+        "id": "youtube-json3-57-245650",
+        "startMs": 245650,
+        "endMs": 249040,
+        "text": "much of the First Industrial Revolution, until around 1870."
+      },
+      {
+        "id": "youtube-json3-58-249040",
+        "startMs": 249040,
+        "endMs": 254040,
+        "text": "But no one could really explain how it worked, in part because no one had brought electricity"
+      },
+      {
+        "id": "youtube-json3-59-254040",
+        "startMs": 254040,
+        "endMs": 255890,
+        "text": "and magnetism together."
+      },
+      {
+        "id": "youtube-json3-60-255890",
+        "startMs": 255890,
+        "endMs": 260530,
+        "text": "One of the first steps in this direction was taken in 1820 by Danish physicist and chemist"
+      },
+      {
+        "id": "youtube-json3-61-260530",
+        "startMs": 260530,
+        "endMs": 262220,
+        "text": "Hans Christian Ørsted."
+      },
+      {
+        "id": "youtube-json3-62-262220",
+        "startMs": 262220,
+        "endMs": 266110,
+        "text": "While demonstrating to his students how to heat up a wire by running an electrical current"
+      },
+      {
+        "id": "youtube-json3-63-266110",
+        "startMs": 266110,
+        "endMs": 271889,
+        "text": "through it, Ørsted noticed that his compass’ needle kept jumping to a ninety-degree angle."
+      },
+      {
+        "id": "youtube-json3-64-271889",
+        "startMs": 271889,
+        "endMs": 276650,
+        "text": "Somehow, he realized, the electrical charge and the magnetic attraction of the compass"
+      },
+      {
+        "id": "youtube-json3-65-276650",
+        "startMs": 276650,
+        "endMs": 277650,
+        "text": "were linked."
+      },
+      {
+        "id": "youtube-json3-66-277650",
+        "startMs": 277650,
+        "endMs": 282009,
+        "text": "Ørsted conducted further experiments and showed that electric currents actually produce"
+      },
+      {
+        "id": "youtube-json3-67-282009",
+        "startMs": 282009,
+        "endMs": 286190,
+        "text": "neatly circular magnetic fields when they flow through wires."
+      },
+      {
+        "id": "youtube-json3-68-286190",
+        "startMs": 286190,
+        "endMs": 288450,
+        "text": "This became known as Ørsted’s law."
+      },
+      {
+        "id": "youtube-json3-69-288450",
+        "startMs": 288450,
+        "endMs": 293590,
+        "text": "Later in 1820, at the Academy of Science in Paris, physicist André-Marie Ampère watched"
+      },
+      {
+        "id": "youtube-json3-70-293590",
+        "startMs": 293590,
+        "endMs": 298370,
+        "text": "as a friend reproduced Ørsted’s electrically-messing-with-a-compass trick."
+      },
+      {
+        "id": "youtube-json3-71-298370",
+        "startMs": 298370,
+        "endMs": 303729,
+        "text": "Amazed, Ampère went to work figuring out the math behind this special relationship."
+      },
+      {
+        "id": "youtube-json3-72-303729",
+        "startMs": 303729,
+        "endMs": 308530,
+        "text": "He showed that two parallel, electrified wires attract each other if the currents flow in"
+      },
+      {
+        "id": "youtube-json3-73-308530",
+        "startMs": 308530,
+        "endMs": 313150,
+        "text": "the same direction, and repel if the currents flow in opposite directions."
+      },
+      {
+        "id": "youtube-json3-74-313150",
+        "startMs": 313150,
+        "endMs": 318060,
+        "text": "Thanks Thoughtbubble. Ampère also showed that the force between the currents was inversely"
+      },
+      {
+        "id": "youtube-json3-75-318060",
+        "startMs": 318060,
+        "endMs": 322940,
+        "text": "proportional to the distance between them, and proportional to the intensity of the current"
+      },
+      {
+        "id": "youtube-json3-76-322940",
+        "startMs": 322940,
+        "endMs": 324360,
+        "text": "flowing in each."
+      },
+      {
+        "id": "youtube-json3-77-324360",
+        "startMs": 324360,
+        "endMs": 329980,
+        "text": "This became known as Ampère's law. You can watch a whole episode about that over at Crash"
+      },
+      {
+        "id": "youtube-json3-78-329980",
+        "startMs": 329980,
+        "endMs": 330980,
+        "text": "Course: Physics!"
+      },
+      {
+        "id": "youtube-json3-79-330980",
+        "startMs": 330980,
+        "endMs": 335800,
+        "text": "And he even theorized that there must be some “electrodynamic molecule” that carried"
+      },
+      {
+        "id": "youtube-json3-80-335800",
+        "startMs": 335800,
+        "endMs": 338400,
+        "text": "the currents of electricity and magnetism."
+      },
+      {
+        "id": "youtube-json3-81-338400",
+        "startMs": 338400,
+        "endMs": 340920,
+        "text": "This became the basis for the electron."
+      },
+      {
+        "id": "youtube-json3-82-340920",
+        "startMs": 340920,
+        "endMs": 346030,
+        "text": "Ampère’s insights became the foundation of the quantitative science of electromagnetism,"
+      },
+      {
+        "id": "youtube-json3-83-346030",
+        "startMs": 346030,
+        "endMs": 347210,
+        "text": "or “electrodynamics.”"
+      },
+      {
+        "id": "youtube-json3-84-347210",
+        "startMs": 347210,
+        "endMs": 354000,
+        "text": "In 1827, Germany physicist Georg Ohm —who’d been conducting research using Volta’s battery—published"
+      },
+      {
+        "id": "youtube-json3-85-354000",
+        "startMs": 354000,
+        "endMs": 355510,
+        "text": "his discovery that an electrical current"
+      },
+      {
+        "id": "youtube-json3-86-355510",
+        "startMs": 355510,
+        "endMs": 360490,
+        "text": "between two points is directly proportional to the voltage, or potential difference, between"
+      },
+      {
+        "id": "youtube-json3-87-360490",
+        "startMs": 360490,
+        "endMs": 361490,
+        "text": "them."
+      },
+      {
+        "id": "youtube-json3-88-361490",
+        "startMs": 361490,
+        "endMs": 362740,
+        "text": "This became known as Ohm’s law."
+      },
+      {
+        "id": "youtube-json3-89-362740",
+        "startMs": 362740,
+        "endMs": 367010,
+        "text": "This can be expressed using the concept of resistance, or the difficulty of passing an"
+      },
+      {
+        "id": "youtube-json3-90-367010",
+        "startMs": 367010,
+        "endMs": 370430,
+        "text": "electric current through that conductor, in a really simple equation:"
+      },
+      {
+        "id": "youtube-json3-91-370430",
+        "startMs": 370430,
+        "endMs": 377120,
+        "text": "“I = V/R.” Current, measured in amperes, is equal to voltage, measured in volts, divided"
+      },
+      {
+        "id": "youtube-json3-92-377120",
+        "startMs": 377120,
+        "endMs": 379280,
+        "text": "by resistance, measured in ohms."
+      },
+      {
+        "id": "youtube-json3-93-379280",
+        "startMs": 379280,
+        "endMs": 383280,
+        "text": "Yep: all three scientists became standard units."
+      },
+      {
+        "id": "youtube-json3-94-383400",
+        "startMs": 383400,
+        "endMs": 384860,
+        "text": "Congrats, scientists!"
+      },
+      {
+        "id": "youtube-json3-95-384860",
+        "startMs": 384860,
+        "endMs": 389740,
+        "text": "They say, in Physics the greatest honor is when your name starts to be spelled with a lower case letter."
+      },
+      {
+        "id": "youtube-json3-96-389740",
+        "startMs": 389740,
+        "endMs": 394640,
+        "text": "With practical batteries and basic scientific laws, the stage was set for electricity to"
+      },
+      {
+        "id": "youtube-json3-97-394650",
+        "startMs": 394650,
+        "endMs": 398370,
+        "text": "become an industry—enter motors and lights."
+      },
+      {
+        "id": "youtube-json3-98-398370",
+        "startMs": 398370,
+        "endMs": 403440,
+        "text": "Born to a poor family in Newington Butts, London, Michael Faraday became obsessed with"
+      },
+      {
+        "id": "youtube-json3-99-403440",
+        "startMs": 403440,
+        "endMs": 406150,
+        "text": "electricity and chemistry at a young age."
+      },
+      {
+        "id": "youtube-json3-100-406150",
+        "startMs": 406150,
+        "endMs": 411889,
+        "text": "Eventually, he became as important to the sciences of stuff as Darwin was to those of"
+      },
+      {
+        "id": "youtube-json3-101-411889",
+        "startMs": 411889,
+        "endMs": 412889,
+        "text": "life."
+      },
+      {
+        "id": "youtube-json3-102-412889",
+        "startMs": 412889,
+        "endMs": 417690,
+        "text": "In 1821—a year after Ørsted characterized electromagnetism and Ampère began experimenting"
+      },
+      {
+        "id": "youtube-json3-103-417690",
+        "startMs": 417690,
+        "endMs": 423000,
+        "text": "with the math behind it—Faraday got to work inventing electromagnetic motors."
+      },
+      {
+        "id": "youtube-json3-104-423000",
+        "startMs": 423000,
+        "endMs": 428229,
+        "text": "His motors worked due to “electromagnetic rotation,” a motion made by the circular"
+      },
+      {
+        "id": "youtube-json3-105-428229",
+        "startMs": 428229,
+        "endMs": 430990,
+        "text": "magnetic force around an electrified wire."
+      },
+      {
+        "id": "youtube-json3-106-430990",
+        "startMs": 430990,
+        "endMs": 437310,
+        "text": "In 1831, he had his big breakthrough—electromagnetic induction, meaning the generation of electricity"
+      },
+      {
+        "id": "youtube-json3-107-437310",
+        "startMs": 437310,
+        "endMs": 443260,
+        "text": "in one wire via the changing magnetic field created by the current in another wire."
+      },
+      {
+        "id": "youtube-json3-108-443260",
+        "startMs": 443260,
+        "endMs": 447400,
+        "text": "This became the basis of the electromagnetic technologies that we use today."
+      },
+      {
+        "id": "youtube-json3-109-447400",
+        "startMs": 447400,
+        "endMs": 449110,
+        "text": "So… thanks, Mike!"
+      },
+      {
+        "id": "youtube-json3-110-449110",
+        "startMs": 449110,
+        "endMs": 453479,
+        "text": "In the same year, Faraday also discovered magneto-electric induction, which is the generation"
+      },
+      {
+        "id": "youtube-json3-111-453479",
+        "startMs": 453479,
+        "endMs": 458360,
+        "text": "of a steady, direct electrical current in a wire by attaching it to a copper disc,"
+      },
+      {
+        "id": "youtube-json3-112-458360",
+        "startMs": 458360,
+        "endMs": 464050,
+        "text": "and then rotating the disc between the poles of a magnet. This was the first modern electrical"
+      },
+      {
+        "id": "youtube-json3-113-464050",
+        "startMs": 464050,
+        "endMs": 465050,
+        "text": "generator!"
+      },
+      {
+        "id": "youtube-json3-114-465050",
+        "startMs": 465050,
+        "endMs": 468940,
+        "text": "And he proved that the electricity created by magnetic induction, the electricity produced"
+      },
+      {
+        "id": "youtube-json3-115-468940",
+        "startMs": 468940,
+        "endMs": 474550,
+        "text": "by a voltaic battery, and good ole static electricity were all the same phenomenon."
+      },
+      {
+        "id": "youtube-json3-116-474550",
+        "startMs": 474550,
+        "endMs": 479810,
+        "text": "Faraday’s experiments led to the invention of modern electrical motors, generators, and"
+      },
+      {
+        "id": "youtube-json3-117-479810",
+        "startMs": 479810,
+        "endMs": 480810,
+        "text": "transformers."
+      },
+      {
+        "id": "youtube-json3-118-480810",
+        "startMs": 480810,
+        "endMs": 485430,
+        "text": "He figured out how to make electricity do work on magnetism and vice versa."
+      },
+      {
+        "id": "youtube-json3-119-485430",
+        "startMs": 485430,
+        "endMs": 490560,
+        "text": "And his young buddy, Scottish physicist James Clerk Maxwell, played the Ampère to his Volta,"
+      },
+      {
+        "id": "youtube-json3-120-490560",
+        "startMs": 490560,
+        "endMs": 492870,
+        "text": "figuring out the math involved in induction."
+      },
+      {
+        "id": "youtube-json3-121-492870",
+        "startMs": 492870,
+        "endMs": 498310,
+        "text": "In 1855, Maxwell dropped “On Faraday’s lines of force,” showing Faraday’s discoveries"
+      },
+      {
+        "id": "youtube-json3-122-498310",
+        "startMs": 498310,
+        "endMs": 502290,
+        "text": "about electricity and magnetism in the forms of differential equations."
+      },
+      {
+        "id": "youtube-json3-123-502290",
+        "startMs": 502290,
+        "endMs": 507070,
+        "text": "Maxwell’s long paper, “On Physical Lines of Force,” introduced his full theory of"
+      },
+      {
+        "id": "youtube-json3-124-507070",
+        "startMs": 507070,
+        "endMs": 510900,
+        "text": "electromagnetism in parts over 1861 and ‘62."
+      },
+      {
+        "id": "youtube-json3-125-510900",
+        "startMs": 510900,
+        "endMs": 516650,
+        "text": "Here, he theorized that electromagnetic waves travel at the speed of light, and that light"
+      },
+      {
+        "id": "youtube-json3-126-516650",
+        "startMs": 516650,
+        "endMs": 520540,
+        "text": "must exist in the same medium as electrical and magnetic energy."
+      },
+      {
+        "id": "youtube-json3-127-520540",
+        "startMs": 520540,
+        "endMs": 526190,
+        "text": "By connecting light, electricity, and magnetism, Maxwell laid the groundwork for modern physics."
+      },
+      {
+        "id": "youtube-json3-128-526190",
+        "startMs": 526190,
+        "endMs": 528660,
+        "text": "And his work was a major influence on Einstein."
+      },
+      {
+        "id": "youtube-json3-129-528660",
+        "startMs": 528660,
+        "endMs": 533520,
+        "text": "But the average person in the 1870s didn’t know who Faraday and Maxwell were, much less"
+      },
+      {
+        "id": "youtube-json3-130-533520",
+        "startMs": 533520,
+        "endMs": 536450,
+        "text": "that they had revolutionized energy and work."
+      },
+      {
+        "id": "youtube-json3-131-536450",
+        "startMs": 536450,
+        "endMs": 539820,
+        "text": "There was still no system for using electricity industrially."
+      },
+      {
+        "id": "youtube-json3-132-539820",
+        "startMs": 539820,
+        "endMs": 544540,
+        "text": "For that useful system, we have to hop across the Atlantic to the first home of corporate"
+      },
+      {
+        "id": "youtube-json3-133-544540",
+        "startMs": 544540,
+        "endMs": 547910,
+        "text": "research and development in science—Menlo Park, New Jersey."
+      },
+      {
+        "id": "youtube-json3-134-547910",
+        "startMs": 547910,
+        "endMs": 554400,
+        "text": "Here, a mix of brilliant engineers, scarcely trained boys, and one pet bear (yes!) worked"
+      },
+      {
+        "id": "youtube-json3-135-554400",
+        "startMs": 554400,
+        "endMs": 556800,
+        "text": "under the direction of a controversial inventor—"
+      },
+      {
+        "id": "youtube-json3-136-556800",
+        "startMs": 556800,
+        "endMs": 562280,
+        "text": "who was or was decidedly not much of a scientist himself, depending on which historian you"
+      },
+      {
+        "id": "youtube-json3-137-562280",
+        "startMs": 562280,
+        "endMs": 563280,
+        "text": "prefer."
+      },
+      {
+        "id": "youtube-json3-138-563280",
+        "startMs": 563280,
+        "endMs": 564870,
+        "text": "His name was Thomas Edison."
+      },
+      {
+        "id": "youtube-json3-139-564870",
+        "startMs": 564870,
+        "endMs": 568980,
+        "text": "Edison, or the “Wizard of Menlo Park,” or the “Napoleon of Science,” started"
+      },
+      {
+        "id": "youtube-json3-140-568980",
+        "startMs": 568980,
+        "endMs": 572830,
+        "text": "his career as a lowly telegraph operator at the age of sixteen."
+      },
+      {
+        "id": "youtube-json3-141-572830",
+        "startMs": 572830,
+        "endMs": 579860,
+        "text": "He worked his way up, improving telegraph systems, until he could open his own contract-based-lab-slash-workshop"
+      },
+      {
+        "id": "youtube-json3-142-579860",
+        "startMs": 579860,
+        "endMs": 580890,
+        "text": "in 1876."
+      },
+      {
+        "id": "youtube-json3-143-580890",
+        "startMs": 580890,
+        "endMs": 585780,
+        "text": "Mostly, people remember Edison for his work on making practical incandescent light bulbs,"
+      },
+      {
+        "id": "youtube-json3-144-585780",
+        "startMs": 585780,
+        "endMs": 590010,
+        "text": "but he should really be thought of as the person who first saw the potential for an"
+      },
+      {
+        "id": "youtube-json3-145-590010",
+        "startMs": 590010,
+        "endMs": 592360,
+        "text": "entire electrical grid."
+      },
+      {
+        "id": "youtube-json3-146-592360",
+        "startMs": 592360,
+        "endMs": 596510,
+        "text": "This included the generation of power, its distribution to homes and businesses, and"
+      },
+      {
+        "id": "youtube-json3-147-596510",
+        "startMs": 596510,
+        "endMs": 600540,
+        "text": "the invention of useful products that required electricity to work."
+      },
+      {
+        "id": "youtube-json3-148-600540",
+        "startMs": 600540,
+        "endMs": 605450,
+        "text": "In the late 1870s, people didn’t understand or see the need for electricity. Customers"
+      },
+      {
+        "id": "youtube-json3-149-605450",
+        "startMs": 605450,
+        "endMs": 608170,
+        "text": "had to be created. So what did Edison do?"
+      },
+      {
+        "id": "youtube-json3-150-608170",
+        "startMs": 608170,
+        "endMs": 612290,
+        "text": "Befriended the richest guy in New York, who was also the richest guy in the world—J."
+      },
+      {
+        "id": "youtube-json3-151-612290",
+        "startMs": 612290,
+        "endMs": 613600,
+        "text": "P. Morgan."
+      },
+      {
+        "id": "youtube-json3-152-613600",
+        "startMs": 613600,
+        "endMs": 617960,
+        "text": "With Morgan’s money, Edison had the resources to work out the longest-lasting filament,"
+      },
+      {
+        "id": "youtube-json3-153-617960",
+        "startMs": 617960,
+        "endMs": 621940,
+        "text": "or slender, heated-up-until-visibly-lighted bit, for his bulbs."
+      },
+      {
+        "id": "youtube-json3-154-621940",
+        "startMs": 621940,
+        "endMs": 626440,
+        "text": "This ended up being made of carbon, after thousands of experiments on different materials."
+      },
+      {
+        "id": "youtube-json3-155-626440",
+        "startMs": 626440,
+        "endMs": 631070,
+        "text": "But he also had the resources to show off his lights in Paris and London. And, most"
+      },
+      {
+        "id": "youtube-json3-156-631070",
+        "startMs": 631070,
+        "endMs": 633790,
+        "text": "importantly, to electrify downtown Manhattan."
+      },
+      {
+        "id": "youtube-json3-157-633790",
+        "startMs": 633790,
+        "endMs": 637620,
+        "text": "Think about it for a second: the night before 1880 was dark."
+      },
+      {
+        "id": "youtube-json3-158-637620",
+        "startMs": 637620,
+        "endMs": 641840,
+        "text": "Yes, gas lamps existed, but they were weak, smelly, and dangerous."
+      },
+      {
+        "id": "youtube-json3-159-641840",
+        "startMs": 641840,
+        "endMs": 646760,
+        "text": "Edison’s electrification of the cultural and financial capital of an ascendent American"
+      },
+      {
+        "id": "youtube-json3-160-646760",
+        "startMs": 646760,
+        "endMs": 650160,
+        "text": "empire was… blindingly amazing."
+      },
+      {
+        "id": "youtube-json3-161-650160",
+        "startMs": 650160,
+        "endMs": 652750,
+        "text": "People stayed up longer. More work got done."
+      },
+      {
+        "id": "youtube-json3-162-652750",
+        "startMs": 652750,
+        "endMs": 657280,
+        "text": "The feedback loop of just pushing off bedtime by a few hours was enormous—and this was"
+      },
+      {
+        "id": "youtube-json3-163-657280",
+        "startMs": 657280,
+        "endMs": 661400,
+        "text": "before anyone had devised a good mass-scale electrical motor or vehicle."
+      },
+      {
+        "id": "youtube-json3-164-661400",
+        "startMs": 661400,
+        "endMs": 665560,
+        "text": "It’s true that Edison didn’t invent the components of his electrical power system,"
+      },
+      {
+        "id": "youtube-json3-165-665560",
+        "startMs": 665560,
+        "endMs": 666980,
+        "text": "only improved upon them,"
+      },
+      {
+        "id": "youtube-json3-166-666980",
+        "startMs": 666980,
+        "endMs": 671070,
+        "text": "thanks to his team-based, finance-backed approach to science and technology."
+      },
+      {
+        "id": "youtube-json3-167-671070",
+        "startMs": 671070,
+        "endMs": 675890,
+        "text": "And it’s true that he became embroiled in an intense public battle called the Current War,"
+      },
+      {
+        "id": "youtube-json3-168-675890",
+        "startMs": 675890,
+        "endMs": 681150,
+        "text": "over the safety and efficiency of his direct current, or DC, versus his rival Westinghouse’s"
+      },
+      {
+        "id": "youtube-json3-169-681150",
+        "startMs": 681150,
+        "endMs": 683970,
+        "text": "much more practical alternating current, or AC."
+      },
+      {
+        "id": "youtube-json3-170-683970",
+        "startMs": 683970,
+        "endMs": 688301,
+        "text": "Aaaaand it’s true that Edison promoted capital punishment in New York, using an electric"
+      },
+      {
+        "id": "youtube-json3-171-688301",
+        "startMs": 688301,
+        "endMs": 690850,
+        "text": "chair powered by Westinghouse’s AC."
+      },
+      {
+        "id": "youtube-json3-172-690850",
+        "startMs": 690850,
+        "endMs": 695900,
+        "text": "But—beginning with incandescent light—Edison and other inventors used the discoveries of"
+      },
+      {
+        "id": "youtube-json3-173-695900",
+        "startMs": 695900,
+        "endMs": 700120,
+        "text": "the early electrical physicists to utterly transform the world."
+      },
+      {
+        "id": "youtube-json3-174-700120",
+        "startMs": 700120,
+        "endMs": 705190,
+        "text": "Next time—we’ll follow Edison, tracing the effects of corporate research and mega-scale"
+      },
+      {
+        "id": "youtube-json3-175-705190",
+        "startMs": 705190,
+        "endMs": 709671,
+        "text": "engineering through many fields during the Second Industrial Revolution. It’s time"
+      },
+      {
+        "id": "youtube-json3-176-709671",
+        "startMs": 709671,
+        "endMs": 712050,
+        "text": "to go big or go bigger!"
+      },
+      {
+        "id": "youtube-json3-177-712050",
+        "startMs": 712050,
+        "endMs": 715570,
+        "text": "Crash Course History of Science is filmed in the Dr. Cheryl C. Kinney studio in Missoula,"
+      },
+      {
+        "id": "youtube-json3-178-715570",
+        "startMs": 715570,
+        "endMs": 719480,
+        "text": "Montana and it’s made with the help of all this nice people and our animation team is"
+      },
+      {
+        "id": "youtube-json3-179-719480",
+        "startMs": 719480,
+        "endMs": 720480,
+        "text": "Thought Cafe."
+      },
+      {
+        "id": "youtube-json3-180-720480",
+        "startMs": 720480,
+        "endMs": 723800,
+        "text": "Crash Course is a Complexly production. If you wanna keep imagining the world complexly"
+      },
+      {
+        "id": "youtube-json3-181-723800",
+        "startMs": 723800,
+        "endMs": 729330,
+        "text": "with us, you can check out some of our other channels like Animal Wonders, The Art Assignment, and Scishow Psych."
+      },
+      {
+        "id": "youtube-json3-182-729330",
+        "startMs": 729330,
+        "endMs": 733110,
+        "text": "And, if you’d like to keep Crash Course free for everybody, forever, you can support"
+      },
+      {
+        "id": "youtube-json3-183-733110",
+        "startMs": 733110,
+        "endMs": 737360,
+        "text": "the series at Patreon; a crowdfunding platform that allows you to support the content you"
+      },
+      {
+        "id": "youtube-json3-184-737360",
+        "startMs": 737360,
+        "endMs": 741350,
+        "text": "love. Thank you to all of our patrons for making Crash Course possible with their continued"
+      },
+      {
+        "id": "youtube-json3-185-741350",
+        "startMs": 741350,
+        "endMs": 741850,
+        "text": "support."
+      }
+    ],
+    "sourceSegmentCount": 185,
+    "characterCount": 12357,
+    "transcriptFingerprint": "a487e35f",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "dbe7102d-866b-42b8-8dee-7b1760b87887",
+    "generationSessionId": "26df2c84-c8f8-4ce6-ac26-7a10a4adfe55",
+    "recoverySessionId": "8be32cea-0618-4760-8751-00a871deec89",
+    "questionPlan": {
+      "seed": "e3713843418c8de0d5666ebde44ca8d0994ced01fdcd05a11d30035808e3ac9c",
+      "types": [
+        "multiple_choice",
+        "short_answer",
+        "multiple_choice",
+        "short_answer",
+        "true_false"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Electricity: Crash Course History of Science #27",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "Maxwell's mathematical formulation",
+          "question": "What did Maxwell's 1855 paper 'On Faraday's lines of force' accomplish?",
+          "retryQuestion": "Which statement correctly describes the contribution of Maxwell's 1855 paper?",
+          "explanation": "Maxwell expressed Faraday's experimental discoveries about electricity and magnetism using differential equations, thereby providing a mathematical formulation for them.",
+          "type": "multiple_choice",
+          "choices": [
+            "It described the experimental setup Faraday used to discover induction.",
+            "It presented Faraday's discoveries about electricity and magnetism in the form of differential equations.",
+            "It introduced the concept of electromagnetic waves traveling at the speed of light.",
+            "It demonstrated that light and electrical energy exist in the same medium."
+          ],
+          "answerIndex": 1,
+          "answer": "It presented Faraday's discoveries about electricity and magnetism in the form of differential equations."
+        },
+        {
+          "id": "q2",
+          "concept": "Ohm's law relationship",
+          "question": "What is the relationship between electrical current and voltage between two points?",
+          "retryQuestion": "How does the electrical current between two points relate to the voltage, or potential difference, between them?",
+          "explanation": "Ohm's law states that the current between two points is directly proportional to the voltage, or potential difference, between them.",
+          "type": "short_answer",
+          "answer": "The current is directly proportional to the voltage.",
+          "rubricIdeas": [
+            "The current is directly proportional to the voltage."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The current is directly proportional to the voltage."
+            ],
+            "acceptableAnswers": [
+              "The current is directly proportional to the voltage."
+            ]
+          }
+        },
+        {
+          "id": "q3",
+          "concept": "Voltaic pile",
+          "question": "What did Volta's pile of copper and zinc discs separated by briny cloth or cardboard achieve when its top and bottom were connected?",
+          "retryQuestion": "What was the outcome of connecting the top and bottom of Volta's pile of copper and zinc discs?",
+          "explanation": "Connecting the top and bottom of the pile allowed it to generate a steady electric current that could be carried by a wire, making it the first stable source of electrical current.",
+          "type": "multiple_choice",
+          "choices": [
+            "It produced a single brief spark that could not be sustained.",
+            "It converted electrical current into chemical energy.",
+            "It generated a steady electric current that could be carried by a wire.",
+            "It stored static charge without producing a current."
+          ],
+          "answerIndex": 2,
+          "answer": "It generated a steady electric current that could be carried by a wire."
+        },
+        {
+          "id": "q4",
+          "concept": "Ampère's force law",
+          "question": "How does the force between two electric currents depend on the distance between them and on the intensity of each current?",
+          "retryQuestion": "What is the relationship between the force between two currents, their distance, and their intensities?",
+          "explanation": "Ampère's law states that the force between two currents is inversely proportional to the distance between them and proportional to the intensity of each current.",
+          "type": "short_answer",
+          "answer": "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current.",
+          "rubricIdeas": [
+            "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+            ],
+            "acceptableAnswers": [
+              "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "current carriers",
+          "question": "Electric current can occur either by the movement of positively charged subatomic particles called protons through wires, or by the movement of charged molecules called ions.",
+          "retryQuestion": "Electric current can be carried by the movement of electrons through wires or by the movement of charged molecules called ions.",
+          "explanation": "The false statement incorrectly replaces electrons with protons. In wires, current is carried by electrons, which are negatively charged subatomic particles, not by protons.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "Electric current can occur either by the movement of negatively charged subatomic particles called electrons through wires, or by the movement of charged molecules called ions."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 5,
+      "retryCount": 0,
+      "inputTokens": 50506,
+      "outputTokens": 872,
+      "reasoningTokens": 0,
+      "elapsedMs": 11360,
+      "sourceSelection": {
+        "sentenceCount": 114,
+        "excludedSentenceCount": 37,
+        "candidateWindowCount": 52,
+        "selectedWindowCount": 30,
+        "focusWordCount": 111
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "Maxwell's mathematical formulation",
+      "question": "What did Maxwell's 1855 paper 'On Faraday's lines of force' accomplish?",
+      "retryQuestion": "Which statement correctly describes the contribution of Maxwell's 1855 paper?",
+      "explanation": "Maxwell expressed Faraday's experimental discoveries about electricity and magnetism using differential equations, thereby providing a mathematical formulation for them.",
+      "type": "multiple_choice",
+      "choices": [
+        "It described the experimental setup Faraday used to discover induction.",
+        "It presented Faraday's discoveries about electricity and magnetism in the form of differential equations.",
+        "It introduced the concept of electromagnetic waves traveling at the speed of light.",
+        "It demonstrated that light and electrical energy exist in the same medium."
+      ],
+      "answerIndex": 1,
+      "answer": "It presented Faraday's discoveries about electricity and magnetism in the form of differential equations."
+    },
+    {
+      "id": "q2",
+      "concept": "Ohm's law relationship",
+      "question": "What is the relationship between electrical current and voltage between two points?",
+      "retryQuestion": "How does the electrical current between two points relate to the voltage, or potential difference, between them?",
+      "explanation": "Ohm's law states that the current between two points is directly proportional to the voltage, or potential difference, between them.",
+      "type": "short_answer",
+      "answer": "The current is directly proportional to the voltage.",
+      "rubricIdeas": [
+        "The current is directly proportional to the voltage."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The current is directly proportional to the voltage."
+        ],
+        "acceptableAnswers": [
+          "The current is directly proportional to the voltage."
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "concept": "Voltaic pile",
+      "question": "What did Volta's pile of copper and zinc discs separated by briny cloth or cardboard achieve when its top and bottom were connected?",
+      "retryQuestion": "What was the outcome of connecting the top and bottom of Volta's pile of copper and zinc discs?",
+      "explanation": "Connecting the top and bottom of the pile allowed it to generate a steady electric current that could be carried by a wire, making it the first stable source of electrical current.",
+      "type": "multiple_choice",
+      "choices": [
+        "It produced a single brief spark that could not be sustained.",
+        "It converted electrical current into chemical energy.",
+        "It generated a steady electric current that could be carried by a wire.",
+        "It stored static charge without producing a current."
+      ],
+      "answerIndex": 2,
+      "answer": "It generated a steady electric current that could be carried by a wire."
+    },
+    {
+      "id": "q4",
+      "concept": "Ampère's force law",
+      "question": "How does the force between two electric currents depend on the distance between them and on the intensity of each current?",
+      "retryQuestion": "What is the relationship between the force between two currents, their distance, and their intensities?",
+      "explanation": "Ampère's law states that the force between two currents is inversely proportional to the distance between them and proportional to the intensity of each current.",
+      "type": "short_answer",
+      "answer": "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current.",
+      "rubricIdeas": [
+        "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+        ],
+        "acceptableAnswers": [
+          "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "current carriers",
+      "question": "Electric current can occur either by the movement of positively charged subatomic particles called protons through wires, or by the movement of charged molecules called ions.",
+      "retryQuestion": "Electric current can be carried by the movement of electrons through wires or by the movement of charged molecules called ions.",
+      "explanation": "The false statement incorrectly replaces electrons with protons. In wires, current is carried by electrons, which are negatively charged subatomic particles, not by protons.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "Electric current can occur either by the movement of negatively charged subatomic particles called electrons through wires, or by the movement of charged molecules called ions."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "9310a77be5cece871620e8ae3d10b09b7aafe1f381406a0ee39a3b4eaed9662d"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "9f95dffdaf6b4f05ca4bdeb57ab9fb2d2393935e3f7eca639f614349aea533fd"
+    },
+    {
+      "callIndex": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "4d7c83781c38b4849f65109f3d64ce55d79daa897712cb053e12528638d54a24"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "00cbfb3f137e93ce1e2261d44b3310d7931e864cd456984f6a4893b911f1dbde"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "cc6e899356936b56d043a59a749839aa793f5fe031c1fdbdd74e041ee103123a"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "It presented Faraday's discoveries about electricity and magnetism in the form of differential equations.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that Maxwell's 1855 paper translated Faraday's experimental findings into mathematical form using differential equations.",
+        "matchedIdeas": [
+          "Presented Faraday's discoveries in the form of differential equations"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "The current is directly proportional to the voltage.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the direct proportionality between current and voltage, which is the key relationship being asked about.",
+        "matchedIdeas": [
+          "The current is directly proportional to the voltage."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "It generated a steady electric current that could be carried by a wire.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that Volta's pile produced a steady electric current that could be carried by a wire, which was its key achievement.",
+        "matchedIdeas": [
+          "generated a steady electric current carried by a wire"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly states that the force is inversely proportional to the distance between the currents and proportional to the intensity of each current.",
+        "matchedIdeas": [
+          "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the statement is false because electric current in wires is carried by electrons, not protons.",
+        "matchedIdeas": [
+          "Correctly identifies the statement as false"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "JoscDcbAjbY"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 2318,
+      "videoId": "JoscDcbAjbY",
+      "title": "Electricity: Crash Course History of Science #27",
+      "language": "en",
+      "durationSeconds": 742,
+      "segmentCount": 185,
+      "sourceSegmentCount": 185,
+      "characterCount": 12357,
+      "transcriptFingerprint": "a487e35f",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 2318,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 3341,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 3372,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 5679,
+      "ordinal": 1,
+      "concept": "Maxwell's mathematical formulation",
+      "prompt": "What did Maxwell's 1855 paper 'On Faraday's lines of force' accomplish?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 5680,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2338,
+      "inputTokens": 9707,
+      "outputTokens": 153,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 5680,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "8be32cea-0618-4760-8751-00a871deec89"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 5698,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 5776,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 7732,
+      "ordinal": 2,
+      "concept": "Ohm's law relationship",
+      "prompt": "What is the relationship between electrical current and voltage between two points?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 7732,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2034,
+      "inputTokens": 10150,
+      "outputTokens": 160,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7732,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "8be32cea-0618-4760-8751-00a871deec89"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7747,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 7760,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 10133,
+      "ordinal": 3,
+      "concept": "Voltaic pile",
+      "prompt": "What did Volta's pile of copper and zinc discs separated by briny cloth or cardboard achieve when its top and bottom were connected?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 10135,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2387,
+      "inputTokens": 9831,
+      "outputTokens": 200,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10135,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "8be32cea-0618-4760-8751-00a871deec89"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10165,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10213,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 12426,
+      "ordinal": 4,
+      "concept": "Ampère's force law",
+      "prompt": "How does the force between two electric currents depend on the distance between them and on the intensity of each current?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12427,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2261,
+      "inputTokens": 10246,
+      "outputTokens": 193,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12427,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "8be32cea-0618-4760-8751-00a871deec89"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12459,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12503,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 14691,
+      "ordinal": 5,
+      "concept": "current carriers",
+      "prompt": "Electric current can occur either by the movement of positively charged subatomic particles called protons through wires, or by the movement of charged molecules called ions."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14691,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2232,
+      "inputTokens": 10572,
+      "outputTokens": 166,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14691,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "8be32cea-0618-4760-8751-00a871deec89"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 14693,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 5,
+      "retryCount": 0,
+      "generationElapsedMs": 11360,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 14693,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "It presented Faraday's discoveries about electricity and magnetism in the form of differential equations."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 17070,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that Maxwell's 1855 paper translated Faraday's experimental findings into mathematical form using differential equations.",
+      "matchedIdeas": [
+        "Presented Faraday's discoveries in the form of differential equations"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 17070,
+      "ordinal": 2,
+      "questionType": "short_answer",
+      "response": "The current is directly proportional to the voltage."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 19168,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the direct proportionality between current and voltage, which is the key relationship being asked about.",
+      "matchedIdeas": [
+        "The current is directly proportional to the voltage."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 19168,
+      "ordinal": 3,
+      "questionType": "multiple_choice",
+      "response": "It generated a steady electric current that could be carried by a wire."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 21275,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that Volta's pile produced a steady electric current that could be carried by a wire, which was its key achievement.",
+      "matchedIdeas": [
+        "generated a steady electric current carried by a wire"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 21275,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 23473,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly states that the force is inversely proportional to the distance between the currents and proportional to the intensity of each current.",
+      "matchedIdeas": [
+        "The force is inversely proportional to the distance between the currents and proportional to the intensity of each current."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 23473,
+      "ordinal": 5,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 26103,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the statement is false because electric current in wires is carried by electrons, not protons.",
+      "matchedIdeas": [
+        "Correctly identifies the statement as false"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

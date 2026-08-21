@@ -1,0 +1,1048 @@
+{
+  "runId": "d8eff79f-394a-4f09-b110-75fcb223f53a",
+  "source": {
+    "videoId": "NgVSHXOz3jI",
+    "title": "Einstein's Revolution: Crash Course History of Science #32",
+    "language": "en",
+    "durationSeconds": 711,
+    "segments": [
+      {
+        "id": "youtube-text-0-5000",
+        "startMs": 5000,
+        "endMs": 40000,
+        "text": "There was physics before Einstein… in the same way that there was biology before Darwin. Einstein didn’t just add some new ideas to physics. And he didn’t just add a unifying framework for doing physics, like Newton. Einstein took what people thought was physics, turned it upside down, then turned it inside out. In the same way Darwin’s work made people see life itself differently, Einstein’s work made humanity reexamine time and space. [Intro Music Plays]"
+      },
+      {
+        "id": "youtube-text-1-40000",
+        "startMs": 40000,
+        "endMs": 70000,
+        "text": "The classical worldview—associated with names you know, like Euclid, Aristotle, and Newton—held that the rules governing space and time were absolute. One meter was always one meter long; one hour would always be one hour long… Matter was made up of immutable and indivisible atoms. And energy moved through a medium called ether—because everything had to move through something, right? God wouldn’t just make, I dunno, a howling void? And with new disciplines like thermodynamics and fun applications like steam power and"
+      },
+      {
+        "id": "youtube-text-2-70000",
+        "startMs": 70000,
+        "endMs": 100000,
+        "text": "light bulbs, human understanding of the fundamental forces of nature seemed pretty solid. To quote historian of science Milena Wazeck, by 1900, “physics was perceived by many to be an almost completed discipline.” But within this almost-completeness lurked many unanswered questions. One of the biggest was the failure of the Michelson–Morley experiment in 1887. They’d attempted to demonstrate that the speed of light changed just a little when measured from the earth, which is always moving, relative to the ether, which never moves."
+      },
+      {
+        "id": "youtube-text-3-100000",
+        "startMs": 100000,
+        "endMs": 133000,
+        "text": "But despite meticulous efforts, they couldn’t find any slowing-down. Light moved at a constant speed—almost as if there was no ether. Then there was the electron and radioactivity. In 1897, English physicist J. J. Thomson showed that cathode rays were made up of discrete particles, way smaller than whole atoms—electrons. And around the same time, Marie Curie proposed the theory of radioactivity, which classical physics didn’t predict. Then, in the early 1900s, Ernest Rutherford experimented on radioactive decay. He named"
+      },
+      {
+        "id": "youtube-text-4-133000",
+        "startMs": 133000,
+        "endMs": 166000,
+        "text": "radioactive alpha, beta, and gamma particles, classifying them by their ability to penetrate different kinds of matter. And Henri Becquerel measured beta particles and realized they were actually electrons exiting the nuclei of atoms at high speeds. So by the early 1900s, radioactive decay was understood, and the crisis of the immutable atom was as deep as the crisis of the ether. A bunch of folks were investigating Maxwell’s equations and looking at black-body radiation, or the heat emitted by dark objects when they absorb light. Then Heinrich Hertz, the original radio wave guy, discovered the photoelectric effect,"
+      },
+      {
+        "id": "youtube-text-5-166000",
+        "startMs": 166000,
+        "endMs": 199000,
+        "text": "or the paradox that certain metals produce electrical currents when zapped with wavelengths of light above a certain threshold. Things started to get messy. Energy was thought to be a continuous wave. But according to wave-based theory, there might be infinite energy radiated back by black bodies zapped with certain wavelengths. This seemingly violated the newly established laws of thermodynamics. Like, infinite energy doesn't seem right. So, in trying to explain the weird results about light and heat, German physicist Max Planck theorized that light"
+      },
+      {
+        "id": "youtube-text-6-199000",
+        "startMs": 199000,
+        "endMs": 231000,
+        "text": "may not be a wave after all, but a series of particles or quantum units. All very non-“classical.” Sorry, Aristotle! Check out Crash Course: Physics for more about quantum weirdness! Enter Albert. Einstein was born in 1879 and grew up in southern Germany, Italy, and Switzerland. He dropped out of high school, then studied to teach physics and math and became a Swiss citizen. But he couldn’t get a teaching job—because he was Jewish. So in 1901 he took a job at the patent office and started a Ph.D. at the University of Zurich,"
+      },
+      {
+        "id": "youtube-text-7-231000",
+        "startMs": 231000,
+        "endMs": 261000,
+        "text": "which he finished in 1905. You’re going to want to remember that year…. 1905. Now, Al wasn’t an academic hotshot or self-funded amateur. He was a working-class nobody who did physics on the side. But he was also a patent officer who spent his days pouring over technical documents. He was an outsider obsessed with math because math is beautiful, and yet he was a deeply practical person who believed that good math and science could be communicated plainly. Plus, he was young and bold. And he had a"
+      },
+      {
+        "id": "youtube-text-8-261000",
+        "startMs": 261000,
+        "endMs": 295000,
+        "text": "super smart and supportive first wife, Serbian mathematician Mileva Marić. So, the year he finished his Ph.D., 1905, Al published his dissertation and four papers that changed physics overnight. This was his annus mirabilis or miracle year, like 1666 had been for Newton. Help us out, ThoughtBubble. At age twenty six, Einstein published revolutionary work on: 1. Brownian motion, or the random motion of particles in fluids; 2. the photoelectric effect, supporting the idea of energy as a series of particles, not a wave;"
+      },
+      {
+        "id": "youtube-text-9-295000",
+        "startMs": 295000,
+        "endMs": 325000,
+        "text": "3. the equivalence of mass and energy; and 4.special relativity. Special relativity, especially made Einstein a scientific rock star. He proved that nothing can move faster than light. This explained why Michelson and Morley hadn’t observed light slowing in ether. And a lot of other things. Einstein got rid of all reference frames for space and time. There was no longer some universal space in which physics happened. All measurements became relative to the position and speed of the observer."
+      },
+      {
+        "id": "youtube-text-10-325000",
+        "startMs": 325000,
+        "endMs": 360000,
+        "text": "Space and time became one mathematically continuous spacetime. So an event at one time for observer A could take place at a completely different time for observer B. And the only constant in the entire system became the speed of light—which classical physics predicted could change! From special relativity followed the equivalence of mass and energy proof. Which was also mind-blowing. It’s probably the most memorable physics formula ever, since it’s printed on mugs and T-shirts the world over: E = mc2. Or, energy equals mass times the speed of light, squared. Or, mass and energy can be converted"
+      },
+      {
+        "id": "youtube-text-11-360000",
+        "startMs": 360000,
+        "endMs": 390000,
+        "text": "into each other! Or, as Einstein said: “…mass and energy are both but different manifestations of the same thing—a somewhat unfamiliar conception for the average mind.” Now, it’s important to note that Einstein’s new system of physics is simply a different system than Netwon’s. “Mass” and “energy” mean something different in the two systems—because, to put it bluntly, Newton’s system turns out to be not so universal. It only seems to work on earth, because we aren’t particularly massive or fast-moving, compared to stars."
+      },
+      {
+        "id": "youtube-text-12-390000",
+        "startMs": 390000,
+        "endMs": 420000,
+        "text": "Thanks Thought Bubble. We don’t have time to explain all of the cool science that Einstein and his generation of physicists did around World War One, but two things stand out: In 1915, Einstein published the theory of general relativity. Special relativity was all about comparing physical effects from different observer positions in terms of velocity, or speed in a particular direction. General relativity provided all of the complicated math regarding relativity and acceleration, or speeding up or down."
+      },
+      {
+        "id": "youtube-text-13-420000",
+        "startMs": 420000,
+        "endMs": 455000,
+        "text": "General relativity explains the physics of all situations. Special relativity is one specific case of general relativity. nailed the coffin shut on the classical, Euclidean worldview: now gravity itself was shown not to be a force like light, but an effect, a distortion in the shape of space due to mass… So the planets didn’t follow certain paths because of the attraction of the sun’s gravity, but because the space before them was curved by the sun’s mass. Einstein’s universe wasn’t a series of perfect spheres in an ether, but a void whose"
+      },
+      {
+        "id": "youtube-text-14-455000",
+        "startMs": 455000,
+        "endMs": 487000,
+        "text": "very dimensions—whose rules, basically, other than the speed of light—could change. Many of his colleagues initially objected to this, but Einstein was confident—and patient. Astronomers awaited a solar eclipse in 1919, that allowed them to experimentally confirm Einstein’s theory. The confirmation of gravitational lensing made Einstein a scientific hero and an icon of pop culture. As The Times of London reported, “Newtonian Ideas Overthrown.” The second major act of science Einstein did around World War One was contribute to the"
+      },
+      {
+        "id": "youtube-text-15-487000",
+        "startMs": 487000,
+        "endMs": 521000,
+        "text": "birth of modern particle physics. This story is about, in part, Einstein getting it wrong. In 1911, Ernest Rutherford and Danish physicist Niels Bohr [“NEELS BOAR”] theorized a model of the atom with electrons zipping around a heavy nucleus. Scientists began to study the physics of the very small, just as Einstein was working out the physics of the very large. But over the 1920s, these particle physicists saw a lot of weird quantum or particle-like effects. Basically, Bohr’s Copenhagen group showed that very small particles tend to act like particles sometimes but like waves at other"
+      },
+      {
+        "id": "youtube-text-16-521000",
+        "startMs": 521000,
+        "endMs": 554000,
+        "text": "times. Like waves, their behaviors have probabilities. But when measured, individual particles are, well particles. They are or aren’t there. In 1926, two German physicists worked out the math behind these quantum mechanics: Werner Heisenberg invented matrix mechanics, which [large exhale] are complex and Erwin Schrödinger, wave mechanics. And lots of dead/not-dead cat jokes. Because, in 1927, Heisenberg proposed his uncertainty principle: any observer can detect the position or velocity of any quantum particle,"
+      },
+      {
+        "id": "youtube-text-17-554000",
+        "startMs": 554000,
+        "endMs": 585000,
+        "text": "at any given time interval, but not both at the same time. Einstein haaated this. He believed in a universe ordered by an ultimate rationality, and he famously quipped, “God doesn’t play dice with the world.” But Al, who had contributed in lots of ways to the emerging model of atoms and particles of energy, was wrong about uncertainty. By the 1930s, Einstein was easily the most famous scientist since Darwin. There was just one problem. He was still Jewish. And living in Germany."
+      },
+      {
+        "id": "youtube-text-18-585000",
+        "startMs": 585000,
+        "endMs": 615000,
+        "text": "So in 1933, Einstein renounced his German citizenship and took a professorship at Princeton. As a celebrity genius with intimate knowledge of the cutting-edge of German science—and perfect hair—Einstein had the ears of politicians anxiously planning for another great war in Europe. And, after one of his physicist buddies demonstrated that an atom could be straight-up, stone-cold split open, Einstein felt that he had a moral obligation to explain to the American establishment just how powerful atomic energy could be…"
+      },
+      {
+        "id": "youtube-text-19-615000",
+        "startMs": 615000,
+        "endMs": 650000,
+        "text": "We’ll pick up this thread next time. Suffice to say, World War Two eventually ended, and a new Cold War started—with scientific discovery, especially in the physics that Einstein had created, as the new measuring stick of imperial might. Israel offered Einstein the presidency, which he turned down. He lived the rest of his life in the home of technological innovation and “fat sandwiches”—New Jersey. Einstein always regretted that his work was used for violent ends. In fact, he was generally skeptical of modernity. Way back during World War One, he wrote: “Our entire much-praised"
+      },
+      {
+        "id": "youtube-text-20-650000",
+        "startMs": 650000,
+        "endMs": 684000,
+        "text": "technological progress, and civilization generally, could be compared to an axe in the hand of a pathological criminal.” And yet, in the end, even the horrors of two world wars never shook his faith that there was great meaning in the universe—a code to be deciphered by science. He died never quite accepting quantum randomness, and believing that, one day, humans would crack the code. Next time—the Americans use Einstein’s world-threatening Bomb, and warfare changes forever. It’s the birth of nuclear physics, the end of World War Two, and the beginning"
+      },
+      {
+        "id": "youtube-text-21-684000",
+        "startMs": 684000,
+        "endMs": 714000,
+        "text": "of the Cold War. Crash Course History of Science is filmed in the Dr. Cheryl C. Kinney studio in Missoula, MT and it's made possible with the help of all these nice people. And our animation team is Thought Cafe. Crash Course is a Complexly production. If you wanna keep imagining the world complexly with us, you can check out some of our other channels like Scishow, Eons, and Sexplanations. And, if you'd like to keep Crash Course free for everyone forever, you can support the series at Patreon, a crowd funding platform that allows you to support the content you love. Thank you to all of our Patrons for making Crash Course possible with your continued support."
+      }
+    ],
+    "sourceSegmentCount": 22,
+    "characterCount": 11907,
+    "transcriptFingerprint": "3a5c1cc0",
+    "acquisition": "youtube_text_provider"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "a6e25346-f9b6-4bdd-8fb5-e3d8f8677426",
+    "generationSessionId": "9b875248-1bbf-4612-ac41-43b40dd40d8d",
+    "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92",
+    "questionPlan": {
+      "seed": "bceb2748f0e039e75ca8ca7bd6148f8a4a1437d075f0db45db4f5081ea42c14f",
+      "types": [
+        "multiple_choice",
+        "short_answer",
+        "true_false",
+        "short_answer",
+        "multiple_choice"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Einstein's Revolution: Crash Course History of Science #32",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "mass-energy equivalence",
+          "question": "What relationship does the equation E = mc² express?",
+          "retryQuestion": "Which statement correctly describes the relationship expressed by E = mc²?",
+          "explanation": "The equation shows that mass and energy are interconvertible, meaning one can be transformed into the other.",
+          "type": "multiple_choice",
+          "choices": [
+            "Energy is converted into mass only under extreme gravitational fields.",
+            "Mass and energy are independent and cannot be interconverted.",
+            "Mass and energy can be converted into each other.",
+            "Mass is a form of energy that cannot be changed into other forms."
+          ],
+          "answerIndex": 2,
+          "answer": "Mass and energy can be converted into each other."
+        },
+        {
+          "id": "q2",
+          "concept": "radioactive decay mechanism",
+          "question": "How did Henri Becquerel's measurement of beta particles contribute to the understanding of radioactive decay?",
+          "retryQuestion": "What did Henri Becquerel's measurement of beta particles reveal about their origin?",
+          "explanation": "Henri Becquerel measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds, showing that atoms are not immutable and that radioactive decay involves changes within the nucleus.",
+          "type": "short_answer",
+          "answer": "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds.",
+          "rubricIdeas": [
+            "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds."
+            ],
+            "acceptableAnswers": [
+              "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds."
+            ]
+          }
+        },
+        {
+          "id": "q3",
+          "concept": "scientific consensus and confirmation",
+          "question": "Einstein's theory of gravity as a distortion of spacetime was experimentally confirmed by observations of a solar eclipse in 1919, but his colleagues remained opposed to it.",
+          "retryQuestion": "The 1919 solar eclipse observations confirmed Einstein's theory of gravity as a distortion of spacetime, yet his colleagues continued to reject it.",
+          "explanation": "The false statement incorrectly claims that colleagues remained opposed after the confirmation, whereas the confirmation made Einstein a scientific hero and icon.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "Einstein's theory of gravity as a distortion of spacetime was experimentally confirmed by observations of a solar eclipse in 1919."
+        },
+        {
+          "id": "q4",
+          "concept": "Michelson-Morley result",
+          "question": "What did the Michelson–Morley experiment find about the speed of light?",
+          "retryQuestion": "What was the outcome of the Michelson–Morley experiment regarding the speed of light?",
+          "explanation": "The experiment expected to detect a change in the speed of light due to Earth's motion through the ether, but it found no such change, indicating that the speed of light is constant.",
+          "type": "short_answer",
+          "answer": "The speed of light is constant.",
+          "rubricIdeas": [
+            "The speed of light is constant."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The speed of light is constant."
+            ],
+            "acceptableAnswers": [
+              "The speed of light is constant."
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "classical worldview",
+          "question": "What did the classical worldview, associated with Euclid, Aristotle, and Newton, hold about the rules governing space and time?",
+          "retryQuestion": "Which statement best describes the classical view of space and time?",
+          "explanation": "The classical worldview held that the rules governing space and time were absolute, meaning measurements like one meter or one hour were fixed and unchanging.",
+          "type": "multiple_choice",
+          "choices": [
+            "They were absolute and unchanging.",
+            "They were determined by the motion of the ether.",
+            "They were relative and depended on the observer.",
+            "They were created by the force of gravity."
+          ],
+          "answerIndex": 0,
+          "answer": "They were absolute and unchanging."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 6,
+      "retryCount": 1,
+      "inputTokens": 50627,
+      "outputTokens": 852,
+      "reasoningTokens": 0,
+      "elapsedMs": 15179,
+      "sourceSelection": {
+        "sentenceCount": 120,
+        "excludedSentenceCount": 7,
+        "candidateWindowCount": 92,
+        "selectedWindowCount": 30,
+        "focusWordCount": 140
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "mass-energy equivalence",
+      "question": "What relationship does the equation E = mc² express?",
+      "retryQuestion": "Which statement correctly describes the relationship expressed by E = mc²?",
+      "explanation": "The equation shows that mass and energy are interconvertible, meaning one can be transformed into the other.",
+      "type": "multiple_choice",
+      "choices": [
+        "Energy is converted into mass only under extreme gravitational fields.",
+        "Mass and energy are independent and cannot be interconverted.",
+        "Mass and energy can be converted into each other.",
+        "Mass is a form of energy that cannot be changed into other forms."
+      ],
+      "answerIndex": 2,
+      "answer": "Mass and energy can be converted into each other."
+    },
+    {
+      "id": "q2",
+      "concept": "radioactive decay mechanism",
+      "question": "How did Henri Becquerel's measurement of beta particles contribute to the understanding of radioactive decay?",
+      "retryQuestion": "What did Henri Becquerel's measurement of beta particles reveal about their origin?",
+      "explanation": "Henri Becquerel measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds, showing that atoms are not immutable and that radioactive decay involves changes within the nucleus.",
+      "type": "short_answer",
+      "answer": "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds.",
+      "rubricIdeas": [
+        "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds."
+        ],
+        "acceptableAnswers": [
+          "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds."
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "concept": "scientific consensus and confirmation",
+      "question": "Einstein's theory of gravity as a distortion of spacetime was experimentally confirmed by observations of a solar eclipse in 1919, but his colleagues remained opposed to it.",
+      "retryQuestion": "The 1919 solar eclipse observations confirmed Einstein's theory of gravity as a distortion of spacetime, yet his colleagues continued to reject it.",
+      "explanation": "The false statement incorrectly claims that colleagues remained opposed after the confirmation, whereas the confirmation made Einstein a scientific hero and icon.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "Einstein's theory of gravity as a distortion of spacetime was experimentally confirmed by observations of a solar eclipse in 1919."
+    },
+    {
+      "id": "q4",
+      "concept": "Michelson-Morley result",
+      "question": "What did the Michelson–Morley experiment find about the speed of light?",
+      "retryQuestion": "What was the outcome of the Michelson–Morley experiment regarding the speed of light?",
+      "explanation": "The experiment expected to detect a change in the speed of light due to Earth's motion through the ether, but it found no such change, indicating that the speed of light is constant.",
+      "type": "short_answer",
+      "answer": "The speed of light is constant.",
+      "rubricIdeas": [
+        "The speed of light is constant."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The speed of light is constant."
+        ],
+        "acceptableAnswers": [
+          "The speed of light is constant."
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "classical worldview",
+      "question": "What did the classical worldview, associated with Euclid, Aristotle, and Newton, hold about the rules governing space and time?",
+      "retryQuestion": "Which statement best describes the classical view of space and time?",
+      "explanation": "The classical worldview held that the rules governing space and time were absolute, meaning measurements like one meter or one hour were fixed and unchanging.",
+      "type": "multiple_choice",
+      "choices": [
+        "They were absolute and unchanging.",
+        "They were determined by the motion of the ether.",
+        "They were relative and depended on the observer.",
+        "They were created by the force of gravity."
+      ],
+      "answerIndex": 0,
+      "answer": "They were absolute and unchanging."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "87e975e23fd533058e04f2bd29318754232395c429c860f0450f0b59f51766ef"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "e21268ce4304a85f7ecbca991895857b8bbd5f8a7785eccae8c703a88c88aa63"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "questionFingerprint": "b50ffac328b109a16b375336ea1776f8054cce5d9120ad37bcef5fdaf0e8fb72"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "6e7b5bd4dea8f639d34d625b43014a999e33863adf19ced3e161b892e711e0b6"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "e736d264135fbd113cef92bca8301476116ee39b937fea1a9534b1cc974baa17"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "Mass and energy can be converted into each other.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that the equation expresses the interconversion of mass and energy.",
+        "matchedIdeas": [
+          "Mass and energy can be converted into each other"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that Becquerel's work revealed beta particles are high-speed electrons emitted from atomic nuclei, which was key to understanding radioactive decay.",
+        "matchedIdeas": [
+          "Beta particles are electrons emitted from atomic nuclei at high speeds",
+          "Becquerel measured beta particles in the context of radioactive decay"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the statement is false, as the 1919 eclipse observations did confirm Einstein's theory, and while some colleagues were skeptical, the claim of widespread opposition is inaccurate.",
+        "matchedIdeas": [
+          "The statement is false because the 1919 eclipse observations actually confirmed Einstein's theory and won over his colleagues, not left them opposed."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "The speed of light is constant.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies the key finding that the speed of light is constant, regardless of the observer's motion or the direction of travel.",
+        "matchedIdeas": [
+          "The speed of light is constant (independent of direction/ether)"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "They were absolute and unchanging.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the classical worldview held space and time to be absolute and unchanging.",
+        "matchedIdeas": [
+          "Classical worldview held rules of space and time were absolute and unchanging"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "NgVSHXOz3jI"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 1055,
+      "videoId": "NgVSHXOz3jI",
+      "title": "Einstein's Revolution: Crash Course History of Science #32",
+      "language": "en",
+      "durationSeconds": 711,
+      "segmentCount": 22,
+      "sourceSegmentCount": 22,
+      "characterCount": 11907,
+      "transcriptFingerprint": "3a5c1cc0",
+      "acquisition": "youtube_text_provider"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 1056,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 4421,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 4459,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 7394,
+      "ordinal": 1,
+      "concept": "mass-energy equivalence",
+      "prompt": "What relationship does the equation E = mc² express?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 7395,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2973,
+      "inputTokens": 9724,
+      "outputTokens": 165,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7395,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7406,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 7451,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 9842,
+      "ordinal": 2,
+      "concept": "radioactive decay mechanism",
+      "prompt": "How did Henri Becquerel's measurement of beta particles contribute to the understanding of radioactive decay?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 9843,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2435,
+      "inputTokens": 10082,
+      "outputTokens": 181,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9843,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9861,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 9915,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 11890,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "true_false_compound_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 197,
+      "callElapsedMs": 2029
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 11890,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 197,
+      "reasonCode": "true_false_compound_claim",
+      "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12087,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12170,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 14540,
+      "ordinal": 3,
+      "concept": "scientific consensus and confirmation",
+      "prompt": "Einstein's theory of gravity as a distortion of spacetime was experimentally confirmed by observations of a solar eclipse in 1919, but his colleagues remained opposed to it."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14541,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2452,
+      "inputTokens": 10474,
+      "outputTokens": 168,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14541,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14573,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14618,
+      "callIndex": 4,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 16952,
+      "ordinal": 4,
+      "concept": "Michelson-Morley result",
+      "prompt": "What did the Michelson–Morley experiment find about the speed of light?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 16953,
+      "callIndex": 4,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2379,
+      "inputTokens": 10229,
+      "outputTokens": 165,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16953,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16987,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 17158,
+      "callIndex": 5,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 19544,
+      "ordinal": 5,
+      "concept": "classical worldview",
+      "prompt": "What did the classical worldview, associated with Euclid, Aristotle, and Newton, hold about the rules governing space and time?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 19545,
+      "callIndex": 5,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2557,
+      "inputTokens": 10118,
+      "outputTokens": 173,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 19545,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "d1848750-453f-4cdd-b884-8664f9082a92"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 19546,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 6,
+      "retryCount": 1,
+      "generationElapsedMs": 15179,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 19547,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "Mass and energy can be converted into each other."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 21650,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that the equation expresses the interconversion of mass and energy.",
+      "matchedIdeas": [
+        "Mass and energy can be converted into each other"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 21650,
+      "ordinal": 2,
+      "questionType": "short_answer",
+      "response": "He measured beta particles and realized they were electrons exiting the nuclei of atoms at high speeds."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 24275,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that Becquerel's work revealed beta particles are high-speed electrons emitted from atomic nuclei, which was key to understanding radioactive decay.",
+      "matchedIdeas": [
+        "Beta particles are electrons emitted from atomic nuclei at high speeds",
+        "Becquerel measured beta particles in the context of radioactive decay"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 24275,
+      "ordinal": 3,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 27011,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the statement is false, as the 1919 eclipse observations did confirm Einstein's theory, and while some colleagues were skeptical, the claim of widespread opposition is inaccurate.",
+      "matchedIdeas": [
+        "The statement is false because the 1919 eclipse observations actually confirmed Einstein's theory and won over his colleagues, not left them opposed."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 27011,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "The speed of light is constant."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 29907,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies the key finding that the speed of light is constant, regardless of the observer's motion or the direction of travel.",
+      "matchedIdeas": [
+        "The speed of light is constant (independent of direction/ether)"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 29907,
+      "ordinal": 5,
+      "questionType": "multiple_choice",
+      "response": "They were absolute and unchanging."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 32571,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the classical worldview held space and time to be absolute and unchanging.",
+      "matchedIdeas": [
+        "Classical worldview held rules of space and time were absolute and unchanging"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

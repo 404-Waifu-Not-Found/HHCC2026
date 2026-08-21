@@ -1,0 +1,1858 @@
+{
+  "runId": "8f7c402d-06c4-4029-a75c-034f63226913",
+  "source": {
+    "videoId": "0rHUDWjR5gg",
+    "title": "Introduction to Astronomy: Crash Course Astronomy #1",
+    "language": "en",
+    "durationSeconds": 722,
+    "segments": [
+      {
+        "id": "youtube-json3-0-3000",
+        "startMs": 3000,
+        "endMs": 6640,
+        "text": "Hello, and welcome to Crash Course Astronomy! I’m your host, Phil Plait, and I’ll be"
+      },
+      {
+        "id": "youtube-json3-1-6640",
+        "startMs": 6640,
+        "endMs": 11860,
+        "text": "taking you on a guided tour of the entire Universe. You might want to pack a lunch."
+      },
+      {
+        "id": "youtube-json3-2-21780",
+        "startMs": 21780,
+        "endMs": 27660,
+        "text": "Over the course of this series we’ll explore planets, stars, black holes, galaxies, subatomic"
+      },
+      {
+        "id": "youtube-json3-3-27670",
+        "startMs": 27670,
+        "endMs": 31490,
+        "text": "particles, and even the eventual fate of the Universe itself."
+      },
+      {
+        "id": "youtube-json3-4-31490",
+        "startMs": 31490,
+        "endMs": 36740,
+        "text": "But before we step into space, let’s take a step back. I wanna talk to you about science."
+      },
+      {
+        "id": "youtube-json3-5-36750",
+        "startMs": 36750,
+        "endMs": 40160,
+        "text": "There are lots of definitions of science, but I’ll say that it’s a body of knowledge,"
+      },
+      {
+        "id": "youtube-json3-6-40160",
+        "startMs": 40160,
+        "endMs": 42480,
+        "text": "and a method of how we learned that knowledge."
+      },
+      {
+        "id": "youtube-json3-7-42480",
+        "startMs": 42480,
+        "endMs": 47880,
+        "text": "Science tells us that stuff we know may not be perfectly known; it may be partly or entirely"
+      },
+      {
+        "id": "youtube-json3-8-47890",
+        "startMs": 47890,
+        "endMs": 53170,
+        "text": "wrong. We need to watch the Universe, see how it behaves, make guesses about why it’s"
+      },
+      {
+        "id": "youtube-json3-9-53170",
+        "startMs": 53170,
+        "endMs": 57870,
+        "text": "doing what it’s doing, and then try to think of ways to support or disprove those ideas."
+      },
+      {
+        "id": "youtube-json3-10-57870",
+        "startMs": 57870,
+        "endMs": 63660,
+        "text": "That last part is important. Science must be, above all else, honest if we really want"
+      },
+      {
+        "id": "youtube-json3-11-63670",
+        "startMs": 63670,
+        "endMs": 65250,
+        "text": "to get to the bottom of things."
+      },
+      {
+        "id": "youtube-json3-12-65250",
+        "startMs": 65250,
+        "endMs": 69760,
+        "text": "Understanding that our understanding might be wrong is essential, and trying to figure"
+      },
+      {
+        "id": "youtube-json3-13-69760",
+        "startMs": 69760,
+        "endMs": 74070,
+        "text": "out the ways we may be mistaken is the only way that science can help us find our way"
+      },
+      {
+        "id": "youtube-json3-14-74070",
+        "startMs": 74070,
+        "endMs": 77370,
+        "text": "to the truth, or at least the nearest approximation to it."
+      },
+      {
+        "id": "youtube-json3-15-77370",
+        "startMs": 77370,
+        "endMs": 83460,
+        "text": "Science learns. We meander a bit as we use it, but in the long run we get ever closer"
+      },
+      {
+        "id": "youtube-json3-16-83470",
+        "startMs": 83470,
+        "endMs": 88420,
+        "text": "to understanding reality, and that is the strength of science. And it’s all around us!"
+      },
+      {
+        "id": "youtube-json3-17-88420",
+        "startMs": 88420,
+        "endMs": 91240,
+        "text": "Whether you know it or not, you’re soaking in science."
+      },
+      {
+        "id": "youtube-json3-18-91240",
+        "startMs": 91240,
+        "endMs": 94340,
+        "text": "You’re a primate. You have mass. Mitochondria"
+      },
+      {
+        "id": "youtube-json3-19-94350",
+        "startMs": 94350,
+        "endMs": 98150,
+        "text": "in your cells are generating energy. Presumably, you’re breathing oxygen."
+      },
+      {
+        "id": "youtube-json3-20-98150",
+        "startMs": 98150,
+        "endMs": 103430,
+        "text": "But astronomy is different. It’s still science, of course, but astronomy puts you in your place."
+      },
+      {
+        "id": "youtube-json3-21-103430",
+        "startMs": 103430,
+        "endMs": 108340,
+        "text": "Because of astronomy, I know we’re standing on a sphere of mostly molten rock and metal"
+      },
+      {
+        "id": "youtube-json3-22-108350",
+        "startMs": 108350,
+        "endMs": 114570,
+        "text": "13,000 kilometers across, with a fuzzy atmosphere about 100 km high, surrounded by a magnetic"
+      },
+      {
+        "id": "youtube-json3-23-114570",
+        "startMs": 114570,
+        "endMs": 120210,
+        "text": "field that protects us from the onslaught of subatomic particles from the Sun 150 million"
+      },
+      {
+        "id": "youtube-json3-24-120210",
+        "startMs": 120210,
+        "endMs": 125330,
+        "text": "km away, which is also flooding space with light that reaches across space, to illuminate"
+      },
+      {
+        "id": "youtube-json3-25-125330",
+        "startMs": 125330,
+        "endMs": 130210,
+        "text": "the planets, asteroids, dust, and comets, racing out past the Kuiper Belt, through the"
+      },
+      {
+        "id": "youtube-json3-26-130210",
+        "startMs": 130210,
+        "endMs": 134750,
+        "text": "Oort Cloud, into interstellar space, past the nearest stars, which orbit along with"
+      },
+      {
+        "id": "youtube-json3-27-134750",
+        "startMs": 134750,
+        "endMs": 140460,
+        "text": "gas clouds and dust lanes in a gigantic spiral galaxy we call the Milky Way that has a supermassive"
+      },
+      {
+        "id": "youtube-json3-28-140460",
+        "startMs": 140460,
+        "endMs": 145180,
+        "text": "black hole in its center, and is surrounded by 150 globular clusters and a halo of dark"
+      },
+      {
+        "id": "youtube-json3-29-145180",
+        "startMs": 145180,
+        "endMs": 149560,
+        "text": "matter and dwarf galaxies, some of which it’s eating, all of which can be seen by other"
+      },
+      {
+        "id": "youtube-json3-30-149560",
+        "startMs": 149560,
+        "endMs": 154290,
+        "text": "galaxies in our Local Group like Andromeda and Triangulum, and our group is on the outskirts"
+      },
+      {
+        "id": "youtube-json3-31-154290",
+        "startMs": 154290,
+        "endMs": 158890,
+        "text": "of the Virgo galaxy cluster, which is part of the Virgo supercluster, which is just one"
+      },
+      {
+        "id": "youtube-json3-32-158890",
+        "startMs": 158890,
+        "endMs": 163520,
+        "text": "of many other gigantic structures that stretch most of the way across the visible Universe,"
+      },
+      {
+        "id": "youtube-json3-33-163520",
+        "startMs": 163520,
+        "endMs": 168510,
+        "text": "which is 90-billion light years across and expanding every day, even faster today than"
+      },
+      {
+        "id": "youtube-json3-34-168510",
+        "startMs": 168510,
+        "endMs": 173320,
+        "text": "yesterday due to mysterious dark energy, and even all that might be part of an infinitely"
+      },
+      {
+        "id": "youtube-json3-35-173320",
+        "startMs": 173320,
+        "endMs": 177320,
+        "text": "larger multiverse that extends forever both in time and space."
+      },
+      {
+        "id": "youtube-json3-36-177320",
+        "startMs": 177320,
+        "endMs": 180160,
+        "text": "See? Astronomy puts you in your place."
+      },
+      {
+        "id": "youtube-json3-37-180160",
+        "startMs": 180160,
+        "endMs": 184940,
+        "text": "But what exactly is astronomy? This isn’t necessarily an obvious thing to ask. When"
+      },
+      {
+        "id": "youtube-json3-38-184940",
+        "startMs": 184940,
+        "endMs": 190820,
+        "text": "I was a kid, it was easy: Astronomy is the study of things in the sky. The sun, moon,"
+      },
+      {
+        "id": "youtube-json3-39-190820",
+        "startMs": 190820,
+        "endMs": 195060,
+        "text": "stars, galaxies, and stuff like that. But it’s not so easy to pigeonhole these days."
+      },
+      {
+        "id": "youtube-json3-40-195069",
+        "startMs": 195069,
+        "endMs": 200060,
+        "text": "Take, for example, Mars. When I haul my ‘scope out to the end of my driveway and look at"
+      },
+      {
+        "id": "youtube-json3-41-200060",
+        "startMs": 200060,
+        "endMs": 205680,
+        "text": "Mars, that’s astronomy, right? Of course! But what about the rovers there? Those machines"
+      },
+      {
+        "id": "youtube-json3-42-205680",
+        "startMs": 205680,
+        "endMs": 210580,
+        "text": "aren’t doing astronomy, surely. They’re doing chemistry, geology, hydrology, petrology…"
+      },
+      {
+        "id": "youtube-json3-43-210580",
+        "startMs": 210580,
+        "endMs": 212040,
+        "text": "everything but astronomy!"
+      },
+      {
+        "id": "youtube-json3-44-212040",
+        "startMs": 212040,
+        "endMs": 216840,
+        "text": "So nowadays, what’s astronomy? I’d say it’s still studying stuff in the sky, but"
+      },
+      {
+        "id": "youtube-json3-45-216840",
+        "startMs": 216840,
+        "endMs": 221020,
+        "text": "it’s branched out quite a bit from there. Borders between it and other fields of science"
+      },
+      {
+        "id": "youtube-json3-46-221020",
+        "startMs": 221020,
+        "endMs": 225230,
+        "text": "are fuzzy… a theme I’ll be hitting on several times over this series. Humans might"
+      },
+      {
+        "id": "youtube-json3-47-225230",
+        "startMs": 225230,
+        "endMs": 229319,
+        "text": "like firm, delineated boundaries between things, but nature isn’t so picky."
+      },
+      {
+        "id": "youtube-json3-48-229319",
+        "startMs": 229319,
+        "endMs": 232280,
+        "text": "And that brings us to our first edition of “Focus On…”"
+      },
+      {
+        "id": "youtube-json3-49-232280",
+        "startMs": 232280,
+        "endMs": 235470,
+        "text": "This week’s topic: Astronomers! Who are we? What do we do?"
+      },
+      {
+        "id": "youtube-json3-50-235470",
+        "startMs": 235470,
+        "endMs": 239550,
+        "text": "I used to look through telescopes for a living, or at least study the data that came from"
+      },
+      {
+        "id": "youtube-json3-51-239550",
+        "startMs": 239550,
+        "endMs": 245250,
+        "text": "detectors strapped onto them. But now I talk and write (and make videos) about astronomy,"
+      },
+      {
+        "id": "youtube-json3-52-245250",
+        "startMs": 245250,
+        "endMs": 250430,
+        "text": "and relegate my viewing to my personal backyard telescope. But I still consider myself an"
+      },
+      {
+        "id": "youtube-json3-53-250430",
+        "startMs": 250430,
+        "endMs": 254190,
+        "text": "astronomer, so that should give you an idea that there’s a lot of wiggle room in the profession."
+      },
+      {
+        "id": "youtube-json3-54-254190",
+        "startMs": 254190,
+        "endMs": 259320,
+        "text": "In fact, when I worked on Hubble Space Telescope, I was actually hired as... a programmer!"
+      },
+      {
+        "id": "youtube-json3-55-259329",
+        "startMs": 259329,
+        "endMs": 264040,
+        "text": "I coded in the language used by the folks helping to build and calibrate a camera that"
+      },
+      {
+        "id": "youtube-json3-56-264040",
+        "startMs": 264040,
+        "endMs": 267340,
+        "text": "was due to launch into space and be installed onto Hubble by an astronaut."
+      },
+      {
+        "id": "youtube-json3-57-267340",
+        "startMs": 267340,
+        "endMs": 271280,
+        "text": "Once the data from that camera are taken and analyzed, you have to know what to do with"
+      },
+      {
+        "id": "youtube-json3-58-271290",
+        "startMs": 271290,
+        "endMs": 276050,
+        "text": "them. Do the observations fit the physical model of how stars blow up, or how galaxies"
+      },
+      {
+        "id": "youtube-json3-59-276050",
+        "startMs": 276050,
+        "endMs": 280360,
+        "text": "form, or the way gas flows through space? Well, you better know your math and physics,"
+      },
+      {
+        "id": "youtube-json3-60-280370",
+        "startMs": 280370,
+        "endMs": 285110,
+        "text": "because that’s how we test our hypotheses. And someone who does that is generally called"
+      },
+      {
+        "id": "youtube-json3-61-285110",
+        "startMs": 285110,
+        "endMs": 286380,
+        "text": "an astrophysicist."
+      },
+      {
+        "id": "youtube-json3-62-286380",
+        "startMs": 286380,
+        "endMs": 290790,
+        "text": "Of course, those telescopes and detectors don’t create themselves. We need engineers"
+      },
+      {
+        "id": "youtube-json3-63-290790",
+        "startMs": 290790,
+        "endMs": 293590,
+        "text": "to design and build them and technicians to use them."
+      },
+      {
+        "id": "youtube-json3-64-293590",
+        "startMs": 293590,
+        "endMs": 297620,
+        "text": "Most astronomers don’t actually use the telescopes themselves anymore; someone who’s"
+      },
+      {
+        "id": "youtube-json3-65-297630",
+        "startMs": 297630,
+        "endMs": 300130,
+        "text": "trained in their specific use does that for them."
+      },
+      {
+        "id": "youtube-json3-66-300130",
+        "startMs": 300130,
+        "endMs": 305160,
+        "text": "Some of those instruments go into space, and some go to other worlds, like the moon and Mars."
+      },
+      {
+        "id": "youtube-json3-67-305160",
+        "startMs": 305160,
+        "endMs": 309400,
+        "text": "We need astronomers and engineers and software programmers who can build those, too."
+      },
+      {
+        "id": "youtube-json3-68-309400",
+        "startMs": 309400,
+        "endMs": 314040,
+        "text": "And then, at the end of all this, we need people to tell you all about it. Teachers,"
+      },
+      {
+        "id": "youtube-json3-69-314040",
+        "startMs": 314040,
+        "endMs": 316810,
+        "text": "professors, writers, video makers, even artists."
+      },
+      {
+        "id": "youtube-json3-70-316810",
+        "startMs": 316810,
+        "endMs": 321080,
+        "text": "So I’ll tell you what: If you have an interest in the Universe, if you love to look up at"
+      },
+      {
+        "id": "youtube-json3-71-321080",
+        "startMs": 321080,
+        "endMs": 326220,
+        "text": "the stars, if you crave to understand what’s going on literally over your head, then who"
+      },
+      {
+        "id": "youtube-json3-72-326220",
+        "startMs": 326220,
+        "endMs": 327980,
+        "text": "am I to say you’re not an astronomer?"
+      },
+      {
+        "id": "youtube-json3-73-327990",
+        "startMs": 327990,
+        "endMs": 331710,
+        "text": "However you define astronomy, humans have been looking up at the sky for as long as"
+      },
+      {
+        "id": "youtube-json3-74-331710",
+        "startMs": 331710,
+        "endMs": 335520,
+        "text": "we’ve been humans. Certainly ancient people noticed the big glowy"
+      },
+      {
+        "id": "youtube-json3-75-335520",
+        "startMs": 335520,
+        "endMs": 339970,
+        "text": "ball in the sky, and how it lit everything up while it was up, and how it got dark when"
+      },
+      {
+        "id": "youtube-json3-76-339970",
+        "startMs": 339970,
+        "endMs": 344480,
+        "text": "it was gone. The other, fainter glowy thing tried, but wasn’t quite as good as lighting"
+      },
+      {
+        "id": "youtube-json3-77-344480",
+        "startMs": 344480,
+        "endMs": 348900,
+        "text": "up the night. They probably took that sort of thing pretty seriously. They probably also"
+      },
+      {
+        "id": "youtube-json3-78-348900",
+        "startMs": 348900,
+        "endMs": 352930,
+        "text": "noticed that when certain stars appeared in the sky, the weather started getting warmer"
+      },
+      {
+        "id": "youtube-json3-79-352930",
+        "startMs": 352930,
+        "endMs": 357280,
+        "text": "and the days longer, and when other stars were seen, the weather would get colder and"
+      },
+      {
+        "id": "youtube-json3-80-357280",
+        "startMs": 357280,
+        "endMs": 358360,
+        "text": "daytime shorten."
+      },
+      {
+        "id": "youtube-json3-81-358360",
+        "startMs": 358360,
+        "endMs": 363460,
+        "text": "And when humans settled down, discovered agriculture, and started farming, noticing those patterns"
+      },
+      {
+        "id": "youtube-json3-82-363460",
+        "startMs": 363460,
+        "endMs": 367820,
+        "text": "in the sky would have had an even greater impact. It told them when to plant seeds,"
+      },
+      {
+        "id": "youtube-json3-83-367820",
+        "startMs": 367820,
+        "endMs": 368760,
+        "text": "and when to harvest."
+      },
+      {
+        "id": "youtube-json3-84-368760",
+        "startMs": 368760,
+        "endMs": 373510,
+        "text": "The cycles in the sky became pretty important. So important that it wasn’t hard to imagine"
+      },
+      {
+        "id": "youtube-json3-85-373510",
+        "startMs": 373510,
+        "endMs": 378810,
+        "text": "gods up there, looking down on us weak and ridiculous humans, interfering with our lives."
+      },
+      {
+        "id": "youtube-json3-86-378810",
+        "startMs": 378810,
+        "endMs": 382740,
+        "text": "Surely if the stars tell us when to plant, and control the weather, seasons, and the"
+      },
+      {
+        "id": "youtube-json3-87-382750",
+        "startMs": 382750,
+        "endMs": 387670,
+        "text": "length of the day, they control our lives too… and astrology was born."
+      },
+      {
+        "id": "youtube-json3-88-387670",
+        "startMs": 387670,
+        "endMs": 392880,
+        "text": "Astrology literally means “study of the stars”; as a word it’s been used before"
+      },
+      {
+        "id": "youtube-json3-89-392880",
+        "startMs": 392880,
+        "endMs": 397690,
+        "text": "science became a formal method of studying nature. It irks me a bit, since it got the"
+      },
+      {
+        "id": "youtube-json3-90-397690",
+        "startMs": 397690,
+        "endMs": 402850,
+        "text": "good name, and now we’re stuck with “astronomy,” which means “law or culture of the stars.\""
+      },
+      {
+        "id": "youtube-json3-91-402850",
+        "startMs": 402850,
+        "endMs": 407150,
+        "text": "That’s not really what we do! But what the heck. Words change meaning over time, and"
+      },
+      {
+        "id": "youtube-json3-92-407150",
+        "startMs": 407150,
+        "endMs": 413000,
+        "text": "now it’s pretty well understood that astronomy is science, and astrology… isn’t."
+      },
+      {
+        "id": "youtube-json3-93-413000",
+        "startMs": 413000,
+        "endMs": 418419,
+        "text": "Millennia ago, astrology was as close to science as you got. It had some of the flavors of"
+      },
+      {
+        "id": "youtube-json3-94-418419",
+        "startMs": 418419,
+        "endMs": 423319,
+        "text": "science: astrologers observed the skies, made predictions about how it would affect people,"
+      },
+      {
+        "id": "youtube-json3-95-423320",
+        "startMs": 423320,
+        "endMs": 427480,
+        "text": "and then those people would provide evidence for it by swearing up and down it worked."
+      },
+      {
+        "id": "youtube-json3-96-427490",
+        "startMs": 427490,
+        "endMs": 433430,
+        "text": "The thing is, it really didn’t; the fault of astrology lies in ourselves and not our"
+      },
+      {
+        "id": "youtube-json3-97-433430",
+        "startMs": 433430,
+        "endMs": 437740,
+        "text": "stars. People tend to remember the hits and forget the misses when predictions are made,"
+      },
+      {
+        "id": "youtube-json3-98-437740",
+        "startMs": 437740,
+        "endMs": 442090,
+        "text": "which is why they sometimes sit in casinos pumping nickels into machines that are in"
+      },
+      {
+        "id": "youtube-json3-99-442090",
+        "startMs": 442090,
+        "endMs": 446460,
+        "text": "proven to be nothing more than a method for reducing the number of nickels you have."
+      },
+      {
+        "id": "youtube-json3-100-446460",
+        "startMs": 446460,
+        "endMs": 451130,
+        "text": "But astrology led to people to really study the sky, and find the patterns there, which"
+      },
+      {
+        "id": "youtube-json3-101-451130",
+        "startMs": 451130,
+        "endMs": 455630,
+        "text": "led to a more rigorous understanding of how things worked in the heavenly vault."
+      },
+      {
+        "id": "youtube-json3-102-455630",
+        "startMs": 455630,
+        "endMs": 460740,
+        "text": "It wasn’t overnight, of course. This took centuries. Before the invention of the telescope,"
+      },
+      {
+        "id": "youtube-json3-103-460740",
+        "startMs": 460740,
+        "endMs": 465440,
+        "text": "keen observers built all sorts of odd and wonderful devices to measure the heavens,"
+      },
+      {
+        "id": "youtube-json3-104-465440",
+        "startMs": 465440,
+        "endMs": 470680,
+        "text": "and in fact it was before the telescope was first turned to the sky that a huge revolution"
+      },
+      {
+        "id": "youtube-json3-105-470680",
+        "startMs": 470680,
+        "endMs": 471840,
+        "text": "in astronomy took place."
+      },
+      {
+        "id": "youtube-json3-106-471840",
+        "startMs": 471840,
+        "endMs": 477320,
+        "text": "It is patently obvious that the ground you stand on is fixed, rooted if you will, and"
+      },
+      {
+        "id": "youtube-json3-107-477320",
+        "startMs": 477320,
+        "endMs": 483310,
+        "text": "the skies turn above us. The sun rises, the sun sets. The moon rises and sets, the stars"
+      },
+      {
+        "id": "youtube-json3-108-483310",
+        "startMs": 483310,
+        "endMs": 488220,
+        "text": "themselves wheel around the sky at night. Clearly, the Earth is motionless, and the"
+      },
+      {
+        "id": "youtube-json3-109-488220",
+        "startMs": 488220,
+        "endMs": 492960,
+        "text": "sky is what is actually moving. In fact, if you think about it, geocentrism"
+      },
+      {
+        "id": "youtube-json3-110-492960",
+        "startMs": 492960,
+        "endMs": 497580,
+        "text": "makes perfect sense that all the objects in the sky revolve about the Earth, and are fixed"
+      },
+      {
+        "id": "youtube-json3-111-497580",
+        "startMs": 497580,
+        "endMs": 502889,
+        "text": "to a series of nested spheres, some of which are transparent, maybe made of crystal, which"
+      },
+      {
+        "id": "youtube-json3-112-502889",
+        "startMs": 502889,
+        "endMs": 508909,
+        "text": "spin once per day. The stars may just be holes in the otherwise opaque sphere, letting sunlight though."
+      },
+      {
+        "id": "youtube-json3-113-508910",
+        "startMs": 508910,
+        "endMs": 510710,
+        "text": "Sounds silly to you, doesn’t it?"
+      },
+      {
+        "id": "youtube-json3-114-510710",
+        "startMs": 510710,
+        "endMs": 514149,
+        "text": "Well, here’s the thing: If you don’t have today’s modern understanding of how the"
+      },
+      {
+        "id": "youtube-json3-115-514149",
+        "startMs": 514149,
+        "endMs": 521029,
+        "text": "cosmos works, this whole multiple-shells-of-things-in- the-sky thing actually does make sense. It explains"
+      },
+      {
+        "id": "youtube-json3-116-521029",
+        "startMs": 521029,
+        "endMs": 525410,
+        "text": "a lot of what’s going on over your head, and if it was good enough for Plato, Aristotle,"
+      },
+      {
+        "id": "youtube-json3-117-525410",
+        "startMs": 525410,
+        "endMs": 530399,
+        "text": "and Ptolemy, then by god it was good enough for you. And speaking of which, it was endorsed"
+      },
+      {
+        "id": "youtube-json3-118-530399",
+        "startMs": 530399,
+        "endMs": 535290,
+        "text": "by the major religions of the time, so maybe it’s better if you just nod and agree and"
+      },
+      {
+        "id": "youtube-json3-119-535290",
+        "startMs": 535290,
+        "endMs": 536490,
+        "text": "don’t think about it too hard."
+      },
+      {
+        "id": "youtube-json3-120-536490",
+        "startMs": 536490,
+        "endMs": 541910,
+        "text": "But a few centuries ago things changed. Although he wasn’t the first, the Polish mathematician"
+      },
+      {
+        "id": "youtube-json3-121-541910",
+        "startMs": 541910,
+        "endMs": 546550,
+        "text": "and astronomer Copernicus came up with the idea that the sun was the center of the solar"
+      },
+      {
+        "id": "youtube-json3-122-546550",
+        "startMs": 546550,
+        "endMs": 551529,
+        "text": "system, not the Earth. His ideas had problems, which we’ll get to in a later episode, but"
+      },
+      {
+        "id": "youtube-json3-123-551529",
+        "startMs": 551529,
+        "endMs": 554079,
+        "text": "it did an incrementally better job than geocentrism."
+      },
+      {
+        "id": "youtube-json3-124-554079",
+        "startMs": 554079,
+        "endMs": 559389,
+        "text": "And then along came Tycho Brahe and Johannes Kepler, who modified that system, making it"
+      },
+      {
+        "id": "youtube-json3-125-559389",
+        "startMs": 559389,
+        "endMs": 566290,
+        "text": "even better. Then Isaac Newton - oh, Newton - he invented calculus partly to help him"
+      },
+      {
+        "id": "youtube-json3-126-566290",
+        "startMs": 566290,
+        "endMs": 571240,
+        "text": "understand the way objects moved in space. Over time, our math got better, our physics"
+      },
+      {
+        "id": "youtube-json3-127-571240",
+        "startMs": 571240,
+        "endMs": 577160,
+        "text": "got better, and our understanding grew. Applied math was a revolution in astronomy, and then"
+      },
+      {
+        "id": "youtube-json3-128-577160",
+        "startMs": 577160,
+        "endMs": 580860,
+        "text": "the use of telescopes was another. Galileo didn’t invent the telescope, by"
+      },
+      {
+        "id": "youtube-json3-129-580860",
+        "startMs": 580860,
+        "endMs": 586129,
+        "text": "the way, but made them better; Newton invented a new kind that was even better than that,"
+      },
+      {
+        "id": "youtube-json3-130-586129",
+        "startMs": 586129,
+        "endMs": 587839,
+        "text": "and we’ve run with the idea from there."
+      },
+      {
+        "id": "youtube-json3-131-587839",
+        "startMs": 587839,
+        "endMs": 593429,
+        "text": "Then, about a century or so ago, came another revolution: photography. We could capture"
+      },
+      {
+        "id": "youtube-json3-132-593429",
+        "startMs": 593429,
+        "endMs": 598189,
+        "text": "much fainter objects on glass plates sprayed with light-sensitive chemicals, which revealed"
+      },
+      {
+        "id": "youtube-json3-133-598189",
+        "startMs": 598189,
+        "endMs": 604600,
+        "text": "stars otherwise invisible to us, details in galaxies, beautiful clouds of gas and dust in space."
+      },
+      {
+        "id": "youtube-json3-134-604600",
+        "startMs": 604600,
+        "endMs": 609470,
+        "text": "And then in the latter half of the last century, digital detectors were invented, which were"
+      },
+      {
+        "id": "youtube-json3-135-609470",
+        "startMs": 609470,
+        "endMs": 614709,
+        "text": "even more sensitive than film. We could use computers to directly analyze observations,"
+      },
+      {
+        "id": "youtube-json3-136-614709",
+        "startMs": 614709,
+        "endMs": 619019,
+        "text": "and our knowledge leaped again. When these were coupled with telescopes sent in orbit"
+      },
+      {
+        "id": "youtube-json3-137-619019",
+        "startMs": 619019,
+        "endMs": 623410,
+        "text": "around the Earth - where our roiling and boiling atmosphere doesn’t blur out observations"
+      },
+      {
+        "id": "youtube-json3-138-623410",
+        "startMs": 623410,
+        "endMs": 626199,
+        "text": "- we began yet another revolution."
+      },
+      {
+        "id": "youtube-json3-139-626199",
+        "startMs": 626199,
+        "endMs": 627339,
+        "text": "And where are we now?"
+      },
+      {
+        "id": "youtube-json3-140-627339",
+        "startMs": 627339,
+        "endMs": 632649,
+        "text": "We’ve come such a long way! What questions can we routinely ask that our ancestors would"
+      },
+      {
+        "id": "youtube-json3-141-632649",
+        "startMs": 632649,
+        "endMs": 636749,
+        "text": "not have dared, what statements made with a pretty good degree of certainty?"
+      },
+      {
+        "id": "youtube-json3-142-636749",
+        "startMs": 636749,
+        "endMs": 643149,
+        "text": "Think on this: The lights in the sky are stars! There are other worlds. We take the idea of"
+      },
+      {
+        "id": "youtube-json3-143-643149",
+        "startMs": 643149,
+        "endMs": 648629,
+        "text": "looking for life on alien planets seriously, and spend billions of dollars doing it. Our"
+      },
+      {
+        "id": "youtube-json3-144-648629",
+        "startMs": 648629,
+        "endMs": 655449,
+        "text": "galaxy is one of a hundred billion others. We can only directly see 4% of the Universe."
+      },
+      {
+        "id": "youtube-json3-145-655449",
+        "startMs": 655449,
+        "endMs": 660869,
+        "text": "Stars explode, and when they do they create the stuff of life: the iron in our blood,"
+      },
+      {
+        "id": "youtube-json3-146-660869",
+        "startMs": 660869,
+        "endMs": 666119,
+        "text": "the calcium in our bones, the phosphorus that is the backbone of our DNA. The most common"
+      },
+      {
+        "id": "youtube-json3-147-666119",
+        "startMs": 666119,
+        "endMs": 670980,
+        "text": "kind of star in the Universe is so faint you can’t see it without a telescope. Our solar"
+      },
+      {
+        "id": "youtube-json3-148-670980",
+        "startMs": 670980,
+        "endMs": 676050,
+        "text": "system is filled to overflowing with worlds more bizarre than we could have dreamed."
+      },
+      {
+        "id": "youtube-json3-149-676050",
+        "startMs": 676050,
+        "endMs": 681309,
+        "text": "Nature has more imagination than we do. It comes up with some nutty stuff. We’re clever"
+      },
+      {
+        "id": "youtube-json3-150-681309",
+        "startMs": 681309,
+        "endMs": 686089,
+        "text": "too, we big-brained apes. We’ve learned a lot… but there’s still a long way to go."
+      },
+      {
+        "id": "youtube-json3-151-686089",
+        "startMs": 686089,
+        "endMs": 689670,
+        "text": "So, with that, I think we’re ready. Let’s explore the universe."
+      },
+      {
+        "id": "youtube-json3-152-689670",
+        "startMs": 689670,
+        "endMs": 693699,
+        "text": "Today you learned what astronomy is, and that astronomers aren’t just people who operate"
+      },
+      {
+        "id": "youtube-json3-153-693699",
+        "startMs": 693699,
+        "endMs": 699999,
+        "text": "telescopes, but include mathematicians, engineers, technicians, programmers, and even artists."
+      },
+      {
+        "id": "youtube-json3-154-699999",
+        "startMs": 699999,
+        "endMs": 703759,
+        "text": "We also wrapped up with a quick history of the origins and development of astronomy,"
+      },
+      {
+        "id": "youtube-json3-155-703759",
+        "startMs": 703759,
+        "endMs": 706339,
+        "text": "from ancient observers to the Hubble Space Telescope."
+      },
+      {
+        "id": "youtube-json3-156-706340",
+        "startMs": 706340,
+        "endMs": 710200,
+        "text": "Crash Course is produced in association with PBS Digital Studios."
+      },
+      {
+        "id": "youtube-json3-157-710200",
+        "startMs": 710200,
+        "endMs": 714920,
+        "text": "This episode was written by me, Phil Plait. The script was edited by Blake de Pastino,"
+      },
+      {
+        "id": "youtube-json3-158-714929",
+        "startMs": 714929,
+        "endMs": 718929,
+        "text": "and our consultant is Dr. Michelle Thaller. It was co-directed by Nicholas Jenkins and"
+      },
+      {
+        "id": "youtube-json3-159-718929",
+        "startMs": 718929,
+        "endMs": 721709,
+        "text": "Michael Aranda, and the graphics team is Thought Café."
+      }
+    ],
+    "sourceSegmentCount": 160,
+    "characterCount": 12602,
+    "transcriptFingerprint": "57e28fe5",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "d2cee233-a883-4d87-bb9b-fe5738343760",
+    "generationSessionId": "8fd35bb2-1820-4468-a16d-5c009e000183",
+    "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d",
+    "questionPlan": {
+      "seed": "632a752b8d04ce724d003e66c7db69776c22777bf6e4932c6332d9518dbf4f70",
+      "types": [
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+        "short_answer",
+        "true_false"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Introduction to Astronomy: Crash Course Astronomy #1",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "Milky Way structure",
+          "question": "What is the name of the spiral galaxy in which the Sun, along with gas clouds and dust lanes, orbits?",
+          "retryQuestion": "Which galaxy contains the Sun, gas clouds, and dust lanes in its spiral structure?",
+          "explanation": "The Sun, gas clouds, and dust lanes are part of a gigantic spiral galaxy called the Milky Way.",
+          "type": "multiple_choice",
+          "choices": [
+            "The Virgo Cluster",
+            "The Andromeda Galaxy",
+            "The Milky Way",
+            "The Local Group"
+          ],
+          "answerIndex": 2,
+          "answer": "The Milky Way"
+        },
+        {
+          "id": "q2",
+          "concept": "historical endorsement",
+          "question": "The multiple-shells model of the cosmos was endorsed by the major religions of the time.",
+          "retryQuestion": "The major religions of the time endorsed the multiple-shells model of the cosmos.",
+          "explanation": "The endorsement by major religions of the time helped the model gain acceptance, even though it was later replaced by the heliocentric model.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "The multiple-shells model of the cosmos was endorsed by the major religions of the time."
+        },
+        {
+          "id": "q3",
+          "concept": "astrophysicist definition",
+          "question": "What term is used for a scientist who tests physical models of astronomical phenomena using math and physics?",
+          "retryQuestion": "What is the name for someone who applies mathematics and physics to test hypotheses about stars, galaxies, and gas flows?",
+          "explanation": "The term for a scientist who uses math and physics to test physical models of astronomical phenomena is astrophysicist.",
+          "type": "short_answer",
+          "answer": "Astrophysicist",
+          "rubricIdeas": [
+            "Astrophysicist"
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "atomic_term",
+          "rubricV2": {
+            "version": 2,
+            "mode": "atomic_term",
+            "canonicalAnswer": "Astrophysicist",
+            "aliases": []
+          }
+        },
+        {
+          "id": "q4",
+          "concept": "agriculture and sky patterns",
+          "question": "What change made noticing patterns in the sky have an even greater impact?",
+          "retryQuestion": "What development increased the importance of observing sky patterns?",
+          "explanation": "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact.",
+          "type": "short_answer",
+          "answer": "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact.",
+          "rubricIdeas": [
+            "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+            ],
+            "acceptableAnswers": [
+              "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "historical modification of heliocentric model",
+          "question": "Tycho Brahe and Johannes Kepler modified the geocentric system, improving it.",
+          "retryQuestion": "Tycho Brahe and Johannes Kepler improved the geocentric model through their modifications.",
+          "explanation": "The supported fact states that Brahe and Kepler refined the heliocentric model, not the geocentric one. The false statement incorrectly identifies the system they improved.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "Tycho Brahe and Johannes Kepler modified the heliocentric system, improving it."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 6,
+      "retryCount": 1,
+      "inputTokens": 50778,
+      "outputTokens": 736,
+      "reasoningTokens": 0,
+      "elapsedMs": 14322,
+      "sourceSelection": {
+        "sentenceCount": 134,
+        "excludedSentenceCount": 4,
+        "candidateWindowCount": 94,
+        "selectedWindowCount": 30,
+        "focusWordCount": 222
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "Milky Way structure",
+      "question": "What is the name of the spiral galaxy in which the Sun, along with gas clouds and dust lanes, orbits?",
+      "retryQuestion": "Which galaxy contains the Sun, gas clouds, and dust lanes in its spiral structure?",
+      "explanation": "The Sun, gas clouds, and dust lanes are part of a gigantic spiral galaxy called the Milky Way.",
+      "type": "multiple_choice",
+      "choices": [
+        "The Virgo Cluster",
+        "The Andromeda Galaxy",
+        "The Milky Way",
+        "The Local Group"
+      ],
+      "answerIndex": 2,
+      "answer": "The Milky Way"
+    },
+    {
+      "id": "q2",
+      "concept": "historical endorsement",
+      "question": "The multiple-shells model of the cosmos was endorsed by the major religions of the time.",
+      "retryQuestion": "The major religions of the time endorsed the multiple-shells model of the cosmos.",
+      "explanation": "The endorsement by major religions of the time helped the model gain acceptance, even though it was later replaced by the heliocentric model.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "The multiple-shells model of the cosmos was endorsed by the major religions of the time."
+    },
+    {
+      "id": "q3",
+      "concept": "astrophysicist definition",
+      "question": "What term is used for a scientist who tests physical models of astronomical phenomena using math and physics?",
+      "retryQuestion": "What is the name for someone who applies mathematics and physics to test hypotheses about stars, galaxies, and gas flows?",
+      "explanation": "The term for a scientist who uses math and physics to test physical models of astronomical phenomena is astrophysicist.",
+      "type": "short_answer",
+      "answer": "Astrophysicist",
+      "rubricIdeas": [
+        "Astrophysicist"
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "atomic_term",
+      "rubricV2": {
+        "version": 2,
+        "mode": "atomic_term",
+        "canonicalAnswer": "Astrophysicist",
+        "aliases": []
+      }
+    },
+    {
+      "id": "q4",
+      "concept": "agriculture and sky patterns",
+      "question": "What change made noticing patterns in the sky have an even greater impact?",
+      "retryQuestion": "What development increased the importance of observing sky patterns?",
+      "explanation": "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact.",
+      "type": "short_answer",
+      "answer": "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact.",
+      "rubricIdeas": [
+        "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+        ],
+        "acceptableAnswers": [
+          "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "historical modification of heliocentric model",
+      "question": "Tycho Brahe and Johannes Kepler modified the geocentric system, improving it.",
+      "retryQuestion": "Tycho Brahe and Johannes Kepler improved the geocentric model through their modifications.",
+      "explanation": "The supported fact states that Brahe and Kepler refined the heliocentric model, not the geocentric one. The false statement incorrectly identifies the system they improved.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "Tycho Brahe and Johannes Kepler modified the heliocentric system, improving it."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "55aee27814698e2c96dc25a5240a21f294976a7aee434bbf56f65cb0379b7e9b"
+    },
+    {
+      "callIndex": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "questionFingerprint": "a5535df4a7167e3fdb036b58bb12d0d62bb78cc3ddb901e896fd7b260c6e95df"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "a09d9cf64691f8a947931edac94a8039831f043f26fc7d59176ea88382f565b8"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "f47f24547d57b4ca7956c581a51985be942a7f13eaf632dced6295442c613d95"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "59fe010f4eb389a6e72d12c4589943c5d1ec1f65eef7aee894617f8387a33b7b"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "The Milky Way",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the Milky Way as the spiral galaxy where the Sun and other matter orbit.",
+        "matchedIdeas": [
+          "The Milky Way"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Correct! The multiple-shells model was indeed endorsed by the major religions of the time, aligning with the grading reference.",
+        "matchedIdeas": [
+          "Multiple-shells model endorsed by major religions"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "Astrophysicist",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your answer correctly identifies the term \"astrophysicist,\" which matches the scientist who uses math and physics to test physical models of astronomical phenomena.",
+        "matchedIdeas": [
+          "Astrophysicist"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the shift to settled farming communities made observing sky patterns more impactful.",
+        "matchedIdeas": [
+          "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Correct! The statement was false because Tycho Brahe and Johannes Kepler refined the heliocentric model, not the geocentric one.",
+        "matchedIdeas": [
+          "Correctly identifies the statement as false"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "0rHUDWjR5gg"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 3158,
+      "videoId": "0rHUDWjR5gg",
+      "title": "Introduction to Astronomy: Crash Course Astronomy #1",
+      "language": "en",
+      "durationSeconds": 722,
+      "segmentCount": 160,
+      "sourceSegmentCount": 160,
+      "characterCount": 12602,
+      "transcriptFingerprint": "57e28fe5",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 3158,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 6294,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 6314,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 9316,
+      "ordinal": 1,
+      "concept": "Milky Way structure",
+      "prompt": "What is the name of the spiral galaxy in which the Sun, along with gas clouds and dust lanes, orbits?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 9316,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 3022,
+      "inputTokens": 9878,
+      "outputTokens": 154,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9316,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9321,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 9330,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 11950,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "true_false_compound_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 306,
+      "callElapsedMs": 2629
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 11950,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 306,
+      "reasonCode": "true_false_compound_claim",
+      "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12264,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12304,
+      "callIndex": 2,
+      "ordinal": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 14035,
+      "ordinal": 2,
+      "concept": "historical endorsement",
+      "prompt": "The multiple-shells model of the cosmos was endorsed by the major religions of the time."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14036,
+      "callIndex": 2,
+      "ordinal": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1771,
+      "inputTokens": 9940,
+      "outputTokens": 111,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14036,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14043,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14066,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 15989,
+      "ordinal": 3,
+      "concept": "astrophysicist definition",
+      "prompt": "What term is used for a scientist who tests physical models of astronomical phenomena using math and physics?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 15989,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1946,
+      "inputTokens": 10113,
+      "outputTokens": 152,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 15989,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 15998,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 16020,
+      "callIndex": 4,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 18326,
+      "ordinal": 4,
+      "concept": "agriculture and sky patterns",
+      "prompt": "What change made noticing patterns in the sky have an even greater impact?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 18327,
+      "callIndex": 4,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2327,
+      "inputTokens": 10258,
+      "outputTokens": 174,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18327,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18337,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 18383,
+      "callIndex": 5,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 20612,
+      "ordinal": 5,
+      "concept": "historical modification of heliocentric model",
+      "prompt": "Tycho Brahe and Johannes Kepler modified the geocentric system, improving it."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 20612,
+      "callIndex": 5,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2275,
+      "inputTokens": 10589,
+      "outputTokens": 145,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20612,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "d10a49a1-3017-49f2-b8a4-12edb0489f8d"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 20613,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 6,
+      "retryCount": 1,
+      "generationElapsedMs": 14322,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 20613,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "The Milky Way"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 22793,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the Milky Way as the spiral galaxy where the Sun and other matter orbit.",
+      "matchedIdeas": [
+        "The Milky Way"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 22793,
+      "ordinal": 2,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 25403,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Correct! The multiple-shells model was indeed endorsed by the major religions of the time, aligning with the grading reference.",
+      "matchedIdeas": [
+        "Multiple-shells model endorsed by major religions"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 25403,
+      "ordinal": 3,
+      "questionType": "short_answer",
+      "response": "Astrophysicist"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 27423,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your answer correctly identifies the term \"astrophysicist,\" which matches the scientist who uses math and physics to test physical models of astronomical phenomena.",
+      "matchedIdeas": [
+        "Astrophysicist"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 27423,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 30070,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the shift to settled farming communities made observing sky patterns more impactful.",
+      "matchedIdeas": [
+        "When humans settled down, discovered agriculture, and started farming, noticing patterns in the sky would have had an even greater impact."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 30070,
+      "ordinal": 5,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 32147,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Correct! The statement was false because Tycho Brahe and Johannes Kepler refined the heliocentric model, not the geocentric one.",
+      "matchedIdeas": [
+        "Correctly identifies the statement as false"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

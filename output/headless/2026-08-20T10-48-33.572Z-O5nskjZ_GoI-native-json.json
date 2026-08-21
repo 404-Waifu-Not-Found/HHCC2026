@@ -1,0 +1,1960 @@
+{
+  "runId": "b65b4b03-bfe9-41a7-a6fb-b20e3f6523a0",
+  "source": {
+    "videoId": "O5nskjZ_GoI",
+    "title": "Early Computing: Crash Course Computer Science #1",
+    "language": "en",
+    "durationSeconds": 681,
+    "segments": [
+      {
+        "id": "youtube-json3-0-3090",
+        "startMs": 3090,
+        "endMs": 6520,
+        "text": "Hello world, I’m Carrie Anne, and welcome to CrashCourse Computer Science!"
+      },
+      {
+        "id": "youtube-json3-1-6520",
+        "startMs": 6520,
+        "endMs": 10680,
+        "text": "Over the course of this series, we’re going to go from bits, bytes, transistors and logic"
+      },
+      {
+        "id": "youtube-json3-2-10680",
+        "startMs": 10680,
+        "endMs": 14370,
+        "text": "gates, all the way to Operating Systems, Virtual Reality and Robots!"
+      },
+      {
+        "id": "youtube-json3-3-14370",
+        "startMs": 14370,
+        "endMs": 17849,
+        "text": "We’re going to cover a lot, but just to clear things up - we ARE NOT going to teach"
+      },
+      {
+        "id": "youtube-json3-4-17849",
+        "startMs": 17849,
+        "endMs": 18849,
+        "text": "you how to program."
+      },
+      {
+        "id": "youtube-json3-5-18849",
+        "startMs": 18849,
+        "endMs": 22980,
+        "text": "Instead, we’re going to explore a range of computing topics as a discipline and a"
+      },
+      {
+        "id": "youtube-json3-6-22980",
+        "startMs": 22980,
+        "endMs": 23980,
+        "text": "technology."
+      },
+      {
+        "id": "youtube-json3-7-23980",
+        "startMs": 23980,
+        "endMs": 25640,
+        "text": "Computers are the lifeblood of today’s world."
+      },
+      {
+        "id": "youtube-json3-8-25640",
+        "startMs": 25640,
+        "endMs": 29050,
+        "text": "If they were to suddenly turn off, all at once, the power grid would shut down, cars"
+      },
+      {
+        "id": "youtube-json3-9-29050",
+        "startMs": 29050,
+        "endMs": 33750,
+        "text": "would crash, planes would fall, water treatment plants would stop, stock markets would freeze,"
+      },
+      {
+        "id": "youtube-json3-10-33750",
+        "startMs": 33750,
+        "endMs": 37350,
+        "text": "trucks with food wouldn’t know where to deliver, and employees wouldn’t get paid."
+      },
+      {
+        "id": "youtube-json3-11-37350",
+        "startMs": 37350,
+        "endMs": 41730,
+        "text": "Even many non-computer objects - like DFTBA shirts and the chair I’m sitting on – are"
+      },
+      {
+        "id": "youtube-json3-12-41730",
+        "startMs": 41730,
+        "endMs": 44280,
+        "text": "made in factories run by computers."
+      },
+      {
+        "id": "youtube-json3-13-44280",
+        "startMs": 44280,
+        "endMs": 47050,
+        "text": "Computing really has transformed nearly every aspect of our lives."
+      },
+      {
+        "id": "youtube-json3-14-47050",
+        "startMs": 47050,
+        "endMs": 50489,
+        "text": "And this isn’t the first time we’ve seen this sort of technology-driven global change."
+      },
+      {
+        "id": "youtube-json3-15-50489",
+        "startMs": 50489,
+        "endMs": 55379,
+        "text": "Advances in manufacturing during the Industrial Revolution brought a new scale to human civilization"
+      },
+      {
+        "id": "youtube-json3-16-55379",
+        "startMs": 55379,
+        "endMs": 57329,
+        "text": "- in agriculture, industry and domestic life."
+      },
+      {
+        "id": "youtube-json3-17-57329",
+        "startMs": 57329,
+        "endMs": 62039,
+        "text": "Mechanization meant superior harvests and more food, mass produced goods, cheaper and"
+      },
+      {
+        "id": "youtube-json3-18-62039",
+        "startMs": 62039,
+        "endMs": 65329,
+        "text": "faster travel and communication, and usually a better quality of life."
+      },
+      {
+        "id": "youtube-json3-19-65329",
+        "startMs": 65329,
+        "endMs": 69779,
+        "text": "And computing technology is doing the same right now – from automated farming and medical"
+      },
+      {
+        "id": "youtube-json3-20-69779",
+        "startMs": 69779,
+        "endMs": 73990,
+        "text": "equipment, to global telecommunications and educational opportunities, and new frontiers"
+      },
+      {
+        "id": "youtube-json3-21-73990",
+        "startMs": 73990,
+        "endMs": 76700,
+        "text": "like Virtual Reality and Self Driving Cars."
+      },
+      {
+        "id": "youtube-json3-22-76700",
+        "startMs": 76700,
+        "endMs": 81020,
+        "text": "We are living in a time likely to be remembered as the Electronic Age."
+      },
+      {
+        "id": "youtube-json3-23-81020",
+        "startMs": 81020,
+        "endMs": 85859,
+        "text": "With billions of transistors in just your smartphones, computers can seem pretty complicated,"
+      },
+      {
+        "id": "youtube-json3-24-85859",
+        "startMs": 85859,
+        "endMs": 89950,
+        "text": "but really, they’re just simple machines that perform complex actions through many"
+      },
+      {
+        "id": "youtube-json3-25-89950",
+        "startMs": 89950,
+        "endMs": 91320,
+        "text": "layers of abstraction."
+      },
+      {
+        "id": "youtube-json3-26-91320",
+        "startMs": 91320,
+        "endMs": 95999,
+        "text": "So in this series, we’re going break down those layers, and build up from simple 1’s"
+      },
+      {
+        "id": "youtube-json3-27-95999",
+        "startMs": 95999,
+        "endMs": 102189,
+        "text": "and 0’s, to logic units, CPUs, operating systems, the entire internet and beyond."
+      },
+      {
+        "id": "youtube-json3-28-102189",
+        "startMs": 102189,
+        "endMs": 105980,
+        "text": "And don’t worry, in the same way someone buying t-shirts on a webpage doesn’t need"
+      },
+      {
+        "id": "youtube-json3-29-105980",
+        "startMs": 105980,
+        "endMs": 109989,
+        "text": "to know how that webpage was programmed, or the web designer doesn’t need to know how"
+      },
+      {
+        "id": "youtube-json3-30-109989",
+        "startMs": 109989,
+        "endMs": 114299,
+        "text": "all the packets are routed, or router engineers don’t need to know about transistor logic,"
+      },
+      {
+        "id": "youtube-json3-31-114299",
+        "startMs": 114299,
+        "endMs": 118340,
+        "text": "this series will build on previous episodes but not be dependent on them."
+      },
+      {
+        "id": "youtube-json3-32-118340",
+        "startMs": 118340,
+        "endMs": 122119,
+        "text": "By the end of this series, I hope that you can better contextualize computing’s role"
+      },
+      {
+        "id": "youtube-json3-33-122119",
+        "startMs": 122119,
+        "endMs": 127259,
+        "text": "both in your own life and society, and how humanity's (arguably) greatest invention is"
+      },
+      {
+        "id": "youtube-json3-34-127259",
+        "startMs": 127259,
+        "endMs": 130410,
+        "text": "just in its infancy, with its biggest impacts yet to come."
+      },
+      {
+        "id": "youtube-json3-35-130410",
+        "startMs": 130410,
+        "endMs": 134610,
+        "text": "But before we get into all that, we should start at computing’s origins, because although"
+      },
+      {
+        "id": "youtube-json3-36-134610",
+        "startMs": 134610,
+        "endMs": 144730,
+        "text": "electronic computers are relatively new, the need for computation is not."
+      },
+      {
+        "id": "youtube-json3-37-144730",
+        "startMs": 144730,
+        "endMs": 147980,
+        "text": "INTRO"
+      },
+      {
+        "id": "youtube-json3-38-147980",
+        "startMs": 147980,
+        "endMs": 149980,
+        "text": "The earliest recognized device for computing"
+      },
+      {
+        "id": "youtube-json3-39-150010",
+        "startMs": 150010,
+        "endMs": 154160,
+        "text": "was the abacus, invented in Mesopotamia around 2500 BCE."
+      },
+      {
+        "id": "youtube-json3-40-154160",
+        "startMs": 154160,
+        "endMs": 159349,
+        "text": "It’s essentially a hand operated calculator, that helps add and subtract many numbers."
+      },
+      {
+        "id": "youtube-json3-41-159349",
+        "startMs": 159349,
+        "endMs": 163240,
+        "text": "It also stores the current state of the computation, much like your hard drive does today."
+      },
+      {
+        "id": "youtube-json3-42-163240",
+        "startMs": 163240,
+        "endMs": 167140,
+        "text": "The abacus was created because, the scale of society had become greater than what a"
+      },
+      {
+        "id": "youtube-json3-43-167140",
+        "startMs": 167140,
+        "endMs": 169969,
+        "text": "single person could keep and manipulate in their mind."
+      },
+      {
+        "id": "youtube-json3-44-169969",
+        "startMs": 169969,
+        "endMs": 173670,
+        "text": "There might be thousands of people in a village or tens of thousands of cattle."
+      },
+      {
+        "id": "youtube-json3-45-173670",
+        "startMs": 173670,
+        "endMs": 177480,
+        "text": "There are many variants of the abacus, but let’s look at a really basic version with"
+      },
+      {
+        "id": "youtube-json3-46-177480",
+        "startMs": 177480,
+        "endMs": 179680,
+        "text": "each row representing a different power of ten."
+      },
+      {
+        "id": "youtube-json3-47-179680",
+        "startMs": 179680,
+        "endMs": 184209,
+        "text": "So each bead on the bottom row represents a single unit, in the next row they represent"
+      },
+      {
+        "id": "youtube-json3-48-184209",
+        "startMs": 184209,
+        "endMs": 186560,
+        "text": "10, the row above 100, and so on."
+      },
+      {
+        "id": "youtube-json3-49-186560",
+        "startMs": 186560,
+        "endMs": 191880,
+        "text": "Let’s say we have 3 heads of cattle represented by 3 beads on the bottom row on the right side."
+      },
+      {
+        "id": "youtube-json3-50-191980",
+        "startMs": 191980,
+        "endMs": 197160,
+        "text": "If we were to buy 4 more cattle we would just slide 4 more beads to the right for a total of 7."
+      },
+      {
+        "id": "youtube-json3-51-197160",
+        "startMs": 197160,
+        "endMs": 202200,
+        "text": "But if we were to add 5 more after the first 3 we would run out of beads, so we would slide"
+      },
+      {
+        "id": "youtube-json3-52-202200",
+        "startMs": 202200,
+        "endMs": 206860,
+        "text": "everything back to the left, slide one bead on the second row to the right, representing"
+      },
+      {
+        "id": "youtube-json3-53-206860",
+        "startMs": 206860,
+        "endMs": 210680,
+        "text": "ten, and then add the final 2 beads on the bottom row for a total of 12."
+      },
+      {
+        "id": "youtube-json3-54-210740",
+        "startMs": 210740,
+        "endMs": 213120,
+        "text": "This is particularly useful with large numbers."
+      },
+      {
+        "id": "youtube-json3-55-213120",
+        "startMs": 213120,
+        "endMs": 219720,
+        "text": "So if we were to add 1,251 we would just add 1 to the bottom row, 5 to the second row,"
+      },
+      {
+        "id": "youtube-json3-56-219720",
+        "startMs": 219720,
+        "endMs": 224099,
+        "text": "2 to the third row, and 1 to the fourth row - we don’t have to add in our head and the"
+      },
+      {
+        "id": "youtube-json3-57-224099",
+        "startMs": 224099,
+        "endMs": 226000,
+        "text": "abacus stores the total for us."
+      },
+      {
+        "id": "youtube-json3-58-226000",
+        "startMs": 226000,
+        "endMs": 230371,
+        "text": "Over the next 4000 years, humans developed all sorts of clever computing devices, like"
+      },
+      {
+        "id": "youtube-json3-59-230371",
+        "startMs": 230371,
+        "endMs": 233580,
+        "text": "the astrolabe, which enabled ships to calculate their latitude at sea."
+      },
+      {
+        "id": "youtube-json3-60-233580",
+        "startMs": 233580,
+        "endMs": 236950,
+        "text": "Or the slide rule, for assisting with multiplication and division."
+      },
+      {
+        "id": "youtube-json3-61-236950",
+        "startMs": 236950,
+        "endMs": 240870,
+        "text": "And there are literally hundred of types of clocks created that could be used to calculate"
+      },
+      {
+        "id": "youtube-json3-62-240870",
+        "startMs": 240870,
+        "endMs": 245720,
+        "text": "sunrise, tides, positions of celestial bodies, and even just the time."
+      },
+      {
+        "id": "youtube-json3-63-245720",
+        "startMs": 245720,
+        "endMs": 249290,
+        "text": "Each one of these devices made something that was previously laborious to calculate much"
+      },
+      {
+        "id": "youtube-json3-64-249290",
+        "startMs": 249290,
+        "endMs": 254170,
+        "text": "faster, easier, and often more accurate –– it lowered the barrier to entry, and at the same"
+      },
+      {
+        "id": "youtube-json3-65-254170",
+        "startMs": 254170,
+        "endMs": 257920,
+        "text": "time, amplified our mental abilities –– take note, this is a theme we’re going to touch"
+      },
+      {
+        "id": "youtube-json3-66-257920",
+        "startMs": 257920,
+        "endMs": 259889,
+        "text": "on a lot in this series."
+      },
+      {
+        "id": "youtube-json3-67-259889",
+        "startMs": 259889,
+        "endMs": 264151,
+        "text": "As early computer pioneer Charles Babbage said: “At each increase of knowledge, as"
+      },
+      {
+        "id": "youtube-json3-68-264151",
+        "startMs": 264151,
+        "endMs": 268710,
+        "text": "well as on the contrivance of every new tool, human labour becomes abridged.”"
+      },
+      {
+        "id": "youtube-json3-69-268710",
+        "startMs": 268710,
+        "endMs": 271150,
+        "text": "However, none of these devices were called “computers”."
+      },
+      {
+        "id": "youtube-json3-70-271150",
+        "startMs": 271150,
+        "endMs": 276199,
+        "text": "The earliest documented use of the word “computer” is from 1613, in a book by Richard Braithwait."
+      },
+      {
+        "id": "youtube-json3-71-276199",
+        "startMs": 276199,
+        "endMs": 278880,
+        "text": "And it wasn’t a machine at all - it was a job title."
+      },
+      {
+        "id": "youtube-json3-72-278880",
+        "startMs": 278880,
+        "endMs": 281680,
+        "text": "Braithwait said, “I have read the truest computer of times,"
+      },
+      {
+        "id": "youtube-json3-73-281680",
+        "startMs": 281680,
+        "endMs": 286419,
+        "text": "and the best arithmetician that ever breathed, and he reduceth thy dayes into a short number”."
+      },
+      {
+        "id": "youtube-json3-74-286419",
+        "startMs": 286419,
+        "endMs": 291120,
+        "text": "In those days, computer was a person who did calculations, sometimes with the help of machines,"
+      },
+      {
+        "id": "youtube-json3-75-291120",
+        "startMs": 291120,
+        "endMs": 292120,
+        "text": "but often not."
+      },
+      {
+        "id": "youtube-json3-76-292120",
+        "startMs": 292120,
+        "endMs": 296150,
+        "text": "This job title persisted until the late 1800s, when the meaning of computer started shifting"
+      },
+      {
+        "id": "youtube-json3-77-296150",
+        "startMs": 296150,
+        "endMs": 297750,
+        "text": "to refer to devices."
+      },
+      {
+        "id": "youtube-json3-78-297750",
+        "startMs": 297750,
+        "endMs": 302020,
+        "text": "Notable among these devices was the Step Reckoner, built by German polymath Gottfried Leibniz"
+      },
+      {
+        "id": "youtube-json3-79-302020",
+        "startMs": 302020,
+        "endMs": 303360,
+        "text": "in 1694."
+      },
+      {
+        "id": "youtube-json3-80-303360",
+        "startMs": 303360,
+        "endMs": 308319,
+        "text": "Leibniz said “... it is beneath the dignity of excellent men to waste their time in calculation"
+      },
+      {
+        "id": "youtube-json3-81-308319",
+        "startMs": 308319,
+        "endMs": 311789,
+        "text": "when any peasant could do the work just as accurately with the aid of a machine.”"
+      },
+      {
+        "id": "youtube-json3-82-311789",
+        "startMs": 311789,
+        "endMs": 315540,
+        "text": "It worked kind of like the odometer in your car, which is really just a machine for adding"
+      },
+      {
+        "id": "youtube-json3-83-315540",
+        "startMs": 315540,
+        "endMs": 317349,
+        "text": "up the number of miles your car has driven."
+      },
+      {
+        "id": "youtube-json3-84-317349",
+        "startMs": 317349,
+        "endMs": 321430,
+        "text": "The device had a series of gears that turned; each gear had ten teeth, to represent the"
+      },
+      {
+        "id": "youtube-json3-85-321430",
+        "startMs": 321430,
+        "endMs": 322860,
+        "text": "digits from 0 to 9."
+      },
+      {
+        "id": "youtube-json3-86-322860",
+        "startMs": 322860,
+        "endMs": 327720,
+        "text": "Whenever a gear bypassed nine, it rotated back to 0 and advanced the adjacent gear by one tooth."
+      },
+      {
+        "id": "youtube-json3-87-327860",
+        "startMs": 327860,
+        "endMs": 331160,
+        "text": "Kind of like when hitting 10 on that basic abacus."
+      },
+      {
+        "id": "youtube-json3-88-331169",
+        "startMs": 331169,
+        "endMs": 333470,
+        "text": "This worked in reverse when doing subtraction, too."
+      },
+      {
+        "id": "youtube-json3-89-333470",
+        "startMs": 333470,
+        "endMs": 337260,
+        "text": "With some clever mechanical tricks, the Step Reckoner was also able to multiply and divide"
+      },
+      {
+        "id": "youtube-json3-90-337260",
+        "startMs": 337260,
+        "endMs": 338400,
+        "text": "numbers."
+      },
+      {
+        "id": "youtube-json3-91-338420",
+        "startMs": 338420,
+        "endMs": 342260,
+        "text": "Multiplications and divisions are really just many additions and subtractions."
+      },
+      {
+        "id": "youtube-json3-92-342260",
+        "startMs": 342260,
+        "endMs": 347720,
+        "text": "For example, if we want to divide 17 by 5, we just subtract 5, then 5 again,"
+      },
+      {
+        "id": "youtube-json3-93-347720",
+        "startMs": 347720,
+        "endMs": 352910,
+        "text": "and then we can’t subtract any more 5’s… so we know 5 goes into 17 three times, with"
+      },
+      {
+        "id": "youtube-json3-94-352910",
+        "startMs": 352910,
+        "endMs": 353910,
+        "text": "2 left over."
+      },
+      {
+        "id": "youtube-json3-95-353910",
+        "startMs": 353910,
+        "endMs": 357919,
+        "text": "The Step Reckoner was able to do this in an automated way, and was the first machine that"
+      },
+      {
+        "id": "youtube-json3-96-357920",
+        "startMs": 357920,
+        "endMs": 360020,
+        "text": "could do all four of these operations."
+      },
+      {
+        "id": "youtube-json3-97-360020",
+        "startMs": 360020,
+        "endMs": 364980,
+        "text": "And this design was so successful it was used for the next three centuries of calculator design."
+      },
+      {
+        "id": "youtube-json3-98-364980",
+        "startMs": 364980,
+        "endMs": 369580,
+        "text": "Unfortunately, even with mechanical calculators, most real world problems required many steps"
+      },
+      {
+        "id": "youtube-json3-99-369580",
+        "startMs": 369580,
+        "endMs": 371800,
+        "text": "of computation before an answer was determined."
+      },
+      {
+        "id": "youtube-json3-100-371819",
+        "startMs": 371819,
+        "endMs": 374330,
+        "text": "It could take hours or days to generate a single result."
+      },
+      {
+        "id": "youtube-json3-101-374330",
+        "startMs": 374330,
+        "endMs": 377990,
+        "text": "Also, these hand-crafted machines were expensive, and not accessible to most of the population."
+      },
+      {
+        "id": "youtube-json3-102-377990",
+        "startMs": 377990,
+        "endMs": 383669,
+        "text": "So, before 20th century, most people experienced computing through pre-computed tables assembled"
+      },
+      {
+        "id": "youtube-json3-103-383669",
+        "startMs": 383669,
+        "endMs": 386069,
+        "text": "by those amazing “human computers” we talked about."
+      },
+      {
+        "id": "youtube-json3-104-386069",
+        "startMs": 386069,
+        "endMs": 390569,
+        "text": "So if you needed to know the square root of 8 million 6 hundred and 75 thousand 3 hundred"
+      },
+      {
+        "id": "youtube-json3-105-390569",
+        "startMs": 390569,
+        "endMs": 394710,
+        "text": "and 9, instead of spending all day hand-cranking your step reckoner, you could look it up in"
+      },
+      {
+        "id": "youtube-json3-106-394710",
+        "startMs": 394710,
+        "endMs": 397800,
+        "text": "a huge book full of square root tables in a minute or so."
+      },
+      {
+        "id": "youtube-json3-107-397800",
+        "startMs": 397800,
+        "endMs": 401349,
+        "text": "Speed and accuracy is particularly important on the battlefield, and so militaries were"
+      },
+      {
+        "id": "youtube-json3-108-401349",
+        "startMs": 401349,
+        "endMs": 404139,
+        "text": "among the first to apply computing to complex problems."
+      },
+      {
+        "id": "youtube-json3-109-404139",
+        "startMs": 404139,
+        "endMs": 408229,
+        "text": "A particularly difficult problem is accurately firing artillery shells, which by the 1800s"
+      },
+      {
+        "id": "youtube-json3-110-408229",
+        "startMs": 408229,
+        "endMs": 411450,
+        "text": "could travel well over a kilometer (or a bit more than half a mile)."
+      },
+      {
+        "id": "youtube-json3-111-411450",
+        "startMs": 411450,
+        "endMs": 416030,
+        "text": "Add to this varying wind conditions, temperature, and atmospheric pressure, and even hitting"
+      },
+      {
+        "id": "youtube-json3-112-416030",
+        "startMs": 416030,
+        "endMs": 418330,
+        "text": "something as large as a ship was difficult."
+      },
+      {
+        "id": "youtube-json3-113-418330",
+        "startMs": 418330,
+        "endMs": 421970,
+        "text": "Range Tables were created that allowed gunners to look up environmental conditions and the"
+      },
+      {
+        "id": "youtube-json3-114-421970",
+        "startMs": 421970,
+        "endMs": 425960,
+        "text": "distance they wanted to fire, and the table would tell them the angle to set the canon."
+      },
+      {
+        "id": "youtube-json3-115-425960",
+        "startMs": 425960,
+        "endMs": 429650,
+        "text": "These Range Tables worked so well, they were used well into World War Two."
+      },
+      {
+        "id": "youtube-json3-116-429650",
+        "startMs": 429650,
+        "endMs": 433479,
+        "text": "The problem was, if you changed the design of the cannon or of the shell, a whole new"
+      },
+      {
+        "id": "youtube-json3-117-433479",
+        "startMs": 433479,
+        "endMs": 438220,
+        "text": "table had to be computed, which was massively time consuming and inevitably led to errors."
+      },
+      {
+        "id": "youtube-json3-118-438220",
+        "startMs": 438220,
+        "endMs": 442680,
+        "text": "Charles Babbage acknowledged this problem in 1822 in a paper to the Royal Astronomical"
+      },
+      {
+        "id": "youtube-json3-119-442680",
+        "startMs": 442680,
+        "endMs": 447940,
+        "text": "Society entitled: “Note on the application of machinery to the computation of astronomical"
+      },
+      {
+        "id": "youtube-json3-120-447940",
+        "startMs": 447940,
+        "endMs": 449090,
+        "text": "and mathematical tables\"."
+      },
+      {
+        "id": "youtube-json3-121-449090",
+        "startMs": 449090,
+        "endMs": 450849,
+        "text": "Let’s go to the thought bubble."
+      },
+      {
+        "id": "youtube-json3-122-450849",
+        "startMs": 450849,
+        "endMs": 455050,
+        "text": "Charles Babbage proposed a new mechanical device called the Difference Engine, a much"
+      },
+      {
+        "id": "youtube-json3-123-455050",
+        "startMs": 455050,
+        "endMs": 458200,
+        "text": "more complex machine that could approximate polynomials."
+      },
+      {
+        "id": "youtube-json3-124-458200",
+        "startMs": 458200,
+        "endMs": 463159,
+        "text": "Polynomials describe the relationship between several variables - like range and air pressure,"
+      },
+      {
+        "id": "youtube-json3-125-463159",
+        "startMs": 463159,
+        "endMs": 465900,
+        "text": "or amount of pizza Carrie Anne eats and happiness."
+      },
+      {
+        "id": "youtube-json3-126-465900",
+        "startMs": 465900,
+        "endMs": 469659,
+        "text": "Polynomials could also be used to approximate logarithmic and trigonometric functions, which"
+      },
+      {
+        "id": "youtube-json3-127-469659",
+        "startMs": 469659,
+        "endMs": 472060,
+        "text": "are a real hassle to calculate by hand."
+      },
+      {
+        "id": "youtube-json3-128-472060",
+        "startMs": 472060,
+        "endMs": 476340,
+        "text": "Babbage started construction in 1823, and over the next two decades, tried to fabricate"
+      },
+      {
+        "id": "youtube-json3-129-476340",
+        "startMs": 476340,
+        "endMs": 481020,
+        "text": "and assemble the 25,000 components, collectively weighing around 15 tons."
+      },
+      {
+        "id": "youtube-json3-130-481020",
+        "startMs": 481020,
+        "endMs": 483740,
+        "text": "Unfortunately, the project was ultimately abandoned."
+      },
+      {
+        "id": "youtube-json3-131-483760",
+        "startMs": 483760,
+        "endMs": 488860,
+        "text": "But, in 1991, historians finished constructing a Difference Engine based on Babbage's drawings"
+      },
+      {
+        "id": "youtube-json3-132-488860",
+        "startMs": 488860,
+        "endMs": 490509,
+        "text": "and writings - and it worked!"
+      },
+      {
+        "id": "youtube-json3-133-490509",
+        "startMs": 490509,
+        "endMs": 494240,
+        "text": "But more importantly, during construction of the Difference Engine, Babbage imagined"
+      },
+      {
+        "id": "youtube-json3-134-494240",
+        "startMs": 494240,
+        "endMs": 497539,
+        "text": "an even more complex machine - the Analytical Engine."
+      },
+      {
+        "id": "youtube-json3-135-497539",
+        "startMs": 497539,
+        "endMs": 501259,
+        "text": "Unlike the Difference Engine, Step Reckoner and all other computational devices before"
+      },
+      {
+        "id": "youtube-json3-136-501259",
+        "startMs": 501259,
+        "endMs": 504500,
+        "text": "it - the Analytical Engine was a “general purpose computer”."
+      },
+      {
+        "id": "youtube-json3-137-504500",
+        "startMs": 504500,
+        "endMs": 508590,
+        "text": "It could be used for many things, not just one particular computation; it could be given"
+      },
+      {
+        "id": "youtube-json3-138-508590",
+        "startMs": 508590,
+        "endMs": 512650,
+        "text": "data and run operations in sequence; it had memory and even a primitive printer."
+      },
+      {
+        "id": "youtube-json3-139-512650",
+        "startMs": 512650,
+        "endMs": 516720,
+        "text": "Like the Difference Engine, it was ahead of its time, and was never fully constructed."
+      },
+      {
+        "id": "youtube-json3-140-516720",
+        "startMs": 516720,
+        "endMs": 520650,
+        "text": "However, the idea of an “automatic computer” – one that could guide itself through a"
+      },
+      {
+        "id": "youtube-json3-141-520650",
+        "startMs": 520650,
+        "endMs": 525450,
+        "text": "series of operations automatically, was a huge deal, and would foreshadow computer programs."
+      },
+      {
+        "id": "youtube-json3-142-525450",
+        "startMs": 525450,
+        "endMs": 530010,
+        "text": "English mathematician Ada Lovelace wrote hypothetical programs for the Analytical Engine, saying,"
+      },
+      {
+        "id": "youtube-json3-143-530010",
+        "startMs": 530010,
+        "endMs": 535030,
+        "text": "“A new, a vast, and a powerful language is developed for the future use of analysis.”"
+      },
+      {
+        "id": "youtube-json3-144-535030",
+        "startMs": 535030,
+        "endMs": 538700,
+        "text": "For her work, Ada is often considered the world’s first programmer."
+      },
+      {
+        "id": "youtube-json3-145-538700",
+        "startMs": 538700,
+        "endMs": 543690,
+        "text": "The Analytical Engine would inspire, arguably, the first generation of computer scientists,"
+      },
+      {
+        "id": "youtube-json3-146-543690",
+        "startMs": 543690,
+        "endMs": 546810,
+        "text": "who incorporated many of Babbage’s ideas in their machines."
+      },
+      {
+        "id": "youtube-json3-147-546810",
+        "startMs": 546810,
+        "endMs": 549580,
+        "text": "This is why Babbage is often considered the \"father of computing\"."
+      },
+      {
+        "id": "youtube-json3-148-549580",
+        "startMs": 549580,
+        "endMs": 550590,
+        "text": "Thanks Thought Bubble!"
+      },
+      {
+        "id": "youtube-json3-149-550590",
+        "startMs": 550590,
+        "endMs": 554970,
+        "text": "So by the end of the 19th century, computing devices were used for special purpose tasks"
+      },
+      {
+        "id": "youtube-json3-150-554970",
+        "startMs": 554970,
+        "endMs": 558880,
+        "text": "in the sciences and engineering, but rarely seen in business, government or domestic life."
+      },
+      {
+        "id": "youtube-json3-151-558880",
+        "startMs": 558880,
+        "endMs": 563330,
+        "text": "However, the US government faced a serious problem for its 1890 census that demanded"
+      },
+      {
+        "id": "youtube-json3-152-563330",
+        "startMs": 563330,
+        "endMs": 565820,
+        "text": "the kind of efficiency that only computers could provide."
+      },
+      {
+        "id": "youtube-json3-153-565820",
+        "startMs": 565820,
+        "endMs": 570090,
+        "text": "The US Constitution requires that a census be conducted every ten years, for the purposes"
+      },
+      {
+        "id": "youtube-json3-154-570090",
+        "startMs": 570090,
+        "endMs": 573810,
+        "text": "of distributing federal funds, representation in congress, and good stuff like that."
+      },
+      {
+        "id": "youtube-json3-155-573810",
+        "startMs": 573810,
+        "endMs": 578090,
+        "text": "And by 1880, the US population was booming, mostly due to immigration."
+      },
+      {
+        "id": "youtube-json3-156-578090",
+        "startMs": 578090,
+        "endMs": 582720,
+        "text": "That census took seven years to manually compile and by the time it was completed, it was already"
+      },
+      {
+        "id": "youtube-json3-157-582720",
+        "startMs": 582720,
+        "endMs": 588050,
+        "text": "out of date – and it was predicted that the 1890 census would take 13 years to compute."
+      },
+      {
+        "id": "youtube-json3-158-588050",
+        "startMs": 588050,
+        "endMs": 590790,
+        "text": "That’s a little problematic when it’s required every decade!"
+      },
+      {
+        "id": "youtube-json3-159-590790",
+        "startMs": 590790,
+        "endMs": 594470,
+        "text": "The Census bureau turned to Herman Hollerith, who had built a tabulating machine."
+      },
+      {
+        "id": "youtube-json3-160-594470",
+        "startMs": 594470,
+        "endMs": 598670,
+        "text": "His machine was “electro-mechanical” – it used traditional mechanical systems for keeping"
+      },
+      {
+        "id": "youtube-json3-161-598670",
+        "startMs": 598670,
+        "endMs": 602970,
+        "text": "count, like Leibniz’s Step Reckoner –– but coupled them with electrically-powered components."
+      },
+      {
+        "id": "youtube-json3-162-602970",
+        "startMs": 602970,
+        "endMs": 606780,
+        "text": "Hollerith’s machine used punch cards which were paper cards with a grid of locations"
+      },
+      {
+        "id": "youtube-json3-163-606780",
+        "startMs": 606780,
+        "endMs": 608700,
+        "text": "that can be punched out to represent data."
+      },
+      {
+        "id": "youtube-json3-164-608700",
+        "startMs": 608700,
+        "endMs": 611910,
+        "text": "For example, there was a series of holes for marital status."
+      },
+      {
+        "id": "youtube-json3-165-611910",
+        "startMs": 611910,
+        "endMs": 615830,
+        "text": "If you were married, you would punch out the married spot, then when the card was inserted"
+      },
+      {
+        "id": "youtube-json3-166-615830",
+        "startMs": 615830,
+        "endMs": 619620,
+        "text": "into Hollerith’s machine, little metal pins would come down over the card – if a spot"
+      },
+      {
+        "id": "youtube-json3-167-619620",
+        "startMs": 619620,
+        "endMs": 623670,
+        "text": "was punched out, the pin would pass through the hole in the paper and into a little vial"
+      },
+      {
+        "id": "youtube-json3-168-623670",
+        "startMs": 623670,
+        "endMs": 625890,
+        "text": "of mercury, which completed the circuit."
+      },
+      {
+        "id": "youtube-json3-169-625890",
+        "startMs": 625890,
+        "endMs": 630180,
+        "text": "This now completed circuit powered an electric motor, which turned a gear to add one, in"
+      },
+      {
+        "id": "youtube-json3-170-630180",
+        "startMs": 630180,
+        "endMs": 632080,
+        "text": "this case, to the “married” total."
+      },
+      {
+        "id": "youtube-json3-171-632080",
+        "startMs": 632080,
+        "endMs": 636180,
+        "text": "Hollerith’s machine was roughly 10x faster than manual tabulations, and the Census was"
+      },
+      {
+        "id": "youtube-json3-172-636180",
+        "startMs": 636180,
+        "endMs": 641130,
+        "text": "completed in just two and a half years - saving the census office millions of dollars."
+      },
+      {
+        "id": "youtube-json3-173-641130",
+        "startMs": 641130,
+        "endMs": 644530,
+        "text": "Businesses began recognizing the value of computing, and saw its potential to boost"
+      },
+      {
+        "id": "youtube-json3-174-644530",
+        "startMs": 644530,
+        "endMs": 649700,
+        "text": "profits by improving labor- and data-intensive tasks, like accounting, insurance appraisals,"
+      },
+      {
+        "id": "youtube-json3-175-649700",
+        "startMs": 649700,
+        "endMs": 650950,
+        "text": "and inventory management."
+      },
+      {
+        "id": "youtube-json3-176-650950",
+        "startMs": 650950,
+        "endMs": 655020,
+        "text": "To meet this demand, Hollerith founded The Tabulating Machine Company, which later merged"
+      },
+      {
+        "id": "youtube-json3-177-655020",
+        "startMs": 655020,
+        "endMs": 660020,
+        "text": "with other machine makers in 1924 to become The International Business Machines Corporation"
+      },
+      {
+        "id": "youtube-json3-178-660020",
+        "startMs": 660020,
+        "endMs": 662940,
+        "text": "or IBM - which you’ve probably heard of."
+      },
+      {
+        "id": "youtube-json3-179-662940",
+        "startMs": 662940,
+        "endMs": 667580,
+        "text": "These electro-mechanical “business machines” were a huge success, transforming commerce"
+      },
+      {
+        "id": "youtube-json3-180-667580",
+        "startMs": 667580,
+        "endMs": 671710,
+        "text": "and government, and by the mid-1900s, the explosion in world population and the rise"
+      },
+      {
+        "id": "youtube-json3-181-671710",
+        "startMs": 671710,
+        "endMs": 677220,
+        "text": "of globalized trade demanded even faster and more flexible tools for processing data, setting"
+      },
+      {
+        "id": "youtube-json3-182-677220",
+        "startMs": 677220,
+        "endMs": 680620,
+        "text": "the stage for digital computers, which we’ll talk about next week."
+      }
+    ],
+    "sourceSegmentCount": 183,
+    "characterCount": 13127,
+    "transcriptFingerprint": "35ab6ade",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "e220edaa-6061-44d6-85b4-8797b9a4ab8e",
+    "generationSessionId": "1ad55651-b935-444f-b209-79c47b7d97f5",
+    "recoverySessionId": "f11c92d9-10ca-41a6-8bc8-d107d688120c",
+    "questionPlan": {
+      "seed": "e5487abc4ce588deccb62bec081551f708bea29f17bb3f2b4a0813533ba669ef",
+      "types": [
+        "multiple_choice",
+        "short_answer",
+        "true_false",
+        "short_answer",
+        "multiple_choice"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Early Computing: Crash Course Computer Science #1",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "computing device function",
+          "question": "What operation does the slide rule assist with?",
+          "retryQuestion": "Which mathematical operations is the slide rule designed to help perform?",
+          "explanation": "The slide rule is a computing device that assists with multiplication and division, making these calculations faster and easier.",
+          "type": "multiple_choice",
+          "choices": [
+            "Addition and subtraction",
+            "Multiplication and division",
+            "Determining sunrise and tides",
+            "Calculating latitude at sea"
+          ],
+          "answerIndex": 1,
+          "answer": "Multiplication and division"
+        },
+        {
+          "id": "q2",
+          "concept": "computing device relationship",
+          "question": "What relationship does the abacus have to the state of a computation?",
+          "retryQuestion": "How does the abacus relate to the current state of a computation?",
+          "explanation": "The abacus stores the current state of the computation, similar to how a hard drive stores data today.",
+          "type": "short_answer",
+          "answer": "The abacus stores the current state of the computation.",
+          "rubricIdeas": [
+            "The abacus stores the current state of the computation."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The abacus stores the current state of the computation."
+            ],
+            "acceptableAnswers": [
+              "The abacus stores the current state of the computation."
+            ]
+          }
+        },
+        {
+          "id": "q3",
+          "concept": "Step Reckoner arithmetic operations",
+          "question": "The Step Reckoner could multiply and divide numbers through mechanical tricks.",
+          "retryQuestion": "The Step Reckoner was limited to addition and subtraction, lacking the ability to multiply or divide.",
+          "explanation": "This statement is true: The Step Reckoner could multiply and divide numbers through mechanical tricks.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "The Step Reckoner could multiply and divide numbers through mechanical tricks."
+        },
+        {
+          "id": "q4",
+          "concept": "astrolabe navigation relationship",
+          "question": "What did the astrolabe enable ships to calculate at sea?",
+          "retryQuestion": "What navigational calculation did the astrolabe allow ships to perform while at sea?",
+          "explanation": "The astrolabe was a computing device that enabled ships to calculate their latitude while at sea.",
+          "type": "short_answer",
+          "answer": "The astrolabe enabled ships to calculate their latitude at sea.",
+          "rubricIdeas": [
+            "The astrolabe enabled ships to calculate their latitude at sea."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The astrolabe enabled ships to calculate their latitude at sea."
+            ],
+            "acceptableAnswers": [
+              "The astrolabe enabled ships to calculate their latitude at sea."
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "abacus origin",
+          "question": "Why was the abacus created?",
+          "retryQuestion": "What societal condition led to the creation of the abacus?",
+          "explanation": "The abacus was created because the scale of society had grown beyond what a single person could keep and manipulate in their mind, such as thousands of people in a village or tens of thousands of cattle.",
+          "type": "multiple_choice",
+          "choices": [
+            "Because the scale of society had become greater than what a single person could keep and manipulate in their mind.",
+            "Because counting on fingers was too slow for everyday arithmetic.",
+            "Because early civilizations wanted a portable way to record trade transactions.",
+            "Because people needed a device to perform multiplication and division quickly."
+          ],
+          "answerIndex": 0,
+          "answer": "Because the scale of society had become greater than what a single person could keep and manipulate in their mind."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 5,
+      "retryCount": 0,
+      "inputTokens": 50507,
+      "outputTokens": 730,
+      "reasoningTokens": 0,
+      "elapsedMs": 11223,
+      "sourceSelection": {
+        "sentenceCount": 96,
+        "excludedSentenceCount": 6,
+        "candidateWindowCount": 89,
+        "selectedWindowCount": 30,
+        "focusWordCount": 164
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "computing device function",
+      "question": "What operation does the slide rule assist with?",
+      "retryQuestion": "Which mathematical operations is the slide rule designed to help perform?",
+      "explanation": "The slide rule is a computing device that assists with multiplication and division, making these calculations faster and easier.",
+      "type": "multiple_choice",
+      "choices": [
+        "Addition and subtraction",
+        "Multiplication and division",
+        "Determining sunrise and tides",
+        "Calculating latitude at sea"
+      ],
+      "answerIndex": 1,
+      "answer": "Multiplication and division"
+    },
+    {
+      "id": "q2",
+      "concept": "computing device relationship",
+      "question": "What relationship does the abacus have to the state of a computation?",
+      "retryQuestion": "How does the abacus relate to the current state of a computation?",
+      "explanation": "The abacus stores the current state of the computation, similar to how a hard drive stores data today.",
+      "type": "short_answer",
+      "answer": "The abacus stores the current state of the computation.",
+      "rubricIdeas": [
+        "The abacus stores the current state of the computation."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The abacus stores the current state of the computation."
+        ],
+        "acceptableAnswers": [
+          "The abacus stores the current state of the computation."
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "concept": "Step Reckoner arithmetic operations",
+      "question": "The Step Reckoner could multiply and divide numbers through mechanical tricks.",
+      "retryQuestion": "The Step Reckoner was limited to addition and subtraction, lacking the ability to multiply or divide.",
+      "explanation": "This statement is true: The Step Reckoner could multiply and divide numbers through mechanical tricks.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "The Step Reckoner could multiply and divide numbers through mechanical tricks."
+    },
+    {
+      "id": "q4",
+      "concept": "astrolabe navigation relationship",
+      "question": "What did the astrolabe enable ships to calculate at sea?",
+      "retryQuestion": "What navigational calculation did the astrolabe allow ships to perform while at sea?",
+      "explanation": "The astrolabe was a computing device that enabled ships to calculate their latitude while at sea.",
+      "type": "short_answer",
+      "answer": "The astrolabe enabled ships to calculate their latitude at sea.",
+      "rubricIdeas": [
+        "The astrolabe enabled ships to calculate their latitude at sea."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The astrolabe enabled ships to calculate their latitude at sea."
+        ],
+        "acceptableAnswers": [
+          "The astrolabe enabled ships to calculate their latitude at sea."
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "abacus origin",
+      "question": "Why was the abacus created?",
+      "retryQuestion": "What societal condition led to the creation of the abacus?",
+      "explanation": "The abacus was created because the scale of society had grown beyond what a single person could keep and manipulate in their mind, such as thousands of people in a village or tens of thousands of cattle.",
+      "type": "multiple_choice",
+      "choices": [
+        "Because the scale of society had become greater than what a single person could keep and manipulate in their mind.",
+        "Because counting on fingers was too slow for everyday arithmetic.",
+        "Because early civilizations wanted a portable way to record trade transactions.",
+        "Because people needed a device to perform multiplication and division quickly."
+      ],
+      "answerIndex": 0,
+      "answer": "Because the scale of society had become greater than what a single person could keep and manipulate in their mind."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "c13382878ea90bdbd6aa510a0e013c5503658de8d148ab7a91589745a153c691"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "7ac90a7ed60930ff21f36f57a3d8bf7a0068b7791048cb0dc04825c1e1310964"
+    },
+    {
+      "callIndex": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "b4a272a536b0b673c68844d8ccea4755e86e06dd0f4d44de05f33b1a2ee1747e"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "1c11800835aa243d7421c429966352bbdbaf20c693e2de2241147300b7b8851f"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "1519c73fbc3195d130025e6b24b34b1c2178770c7cc7c6f5d20b1bc044114606"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "Multiplication and division",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the slide rule assists with multiplication and division.",
+        "matchedIdeas": [
+          "Multiplication and division"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "The abacus stores the current state of the computation.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the abacus stores the current state of the computation.",
+        "matchedIdeas": [
+          "The abacus stores the current state of the computation."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Correct! The Step Reckoner was indeed capable of performing multiplication and division through mechanical tricks.",
+        "matchedIdeas": [
+          "Step Reckoner could multiply and divide through mechanical tricks"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "The astrolabe enabled ships to calculate their latitude at sea.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the astrolabe enabled ships to calculate their latitude at sea.",
+        "matchedIdeas": [
+          "The astrolabe enabled ships to calculate their latitude at sea."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "Because the scale of society had become greater than what a single person could keep and manipulate in their mind.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that the abacus was created because society's growing scale exceeded what one person could manage mentally.",
+        "matchedIdeas": [
+          "The scale of society had become greater than what a single person could keep and manipulate in their mind."
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "O5nskjZ_GoI"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 2499,
+      "videoId": "O5nskjZ_GoI",
+      "title": "Early Computing: Crash Course Computer Science #1",
+      "language": "en",
+      "durationSeconds": 681,
+      "segmentCount": 183,
+      "sourceSegmentCount": 183,
+      "characterCount": 13127,
+      "transcriptFingerprint": "35ab6ade",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 2499,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 5912,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 5955,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 8630,
+      "ordinal": 1,
+      "concept": "computing device function",
+      "prompt": "What operation does the slide rule assist with?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 8630,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2718,
+      "inputTokens": 9755,
+      "outputTokens": 136,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8630,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f11c92d9-10ca-41a6-8bc8-d107d688120c"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8643,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 8678,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 10477,
+      "ordinal": 2,
+      "concept": "computing device relationship",
+      "prompt": "What relationship does the abacus have to the state of a computation?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 10478,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1834,
+      "inputTokens": 10066,
+      "outputTokens": 147,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10478,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f11c92d9-10ca-41a6-8bc8-d107d688120c"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10490,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10512,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 12580,
+      "ordinal": 3,
+      "concept": "Step Reckoner arithmetic operations",
+      "prompt": "The Step Reckoner could multiply and divide numbers through mechanical tricks."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12580,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2090,
+      "inputTokens": 10357,
+      "outputTokens": 137,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12580,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f11c92d9-10ca-41a6-8bc8-d107d688120c"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12595,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12613,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 14841,
+      "ordinal": 4,
+      "concept": "astrolabe navigation relationship",
+      "prompt": "What did the astrolabe enable ships to calculate at sea?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14842,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2246,
+      "inputTokens": 10310,
+      "outputTokens": 152,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14842,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f11c92d9-10ca-41a6-8bc8-d107d688120c"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14854,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14873,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 17130,
+      "ordinal": 5,
+      "concept": "abacus origin",
+      "prompt": "Why was the abacus created?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 17131,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2276,
+      "inputTokens": 10019,
+      "outputTokens": 158,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 17131,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "f11c92d9-10ca-41a6-8bc8-d107d688120c"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 17131,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 5,
+      "retryCount": 0,
+      "generationElapsedMs": 11223,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 17131,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "Multiplication and division"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 19172,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the slide rule assists with multiplication and division.",
+      "matchedIdeas": [
+        "Multiplication and division"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 19172,
+      "ordinal": 2,
+      "questionType": "short_answer",
+      "response": "The abacus stores the current state of the computation."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 21192,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the abacus stores the current state of the computation.",
+      "matchedIdeas": [
+        "The abacus stores the current state of the computation."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 21193,
+      "ordinal": 3,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 23610,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Correct! The Step Reckoner was indeed capable of performing multiplication and division through mechanical tricks.",
+      "matchedIdeas": [
+        "Step Reckoner could multiply and divide through mechanical tricks"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 23610,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "The astrolabe enabled ships to calculate their latitude at sea."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 25769,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the astrolabe enabled ships to calculate their latitude at sea.",
+      "matchedIdeas": [
+        "The astrolabe enabled ships to calculate their latitude at sea."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 25769,
+      "ordinal": 5,
+      "questionType": "multiple_choice",
+      "response": "Because the scale of society had become greater than what a single person could keep and manipulate in their mind."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 28362,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that the abacus was created because society's growing scale exceeded what one person could manage mentally.",
+      "matchedIdeas": [
+        "The scale of society had become greater than what a single person could keep and manipulate in their mind."
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

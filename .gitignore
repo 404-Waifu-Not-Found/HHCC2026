@@ -32,12 +32,19 @@ test-results/
 *.hbc
 
 # Generated Expo and native projects
+/android/
 apps/app/android/
 apps/app/ios/
 apps/app/.expo/
 apps/app/expo-env.d.ts
 apps/app/public/runtime/
 apps/api/worker-configuration.d.ts
+
+# Local scratch and interpreter caches
+/tmp/
+**/__pycache__/
+*.pyc
+qa-results/.tmp-*
 
 # Model weights and compiled ML assets stay in R2/local caches
 *.onnx

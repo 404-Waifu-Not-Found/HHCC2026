@@ -1,0 +1,107 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.000] SOURCE_STARTED videoId="NgVSHXOz3jI"
+[00:02.325] CAPTIONS_COMPLETE videoId="NgVSHXOz3jI" title="Einstein's Revolution: Crash Course History of Science #32" language="en" durationSeconds=717 segmentCount=151 sourceSegmentCount=151 characterCount=11758 transcriptFingerprint="edae6d59" acquisition="youtube_local_ytdlp"
+[00:02.325] PLAN_REQUESTED questionCount=5 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:05.287] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:05.319] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:08.096] QUESTION_ACCEPTED ordinal=1 concept="mass-energy equivalence" prompt="What relationship does the equation E = mc² express?"
+[00:08.097] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2809 inputTokens=9724 outputTokens=172 reasoningTokens=0
+[00:08.097] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:08.113] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:08.157] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:10.003] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="true_false_compound_claim" acceptedCount=0 retryDelayMs=194 callElapsedMs=1889
+[00:10.003] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=2 ordinalAttempt=2 retryKind="structural" retryDelayMs=194 reasonCode="true_false_compound_claim" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:10.228] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=2 ordinalAttempt=2 retryKind="structural" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:10.281] AI_CALL_STARTED callIndex=2 ordinal=2 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:12.266] AI_CALL_COMPLETED callIndex=2 ordinal=2 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="true_false_compound_claim" acceptedCount=0 retryDelayMs=553 callElapsedMs=2037
+[00:12.266] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=2 ordinalAttempt=3 retryKind="structural" retryDelayMs=553 reasonCode="true_false_compound_claim" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:12.852] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=2 ordinalAttempt=3 retryKind="structural" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:12.873] AI_CALL_STARTED callIndex=3 ordinal=2 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:14.798] QUESTION_ACCEPTED ordinal=2 concept="Michelson-Morley experiment result" prompt="The Michelson-Morley experiment found a change in the speed of light due to Earth's motion relative to the ether."
+[00:14.799] AI_CALL_COMPLETED callIndex=3 ordinal=2 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1947 inputTokens=10281 outputTokens=174 reasoningTokens=0
+[00:14.799] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:14.828] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:14.855] AI_CALL_STARTED callIndex=4 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:16.743] QUESTION_ACCEPTED ordinal=3 concept="Heisenberg uncertainty principle mechanism" prompt="What limitation does the Heisenberg uncertainty principle place on measuring a quantum particle?"
+[00:16.743] AI_CALL_COMPLETED callIndex=4 ordinal=3 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1915 inputTokens=10209 outputTokens=177 reasoningTokens=0
+[00:16.743] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:16.777] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:16.813] AI_CALL_STARTED callIndex=5 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:18.372] QUESTION_ACCEPTED ordinal=4 concept="classical worldview absoluteness" prompt="The classical worldview held that the rules governing space and time were absolute."
+[00:18.373] AI_CALL_COMPLETED callIndex=5 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1595 inputTokens=10072 outputTokens=82 reasoningTokens=0
+[00:18.373] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:18.396] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:18.494] AI_CALL_STARTED callIndex=6 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:20.609] QUESTION_ACCEPTED ordinal=5 concept="Newtonian physics scope" prompt="Under what condition does Newton's system of physics apply?"
+[00:20.610] AI_CALL_COMPLETED callIndex=6 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2213 inputTokens=10183 outputTokens=164 reasoningTokens=0
+[00:20.610] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="31dc948e-5010-498e-b3ba-a1075fc3014b"
+[00:20.610] BANK_COMPLETE accepted=5 requested=5 aiCalls=7 retryCount=2 generationElapsedMs=15333 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: mass-energy equivalence
+Prompt: What relationship does the equation E = mc² express?
+Retry prompt: Which statement correctly describes the relationship expressed by E = mc²?
+A. Energy is converted into mass only, never mass into energy.
+B. Mass and energy can be converted into each other.
+C. Mass is converted into energy only, never energy into mass.
+D. Mass and energy are independent and cannot be interconverted.
+Correct answer: B. Mass and energy can be converted into each other.
+Explanation: The equation states that energy equals mass times the speed of light squared, meaning mass and energy are interconvertible forms of the same underlying quantity.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=824b4c0d5c21b1701021cc28966f0f89b2d2196f5e3d20813da84188a1ad61dd
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — TRUE_FALSE
+Concept: Michelson-Morley experiment result
+Prompt: The Michelson-Morley experiment found a change in the speed of light due to Earth's motion relative to the ether.
+Retry prompt: The Michelson-Morley experiment detected a variation in the speed of light caused by Earth's motion through the ether.
+Correct answer: False
+Correction: The Michelson-Morley experiment found no change in the speed of light due to Earth's motion relative to the ether.
+Explanation: The experiment expected a slight change in light's speed depending on its direction relative to Earth's motion through the ether, but no such change was observed, indicating that the speed of light is constant.
+AI provenance: call=3 attempt=3 classification=automatic_retry fingerprint=12a9e424ec0fbb4dfff446e0fdcb9bb8b3d4747b2e58a4c33347ab86042b95a2
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 3 — SHORT_ANSWER
+Concept: Heisenberg uncertainty principle mechanism
+Prompt: What limitation does the Heisenberg uncertainty principle place on measuring a quantum particle?
+Retry prompt: What cannot be simultaneously known about a quantum particle?
+Reference answer: An observer can detect the position or velocity of a quantum particle, but not both at the same time.
+Rubric ideas: An observer can detect the position or velocity of a quantum particle, but not both at the same time.
+Short-answer mode: proposition
+Explanation: The uncertainty principle states that an observer can determine either the position or the velocity of a quantum particle at a given time, but not both at the same time.
+AI provenance: call=4 attempt=1 classification=primary fingerprint=c5937c3272c4163cddde01e8184c959af9f9e01dfcd4c6f724127fcc528f814c
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 4 — TRUE_FALSE
+Concept: classical worldview absoluteness
+Prompt: The classical worldview held that the rules governing space and time were absolute.
+Retry prompt: In the classical worldview, the rules governing space and time were absolute.
+Correct answer: True
+Correction: The classical worldview held that the rules governing space and time were absolute.
+Explanation: This worldview treated measurements like length and duration as fixed and unchanging, independent of observer or situation.
+AI provenance: call=5 attempt=1 classification=primary fingerprint=d95d00e3b4ffa1bfe94e30275b93431ca0deb69fc014f2e0612d0f8a5b821d7f
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 5 — MULTIPLE_CHOICE
+Concept: Newtonian physics scope
+Prompt: Under what condition does Newton's system of physics apply?
+Retry prompt: For which objects is Newton's system of physics applicable?
+A. It applies only to extremely massive objects like stars.
+B. It applies only to objects moving near the speed of light.
+C. It applies to all objects regardless of mass or speed.
+D. It applies to objects that are not particularly massive or fast-moving.
+Correct answer: D. It applies to objects that are not particularly massive or fast-moving.
+Explanation: Newton's system works only for objects that are not particularly massive or fast-moving, such as those on Earth.
+AI provenance: call=6 attempt=1 classification=primary fingerprint=b1a03e4e43d87db3fb10930ce4dcb6466ee018efa7c4843c389cee33ad05aebe
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:20.610] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="Mass and energy can be converted into each other."
+[00:22.722] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="Your response correctly identifies that mass and energy are interchangeable, which is the key relationship expressed by E = mc²." matchedIdeas=["Mass and energy can be converted into each other."] source="deepseek_local"
+[00:22.722] GRADE_STARTED ordinal=2 questionType="true_false" response="False"
+[00:24.762] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="The response correctly identifies that the experiment found no change in the speed of light, which is the key point of the question." matchedIdeas=["Correctly identifies the statement as false"] source="deepseek_local"
+[00:24.762] GRADE_STARTED ordinal=3 questionType="short_answer" response="An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+[00:26.681] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="Your response correctly captures the key limitation: you can measure either a particle's position or its velocity, but not both simultaneously." matchedIdeas=["An observer can detect the position or velocity of a quantum particle, but not both at the same time."] source="deepseek_local"
+[00:26.681] GRADE_STARTED ordinal=4 questionType="true_false" response="True"
+[00:28.871] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your response correctly identifies that the classical worldview treated the rules of space and time as absolute." matchedIdeas=["Classical worldview held space and time rules as absolute"] source="deepseek_local"
+[00:28.871] GRADE_STARTED ordinal=5 questionType="multiple_choice" response="It applies to objects that are not particularly massive or fast-moving."
+[00:31.090] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="You correctly identified that Newton's physics applies to everyday objects that aren't extremely massive or moving near the speed of light." matchedIdeas=["Newton's physics applies to objects that are not particularly massive or fast-moving"] source="deepseek_local"
