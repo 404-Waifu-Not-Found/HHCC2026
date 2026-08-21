@@ -118,6 +118,42 @@ export async function apiRequest<T>(
   }
 }
 
+export async function apiMultipartRequest<T>(
+  path: string,
+  body: FormData,
+  schema?: ZodType<T>,
+): Promise<T> {
+  return apiRequest(path, { method: "PUT", body }, schema);
+}
+
+export async function apiBinaryRequest(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const headers = new Headers(options.headers);
+  headers.set("Accept", "application/pdf, image/*, application/octet-stream");
+  const cookie = readNativeAuthCookie(Platform.OS, () =>
+    authClient.getCookie(),
+  );
+  if (cookie) headers.set("Cookie", cookie);
+  const response = await fetch(`${API_ORIGIN}${path}`, {
+    ...options,
+    credentials: "include",
+    headers,
+  });
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = (await response.json()) as ApiErrorBody;
+      message = body.error?.message ?? message;
+    } catch {
+      // Keep the status fallback for binary error responses.
+    }
+    throw new ClientApiError(response.status, "request_failed", message);
+  }
+  return response;
+}
+
 export async function readBoundedApiResponseText(
   response: Response,
   maximumBytes = API_RESPONSE_MAX_BYTES,

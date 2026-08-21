@@ -8217,3 +8217,74 @@ export async function testDeepSeekKey(
   }
   return true;
 }
+
+export async function generateLocalCheatSheet(
+  context,
+  apiKey,
+  signal,
+  adapters = {},
+) {
+  const fetchImpl = adapters.fetch ?? globalThis.fetch.bind(globalThis);
+  const response = await fetchImpl(
+    "https://api.deepseek.com/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        thinking: { type: "disabled" },
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        max_tokens: 8_192,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied quiz primer, prompts, and explanations. Do not invent facts.",
+          },
+          { role: "user", content: JSON.stringify(context) },
+        ],
+      }),
+      signal,
+    },
+  );
+  if (!response.ok)
+    throw new Error(
+      `DeepSeek cheat-sheet request failed (${response.status}).`,
+    );
+  const envelope = await response.json();
+  const content = envelope?.choices?.[0]?.message?.content;
+  const parsed = typeof content === "string" ? JSON.parse(content) : content;
+  if (!parsed || typeof parsed !== "object")
+    throw new Error("DeepSeek returned an invalid cheat sheet.");
+  const bounded = {
+    title: String(parsed.title ?? context.title).slice(0, 240),
+    source: String(parsed.source ?? context.source).slice(0, 500),
+    summary: String(parsed.summary ?? context.primer).slice(0, 4_000),
+    keyConcepts: Array.isArray(parsed.keyConcepts)
+      ? parsed.keyConcepts.map(String).slice(0, 20)
+      : [],
+    definitions: Array.isArray(parsed.definitions)
+      ? parsed.definitions
+          .filter((item) => item && typeof item === "object")
+          .map((item) => ({
+            term: String(item.term ?? "").slice(0, 200),
+            definition: String(item.definition ?? "").slice(0, 1_000),
+          }))
+          .filter((item) => item.term && item.definition)
+          .slice(0, 30)
+      : [],
+    formulas: Array.isArray(parsed.formulas)
+      ? parsed.formulas.map(String).slice(0, 20)
+      : [],
+    rememberThis: Array.isArray(parsed.rememberThis)
+      ? parsed.rememberThis.map(String).slice(0, 10)
+      : [],
+  };
+  if (!bounded.summary)
+    throw new Error("DeepSeek returned an empty cheat sheet.");
+  return bounded;
+}

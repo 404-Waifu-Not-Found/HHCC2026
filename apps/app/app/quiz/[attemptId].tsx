@@ -34,6 +34,14 @@ import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
+import {
+  exportCheatSheet,
+  generateCheatSheetDocumentWithLocalAi,
+  loadCheatSheetContext,
+  recordCheatSheetFailure,
+  renderCheatSheetPdf,
+  uploadCheatSheet,
+} from "../../src/lib/cheat-sheet";
 import { useAppSession } from "../../src/lib/auth-client";
 import {
   presentQuizPrompt,
@@ -102,6 +110,26 @@ export default function QuizScreen() {
   const [questionActivation, setQuestionActivation] = useState(0);
   const [questionInteractionReady, setQuestionInteractionReady] =
     useState(false);
+  const [cheatSheetStatus, setCheatSheetStatus] = useState<
+    "preparing" | "ready" | "failed"
+  >("preparing");
+  const [cheatSheetId, setCheatSheetId] = useState<string>();
+  const [cheatSheetTitle, setCheatSheetTitle] = useState<string>(
+    "ClipQuest cheat sheet",
+  );
+  const cheatSheetStartedRef = useRef(false);
+  const pendingCheatSheetRef = useRef<
+    | {
+        videoId: string;
+        quizId: string;
+        document: import("@clipquest/contracts").CheatSheetDocument;
+        pdf: Uint8Array;
+      }
+    | undefined
+  >(undefined);
+  const cheatSheetContextRef = useRef<
+    { videoId: string; quizId: string } | undefined
+  >(undefined);
   const recoveryAttemptedRef = useRef(false);
 
   const updateGeneration = useCallback(
@@ -161,6 +189,15 @@ export default function QuizScreen() {
       setFeedback(undefined);
       setError(undefined);
       updateGeneration(resumed.generation);
+      if (resumed.quizId && resumed.videoId && !cheatSheetStartedRef.current) {
+        cheatSheetStartedRef.current = true;
+        cheatSheetContextRef.current = {
+          quizId: resumed.quizId,
+          videoId: resumed.videoId,
+        };
+        setCheatSheetTitle(resumed.title ?? "ClipQuest cheat sheet");
+        void prepareCheatSheet(resumed.quizId, resumed.videoId);
+      }
       if (resumed.completed) {
         setQuestion(undefined);
         setAnswer(undefined);
@@ -168,6 +205,7 @@ export default function QuizScreen() {
         setScore(resumed.score ?? 0);
         setMastery(resumed.mastery ?? "learning");
         setShowCompletion(true);
+        void syncCheatSheet();
         return;
       }
       if (!resumed.question) {
@@ -193,6 +231,50 @@ export default function QuizScreen() {
     },
     [activateQuestion, attemptId, t, updateGeneration, userId],
   );
+
+  const prepareCheatSheet = async (quizId: string, videoId: string) => {
+    let lastError = "Local cheat-sheet generation failed.";
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const context = await loadCheatSheetContext(quizId);
+        const document = await generateCheatSheetDocumentWithLocalAi(context);
+        const pdf = await renderCheatSheetPdf(document);
+        pendingCheatSheetRef.current = { videoId, quizId, document, pdf };
+        setCheatSheetStatus("ready");
+        return;
+      } catch (cause) {
+        lastError = cause instanceof Error ? cause.message : lastError;
+        if (attempt < 2)
+          await new Promise((resolve) =>
+            setTimeout(resolve, [1_000, 3_000][attempt]),
+          );
+      }
+    }
+    setCheatSheetStatus("failed");
+    const context = await loadCheatSheetContext(quizId).catch(() => undefined);
+    if (context)
+      void recordCheatSheetFailure({
+        videoId,
+        quizId,
+        sourceRevision: context.sourceRevision,
+        lastError,
+      });
+  };
+
+  const syncCheatSheet = useCallback(async () => {
+    const pending = pendingCheatSheetRef.current;
+    if (!pending) return;
+    try {
+      const uploaded = await uploadCheatSheet(pending);
+      setCheatSheetId(uploaded.id);
+    } catch {
+      setCheatSheetStatus("failed");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showCompletion && cheatSheetStatus === "ready") void syncCheatSheet();
+  }, [cheatSheetStatus, showCompletion, syncCheatSheet]);
 
   const resume = useCallback(async () => {
     const resumed = await apiRequest(
@@ -221,6 +303,7 @@ export default function QuizScreen() {
         setShowPrimer(Boolean(stored.primer && !stored.primerSeen));
         if (stored.question) {
           setLoading(false);
+          void resume().catch(() => undefined);
           return;
         }
       }
@@ -421,6 +504,7 @@ export default function QuizScreen() {
     if (!feedback) return;
     if (feedback.completed) {
       setShowCompletion(true);
+      void syncCheatSheet();
       return;
     }
     if (feedback.nextQuestion) {
@@ -555,7 +639,31 @@ export default function QuizScreen() {
               </StaggerItem>
             ) : null}
           </View>
-          <MotionView preset="rise" delay={176} style={styles.completeButton}>
+          <MotionView preset="rise" delay={176} style={styles.completeActions}>
+            <PrimaryButton
+              variant="secondary"
+              disabled={
+                cheatSheetStatus === "preparing" ||
+                (!cheatSheetId && cheatSheetStatus !== "failed")
+              }
+              onPress={() => {
+                if (cheatSheetId)
+                  void exportCheatSheet(cheatSheetId, cheatSheetTitle);
+                else if (cheatSheetContextRef.current) {
+                  setCheatSheetStatus("preparing");
+                  void prepareCheatSheet(
+                    cheatSheetContextRef.current.quizId,
+                    cheatSheetContextRef.current.videoId,
+                  );
+                }
+              }}
+            >
+              {cheatSheetStatus === "failed"
+                ? t("retryNotes")
+                : cheatSheetId
+                  ? t("exportNotes")
+                  : t("preparingNotes")}
+            </PrimaryButton>
             <PrimaryButton
               trailingIcon={
                 <VoxelIcon name="next" size={20} color={theme.textOnAction} />
@@ -1196,8 +1304,8 @@ const styles = StyleSheet.create({
   },
   statItem: { minWidth: 132, flex: 1 },
   statItemCompact: { width: "100%", flexGrow: 0 },
-  completeButton: {
+  completeActions: {
     width: "100%",
-    maxWidth: 440,
+    gap: spacing[3],
   },
 });

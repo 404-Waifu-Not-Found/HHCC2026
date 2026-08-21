@@ -7,6 +7,10 @@ import type {
   LocalGenerationCallEvent,
   LocalQuizContext,
 } from "@clipquest/contracts";
+import type {
+  CheatSheetContext,
+  CheatSheetDocument,
+} from "@clipquest/contracts";
 
 export type LocalGenerationProgress = {
   attempt?: number;
@@ -41,6 +45,11 @@ export type LocalGenerationRequest = (
   onQuestion?: (chunk: LocalConceptQuizQuestionChunk) => void | Promise<void>,
   onCall?: (event: LocalGenerationCallEvent) => void | Promise<void>,
 ) => Promise<LocalConceptQuizGenerationResult>;
+
+export type LocalCheatSheetRequest = (
+  context: CheatSheetContext,
+  signal?: AbortSignal,
+) => Promise<CheatSheetDocument>;
 
 export type LocalGenerationOutboxReplay = {
   questions: number;

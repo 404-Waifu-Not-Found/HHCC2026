@@ -26,6 +26,11 @@ import { libraryRouter } from "./routes/library";
 import { mediaRouter } from "./routes/media";
 import { modelsRouter } from "./routes/models";
 import { pushRouter, sendDueReviewNotifications } from "./routes/push";
+import { profileRouter } from "./routes/profile";
+import {
+  cheatSheetContextRouter,
+  cheatSheetsRouter,
+} from "./routes/cheat-sheets";
 import { quizImportsRouter } from "./routes/quiz-imports";
 import { quizzesRouter } from "./routes/quizzes";
 import { thumbnailRouter, videosRouter } from "./routes/videos";
@@ -201,6 +206,9 @@ app.route("/api/quiz-imports", quizImportsRouter);
 app.route("/api", quizzesRouter);
 app.route("/api/library", libraryRouter);
 app.route("/api/push", pushRouter);
+app.route("/api/profile", profileRouter);
+app.route("/api/cheat-sheets", cheatSheetsRouter);
+app.route("/api", cheatSheetContextRouter);
 app.route("/api/models", modelsRouter);
 app.route("/api/youtube", youtubeRouter);
 

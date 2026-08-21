@@ -21,6 +21,7 @@ import { Surface } from "../../src/components/Surface";
 import { VideoCard } from "../../src/components/VideoCard";
 import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest } from "../../src/lib/api";
+import { exportCheatSheet } from "../../src/lib/cheat-sheet";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { breakpoints, spacing, typography } from "../../src/theme/tokens";
 import {
@@ -234,6 +235,17 @@ function QuestList({
               fill={compact}
               card={card}
               onPress={() => onOpen(card)}
+              onExport={
+                card.cheatSheet.status === "failed"
+                  ? () => onOpen(card)
+                  : card.cheatSheet.sheetId
+                    ? () =>
+                        void exportCheatSheet(
+                          card.cheatSheet.sheetId!,
+                          card.title,
+                        )
+                    : undefined
+              }
             />
             {openingId === card.videoId ? (
               <ActivityIndicator

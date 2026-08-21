@@ -49,3 +49,17 @@ export function testDeepSeekKey(
   apiKey: string,
   fetchImpl?: typeof globalThis.fetch,
 ): Promise<true>;
+export function generateLocalCheatSheet(
+  context: unknown,
+  apiKey: string,
+  signal?: AbortSignal,
+  adapters?: LocalQuizEngineAdapters,
+): Promise<{
+  title: string;
+  source: string;
+  summary: string;
+  keyConcepts: string[];
+  definitions: { term: string; definition: string }[];
+  formulas: string[];
+  rememberThis: string[];
+}>;

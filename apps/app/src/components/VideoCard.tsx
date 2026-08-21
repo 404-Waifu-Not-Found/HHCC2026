@@ -2,6 +2,7 @@ import type { LibraryCard } from "@clipquest/contracts";
 import { VoxelIcon } from "./VoxelIcon";
 import {
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -23,11 +24,13 @@ export function VideoCard({
   onPress,
   compact = false,
   fill = false,
+  onExport,
 }: {
   card: LibraryCard;
   onPress(): void;
   compact?: boolean;
   fill?: boolean;
+  onExport?(): void;
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
@@ -120,6 +123,41 @@ export function VideoCard({
             {actionLabel}
           </Text>
           <VoxelIcon name="next" size={20} color={theme.primary} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              card.cheatSheet.status === "ready"
+                ? t("exportNotes")
+                : card.cheatSheet.status === "failed"
+                  ? t("retryNotes")
+                  : t("preparingNotes")
+            }
+            disabled={!onExport || card.cheatSheet.status === "none"}
+            onPress={(event) => {
+              event.stopPropagation();
+              onExport?.();
+            }}
+            style={({ pressed }) => [
+              styles.exportButton,
+              {
+                borderColor: theme.borderStrong,
+                opacity:
+                  !onExport || card.cheatSheet.status === "none"
+                    ? 0.45
+                    : pressed
+                      ? 0.7
+                      : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.exportText, { color: theme.textMuted }]}>
+              {card.cheatSheet.status === "ready"
+                ? t("exportNotes")
+                : card.cheatSheet.status === "failed"
+                  ? t("retryNotes")
+                  : t("preparingNotes")}
+            </Text>
+          </Pressable>
         </MotionView>
       </View>
     </MotionPressable>
@@ -222,5 +260,16 @@ const styles = StyleSheet.create({
   action: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.label,
+  },
+  exportButton: {
+    minHeight: 34,
+    justifyContent: "center",
+    borderWidth: borders.standard,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[3],
+  },
+  exportText: {
+    fontFamily: typography.bodyBold,
+    fontSize: 11,
   },
 });

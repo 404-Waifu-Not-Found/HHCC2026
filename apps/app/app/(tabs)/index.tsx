@@ -38,6 +38,7 @@ import { Surface } from "../../src/components/Surface";
 import { VideoCard } from "../../src/components/VideoCard";
 import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest, jsonBody } from "../../src/lib/api";
+import { exportCheatSheet } from "../../src/lib/cheat-sheet";
 import { useAppSession } from "../../src/lib/auth-client";
 import {
   parseQuickOpenRequest,
@@ -464,6 +465,17 @@ export default function HomeScreen() {
                         fill
                         card={card}
                         onPress={() => void open(card)}
+                        onExport={
+                          card.cheatSheet.status === "failed"
+                            ? () => void open(card)
+                            : card.cheatSheet.sheetId
+                              ? () =>
+                                  void exportCheatSheet(
+                                    card.cheatSheet.sheetId!,
+                                    card.title,
+                                  )
+                              : undefined
+                        }
                       />
                     </StaggerItem>
                   ))}
@@ -480,6 +492,17 @@ export default function HomeScreen() {
                         compact
                         card={card}
                         onPress={() => void open(card)}
+                        onExport={
+                          card.cheatSheet.status === "failed"
+                            ? () => void open(card)
+                            : card.cheatSheet.sheetId
+                              ? () =>
+                                  void exportCheatSheet(
+                                    card.cheatSheet.sheetId!,
+                                    card.title,
+                                  )
+                              : undefined
+                        }
                       />
                     </StaggerItem>
                   ))}
@@ -555,7 +578,22 @@ function CardSection({
             index={index}
             style={openingId === card.videoId ? styles.opening : undefined}
           >
-            <VideoCard compact card={card} onPress={() => onOpen(card)} />
+            <VideoCard
+              compact
+              card={card}
+              onPress={() => onOpen(card)}
+              onExport={
+                card.cheatSheet.status === "failed"
+                  ? () => onOpen(card)
+                  : card.cheatSheet.sheetId
+                    ? () =>
+                        void exportCheatSheet(
+                          card.cheatSheet.sheetId!,
+                          card.title,
+                        )
+                    : undefined
+              }
+            />
             {openingId === card.videoId ? (
               <ActivityIndicator
                 style={styles.cardSpinner}

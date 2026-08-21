@@ -149,6 +149,7 @@ const AttemptRowSchema = z.object({
   quiz_language: z.string(),
   quiz_session_length: z.enum(["short", "medium", "long"]),
   quiz_watched: z.number().int(),
+  video_title: z.string().optional(),
 });
 type AttemptRow = z.infer<typeof AttemptRowSchema>;
 
@@ -703,6 +704,9 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
     return c.json(
       AttemptResumeResponseSchema.parse({
         attemptId: attempt.id,
+        quizId: attempt.quiz_id,
+        videoId: attempt.video_id,
+        title: attempt.video_title,
         question: null,
         completed: true,
         score: attempt.score,
@@ -744,6 +748,9 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
   return c.json(
     AttemptResumeResponseSchema.parse({
       attemptId: attempt.id,
+      quizId: attempt.quiz_id,
+      videoId: attempt.video_id,
+      title: attempt.video_title,
       question: toPublicQuestion(
         question,
         attempt.current_index,

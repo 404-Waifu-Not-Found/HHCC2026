@@ -12,6 +12,8 @@ import {
   LocalConceptQuizGenerationResultSchema,
   LocalConceptQuizQuestionChunkSchema,
   LocalQuizContextSchema,
+  CheatSheetContextSchema,
+  CheatSheetDocumentSchema,
   MAX_COMPLETE_TRANSCRIPT_SEGMENTS,
   TranscriptSegmentSchema,
   type GenerationStage,
@@ -759,6 +761,75 @@ export async function requestExtensionLocalQuiz(
     window.addEventListener("message", receive);
     signal.addEventListener("abort", abort, { once: true });
     post({ type: "generate", requestId: id, context });
+  });
+}
+
+export async function requestExtensionLocalCheatSheet(
+  rawContext: import("@clipquest/contracts").CheatSheetContext,
+  signal?: AbortSignal,
+): Promise<import("@clipquest/contracts").CheatSheetDocument> {
+  const context = CheatSheetContextSchema.parse(rawContext);
+  const extension = await detectClipQuestExtension();
+  if (!extension.available || !extension.configured)
+    throw new Error(
+      "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+    );
+  const id = requestId();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
+      window.removeEventListener("message", receive);
+      callback();
+    };
+    const abort = () =>
+      finish(() =>
+        reject(
+          signal?.reason ??
+            new DOMException("The request was cancelled.", "AbortError"),
+        ),
+      );
+    const receive = (event: MessageEvent<unknown>) => {
+      if (
+        event.source !== window ||
+        event.origin !== window.location.origin ||
+        !isGenerationResultMessage(event.data) ||
+        event.data.requestId !== id
+      )
+        return;
+      const response = event.data.response;
+      if (!response?.ok)
+        return finish(() =>
+          reject(
+            new Error(response?.error ?? "Cheat-sheet generation failed."),
+          ),
+        );
+      const parsed = CheatSheetDocumentSchema.safeParse({
+        ...(response.result && typeof response.result === "object"
+          ? response.result
+          : {}),
+        generatedAt: new Date().toISOString(),
+        sourceRevision: context.sourceRevision,
+      });
+      if (!parsed.success)
+        return finish(() =>
+          reject(new Error("The extension returned an invalid cheat sheet.")),
+        );
+      finish(() => resolve(parsed.data));
+    };
+    const timeout = setTimeout(
+      () =>
+        finish(() =>
+          reject(new Error("The ClipQuest extension request timed out.")),
+        ),
+      120_000,
+    );
+    window.addEventListener("message", receive);
+    signal?.addEventListener("abort", abort, { once: true });
+    post({ type: "generate", kind: "cheat-sheet", requestId: id, context });
   });
 }
 

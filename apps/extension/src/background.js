@@ -1,6 +1,7 @@
 import { captionsToPlainText } from "./caption-text.js";
 import {
   generateLocalQuiz,
+  generateLocalCheatSheet,
   generateQuizFromPlainText,
   testDeepSeekKey,
 } from "./local-generator.js";
@@ -584,6 +585,13 @@ chrome.runtime.onConnect.addListener((port) => {
           });
         };
         const generationContext = message.context;
+        if (message.kind === "cheat-sheet") {
+          return generateLocalCheatSheet(
+            generationContext,
+            apiKey,
+            controller.signal,
+          );
+        }
         const client = {
           kind: "chrome_extension",
           version: chrome.runtime.getManifest().version,
