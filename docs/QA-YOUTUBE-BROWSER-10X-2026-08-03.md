@@ -1,6 +1,6 @@
 # Production YouTube browser-caption QA — 2026-08-03
 
-> Historical production evidence. The 2026-08-04 full-subtitle changes were verified locally and are documented below, but were not deployed during that implementation run. See the [README release status](../README.md#release-status) for the authoritative release state.
+> Historical pre-extension production evidence. This report exercised the retired transcript-upload/backend-generation path and does not describe the current extension-local storage-only architecture. The 2026-08-04 full-subtitle changes below were verified locally but were not deployed during that implementation run. Use the [documentation index](./README.md), [README release status](../README.md#release-status), and [extension-0.8.5 production report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md) for current release decisions.
 
 ## Scope
 
@@ -25,7 +25,7 @@
 |   9 | AP Calculus AB Unit 1         | `G8zkXA5TXgg` |         8.908 s |             10.083 s |    5.494 s |         5 | Pass   |
 |  10 | AP Calculus AB Unit 2         | `fC6hYVrYdgk` |        10.604 s |              9.107 s |    4.736 s |         5 | Pass   |
 
-Production result: **10/10 passed**.
+Historical production result for that artifact: **10/10 passed**. It is not evidence that the current extension-local flow passes today.
 
 ## Evidence and timing
 
