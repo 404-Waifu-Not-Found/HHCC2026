@@ -200,23 +200,32 @@ describe("ClipQuest rebrand assets", () => {
   });
 
   it("keeps preflight, manifest, native, and extension colors in sync", async () => {
-    const [manifest, preflight, html, appConfig, nativeColors, extensionCss] =
+    const nativeColorsPath = resolve(
+      appRoot,
+      "android/app/src/main/res/values/colors.xml",
+    );
+    const [manifest, preflight, html, appConfig, extensionCss] =
       await Promise.all([
         readFile(resolve(appRoot, "public/site.webmanifest"), "utf8"),
         readFile(resolve(appRoot, "public/theme-preflight.js"), "utf8"),
         readFile(resolve(appRoot, "app/+html.tsx"), "utf8"),
         readFile(resolve(appRoot, "app.config.ts"), "utf8"),
-        readFile(
-          resolve(appRoot, "android/app/src/main/res/values/colors.xml"),
-          "utf8",
-        ),
         readFile(resolve(repoRoot, "apps/extension/src/popup.css"), "utf8"),
       ]);
     expect(manifest).toContain('"background_color": "#F7F9F4"');
     expect(manifest).toContain('"theme_color": "#247D49"');
-    for (const source of [preflight, html, appConfig, nativeColors]) {
+    for (const source of [preflight, html, appConfig]) {
       expect(source).toContain("#F7F9F4");
     }
+    // Expo owns the managed native tree. A clean release checkout validates the
+    // committed config; a checkout that has run prebuild validates its output too.
+    const nativeColors = await readFile(nativeColorsPath, "utf8").catch(
+      (error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      },
+    );
+    if (nativeColors !== null) expect(nativeColors).toContain("#F7F9F4");
     expect(preflight).toContain("#101B15");
     expect(extensionCss).toContain("#f7f9f4");
     expect(extensionCss).toContain("#101b15");
