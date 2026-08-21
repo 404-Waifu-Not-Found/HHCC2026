@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.license        = "MIT"
   s.author         = "ClipQuest"
   s.homepage       = "https://clipquest.ccwu.cc"
-  s.platforms      = { :ios => "15.1" }
+  s.platforms      = { :ios => "16.4" }
   s.swift_version  = "5.9"
   s.source         = { :git => "https://example.invalid/clipquest.git" }
   s.static_framework = true
@@ -18,4 +18,3 @@ Pod::Spec.new do |s|
   s.frameworks = "AVFoundation", "CoreMedia", "AudioToolbox"
   s.source_files = "ios/**/*.{h,m,mm,swift}"
 end
-

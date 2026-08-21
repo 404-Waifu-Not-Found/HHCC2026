@@ -65,10 +65,16 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    "expo-image",
     "expo-secure-store",
     [
       "expo-build-properties",
       {
+        ios: {
+          deploymentTarget: "16.4",
+          buildReactNativeFromSource: true,
+          usePrecompiledModules: false,
+        },
         android: {
           minSdkVersion: 29,
           compileSdkVersion: 36,
@@ -77,6 +83,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    "./plugins/withXcode26ExpoModulesCoreConcurrencyFix",
     "./plugins/withAndroidShareIntent",
     [
       "expo-splash-screen",
