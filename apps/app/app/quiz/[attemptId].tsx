@@ -299,7 +299,7 @@ export default function QuizScreen() {
               }
               onPress={() => {
                 void clearAttempt(attemptId);
-                router.replace("/(tabs)");
+                router.replace("/(tabs)/library");
               }}
             >
               {t("returnToLibrary")}
@@ -520,9 +520,6 @@ function QuestionInput({
         <StaggerItem index={0} preset="from-left" style={styles.binaryOption}>
           <AnswerCard
             label={t("true")}
-            leading={
-              <VoxelIcon name="correct" size={26} color={theme.success} />
-            }
             state={stateFor(answer === true)}
             onPress={() => setAnswer(true)}
           />
@@ -530,7 +527,6 @@ function QuestionInput({
         <StaggerItem index={1} preset="from-right" style={styles.binaryOption}>
           <AnswerCard
             label={t("false")}
-            leading={<VoxelIcon name="error" size={26} color={theme.error} />}
             state={stateFor(answer === false)}
             onPress={() => setAnswer(false)}
           />

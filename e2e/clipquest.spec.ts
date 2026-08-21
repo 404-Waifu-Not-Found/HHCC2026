@@ -653,6 +653,8 @@ test("mobile link, processing, lesson feedback, and completion", async ({
     page.getByRole("heading", { name: "Quest complete!" }),
   ).toBeVisible();
   await capture(page, "mobile-completion");
+  await page.getByRole("button", { name: "Return to library" }).click();
+  await expect(page).toHaveURL(/\/library$/);
   expect(
     scenario.requestedPaths.filter((path) => path.startsWith("/api/youtube")),
   ).toEqual([]);
@@ -673,6 +675,12 @@ test("all generated question types keep the tactile learning layout", async ({
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "True" })).toBeVisible();
   await expect(page.getByRole("button", { name: "False" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "True" }).locator("img"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "False" }).locator("img"),
+  ).toHaveCount(0);
   await capture(page, "tablet-quiz-true-false");
 
   scenario.question = shortAnswerQuestion;
