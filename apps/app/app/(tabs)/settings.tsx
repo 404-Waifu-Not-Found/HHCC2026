@@ -2,6 +2,7 @@ import type { AppLanguage } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { apiBinaryRequest, apiMultipartRequest } from "../../src/lib/api";
+import { pickWebFile } from "../../src/lib/web-file-picker";
 import { ProfileAvatarResponseSchema } from "@clipquest/contracts";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -94,12 +95,7 @@ export default function SettingsScreen() {
         const input = document.createElement("input");
         input.type = "file";
         input.accept = "image/jpeg,image/png,image/webp";
-        const selected = await new Promise<globalThis.File | null>(
-          (resolve) => {
-            input.onchange = () => resolve(input.files?.[0] ?? null);
-            input.click();
-          },
-        );
+        const selected = await pickWebFile(input);
         if (!selected) return;
         body.append("file", await normalizeWebAvatar(selected), "avatar.webp");
       } else {

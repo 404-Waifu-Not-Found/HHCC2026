@@ -4,6 +4,7 @@ import {
   parseStoredSettings,
   resolveThemeMode,
 } from "../src/lib/settings";
+import { pickWebFile } from "../src/lib/web-file-picker";
 
 describe("settings preflight", () => {
   it("keeps only supported stored settings", () => {
@@ -18,6 +19,48 @@ describe("settings preflight", () => {
       ),
     ).toEqual({ locale: "en", themeMode: "dark", reduceMotion: true });
     expect(parseStoredSettings("not-json")).toEqual({});
+  });
+
+  it("settles without a file when the web picker is canceled", async () => {
+    const inputListeners = new Map<string, EventListener>();
+    const windowListeners = new Map<string, EventListener>();
+    const input = {
+      files: null,
+      addEventListener: (type: string, listener: EventListener) =>
+        inputListeners.set(type, listener),
+      removeEventListener: (type: string) => inputListeners.delete(type),
+      click: () => inputListeners.get("cancel")?.(new Event("cancel")),
+    } as unknown as HTMLInputElement;
+    const targetWindow = {
+      addEventListener: (type: string, listener: EventListener) =>
+        windowListeners.set(type, listener),
+      removeEventListener: (type: string) => windowListeners.delete(type),
+    } as unknown as Window;
+
+    await expect(pickWebFile(input, targetWindow)).resolves.toBeNull();
+    expect(inputListeners.size).toBe(0);
+    expect(windowListeners.size).toBe(0);
+  });
+
+  it("treats window focus as a canceled picker when no file was selected", async () => {
+    const windowListeners = new Map<string, EventListener>();
+    const input = {
+      files: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      click: () => undefined,
+    } as unknown as HTMLInputElement;
+    const targetWindow = {
+      addEventListener: (type: string, listener: EventListener) =>
+        windowListeners.set(type, listener),
+      removeEventListener: (type: string) => windowListeners.delete(type),
+    } as unknown as Window;
+
+    const selection = pickWebFile(input, targetWindow);
+    windowListeners.get("focus")?.(new Event("focus"));
+
+    await expect(selection).resolves.toBeNull();
+    expect(windowListeners.size).toBe(0);
   });
 
   it("resolves explicit themes before the system preference", () => {
