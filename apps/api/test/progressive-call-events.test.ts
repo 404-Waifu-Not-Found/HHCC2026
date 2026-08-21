@@ -2,6 +2,7 @@ import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { errorResponse } from "../src/lib/errors";
+import { readProgressiveGenerationSnapshot } from "../src/lib/progressive-quiz";
 import type { ApiBindings } from "../src/middleware/authenticated";
 import { quizImportsRouter } from "../src/routes/quiz-imports";
 import { quizzesRouter } from "../src/routes/quizzes";
@@ -1342,6 +1343,13 @@ describe("protocol-9 concept-first call lifecycles", () => {
       recoveryPhase: "dispatched",
       activeCallIndex: 0,
     });
+
+    const activeSnapshot = await readProgressiveGenerationSnapshot(
+      db as unknown as D1Database,
+      QUIZ_ID,
+    );
+    expect(activeSnapshot.previousOutcome).toBeNull();
+    expect(activeSnapshot.retryOrdinals).toEqual([]);
 
     expect((await putCall(app, env, completed)).status).toBe(200);
     expect((await putCall(app, env, completed)).status).toBe(200);

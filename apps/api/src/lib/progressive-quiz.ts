@@ -709,6 +709,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
           SELECT 0 AS offset UNION ALL SELECT 1 UNION ALL SELECT 2
         ) offsets ON offsets.offset < event.requested_count
         WHERE event.quiz_id = qb.id
+          AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
           AND event.start_ordinal + offsets.offset >= (
             SELECT COUNT(*) FROM questions stored_question
             WHERE stored_question.quiz_id = qb.id
@@ -724,6 +725,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       SELECT event.outcome_code
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
+        AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
         AND event.start_ordinal <= (
           SELECT COUNT(*) FROM questions stored_question
           WHERE stored_question.quiz_id = qb.id
