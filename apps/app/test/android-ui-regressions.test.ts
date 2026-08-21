@@ -138,6 +138,10 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain("accessibilityLabel={");
     expect(videoCard).toContain("card.cheatSheet.status");
     expect(videoCard).toContain("onGenerateNotes");
+    expect(videoCard).toContain("theme.surfaceTint");
+    expect(videoCard).toContain(
+      'transitionProperty: "transform, background-color, border-color"',
+    );
     expect(videoCard).not.toContain("styles.actionRow");
     expect(videoCard).not.toContain("event.stopPropagation()");
     expect(videoCard).not.toContain("onPress={() => undefined}");

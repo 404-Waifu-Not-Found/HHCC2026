@@ -4,7 +4,6 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -156,7 +155,9 @@ export function VideoCard({
       </MotionPressable>
       <View style={styles.actions}>
         <View style={styles.actionWrap}>
-          <Pressable
+          <MotionPressable
+            pressDepth={0}
+            pressScale={motion.scale.iconPress}
             accessibilityRole="button"
             accessibilityLabel={notesLabel}
             accessibilityHint={notesLabel}
@@ -179,12 +180,27 @@ export function VideoCard({
                 );
               });
             }}
-            style={({ pressed }) => [
+            style={({ pressed, hovered }) => [
               styles.iconButton,
               {
-                backgroundColor: theme.surfaceSunken,
+                backgroundColor:
+                  notesPending || !notesAction
+                    ? theme.surfaceSunken
+                    : hovered
+                      ? theme.surfaceTint
+                      : theme.surfaceSunken,
+                borderColor:
+                  hovered && !notesPending && notesAction
+                    ? theme.primary
+                    : theme.border,
                 opacity:
                   notesPending || !notesAction ? 0.45 : pressed ? 0.7 : 1,
+                transform: [{ scale: hovered ? 1.06 : 1 }],
+              },
+              Platform.OS === "web" && {
+                transitionDuration: `${motion.fast}ms`,
+                transitionProperty: "transform, background-color, border-color",
+                outlineColor: theme.focus,
               },
             ]}
           >
@@ -193,10 +209,12 @@ export function VideoCard({
             ) : (
               <VoxelIcon name={notesIcon} size={26} />
             )}
-          </Pressable>
+          </MotionPressable>
           {hoveredAction === "notes" ? (
-            <View
+            <MotionView
+              duration={motion.fast}
               pointerEvents="none"
+              preset="pop"
               style={[
                 styles.tooltip,
                 {
@@ -208,11 +226,13 @@ export function VideoCard({
               <Text style={[styles.tooltipText, { color: theme.background }]}>
                 {notesLabel}
               </Text>
-            </View>
+            </MotionView>
           ) : null}
         </View>
         <View style={styles.actionWrap}>
-          <Pressable
+          <MotionPressable
+            pressDepth={0}
+            pressScale={motion.scale.iconPress}
             accessibilityRole="button"
             accessibilityLabel={actionLabel}
             accessibilityHint={actionLabel}
@@ -221,19 +241,30 @@ export function VideoCard({
             onHoverIn={() => setHoveredAction("open")}
             onHoverOut={() => setHoveredAction(undefined)}
             onPress={onPress}
-            style={({ pressed }) => [
+            style={({ pressed, hovered }) => [
               styles.iconButton,
               {
-                backgroundColor: theme.surfaceSunken,
+                backgroundColor: hovered
+                  ? theme.surfaceTint
+                  : theme.surfaceSunken,
+                borderColor: hovered ? theme.primary : theme.border,
                 opacity: pressed ? 0.7 : 1,
+                transform: [{ scale: hovered ? 1.06 : 1 }],
+              },
+              Platform.OS === "web" && {
+                transitionDuration: `${motion.fast}ms`,
+                transitionProperty: "transform, background-color, border-color",
+                outlineColor: theme.focus,
               },
             ]}
           >
             <VoxelIcon name="next" size={26} />
-          </Pressable>
+          </MotionPressable>
           {hoveredAction === "open" ? (
-            <View
+            <MotionView
+              duration={motion.fast}
               pointerEvents="none"
+              preset="pop"
               style={[
                 styles.tooltip,
                 {
@@ -245,7 +276,7 @@ export function VideoCard({
               <Text style={[styles.tooltipText, { color: theme.background }]}>
                 {actionLabel}
               </Text>
-            </View>
+            </MotionView>
           ) : null}
         </View>
       </View>
@@ -363,6 +394,7 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: borders.standard,
     borderRadius: radii.pill,
   },
   tooltip: {
