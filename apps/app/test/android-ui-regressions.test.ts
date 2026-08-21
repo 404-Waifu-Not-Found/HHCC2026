@@ -62,7 +62,7 @@ describe("Android UI regressions", () => {
     expect(creation).toContain(
       "The local-client probe is diagnostic. It may wait on native",
     );
-    expect(generation).toContain('"privateTranscriptionAndroid"');
+    expect(generation).toContain('"captionPrivacyNative"');
     expect(generation).toContain('label: t("checkingCaptions")');
     expect(localClient).toContain("disableStreaming: true");
   });

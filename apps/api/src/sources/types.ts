@@ -19,15 +19,6 @@ export type SourceVideo = {
   preferredCaptionSourceUrl?: string;
 };
 
-export type AudioStream = {
-  body: ReadableStream<Uint8Array>;
-  contentType: string;
-  contentLength?: string;
-  acceptRanges?: string;
-  contentRange?: string;
-};
-
 export interface SourceAdapter {
   inspect(url: URL): Promise<SourceVideo>;
-  streamAudio(sourceVideoId: string, request: Request): Promise<AudioStream>;
 }

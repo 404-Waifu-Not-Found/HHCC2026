@@ -4,10 +4,8 @@ import {
   ExtensionQuizProgressiveImportResponseSchema,
   GenerationFailureCodeSchema,
   GenerationClaimResponseSchema,
-  MediaResolveResponseSchema,
   VideoImportResponseSchema,
   VerifiedVideoMetadataResponseSchema,
-  createTranscriptCompleteness,
   type AutomaticRetryKind,
   type GenerationFailureCode,
   type GenerationRecord,
@@ -36,14 +34,16 @@ import {
   startGenerationRecordHeartbeat,
   updateGenerationRecord,
 } from "../state/creation";
-import { acquireTextTranscript } from "../transcription/acquire-text-transcript";
+import {
+  acquireTextTranscript,
+  CAPTIONS_REQUIRED_MESSAGE,
+} from "../transcription/acquire-text-transcript";
 import {
   flushLocalGenerationOutbox,
   LocalGenerationRequestError,
   requestLocalQuiz,
   type LocalGenerationProgress,
 } from "./local-generation-client";
-import { transcribeLocally } from "../transcription/local-transcriber";
 import {
   getOrStartProgressiveRecoveryTask,
   publishAttemptGeneration,
@@ -355,7 +355,6 @@ async function runAutomaticRecoveryOnce(
   let transcript;
   try {
     transcript = await acquireContinuationTranscript(
-      session.user.id,
       imported,
       signal,
       continuation.quizLanguage,
@@ -960,7 +959,6 @@ async function matchingGenerationRecord(
 }
 
 async function acquireContinuationTranscript(
-  ownerUserId: string,
   imported: NonNullable<Awaited<ReturnType<typeof loadImportedVideo>>>,
   signal: AbortSignal,
   preferredLanguage: string,
@@ -969,8 +967,7 @@ async function acquireContinuationTranscript(
   completeness: TranscriptCompleteness;
   language: string;
   verifiedDurationSeconds: number;
-  captionSourceCategory:
-    "manual" | "automatic" | "local_transcription" | "unknown";
+  captionSourceCategory: "manual" | "automatic" | "unknown";
 }> {
   const textTranscript = await acquireTextTranscript(
     imported,
@@ -979,62 +976,10 @@ async function acquireContinuationTranscript(
     preferredLanguage,
   );
   if (textTranscript) return textTranscript;
-  if (Platform.OS === "android") {
-    throw new Error(
-      "This Android beta requires a public YouTube video with usable captions.",
-    );
-  }
-  let media: { mediaUrl: string };
-  let result: Awaited<ReturnType<typeof transcribeLocally>>;
-  try {
-    media = await apiRequest(
-      "/api/media/resolve",
-      {
-        method: "POST",
-        body: jsonBody({ videoId: imported.video.id }),
-        signal,
-      },
-      MediaResolveResponseSchema,
-    );
-    result = await transcribeLocally({
-      ownerUserId,
-      videoId: imported.video.id,
-      mediaUrl: media.mediaUrl,
-      durationSeconds: imported.video.durationSeconds,
-      language: imported.video.sourceLanguage,
-      signal,
-      onPhase: () => undefined,
-      onProgress: () => undefined,
-    });
-  } catch (cause) {
-    if (signal.aborted) throw cause;
-    throw new LocalGenerationRequestError(
-      cause instanceof Error
-        ? cause.message
-        : "The video source is unavailable for local recovery.",
-      "source_unavailable",
-    );
-  }
-  const inferredDurationSeconds = Math.max(
-    1,
-    Math.ceil(
-      Math.max(...result.segments.map((segment) => segment.endMs)) / 1_000,
-    ),
+  throw new LocalGenerationRequestError(
+    CAPTIONS_REQUIRED_MESSAGE,
+    "source_unavailable",
   );
-  const verifiedDurationSeconds =
-    imported.video.durationSeconds > 0
-      ? imported.video.durationSeconds
-      : inferredDurationSeconds;
-  return {
-    segments: result.segments,
-    language: result.language,
-    verifiedDurationSeconds,
-    captionSourceCategory: "local_transcription",
-    completeness: createTranscriptCompleteness(
-      result.segments,
-      verifiedDurationSeconds,
-    ),
-  };
 }
 
 function updateProgress(

@@ -16,6 +16,9 @@ import {
   normalizeTranscriptLanguage,
 } from "./youtube-captions";
 
+export const CAPTIONS_REQUIRED_MESSAGE =
+  "Verified YouTube captions are required. ClipQuest does not download or transcribe video audio.";
+
 export type AcquiredTextTranscript = {
   segments: TranscriptSegment[];
   language: string;
@@ -179,7 +182,6 @@ async function acquireTextTranscriptOnce(
   onProgress?: (progress: number) => void,
   preferredLanguage?: string | null,
 ): Promise<AcquiredTextTranscript | null> {
-
   if (Platform.OS === "web") {
     try {
       onProgress?.(0.1);

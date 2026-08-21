@@ -44,7 +44,6 @@ import {
   spacing,
   typography,
 } from "../../src/theme/tokens";
-import { canTranscribeInBrowser } from "../../src/transcription/limits";
 import { blurActiveWebElement } from "../../src/lib/web-focus";
 import {
   detectLocalGenerationClient,
@@ -176,17 +175,6 @@ export default function CreateQuestScreen() {
       </Screen>
     );
   }
-  const nativeLocalFallback =
-    Platform.OS === "ios" &&
-    (preworkStatus === "unavailable" || preworkStatus === "failed");
-  const needsLocalTranscription =
-    video.requiresLocalTranscription || nativeLocalFallback;
-  const tooLong =
-    needsLocalTranscription && video.video.durationSeconds > 5_400;
-  const tooLongForWeb =
-    video.requiresLocalTranscription &&
-    Platform.OS === "web" &&
-    !canTranscribeInBrowser(video.video.durationSeconds);
   const compact = width < breakpoints.tablet;
   const nativeCaptionState =
     Platform.OS !== "web" && generationId ? preworkStatus : undefined;
@@ -199,18 +187,14 @@ export default function CreateQuestScreen() {
   const transcriptStatus = (
     captionsPending
       ? t("sourceCaptionsPreparing")
-      : nativeLocalFallback
-        ? t("localTranscript")
-        : captionsUnavailable
-          ? t("sourceCaptionsUnavailable")
-          : captionsFailed
-            ? t("sourceCaptionsFailed")
-            : needsLocalTranscription
-              ? t("localTranscript")
-              : t("sourceCaptions")
+      : captionsUnavailable
+        ? t("sourceCaptionsUnavailable")
+        : captionsFailed
+          ? t("sourceCaptionsFailed")
+          : t("sourceCaptions")
   ).replace(/[—–]/g, "-");
   const captionsBlocked =
-    Platform.OS === "android" && (captionsUnavailable || captionsFailed);
+    captionsUnavailable || captionsFailed || video.captions.available === false;
   const localAiMissing = Platform.OS !== "web" && localAiConfigured === false;
   const proceed = async () => {
     blurActiveWebElement();
@@ -283,7 +267,7 @@ export default function CreateQuestScreen() {
             // Video ready screen. The generation route re-checks the key
             // before dispatching any AI request.
             loading={captionsPending}
-            disabled={tooLong || tooLongForWeb || captionsBlocked}
+            disabled={captionsBlocked}
             onPress={
               localAiMissing
                 ? openLocalGenerationClientSettings
@@ -337,12 +321,12 @@ export default function CreateQuestScreen() {
                     {
                       backgroundColor: captionsBlocked
                         ? theme.errorSoft
-                        : captionsPending || needsLocalTranscription
+                        : captionsPending
                           ? theme.secondarySoft
                           : theme.successSoft,
                       borderColor: captionsBlocked
                         ? theme.error
-                        : captionsPending || needsLocalTranscription
+                        : captionsPending
                           ? theme.secondary
                           : theme.success,
                     },
@@ -352,7 +336,7 @@ export default function CreateQuestScreen() {
                     name={
                       captionsBlocked
                         ? "error"
-                        : captionsPending || needsLocalTranscription
+                        : captionsPending
                           ? "processing"
                           : "captions"
                     }
@@ -360,7 +344,7 @@ export default function CreateQuestScreen() {
                     color={
                       captionsBlocked
                         ? theme.error
-                        : captionsPending || needsLocalTranscription
+                        : captionsPending
                           ? theme.secondaryPressed
                           : theme.successPressed
                     }
@@ -435,31 +419,6 @@ export default function CreateQuestScreen() {
           </Surface>
         </MotionView>
 
-        {needsLocalTranscription ? (
-          <MotionView preset="rise" delay={132} exiting>
-            <Surface tone="tinted" style={styles.noticeSurface}>
-              <View style={styles.noticeRow}>
-                <View
-                  style={[
-                    styles.noticeIcon,
-                    { backgroundColor: theme.surface },
-                  ]}
-                >
-                  <VoxelIcon name="privacy" size={27} color={theme.primary} />
-                </View>
-                <View style={styles.noticeCopy}>
-                  <Text style={[styles.noticeTitle, { color: theme.text }]}>
-                    {t("modelSize")}
-                  </Text>
-                  <Text style={[styles.help, { color: theme.textMuted }]}>
-                    {t("privateTranscription")}
-                  </Text>
-                </View>
-              </View>
-            </Surface>
-          </MotionView>
-        ) : null}
-
         {localAiMissing && !captionsBlocked ? (
           <MotionView preset="rise" delay={154} exiting>
             <Surface tone="warning" style={styles.noticeSurface}>
@@ -483,31 +442,6 @@ export default function CreateQuestScreen() {
               </View>
             </Surface>
           </MotionView>
-        ) : null}
-
-        {tooLong || tooLongForWeb ? (
-          <FeedbackMotion
-            signal={tooLongForWeb ? "web" : "duration"}
-            kind="error"
-          >
-            <MotionView preset="rise" exiting>
-              <Surface tone="error" style={styles.limitSurface}>
-                <View style={styles.noticeRow}>
-                  <VoxelIcon name="error" size={25} color={theme.error} />
-                  <Text
-                    accessibilityRole="alert"
-                    style={[styles.limitText, { color: theme.text }]}
-                  >
-                    {t(
-                      tooLongForWeb
-                        ? "webUnsupportedLength"
-                        : "unsupportedLength",
-                    )}
-                  </Text>
-                </View>
-              </Surface>
-            </MotionView>
-          </FeedbackMotion>
         ) : null}
       </View>
     </Screen>
@@ -672,13 +606,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyBold,
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
-  },
-  limitSurface: { padding: spacing[4] },
-  limitText: {
-    flex: 1,
-    fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
   },
   footerInner: { width: "100%", maxWidth: layout.reading, alignSelf: "center" },
   expiredCard: { width: "100%", alignItems: "center", gap: spacing[5] },

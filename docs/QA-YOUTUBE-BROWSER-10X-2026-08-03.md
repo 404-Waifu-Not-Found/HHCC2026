@@ -8,7 +8,7 @@
 - Browser: the user's existing Google Chrome session
 - Session length: Short (5 questions)
 - Acceptance: paste a distinct public AP-course YouTube URL and reach question 1 of a schema-valid five-question quiz
-- Media boundary: browser caption text only; no extension, display capture, speech-model download, or `/api/media` fallback
+- Source boundary: complete browser caption text only; sources without verified subtitles fail explicitly
 
 ## Results
 
@@ -34,7 +34,7 @@ Historical production result for that artifact: **10/10 passed**. It is not evid
 - Remote D1 job time averaged 5.785 seconds and ranged from 4.736 to 9.342 seconds. All ten transcript-upload-to-complete server jobs met the under-10-second target.
 - Remote D1 reported `state = complete`, `error_code = null`, and five committed questions for every job.
 - Remote R2 transcript metadata reported `origin = captions` and `acquisition = youtube_text_provider` for every job. Segment counts ranged from 13 to 103.
-- Because each client upload used the caption origin, the generation branch skipped `/api/media`, audio decoding, Whisper download, and device transcription.
+- Every accepted source used complete browser subtitle text. ClipQuest did not download or process video audio.
 
 ## Release verification
 

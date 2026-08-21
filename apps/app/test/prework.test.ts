@@ -31,7 +31,6 @@ const imported = {
   },
   captions: { available: true },
   capture: { expectedDurationSeconds: 120 },
-  requiresLocalTranscription: false,
 };
 
 const input = {

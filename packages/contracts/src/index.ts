@@ -42,9 +42,6 @@ export type MasteryState = z.infer<typeof MasteryStateSchema>;
 
 export const GenerationStageSchema = z.enum([
   "getting_video",
-  "preparing_audio",
-  "downloading_model",
-  "transcribing_device",
   "planning_questions",
   "creating_questions",
   "reviewing_questions",
@@ -206,13 +203,6 @@ export const CaptionTrackSchema = z.object({
 });
 export type CaptionTrack = z.infer<typeof CaptionTrackSchema>;
 
-export const TranscriptionModeSchema = z.enum([
-  "captions",
-  "browser_tab_capture",
-  "device_media",
-]);
-export type TranscriptionMode = z.infer<typeof TranscriptionModeSchema>;
-
 const httpUrl = z
   .string()
   .url()
@@ -232,7 +222,6 @@ export type VideoImportRequest = z.infer<typeof VideoImportRequestSchema>;
 export const CaptionSourceCategorySchema = z.enum([
   "manual",
   "automatic",
-  "local_transcription",
   "unknown",
 ]);
 export type CaptionSourceCategory = z.infer<typeof CaptionSourceCategorySchema>;
@@ -284,12 +273,10 @@ export const VideoImportResponseSchema = z
       browserSourceAvailable: z.boolean().optional(),
       browserLookupAvailable: z.boolean().optional(),
     }),
-    transcriptionMode: TranscriptionModeSchema,
     capture: z.object({
       expectedDurationSeconds: z.number().int().nonnegative(),
       requiresUserGesture: z.boolean(),
     }),
-    requiresLocalTranscription: z.boolean(),
   })
   .superRefine((value, context) => {
     const segments = value.captions.preferredSegments;
@@ -330,18 +317,6 @@ export const CaptionResolveResponseSchema = z.object({
 export type CaptionResolveResponse = z.infer<
   typeof CaptionResolveResponseSchema
 >;
-
-export const MediaResolveRequestSchema = z.object({
-  videoId: z.string().uuid(),
-});
-export type MediaResolveRequest = z.infer<typeof MediaResolveRequestSchema>;
-
-export const MediaResolveResponseSchema = z.object({
-  mediaUrl: z.string().url(),
-  expiresAt: z.string().datetime(),
-  maximumDurationSeconds: z.literal(5_400),
-});
-export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 
 export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
 export const LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 5 as const;

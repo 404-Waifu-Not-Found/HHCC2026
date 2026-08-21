@@ -68,7 +68,6 @@
     "BETTER_AUTH_URL": "https://clipquest.ccwu.cc",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
     "ENABLE_YOUTUBE_DEMO_HISTORY": "false",
-    "MODEL_MANIFEST_KEY": "models/whisper-tiny/manifest.json",
     "QUIZ_V5_2_CANARY_USER_IDS": "",
     "QUIZ_V5_2_ROLLOUT": "disabled",
     "QUIZ_V5_3_CANARY_USER_IDS": "",

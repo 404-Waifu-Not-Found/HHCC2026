@@ -110,12 +110,10 @@ videosRouter.get("/:videoId/recovery", async (c) => {
         browserSourceAvailable: false,
         browserLookupAvailable: true,
       },
-      transcriptionMode: "captions",
       capture: {
         expectedDurationSeconds: video.duration_seconds,
         requiresUserGesture: false,
       },
-      requiresLocalTranscription: false,
     }),
   );
 });
@@ -156,7 +154,7 @@ videosRouter.post("/import", async (c) => {
         ? "server_captions"
         : inspected.preferredCaptionSourceUrl
           ? "browser_captions"
-          : "transient_audio_stream",
+          : "caption_lookup_required",
       captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
       elapsedMs: Date.now() - importStartedAt,
     }),
@@ -248,12 +246,10 @@ videosRouter.post("/import", async (c) => {
       browserSourceAvailable: browserCaptionLookup,
       browserLookupAvailable: browserTextLookupAvailable,
     },
-    transcriptionMode: captionsAvailable ? "captions" : "device_media",
     capture: {
       expectedDurationSeconds: durationSeconds,
       requiresUserGesture: false,
     },
-    requiresLocalTranscription: !captionsAvailable,
   });
   console.info(
     JSON.stringify({
@@ -267,7 +263,7 @@ videosRouter.post("/import", async (c) => {
       captionSegmentCount: preferredSegments?.length ?? 0,
       browserCaptionSourceAvailable: browserCaptionLookup,
       browserTextLookupAvailable,
-      requiresLocalTranscription: !captionsAvailable,
+      captionsAvailable,
       elapsedMs: Date.now() - importStartedAt,
     }),
   );

@@ -31,12 +31,13 @@ describe("iOS native generation", () => {
       "rolloutProfile.clientRequirements.androidApp",
     );
     expect(generation).toContain('Platform.OS !== "web"');
-    expect(generation).toContain('Platform.OS === "android"');
-    expect(generation).toContain("inferredDurationSeconds");
+    expect(generation).toContain("CAPTIONS_REQUIRED_MESSAGE");
+    expect(generation).not.toContain('"/api/media/resolve"');
+    expect(generation).not.toContain("transcribeLocally");
     expect(generation).toContain('"Question 1 unavailable"');
     expect(creation).toContain('Platform.OS !== "web" && generationId');
-    expect(creation).toContain('Platform.OS === "ios"');
-    expect(creation).toContain("nativeLocalFallback");
+    expect(creation).toContain("captionsUnavailable || captionsFailed");
+    expect(creation).not.toContain("nativeLocalFallback");
     expect(creation).toContain("openLocalGenerationClientSettings");
     expect(settings).toContain('Platform.OS !== "web"');
     expect(reminders).toContain('Platform.OS === "ios" ? "ios" : "android"');

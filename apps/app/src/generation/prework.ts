@@ -77,12 +77,10 @@ export async function preGenerateImportedQuiz(
         preferredSegments: transcript.segments,
         preferredCompleteness: transcript.completeness,
       },
-      transcriptionMode: "captions",
       capture: {
         ...imported.capture,
         expectedDurationSeconds: transcript.verifiedDurationSeconds,
       },
-      requiresLocalTranscription: false,
     });
     const activeTask = activePrework.get(input.generationId);
     if (

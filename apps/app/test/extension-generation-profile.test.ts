@@ -351,8 +351,7 @@ describe("extension generation profile compatibility", () => {
     expect(source).toContain(
       'reasonCode === "source_unavailable"\n          ? "generation_failed"',
     );
-    expect(source).toContain(
-      "The video source is unavailable for local recovery.",
-    );
+    expect(source).toContain("CAPTIONS_REQUIRED_MESSAGE");
+    expect(source).not.toContain('"/api/media/resolve"');
   });
 });

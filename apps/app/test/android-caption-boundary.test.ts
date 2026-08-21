@@ -1,11 +1,11 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(import.meta.dirname, "..");
 
-describe("native caption-only generation boundary", () => {
-  it("fails before media resolution when captions are unavailable", () => {
+describe("cross-platform caption-only generation boundary", () => {
+  it("fails clearly before AI generation when captions are unavailable", () => {
     const creation = readFileSync(
       resolve(appRoot, "app/generation/[videoId].tsx"),
       "utf8",
@@ -15,40 +15,51 @@ describe("native caption-only generation boundary", () => {
       "utf8",
     );
     const message =
-      "This Android beta requires a public YouTube video with usable captions.";
+      "Verified YouTube captions are required. ClipQuest does not download or transcribe video audio.";
     for (const source of [creation, recovery]) {
-      const nativeGuard = source.indexOf('Platform.OS === "android"');
-      const captionFailure = source.indexOf(message, nativeGuard);
-      const mediaResolve = source.indexOf(
-        '"/api/media/resolve"',
-        captionFailure,
-      );
-      expect(nativeGuard).toBeGreaterThanOrEqual(0);
-      expect(captionFailure).toBeGreaterThan(nativeGuard);
-      expect(mediaResolve).toBeGreaterThan(captionFailure);
+      expect(source).toContain("CAPTIONS_REQUIRED_MESSAGE");
+      expect(source).not.toContain('"/api/media/resolve"');
+      expect(source).not.toContain("transcribeLocally");
     }
+    const captions = readFileSync(
+      resolve(appRoot, "src/transcription/acquire-text-transcript.ts"),
+      "utf8",
+    );
+    expect(captions).toContain(message);
   });
 
-  it("excludes Whisper and the audio decoder from Android autolinking", () => {
+  it("does not ship a speech model or audio-decoder dependency", () => {
     const packageJson = JSON.parse(
       readFileSync(resolve(appRoot, "package.json"), "utf8"),
     ) as {
-      expo?: { autolinking?: { android?: { exclude?: string[] } } };
+      dependencies?: Record<string, string>;
+      expo?: unknown;
     };
-    expect(packageJson.expo?.autolinking?.android?.exclude).toEqual(
-      expect.arrayContaining(["whisper.rn", "@clipquest/local-audio-decoder"]),
+    expect(packageJson.dependencies).not.toHaveProperty("whisper.rn");
+    expect(packageJson.dependencies).not.toHaveProperty(
+      "@clipquest/local-audio-decoder",
     );
+    expect(packageJson.dependencies).not.toHaveProperty(
+      "@huggingface/transformers",
+    );
+    expect(packageJson.dependencies).not.toHaveProperty("mp4box");
+    expect(packageJson.expo).toBeUndefined();
   });
 
-  it("bounds native media downloads and removes oversized partial files", () => {
-    const transcriber = readFileSync(
-      resolve(appRoot, "src/transcription/local-transcriber.native.ts"),
+  it("removes server media and model delivery surfaces", () => {
+    const apiRoot = resolve(appRoot, "../api");
+    const apiIndex = readFileSync(resolve(apiRoot, "src/index.ts"), "utf8");
+    const workerConfig = readFileSync(
+      resolve(apiRoot, "wrangler.jsonc"),
       "utf8",
     );
-    expect(transcriber).toContain("MAX_MEDIA_BYTES = 180 * 1024 * 1024");
-    expect(transcriber).toContain("bytesWritten > MAX_MEDIA_BYTES");
-    expect(transcriber).toContain("result.size > MAX_MEDIA_BYTES");
-    expect(transcriber).toContain("void task.cancel()");
-    expect(transcriber).toContain("destination.delete()");
+    expect(apiIndex).not.toContain('app.route("/api/media"');
+    expect(apiIndex).not.toContain('app.route("/api/models"');
+    expect(workerConfig).not.toContain("MODEL_MANIFEST_KEY");
+    expect(existsSync(resolve(apiRoot, "src/routes/media.ts"))).toBe(false);
+    expect(existsSync(resolve(apiRoot, "src/routes/models.ts"))).toBe(false);
+    expect(existsSync(resolve(appRoot, "public/whisper-worker.js"))).toBe(
+      false,
+    );
   });
 });
