@@ -58,7 +58,7 @@ export function AppTextInput({
             borderColor: error
               ? theme.error
               : focused
-                ? theme.focus
+                ? theme.primary
                 : theme.borderStrong,
           },
           focused && styles.fieldFocused,
@@ -96,6 +96,7 @@ export function AppTextInput({
           style={[
             styles.input,
             large && styles.inputLarge,
+            Platform.OS === "web" && styles.webInput,
             { color: theme.text },
             style,
           ]}
@@ -156,6 +157,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
+  },
+  webInput: {
+    outlineColor: "transparent",
+    outlineStyle: "solid",
+    outlineWidth: 0,
+    userSelect: "text",
   },
   inputLarge: {
     minHeight: controls.urlInputHeight - borders.standard * 2,

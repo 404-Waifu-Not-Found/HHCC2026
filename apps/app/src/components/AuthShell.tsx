@@ -1,5 +1,11 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { breakpoints, spacing, typography } from "../theme/tokens";
 import { LearningPrism } from "./LearningPrism";
@@ -29,6 +35,7 @@ export function AuthShell({
       <View
         style={[
           styles.page,
+          Platform.OS === "web" && styles.webNoSelection,
           welcome && styles.welcomePage,
           welcome && desktop && styles.welcomePageWide,
           !welcome && styles.formPage,
@@ -92,6 +99,9 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "stretch",
     justifyContent: "center",
+  },
+  webNoSelection: {
+    userSelect: "none",
   },
   welcomePage: {
     gap: spacing[7],
