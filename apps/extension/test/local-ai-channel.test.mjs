@@ -6,6 +6,10 @@ import {
   generateQuizFromPlainText,
   randomizeMultipleChoiceOptions,
 } from "../src/local-generator.js";
+import {
+  CLIPQUEST_PAGE_ORIGINS,
+  isClipQuestPageOrigin,
+} from "../src/origin-policy.js";
 
 const background = await readFile(
   new URL("../src/background.js", import.meta.url),
@@ -137,6 +141,50 @@ test("long local generation uses a heartbeat port", () => {
   assert.match(bridge, /chrome\.runtime\.connect\(\{ name: LOCAL_AI_PORT \}\)/);
   assert.match(bridge, /setInterval\([\s\S]*type: "heartbeat"/);
   assert.doesNotMatch(popup, /chrome\.runtime\.connect/);
+});
+
+test("website privileges are bound to exact ClipQuest origins", () => {
+  assert.match(background, /isClipQuestPageOrigin/);
+  assert.doesNotMatch(background, /url\.hostname === "localhost"/);
+  assert.doesNotMatch(background, /url\.hostname === "127\.0\.0\.1"/);
+  assert.equal(
+    isClipQuestPageOrigin("https://clipquest.ccwu.cc/library"),
+    true,
+  );
+  assert.equal(
+    isClipQuestPageOrigin("http://localhost:8081/create/video"),
+    true,
+  );
+  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8081/"), true);
+  assert.equal(isClipQuestPageOrigin("http://localhost:19006/"), true);
+  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:19006/"), true);
+  assert.equal(isClipQuestPageOrigin("http://localhost:3000/"), false);
+  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8787/"), false);
+  assert.equal(
+    isClipQuestPageOrigin("https://clipquest.ccwu.cc.evil.test/"),
+    false,
+  );
+  assert.deepEqual(
+    [...CLIPQUEST_PAGE_ORIGINS],
+    [
+      "https://clipquest.ccwu.cc",
+      "http://localhost:8081",
+      "http://127.0.0.1:8081",
+      "http://localhost:19006",
+      "http://127.0.0.1:19006",
+    ],
+  );
+});
+
+test("DeepSeek key management is restricted to extension pages", () => {
+  for (const messageType of ["get", "save", "delete", "test"]) {
+    assert.match(
+      background,
+      new RegExp(
+        `message\\?\\.type === "clipquest\\.key\\.${messageType}\\.v1"\\) \\{\\s+if \\(!extensionPageSender\\(sender\\)\\) return false;`,
+      ),
+    );
+  }
 });
 
 test("release builds preserve the loaded unpacked extension directory", () => {

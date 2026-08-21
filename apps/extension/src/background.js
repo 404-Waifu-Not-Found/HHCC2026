@@ -4,6 +4,7 @@ import {
   generateQuizFromPlainText,
   testDeepSeekKey,
 } from "./local-generator.js";
+import { isClipQuestPageOrigin } from "./origin-policy.js";
 
 const CLIPQUEST_MATCHES = [
   "https://clipquest.ccwu.cc/*",
@@ -24,16 +25,7 @@ function extensionPageSender(sender) {
 }
 
 function senderAllowed(sender) {
-  try {
-    const url = new URL(sender?.url ?? sender?.tab?.url ?? "");
-    return (
-      url.origin === "https://clipquest.ccwu.cc" ||
-      (url.protocol === "http:" &&
-        (url.hostname === "localhost" || url.hostname === "127.0.0.1"))
-    );
-  } catch {
-    return false;
-  }
+  return isClipQuestPageOrigin(sender?.url ?? sender?.tab?.url ?? "");
 }
 
 function waitForTab(tabId) {
@@ -278,6 +270,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "clipquest.key.get.v1") {
+    if (!extensionPageSender(sender)) return false;
     void chrome.storage.local.get(API_KEY_STORAGE_KEY).then((stored) =>
       sendResponse({
         configured: typeof stored[API_KEY_STORAGE_KEY] === "string",
@@ -286,6 +279,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "clipquest.key.save.v1") {
+    if (!extensionPageSender(sender)) return false;
     const key = typeof message.apiKey === "string" ? message.apiKey.trim() : "";
     if (!/^sk-[A-Za-z0-9_-]{12,}$/.test(key)) {
       sendResponse({ ok: false, error: "Enter a valid DeepSeek API key." });
@@ -297,12 +291,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "clipquest.key.delete.v1") {
+    if (!extensionPageSender(sender)) return false;
     void chrome.storage.local
       .remove(API_KEY_STORAGE_KEY)
       .then(() => sendResponse({ ok: true }));
     return true;
   }
   if (message?.type === "clipquest.key.test.v1") {
+    if (!extensionPageSender(sender)) return false;
     const supplied =
       typeof message.apiKey === "string" ? message.apiKey.trim() : "";
     void chrome.storage.local
