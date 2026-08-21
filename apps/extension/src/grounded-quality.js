@@ -295,6 +295,7 @@ const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
   /\b(?:cut(?:ting)?\s+(?:too\s+)?many\s+links?|every\s+link\s+(?:provides|gives|adds)\s+stability)\b/iu,
   /\b(?:entire\s+)?fabric\s+of\s+(?:the\s+)?(?:reef|ecosystem|community|life|nature)\b/iu,
   /\bjacket\s+of\s+gases\b/iu,
+  /\b(?:remove|removes|removed|removing)\s+(?:the\s+)?blocks\b/iu,
   /(?:编织|织网|织物|线头|解开整张网|生态系统的结构|生态网络|气体外套)/u,
 ];
 

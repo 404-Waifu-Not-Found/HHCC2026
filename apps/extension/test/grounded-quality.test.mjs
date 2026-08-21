@@ -332,6 +332,20 @@ test("v5.8 repairs an obvious caption plural locally", () => {
   );
 });
 
+test("v5.8 rejects a Tetris presentation vehicle as the learner answer", () => {
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "How does clearing forests affect Earth's ability to remove carbon?",
+      concept: "deforestation and atmospheric carbon",
+      answerText: "reducing Earth's ability to remove the blocks",
+      explanation:
+        "Clearing forests reduces Earth's ability to remove carbon from the atmosphere.",
+    }),
+    "low_pedagogical_value",
+  );
+});
+
 test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () => {
   for (const question of [
     "What condition strengthens biodiversity's weave in a rainforest?",
