@@ -1,6 +1,6 @@
 {
   "name": "@clipquest/app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -23,6 +23,7 @@
     "@better-auth/expo": "1.6.25",
     "@clipquest/contracts": "0.1.0",
     "@clipquest/local-audio-decoder": "0.1.0",
+    "@clipquest/local-quiz-engine": "0.1.0",
     "@expo-google-fonts/dm-sans": "^0.4.1",
     "@expo-google-fonts/fredoka": "0.4.1",
     "@huggingface/transformers": "4.2.0",
@@ -31,6 +32,7 @@
     "buffer": "^6.0.3",
     "expo": "~57.0.9",
     "expo-application": "~57.0.1",
+    "expo-build-properties": "~57.0.11",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.8",
     "expo-crypto": "~57.0.1",
@@ -58,6 +60,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "~0.21.0",
+    "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.1",
     "whisper.rn": "0.7.2",
     "zod": "^4.2.1"
@@ -67,5 +70,15 @@
     "babel-preset-expo": "~57.0.1",
     "sharp": "^0.34.5",
     "vitest": "3.2.7"
+  },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "whisper.rn",
+          "@clipquest/local-audio-decoder"
+        ]
+      }
+    }
   }
 }

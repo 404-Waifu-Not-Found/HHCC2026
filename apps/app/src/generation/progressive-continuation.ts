@@ -11,12 +11,14 @@ import {
   type AutomaticRetryKind,
   type GenerationFailureCode,
   type GenerationRecord,
+  type LocalConceptQuizQuestionChunk,
   type LocalGenerationCallEvent,
   type LocalQuizContext,
   type TranscriptCompleteness,
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import * as Crypto from "expo-crypto";
+import { Platform } from "react-native";
 import { apiRequest, ClientApiError, jsonBody } from "../lib/api";
 import { countCaptionWords } from "./eta";
 import {
@@ -35,10 +37,11 @@ import {
 } from "../state/creation";
 import { acquireTextTranscript } from "../transcription/acquire-text-transcript";
 import {
+  flushLocalGenerationOutbox,
   LocalGenerationRequestError,
-  requestExtensionLocalQuiz,
+  requestLocalQuiz,
   type LocalGenerationProgress,
-} from "../transcription/clipquest-extension";
+} from "./local-generation-client";
 import { transcribeLocally } from "../transcription/local-transcriber";
 import {
   getOrStartProgressiveRecoveryTask,
@@ -109,14 +112,34 @@ async function runAutomaticRecovery(
   const sessionResult = await authClient.getSession();
   const session = sessionResult.data as AuthAppSession | null;
   if (!session?.user.id) return;
-  const claimKey = Crypto.randomUUID();
+  // Android uses one single-task activity. Preserve its local lease identity
+  // across a foreground interruption so that the same app can renew the lease
+  // immediately. Web tabs still receive independent claim identities.
+  let stored =
+    Platform.OS === "android"
+      ? await matchingGenerationRecord(attemptId, status.quizId)
+      : null;
+  const resumableAndroidLease =
+    Platform.OS === "android" &&
+    stored &&
+    (stored.version === 3 || stored.version === 4) &&
+    stored.generationSessionId === continuation.generationSessionId
+      ? stored
+      : undefined;
+  const claimKey = resumableAndroidLease
+    ? resumableAndroidLease.idempotencyKey
+    : Crypto.randomUUID();
   const generationSessionId =
     continuation.generationSessionId ??
     (legacyAutomaticRecovery ? Crypto.randomUUID() : undefined);
   if (!generationSessionId) {
     throw new Error("The generation session metadata is missing.");
   }
-  const recoverySessionId = automatic ? Crypto.randomUUID() : undefined;
+  const recoverySessionId = automatic
+    ? resumableAndroidLease
+      ? resumableAndroidLease.recoverySessionId
+      : Crypto.randomUUID()
+    : undefined;
 
   let claim;
   try {
@@ -179,7 +202,7 @@ async function runAutomaticRecovery(
   }
 
   const generationId = continuation.generationId ?? Crypto.randomUUID();
-  let stored = await matchingGenerationRecord(attemptId, status.quizId);
+  stored ??= await matchingGenerationRecord(attemptId, status.quizId);
   if (!stored && continuation.generationId) {
     const candidate = await loadGenerationRecord(continuation.generationId);
     if (
@@ -340,6 +363,7 @@ async function runAutomaticRecovery(
       resultProtocolVersion: continuation.resultProtocolVersion,
       promptVersion: continuation.promptVersion,
       validatorVersion: continuation.validatorVersion,
+      client: continuation.client,
       generationProfile: continuation.generationProfile,
       questionPlan: continuation.questionPlan,
       claim: claim.claim,
@@ -452,10 +476,76 @@ async function runAutomaticRecovery(
       ).catch(() => undefined);
     });
     void ingestion.catch(() => undefined);
+    return ingestion;
+  };
+
+  const enqueueQuestion = (chunk: LocalConceptQuizQuestionChunk) => {
+    ingestion = ingestion.then(async () => {
+      const response = await apiRequest(
+        `/api/quiz-imports/${status.quizId}/questions`,
+        {
+          method: "PUT",
+          headers: { "Idempotency-Key": claimKey },
+          body: jsonBody({ chunk }),
+          signal,
+        },
+        ExtensionQuizProgressiveImportResponseSchema,
+      );
+      latest = response.generation;
+      publishAttemptGeneration(attemptId, status.quizId, latest);
+      await updateGenerationRecord(
+        generationId,
+        stored?.version === 3 || stored?.version === 4
+          ? {
+              acceptedCount: latest.availableQuestions,
+              state: latest.state,
+              retryOrdinal: undefined,
+              ordinalAttempt: undefined,
+              retryKind: undefined,
+              retryDelayMs: undefined,
+            }
+          : {
+              acceptedCount: latest.availableQuestions,
+              state: latest.state,
+            },
+      );
+    });
+    void ingestion.catch(() => undefined);
+    return ingestion;
   };
 
   try {
-    await requestExtensionLocalQuiz(
+    const replayed = await flushLocalGenerationOutbox(
+      generationId,
+      enqueueQuestion,
+      enqueueCall,
+    );
+    await ingestion;
+    if (replayed.questions > 0) {
+      const refreshed = await readStatus(attemptId, signal);
+      latest = refreshed.generation;
+      publishAttemptGeneration(attemptId, status.quizId, latest);
+      if (latest.state === "ready") {
+        await clearGenerationRecord(generationId);
+        return;
+      }
+      if (!refreshed.continuation || !context.continuation) {
+        throw new Error("Automatic recovery metadata is missing.");
+      }
+      context.continuation = {
+        ...context.continuation,
+        startIndex: refreshed.continuation.startIndex,
+        acceptedQuestions: refreshed.continuation.acceptedQuestions,
+        nextCallIndex: refreshed.continuation.nextCallIndex,
+        nextOrdinalAttempt: refreshed.continuation.nextOrdinalAttempt,
+        retryKind: refreshed.continuation.retryKind,
+        automaticRetryCount: refreshed.continuation.automaticRetryCount,
+        retryBudgetUsedCount: refreshed.continuation.retryBudgetUsedCount,
+        retryOrdinals: refreshed.continuation.retryOrdinals,
+        previousOutcome: refreshed.continuation.previousOutcome,
+      };
+    }
+    await requestLocalQuiz(
       context,
       signal,
       (_stage, _progress, detail) => {
@@ -512,39 +602,7 @@ async function runAutomaticRecovery(
         });
         void ingestion.catch(() => undefined);
       },
-      (chunk) => {
-        ingestion = ingestion.then(async () => {
-          const response = await apiRequest(
-            `/api/quiz-imports/${status.quizId}/questions`,
-            {
-              method: "PUT",
-              headers: { "Idempotency-Key": claimKey },
-              body: jsonBody({ chunk }),
-              signal,
-            },
-            ExtensionQuizProgressiveImportResponseSchema,
-          );
-          latest = response.generation;
-          publishAttemptGeneration(attemptId, status.quizId, latest);
-          await updateGenerationRecord(
-            generationId,
-            stored?.version === 3 || stored?.version === 4
-              ? {
-                  acceptedCount: latest.availableQuestions,
-                  state: latest.state,
-                  retryOrdinal: undefined,
-                  ordinalAttempt: undefined,
-                  retryKind: undefined,
-                  retryDelayMs: undefined,
-                }
-              : {
-                  acceptedCount: latest.availableQuestions,
-                  state: latest.state,
-                },
-          );
-        });
-        void ingestion.catch(() => undefined);
-      },
+      enqueueQuestion,
       enqueueCall,
     );
     await ingestion;
@@ -720,6 +778,11 @@ async function acquireContinuationTranscript(
     preferredLanguage,
   );
   if (textTranscript) return textTranscript;
+  if (Platform.OS === "android") {
+    throw new Error(
+      "This Android beta requires a public YouTube video with usable captions.",
+    );
+  }
   const media = await apiRequest(
     "/api/media/resolve",
     {

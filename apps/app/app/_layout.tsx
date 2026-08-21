@@ -8,10 +8,11 @@ import {
   Fredoka_700Bold,
 } from "@expo-google-fonts/fredoka";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -20,6 +21,10 @@ import {
   useSettings,
 } from "../src/providers/SettingsProvider";
 import { ExtensionInstallGate } from "../src/components/ExtensionInstallGate";
+import { removeLocalGenerationCredential } from "../src/generation/local-generation-client";
+import { pauseAllProgressiveGenerationTasks } from "../src/generation/progressive-coordinator";
+import { useAppSession } from "../src/lib/auth-client";
+import { clearReviewReminderDeviceState } from "../src/notifications/review-reminders";
 
 const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
 
@@ -35,7 +40,16 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") pauseAllProgressiveGenerationTasks();
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
     if (Platform.OS === "web") return;
+    let subscription: { remove(): void } | undefined;
     void import("expo-notifications").then((Notifications) => {
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
@@ -45,7 +59,19 @@ export default function RootLayout() {
           shouldSetBadge: false,
         }),
       });
+      const openResponse = (
+        response: import("expo-notifications").NotificationResponse,
+      ) => {
+        const route = response.notification.request.content.data?.route;
+        if (route === "/library") router.push("/(tabs)/library" as never);
+      };
+      subscription =
+        Notifications.addNotificationResponseReceivedListener(openResponse);
+      void Notifications.getLastNotificationResponseAsync().then((response) => {
+        if (response) openResponse(response);
+      });
     });
+    return () => subscription?.remove();
   }, []);
 
   useEffect(() => {
@@ -61,11 +87,39 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SettingsProvider>
+          <NativeAccountBoundary />
           <RootNavigator />
         </SettingsProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+const OBSERVED_NATIVE_USER_KEY = "clipquest:native-local-ai-user:v1";
+
+function NativeAccountBoundary() {
+  const { data: session, isPending } = useAppSession();
+  useEffect(() => {
+    if (Platform.OS === "web" || isPending) return;
+    void (async () => {
+      const currentUserId = session?.user.id ?? null;
+      const previousUserId = await AsyncStorage.getItem(
+        OBSERVED_NATIVE_USER_KEY,
+      );
+      if (previousUserId && previousUserId !== currentUserId) {
+        await Promise.allSettled([
+          removeLocalGenerationCredential(previousUserId),
+          clearReviewReminderDeviceState(previousUserId),
+        ]);
+      }
+      if (currentUserId) {
+        await AsyncStorage.setItem(OBSERVED_NATIVE_USER_KEY, currentUserId);
+      } else {
+        await AsyncStorage.removeItem(OBSERVED_NATIVE_USER_KEY);
+      }
+    })();
+  }, [isPending, session?.user.id]);
+  return null;
 }
 
 function RootNavigator() {

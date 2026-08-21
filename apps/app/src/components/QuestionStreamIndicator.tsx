@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { openClipQuestExtensionSettings } from "../transcription/clipquest-extension";
+import { openLocalGenerationClientSettings } from "../generation/local-generation-client";
 import { borders, radii, shadows, spacing, typography } from "../theme/tokens";
 import { VoxelIcon } from "./VoxelIcon";
 
@@ -58,7 +58,7 @@ export function QuestionStreamIndicator({
       {generation.state === "action_required" ? (
         <Pressable
           accessibilityRole="button"
-          onPress={openClipQuestExtensionSettings}
+          onPress={openLocalGenerationClientSettings}
           style={({ pressed }) => [
             styles.action,
             {

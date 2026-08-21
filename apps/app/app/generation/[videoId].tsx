@@ -27,7 +27,14 @@ import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  AppState,
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
@@ -71,12 +78,14 @@ import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
 import { acquireTextTranscript } from "../../src/transcription/acquire-text-transcript";
 import {
+  detectLocalGenerationClient,
+  flushLocalGenerationOutbox,
   LocalGenerationRequestError,
-  openClipQuestExtensionSettings,
-  requestExtensionLocalQuiz,
-  subscribeToClipQuestExtension,
+  openLocalGenerationClientSettings,
+  requestLocalQuiz,
+  subscribeToLocalGenerationClient,
   type LocalGenerationProgress,
-} from "../../src/transcription/clipquest-extension";
+} from "../../src/generation/local-generation-client";
 import {
   breakpoints,
   layout,
@@ -135,6 +144,7 @@ export default function GenerationScreen() {
   const [runNumber, setRunNumber] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const taskKeyRef = useRef<string | undefined>(undefined);
+  const resumeInFlightRef = useRef(false);
   const [localTranscription, setLocalTranscription] = useState(false);
   const [captionWordCount, setCaptionWordCount] = useState<number>();
   const [videoDurationSeconds, setVideoDurationSeconds] = useState<number>();
@@ -356,15 +366,38 @@ export default function GenerationScreen() {
         return;
       }
 
-      const rolloutProfile = generationRecord.generationProfile
-        ? {
-            generationProfile: generationRecord.generationProfile,
-          }
-        : await apiRequest(
-            "/api/local-ai/profile",
-            { signal },
-            QuizGenerationProfileResponseSchema,
+      // A generation without a server quiz has no immutable bank contract yet.
+      // Re-read the authenticated assignment so both native and extension
+      // clients enforce the current server-owned version requirement.
+      const rolloutProfile = await apiRequest(
+        "/api/local-ai/profile",
+        { signal },
+        QuizGenerationProfileResponseSchema,
+      );
+      if (rolloutProfile.clientRequirements) {
+        const localClient = await detectLocalGenerationClient();
+        if (!localClient.available) {
+          throw new Error("A compatible local generation client is required.");
+        }
+        const requirement =
+          localClient.kind === "android_app"
+            ? rolloutProfile.clientRequirements.androidApp
+            : rolloutProfile.clientRequirements.chromeExtension;
+        if (
+          !localClient.version ||
+          !semanticVersionAtLeast(
+            localClient.version,
+            requirement.minimumVersion,
+          ) ||
+          !localClient.capabilities.includes(requirement.requiredCapability)
+        ) {
+          throw new Error(
+            localClient.kind === "android_app"
+              ? `ClipQuest Android ${requirement.minimumVersion} or newer is required.`
+              : `ClipQuest Local AI ${requirement.minimumVersion} or newer is required.`,
           );
+        }
+      }
       await persistRecord({
         state: "generating",
         generationProfile: rolloutProfile.generationProfile,
@@ -400,6 +433,11 @@ export default function GenerationScreen() {
         captionSourceCategory = textTranscript.captionSourceCategory;
       }
       if (!segments.length) {
+        if (Platform.OS === "android") {
+          throw new Error(
+            "This Android beta requires a public YouTube video with usable captions.",
+          );
+        }
         setLocalTranscription(true);
         const media = await apiRequest(
           "/api/media/resolve",
@@ -662,6 +700,7 @@ export default function GenerationScreen() {
           if (!callEventsReady) schedulePendingCallFlush();
         });
         void questionIngestion.catch(() => undefined);
+        return questionIngestion;
       };
 
       const enqueueCall = (event: LocalGenerationCallEvent) => {
@@ -669,6 +708,7 @@ export default function GenerationScreen() {
           await uploadCallEvent(event);
         });
         void callIngestion.catch(() => undefined);
+        return callIngestion;
       };
 
       const enqueueRetrying = (detail: LocalGenerationProgress) => {
@@ -739,6 +779,16 @@ export default function GenerationScreen() {
         });
         void callIngestion.catch(() => undefined);
       };
+
+      const replayed = await flushLocalGenerationOutbox(
+        generationRecord.generationId,
+        enqueueQuestion,
+        enqueueCall,
+      );
+      await Promise.all([questionIngestion, callIngestion]);
+      if (replayed.questions > 0 && progressiveQuizId && attemptId) {
+        return;
+      }
       const stopHeartbeat = startGenerationRecordHeartbeat(
         generationRecord.generationId,
       );
@@ -766,7 +816,7 @@ export default function GenerationScreen() {
       }, 10_000);
 
       try {
-        await requestExtensionLocalQuiz(
+        await requestLocalQuiz(
           context,
           signal,
           (nextStage, _progress, detail) => {
@@ -797,6 +847,10 @@ export default function GenerationScreen() {
         await clearGenerationRecord(generationRecord.generationId);
       } catch (cause) {
         await Promise.allSettled([questionIngestion, callIngestion]);
+        if (Platform.OS === "android" && signal.aborted) {
+          await persistRecord({ state: "generating" }).catch(() => undefined);
+          throw new TranscriptionPausedError();
+        }
         const reasonCode =
           cause instanceof LocalGenerationRequestError
             ? cause.reasonCode
@@ -938,8 +992,8 @@ export default function GenerationScreen() {
   useEffect(() => {
     if (!configurationRequired) return;
     let restarting = false;
-    return subscribeToClipQuestExtension((extension) => {
-      if (!extension.configured || restarting) return;
+    return subscribeToLocalGenerationClient((client) => {
+      if (!client.available || !client.configured || restarting) return;
       restarting = true;
       void (async () => {
         const current = await loadGenerationRecord(params.generationId);
@@ -983,25 +1037,63 @@ export default function GenerationScreen() {
     if (taskKeyRef.current) cancelProgressiveGenerationTask(taskKeyRef.current);
     setPaused(true);
   };
-  const resumePausedGeneration = () => {
+  const resumePausedGeneration = useCallback(() => {
+    if (resumeInFlightRef.current) return;
+    resumeInFlightRef.current = true;
     void (async () => {
       if (!isUuid(params.generationId)) return;
       const current = await loadGenerationRecord(params.generationId);
-      if (!current || current.acceptedCount > 0) return;
-      await updateGenerationRecord(params.generationId, {
-        generationSessionId: Crypto.randomUUID(),
-        idempotencyKey: Crypto.randomUUID(),
-        nextCallIndex: 0,
-        state: "generating",
-      });
+      if (!current) return;
+      await updateGenerationRecord(
+        params.generationId,
+        current.quizId
+          ? { state: "generating" }
+          : {
+              generationSessionId: Crypto.randomUUID(),
+              idempotencyKey: Crypto.randomUUID(),
+              nextCallIndex: 0,
+              state: "generating",
+            },
+      );
       setPaused(false);
       setError(undefined);
       setConfigurationRequired(false);
       setRunNumber((value) => value + 1);
-    })().catch((cause) => {
-      setError(cause instanceof Error ? cause.message : t("trustworthyError"));
+    })()
+      .catch((cause) => {
+        setError(
+          cause instanceof Error ? cause.message : t("trustworthyError"),
+        );
+      })
+      .finally(() => {
+        resumeInFlightRef.current = false;
+      });
+  }, [params.generationId, t]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        if (taskKeyRef.current) {
+          cancelProgressiveGenerationTask(taskKeyRef.current);
+        }
+        setPaused(true);
+      }
     });
-  };
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (
+      Platform.OS === "android" &&
+      paused &&
+      !error &&
+      !configurationRequired &&
+      AppState.currentState === "active"
+    ) {
+      resumePausedGeneration();
+    }
+  }, [configurationRequired, error, paused, resumePausedGeneration]);
   const cancel = async () => {
     if (cancelling) return;
     setCancelling(true);
@@ -1035,7 +1127,7 @@ export default function GenerationScreen() {
               {t("cancel")}
             </PrimaryButton>
           </View>
-          {paused ? (
+          {paused && Platform.OS !== "android" ? (
             <View style={styles.footerAction}>
               <PrimaryButton
                 disabled={cancelling}
@@ -1048,11 +1140,15 @@ export default function GenerationScreen() {
             <View style={styles.footerAction}>
               <PrimaryButton
                 disabled={cancelling}
-                onPress={openClipQuestExtensionSettings}
+                onPress={openLocalGenerationClientSettings}
               >
                 {locale === "zh-CN"
-                  ? "打开扩展设置"
-                  : "Open extension settings"}
+                  ? Platform.OS === "android"
+                    ? "打开本地 AI 设置"
+                    : "打开扩展设置"
+                  : Platform.OS === "android"
+                    ? "Open Local AI settings"
+                    : "Open extension settings"}
               </PrimaryButton>
             </View>
           ) : localTranscription &&
@@ -1232,6 +1328,24 @@ function LinearJourneyBar({
 function formatGenerationError(cause: unknown, fallback: string): string {
   if (!(cause instanceof Error)) return fallback;
   return cause.message;
+}
+
+function semanticVersionAtLeast(actual: string, minimum: string): boolean {
+  const left = actual.split(".").map(Number);
+  const right = minimum.split(".").map(Number);
+  if (
+    left.length !== 3 ||
+    right.length !== 3 ||
+    [...left, ...right].some((part) => !Number.isInteger(part) || part < 0)
+  ) {
+    return false;
+  }
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] !== right[index]) {
+      return left[index]! > right[index]!;
+    }
+  }
+  return true;
 }
 
 function isUuid(value: string | undefined): value is string {

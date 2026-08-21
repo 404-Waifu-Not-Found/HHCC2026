@@ -1,13 +1,14 @@
 import type { AppLanguage } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { router } from "expo-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   StyleSheet,
   Switch,
   Text,
   useWindowDimensions,
   View,
+  Platform,
 } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { useAdminCopy } from "../../src/admin/copy";
@@ -19,6 +20,12 @@ import { authClient, useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { clearPendingVideoHandoffs } from "../../src/state/pending-video-handoff";
 import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
+import { removeLocalGenerationCredential } from "../../src/generation/local-generation-client";
+import {
+  disableReviewReminders,
+  enableReviewReminders,
+  reviewRemindersEnabled,
+} from "../../src/notifications/review-reminders";
 import {
   breakpoints,
   radii,
@@ -45,15 +52,33 @@ export default function SettingsScreen() {
   const [busy, setBusy] = useState<string>();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "android" || !session?.user.id) return;
+    let active = true;
+    void reviewRemindersEnabled(session.user.id).then((enabled) => {
+      if (active) setNotificationsEnabled(enabled);
+    });
+    return () => {
+      active = false;
+    };
+  }, [session?.user.id]);
 
   const signOut = async () => {
     if (busy) return;
     setBusy("signout");
     setError(undefined);
     try {
+      if (session?.user.id) {
+        await disableReviewReminders(session.user.id);
+      }
       const result = await authClient.signOut();
       if (result.error)
         throw new Error(result.error.message ?? t("signOutFailed"));
+      if (session?.user.id) {
+        await removeLocalGenerationCredential(session.user.id);
+      }
       await clearPendingVideoHandoffs();
       router.replace("/(auth)/sign-in");
     } catch (cause) {
@@ -68,9 +93,15 @@ export default function SettingsScreen() {
     setBusy("delete");
     setError(undefined);
     try {
+      if (session?.user.id) {
+        await disableReviewReminders(session.user.id);
+      }
       const result = await authClient.deleteUser({ password: deletePassword });
       if (result.error)
         throw new Error(result.error.message ?? t("deleteAccountFailed"));
+      if (session?.user.id) {
+        await removeLocalGenerationCredential(session.user.id);
+      }
       await clearPendingVideoHandoffs();
       router.replace("/(auth)/sign-in");
     } catch (cause) {
@@ -140,6 +171,14 @@ export default function SettingsScreen() {
                 onPress={() => router.push("/admin" as never)}
               >
                 {adminCopy.openOperations}
+              </PrimaryButton>
+            ) : null}
+            {Platform.OS === "android" ? (
+              <PrimaryButton
+                variant="secondary"
+                onPress={() => router.push("/local-ai" as never)}
+              >
+                {locale === "zh-CN" ? "本地 AI" : "Local AI"}
               </PrimaryButton>
             ) : null}
             <PrimaryButton
@@ -235,6 +274,32 @@ export default function SettingsScreen() {
               value={reduceMotion}
               onChange={setReduceMotion}
             />
+            {Platform.OS === "android" && session?.user.id ? (
+              <SettingSwitch
+                label={t("notifications")}
+                help={t("remindersHelp")}
+                value={notificationsEnabled}
+                onChange={(enabled) => {
+                  if (busy) return;
+                  setBusy("notifications");
+                  setError(undefined);
+                  void (
+                    enabled
+                      ? enableReviewReminders(session.user.id, locale)
+                      : disableReviewReminders(session.user.id)
+                  )
+                    .then(() => setNotificationsEnabled(enabled))
+                    .catch((cause) =>
+                      setError(
+                        cause instanceof Error
+                          ? cause.message
+                          : "Review reminders could not be updated.",
+                      ),
+                    )
+                    .finally(() => setBusy(undefined));
+                }}
+              />
+            ) : null}
           </SettingsSection>
         </MotionView>
       </View>
@@ -281,10 +346,12 @@ function FieldLabel({ children }: { children: string }) {
 
 function SettingSwitch({
   label,
+  help,
   value,
   onChange,
 }: {
   label: string;
+  help?: string;
   value: boolean;
   onChange(value: boolean): void;
 }) {
@@ -294,7 +361,7 @@ function SettingSwitch({
       <View style={styles.switchCopy}>
         <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
         <Text style={[styles.help, { color: theme.textMuted }]}>
-          {t(value ? "reducedMotionOnHelp" : "reducedMotionOffHelp")}
+          {help ?? t(value ? "reducedMotionOnHelp" : "reducedMotionOffHelp")}
         </Text>
       </View>
       <Switch

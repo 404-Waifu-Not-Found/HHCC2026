@@ -43,7 +43,7 @@ import {
   subscribeToAttemptGeneration,
 } from "../../src/generation/progressive-coordinator";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { subscribeToClipQuestExtension } from "../../src/transcription/clipquest-extension";
+import { subscribeToLocalGenerationClient } from "../../src/generation/local-generation-client";
 import {
   FeedbackMotion,
   MotionSkeleton,
@@ -306,8 +306,13 @@ export default function QuizScreen() {
 
   useEffect(() => {
     if (generation?.state !== "action_required") return;
-    return subscribeToClipQuestExtension((extension) => {
-      if (!extension.configured || recoveryAttemptedRef.current) return;
+    return subscribeToLocalGenerationClient((client) => {
+      if (
+        !client.available ||
+        !client.configured ||
+        recoveryAttemptedRef.current
+      )
+        return;
       recoveryAttemptedRef.current = true;
       void ensureProgressiveAttemptRecovery(attemptId).finally(() => {
         recoveryAttemptedRef.current = false;
