@@ -79,11 +79,14 @@ const securityMigration = await readFile(
 );
 
 describe("security resource guards", () => {
-  it("keeps learner answers and transcript evidence out of Worker AI helpers", () => {
-    expect(aiServicesSource).not.toContain("gradeWrittenAnswer");
+  it("uses bounded schema-validated AI grading without logging learner answers", () => {
+    expect(aiServicesSource).toContain("gradeShortAnswerWithAi");
+    expect(aiServicesSource).toContain("ShortAnswerGradeSchema");
+    expect(aiServicesSource).toContain("learnerAnswer: input.learnerAnswer");
+    expect(aiServicesSource).not.toMatch(/console\.(?:info|warn|error)/);
     expect(aiServicesSource).not.toContain("TranscriptSegment");
-    expect(aiServicesSource).not.toContain("learnerAnswer");
-    expect(aiServicesSource).not.toContain("requiredIdeas");
+    expect(quizSource).toContain("gradeShortAnswerWithAi");
+    expect(quizSource).not.toContain("gradeProgressiveShortAnswerDecision");
   });
 
   it("keeps raw upstream bodies and exception objects out of Worker logs", () => {

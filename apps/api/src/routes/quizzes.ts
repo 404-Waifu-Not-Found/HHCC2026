@@ -24,15 +24,14 @@ import {
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
+import { gradeShortAnswerWithAi } from "../lib/ai-services";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
 import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
   ProgressiveQuizSummarySchema,
-  gradeProgressiveShortAnswerDecision,
   readProgressiveGenerationSnapshot,
-  type ProgressiveShortAnswerGradingPath,
   type ProgressiveGenerationSnapshot,
 } from "../lib/progressive-quiz";
 import { enforceRateLimit } from "../lib/rate-limit";
@@ -504,18 +503,6 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   let reservationCommitted = false;
   try {
     const grade = await gradeAnswer(c.env, attempt, question, input.answer);
-    if (grade.gradingPath) {
-      console.info(
-        JSON.stringify({
-          scope: "quiz_grading",
-          event: "short_answer.graded",
-          quizId: attempt.quiz_id,
-          attemptId: attempt.id,
-          questionId: question.id,
-          gradingPath: grade.gradingPath,
-        }),
-      );
-    }
     // Freeze one coherent generation snapshot before any answer write. A
     // concurrent append may become visible on the next poll, but can never turn
     // this committed answer into a generation-state error response.
@@ -1458,14 +1445,13 @@ async function getAttemptQuestion(
 }
 
 async function gradeAnswer(
-  _env: ApiBindings["Bindings"],
+  env: ApiBindings["Bindings"],
   attempt: AttemptRow,
   question: QuestionRow,
   answer: z.infer<typeof AnswerValueSchema>,
 ): Promise<{
   correct: boolean;
   feedback: string;
-  gradingPath?: ProgressiveShortAnswerGradingPath;
 }> {
   if (question.type === "short_answer") {
     if (typeof answer !== "string") {
@@ -1480,16 +1466,22 @@ async function gradeAnswer(
       RubricSchema,
       "short-answer rubric",
     );
-    const decision = gradeProgressiveShortAnswerDecision({
-      answer,
+    const sampleAnswer = parseStoredJson(
+      question.correct_answer_json,
+      z.string().trim().min(1).max(1_000),
+      "short-answer sample answer",
+    );
+    const correct = await gradeShortAnswerWithAi(env, {
+      question: question.prompt,
+      sampleAnswer,
+      learnerAnswer: answer,
       requiredIdeas: rubric.requiredIdeas,
       acceptableAlternatives: rubric.acceptableAlternatives,
       rubricV2: rubric.v2,
     });
     return {
-      correct: decision.correct,
+      correct,
       feedback: question.explanation,
-      gradingPath: decision.path,
     };
   }
 
