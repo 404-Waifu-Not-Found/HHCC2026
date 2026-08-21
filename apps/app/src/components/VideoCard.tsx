@@ -130,7 +130,7 @@ export function VideoCard({
                 ? t("exportNotes")
                 : card.cheatSheet.status === "failed"
                   ? t("retryNotes")
-                  : t("preparingNotes")
+                  : t("notesNotReady")
             }
             disabled={!onExport || card.cheatSheet.status === "none"}
             onPress={(event) => {
@@ -155,7 +155,7 @@ export function VideoCard({
                 ? t("exportNotes")
                 : card.cheatSheet.status === "failed"
                   ? t("retryNotes")
-                  : t("preparingNotes")}
+                  : t("notesNotReady")}
             </Text>
           </Pressable>
         </MotionView>
