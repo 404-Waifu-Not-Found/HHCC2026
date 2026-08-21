@@ -471,7 +471,7 @@ export default function HomeScreen() {
                             ? () => void open(card)
                             : card.cheatSheet.sheetId
                               ? () =>
-                                  void exportCheatSheet(
+                                  exportCheatSheet(
                                     card.cheatSheet.sheetId!,
                                     card.title,
                                   )
@@ -588,7 +588,7 @@ function CardSection({
                   ? () => onOpen(card)
                   : card.cheatSheet.sheetId
                     ? () =>
-                        void exportCheatSheet(
+                        exportCheatSheet(
                           card.cheatSheet.sheetId!,
                           card.title,
                         )
