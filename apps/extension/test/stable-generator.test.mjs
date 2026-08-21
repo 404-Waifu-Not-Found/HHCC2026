@@ -4068,6 +4068,122 @@ test("v5.12 abandons a low-value evidence slot before automatic retry", async (c
   assert.doesNotMatch(result.quiz.questions[0].question, /historical scope/iu);
 });
 
+test("v5.12 abandons evidence that repeatedly invites an unsupported absolute", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        // Keep the otherwise-valid answer, rubric, and source overlap intact so
+        // this attempt fails for exactly one reason: the model introduced an
+        // absolute that the assigned evidence does not support.
+        value.questions[0].question = value.questions[0].question.replace(
+          /\?$/u,
+          " in every case?",
+        );
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+  assert.doesNotMatch(
+    `${result.quiz.questions[0].question} ${result.quiz.questions[0].answer}`,
+    /\b(?:always|every|must)\b/iu,
+  );
+});
+
+test("v5.12 changes evidence after one true-false polarity mismatch", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        value.questions[0].explanation = task.polarity
+          ? "The statement is false, so the proposed relationship does not hold."
+          : "The statement is true, so the proposed relationship does hold.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.equal(
+    calls.some((event) => event.outcome === "polarity_mismatch"),
+    true,
+  );
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+});
+
+test("v5.12 changes evidence after one compound true-false claim", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        const field = task.polarity ? "supportedStatement" : "falseStatement";
+        value.questions[0][field] =
+          `${value.questions[0][field].replace(/\.$/u, "")}, and the reaction changes by 11 units.`;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.equal(
+    calls.some((event) => event.outcome === "true_false_compound_claim"),
+    true,
+  );
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+});
+
 test("v5.12 repairs an interrogative true-false retry before storage", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];

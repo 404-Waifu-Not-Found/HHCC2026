@@ -8335,13 +8335,18 @@ async function generateAutomaticQuiz({
     if (!nextRetryKind || retryDelayMs <= 0) throw callFailure;
     if (
       input.promptFirstV512Mode &&
-      ["low_pedagogical_value", "retry_question_invalid"].includes(
-        callFailure.reasonCode,
-      )
+      [
+        "low_pedagogical_value",
+        "polarity_mismatch",
+        "true_false_compound_claim",
+        "retry_question_invalid",
+        "unsupported_absolute_claim",
+      ].includes(callFailure.reasonCode)
     ) {
       // A structural rewrite cannot rescue a slot whose assigned evidence is
-      // itself biography, publicity, or timeline trivia. A model that copied
-      // the adaptive prompt also tends to repeat that shape for the same fact.
+      // itself biography, publicity, timeline trivia, an unstable true/false
+      // contrast, or an unsupported absolute. A model that copied the adaptive
+      // prompt also tends to repeat that shape for the same fact.
       // Release either window before the automatic retry so allocation moves
       // to the next unused fact instead of spending the whole budget on one
       // stuck objective.
@@ -8808,7 +8813,17 @@ async function requestLocalAnswerReason(
   fetchImpl,
   apiKey,
   signal,
-  { question, questionType, options, response, correct },
+  {
+    question,
+    questionType,
+    options,
+    response,
+    referenceAnswer,
+    requiredIdeas,
+    acceptableAlternatives,
+    correction,
+    correct,
+  },
 ) {
   const reasonResponse = await fetchImpl(
     "https://api.deepseek.com/chat/completions",
@@ -8832,6 +8847,18 @@ async function requestLocalAnswerReason(
               questionType,
               ...(options ? { options } : {}),
               learnerResponse: response,
+              ...(referenceAnswer || requiredIdeas?.length || correction
+                ? {
+                    gradingReference: {
+                      ...(referenceAnswer ? { referenceAnswer } : {}),
+                      ...(requiredIdeas?.length ? { requiredIdeas } : {}),
+                      ...(acceptableAlternatives?.length
+                        ? { acceptableAlternatives }
+                        : {}),
+                      ...(correction ? { correction } : {}),
+                    },
+                  }
+                : {}),
               gradingOutcome: correct ? "correct" : "incorrect",
             }),
           },
@@ -8886,6 +8913,32 @@ async function requestLocalAnswerGradeAttempt(
         .filter(Boolean)
         .slice(0, 4)
     : undefined;
+  const referenceAnswer = String(input?.referenceAnswer ?? "")
+    .trim()
+    .slice(0, 1_000);
+  const requiredIdeas = Array.isArray(input?.requiredIdeas)
+    ? input.requiredIdeas
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 500),
+        )
+        .filter(Boolean)
+        .slice(0, 6)
+    : undefined;
+  const acceptableAlternatives = Array.isArray(input?.acceptableAlternatives)
+    ? input.acceptableAlternatives
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 1_000),
+        )
+        .filter(Boolean)
+        .slice(0, 12)
+    : undefined;
+  const correction = String(input?.correction ?? "")
+    .trim()
+    .slice(0, 1_000);
   if (!question || !response) {
     throw new Error("A question and learner response are required.");
   }
@@ -8917,7 +8970,7 @@ async function requestLocalAnswerGradeAttempt(
           {
             role: "system",
             content:
-              "You are ClipQuest's gentle answer grader. Grade the learner response against the question itself. Accept concise, grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, judge the statement's actual factual polarity rather than trusting a requested label. For multiple choice, judge the selected option against the question. For short-answer propositions, be generous: if the learner states the central relationship correctly and gives at least one relevant supporting fact, mark it correct even when a secondary detail is omitted. Require every item only when the prompt explicitly asks for a list/count/formula. Prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
+              "You are ClipQuest's gentle answer grader. Grade the learner response against the question and the supplied AI-generated gradingReference. The gradingReference is the schema-validated answer key for this quiz item; do not replace it with an answer recalled from outside knowledge. An exact match to referenceAnswer is correct. Also accept concise grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, compare the learner's label with referenceAnswer and use correction to explain a false statement. For multiple choice, compare the selected option with referenceAnswer. For short-answer propositions, be generous: if the learner states the central relationship correctly or covers the indispensable requiredIdeas, mark it correct even when a secondary detail is omitted. acceptableAlternatives are examples, not an exhaustive phrase list. Require every item only when the prompt explicitly asks for a list/count/formula. Prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
           },
           {
             role: "user",
@@ -8926,6 +8979,18 @@ async function requestLocalAnswerGradeAttempt(
               questionType,
               ...(options ? { options } : {}),
               learnerResponse: response,
+              ...(referenceAnswer || requiredIdeas?.length || correction
+                ? {
+                    gradingReference: {
+                      ...(referenceAnswer ? { referenceAnswer } : {}),
+                      ...(requiredIdeas?.length ? { requiredIdeas } : {}),
+                      ...(acceptableAlternatives?.length
+                        ? { acceptableAlternatives }
+                        : {}),
+                      ...(correction ? { correction } : {}),
+                    },
+                  }
+                : {}),
             }),
           },
         ],
@@ -8956,6 +9021,10 @@ async function requestLocalAnswerGradeAttempt(
       questionType,
       options,
       response,
+      referenceAnswer,
+      requiredIdeas,
+      acceptableAlternatives,
+      correction,
       correct: decision.correct,
     });
   }

@@ -1,5 +1,10 @@
 import { compactTranscriptSegments } from "@clipquest/contracts";
+import { execFile as execFileCallback } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
 
 const MAX_CAPTION_BYTES = 8 * 1024 * 1024;
 const MAX_METADATA_BYTES = 256 * 1024;
@@ -7,6 +12,8 @@ const TRANSCRIPT_PROVIDER_ORIGIN = "https://youtube-transcript.ai";
 const TRANSCRIPT_PROVIDER_ATTEMPTS = 2;
 const TRANSCRIPT_PROVIDER_TIMEOUT_MS = 10_000;
 const METADATA_TIMEOUT_MS = 10_000;
+const LOCAL_TRANSCRIPT_TIMEOUT_MS = 45_000;
+const execFile = promisify(execFileCallback);
 
 function abortError(message) {
   return new DOMException(message, "AbortError");
@@ -256,6 +263,61 @@ export function parseBrowserTranscript(body, expectedVideoId) {
   };
 }
 
+export function parseYouTubeJson3Transcript(body, language = "en") {
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    throw new Error("The local YouTube extractor returned malformed captions.");
+  }
+  const rawSegments = Array.isArray(payload?.events)
+    ? payload.events.flatMap((event, index) => {
+        const text = collapseAdjacentCaptionRepeats(
+          Array.isArray(event?.segs)
+            ? event.segs
+                .map((segment) => String(segment?.utf8 ?? ""))
+                .join("")
+                .replaceAll("\n", " ")
+            : "",
+        );
+        if (!text || /^\[[^\]]{1,80}\]$/u.test(text)) return [];
+        const startMs = Number(event?.tStartMs);
+        const durationMs = Number(event?.dDurationMs);
+        if (!Number.isFinite(startMs) || startMs < 0) return [];
+        return [
+          {
+            id: `youtube-json3-${index}-${Math.round(startMs)}`,
+            startMs: Math.round(startMs),
+            endMs: Math.max(
+              Math.round(startMs) + 1,
+              Math.round(
+                startMs + (Number.isFinite(durationMs) ? durationMs : 2_000),
+              ),
+            ),
+            text,
+          },
+        ];
+      })
+    : [];
+  const segments = compactTranscriptSegments(rawSegments);
+  const characterCount = segments.reduce(
+    (total, segment) => total + segment.text.length,
+    0,
+  );
+  if (segments.length === 0 || characterCount < 20) {
+    throw new Error("The local YouTube extractor returned empty captions.");
+  }
+  return {
+    language: normalizeTranscriptLanguage(language),
+    durationSeconds: Math.max(
+      1,
+      Math.ceil(Math.max(...segments.map((segment) => segment.endMs)) / 1_000),
+    ),
+    segments,
+    sourceSegmentCount: rawSegments.length,
+  };
+}
+
 export async function readBoundedResponseText(
   response,
   maximumBytes = MAX_CAPTION_BYTES,
@@ -337,7 +399,79 @@ async function fetchMetadata(fetchImpl, videoId, signal) {
   return title;
 }
 
-async function fetchTranscript(fetchImpl, videoId, preferredLanguage, signal) {
+async function fetchTranscriptWithYtDlp(videoId, preferredLanguage, signal) {
+  const directory = await mkdtemp(path.join(tmpdir(), "clipquest-youtube-"));
+  try {
+    const normalizedLanguage = normalizeTranscriptLanguage(preferredLanguage);
+    const language =
+      normalizedLanguage === "und" ? "en" : normalizedLanguage.split("-")[0];
+    let commandError;
+    try {
+      await execFile(
+        "yt-dlp",
+        [
+          "--no-playlist",
+          "--skip-download",
+          "--write-subs",
+          "--write-auto-subs",
+          "--sub-langs",
+          language,
+          "--sub-format",
+          "json3",
+          "--output",
+          path.join(directory, "%(id)s.%(ext)s"),
+          `https://www.youtube.com/watch?v=${videoId}`,
+        ],
+        {
+          signal,
+          timeout: LOCAL_TRANSCRIPT_TIMEOUT_MS,
+          maxBuffer: 2 * 1024 * 1024,
+        },
+      );
+    } catch (error) {
+      commandError = error;
+    }
+    const files = (await readdir(directory))
+      .filter(
+        (file) => file.startsWith(`${videoId}.`) && file.endsWith(".json3"),
+      )
+      .sort((left, right) => {
+        const leftEnglish = /\.en(?:[-.])/iu.test(left) ? 0 : 1;
+        const rightEnglish = /\.en(?:[-.])/iu.test(right) ? 0 : 1;
+        return leftEnglish - rightEnglish || left.localeCompare(right);
+      });
+    const selected = files[0];
+    if (!selected) {
+      if (commandError) throw commandError;
+      throw new Error(
+        "The local YouTube extractor found no human or automatic captions.",
+      );
+    }
+    const detectedLanguage = selected
+      .slice(videoId.length + 1, -".json3".length)
+      .split(".")[0];
+    return parseYouTubeJson3Transcript(
+      await readFile(path.join(directory, selected), "utf8"),
+      detectedLanguage || preferredLanguage || "en",
+    );
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error(
+        "yt-dlp is required for reliable local headless caption extraction.",
+      );
+    }
+    throw error;
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+async function fetchProviderTranscript(
+  fetchImpl,
+  videoId,
+  preferredLanguage,
+  signal,
+) {
   let lastError;
   for (let attempt = 1; attempt <= TRANSCRIPT_PROVIDER_ATTEMPTS; attempt += 1) {
     try {
@@ -371,15 +505,41 @@ export async function acquireYouTubeSource(rawUrl, options = {}) {
   const videoId = parseYouTubeVideoId(rawUrl);
   const fetchImpl =
     options.adapters?.fetch ?? globalThis.fetch.bind(globalThis);
-  const [title, transcript] = await Promise.all([
+  const localTranscriptReader =
+    options.adapters?.readLocalTranscript ??
+    (options.adapters?.fetch && !options.preferLocalTranscript
+      ? undefined
+      : fetchTranscriptWithYtDlp);
+  const transcriptRequest = async () => {
+    if (localTranscriptReader) {
+      try {
+        return {
+          transcript: await localTranscriptReader(
+            videoId,
+            options.preferredLanguage,
+            options.signal,
+          ),
+          acquisition: "youtube_local_ytdlp",
+        };
+      } catch (localError) {
+        if (options.localOnly) throw localError;
+      }
+    }
+    return {
+      transcript: await fetchProviderTranscript(
+        fetchImpl,
+        videoId,
+        options.preferredLanguage,
+        options.signal,
+      ),
+      acquisition: "youtube_text_provider",
+    };
+  };
+  const [title, transcriptResult] = await Promise.all([
     fetchMetadata(fetchImpl, videoId, options.signal),
-    fetchTranscript(
-      fetchImpl,
-      videoId,
-      options.preferredLanguage,
-      options.signal,
-    ),
+    transcriptRequest(),
   ]);
+  const { transcript, acquisition } = transcriptResult;
   const characterCount = transcript.segments.reduce(
     (total, segment) => total + segment.text.length,
     0,
@@ -401,6 +561,6 @@ export async function acquireYouTubeSource(rawUrl, options = {}) {
     sourceSegmentCount: transcript.sourceSegmentCount,
     characterCount,
     transcriptFingerprint,
-    acquisition: "youtube_text_provider",
+    acquisition,
   };
 }

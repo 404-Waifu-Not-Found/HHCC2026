@@ -421,6 +421,13 @@ export const LocalAnswerGradeRequestSchema = z.object({
   response: z.string().trim().min(1).max(2_000),
   questionType: QuizQuestionTypeSchema,
   options: z.array(z.string().trim().min(1).max(500)).max(4).optional(),
+  referenceAnswer: z.string().trim().min(1).max(1_000).optional(),
+  requiredIdeas: z.array(z.string().trim().min(1).max(500)).max(6).optional(),
+  acceptableAlternatives: z
+    .array(z.string().trim().min(1).max(1_000))
+    .max(12)
+    .optional(),
+  correction: z.string().trim().min(1).max(1_000).optional(),
 });
 export type LocalAnswerGradeRequest = z.infer<
   typeof LocalAnswerGradeRequestSchema

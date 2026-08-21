@@ -4,6 +4,7 @@ import {
   acquireYouTubeSource,
   collapseAdjacentCaptionRepeats,
   parseBrowserTranscript,
+  parseYouTubeJson3Transcript,
   parseYouTubeVideoId,
 } from "../index.js";
 
@@ -50,6 +51,63 @@ test("collapses adjacent rolling-caption repeats", () => {
     collapseAdjacentCaptionRepeats("current moves current moves through wire"),
     "current moves through wire",
   );
+});
+
+test("parses local yt-dlp json3 captions without transcript fabrication", () => {
+  const transcript = parseYouTubeJson3Transcript(
+    JSON.stringify({
+      events: [
+        {
+          tStartMs: 1_000,
+          dDurationMs: 3_000,
+          segs: [{ utf8: "Mass and energy " }, { utf8: "are related." }],
+        },
+        {
+          tStartMs: 4_000,
+          dDurationMs: 2_000,
+          segs: [{ utf8: "The speed of light is constant." }],
+        },
+      ],
+    }),
+    "en-US",
+  );
+  assert.equal(transcript.language, "en-US");
+  assert.equal(transcript.sourceSegmentCount, 2);
+  assert.equal(transcript.segments.length, 2);
+  assert.match(transcript.segments[0].text, /Mass and energy are related/);
+});
+
+test("prefers an injected local caption reader for headless acquisition", async () => {
+  let localCalls = 0;
+  const source = await acquireYouTubeSource("JoscDcbAjbY", {
+    adapters: {
+      async fetch(url) {
+        assert.match(String(url), /youtube\.com\/oembed/u);
+        return new Response(JSON.stringify({ title: "Electricity" }));
+      },
+      async readLocalTranscript(videoId) {
+        localCalls += 1;
+        assert.equal(videoId, "JoscDcbAjbY");
+        return parseYouTubeJson3Transcript(
+          JSON.stringify({
+            events: [
+              {
+                tStartMs: 0,
+                dDurationMs: 4_000,
+                segs: [
+                  {
+                    utf8: "Electric current is the movement of charge through a material.",
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+      },
+    },
+  });
+  assert.equal(localCalls, 1);
+  assert.equal(source.acquisition, "youtube_local_ytdlp");
 });
 
 test("acquisition validates metadata and transcript source together", async () => {

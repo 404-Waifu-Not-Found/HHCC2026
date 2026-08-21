@@ -248,6 +248,9 @@ export async function runHeadlessQuiz(rawOptions) {
     options.source ??
     (await acquireYouTubeSource(options.url, {
       preferredLanguage: options.preferredLanguage,
+      // The injected fetch is also used for DeepSeek transport, but caption
+      // acquisition must still prefer real local YouTube subtitle files.
+      preferLocalTranscript: true,
       adapters: { fetch: fetchImpl },
     }));
   reporter.event("CAPTIONS_COMPLETE", {
@@ -398,8 +401,21 @@ export async function runHeadlessQuiz(rawOptions) {
             question: question.question,
             response,
             questionType: question.type,
+            referenceAnswer: response,
             ...(question.type === "multiple_choice"
               ? { options: question.choices }
+              : {}),
+            ...(question.type === "short_answer"
+              ? {
+                  requiredIdeas: question.rubricIdeas,
+                  acceptableAlternatives: [
+                    question.answer,
+                    ...question.rubricIdeas,
+                  ],
+                }
+              : {}),
+            ...(question.type === "true_false" && question.correction
+              ? { correction: question.correction }
               : {}),
           },
           apiKey,
