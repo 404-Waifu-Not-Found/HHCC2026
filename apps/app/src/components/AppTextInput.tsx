@@ -17,6 +17,7 @@ type Props = ComponentProps<typeof TextInput> & {
   leading?: ReactNode;
   trailing?: ReactNode;
   large?: boolean;
+  labelPlacement?: "above" | "inside";
 };
 
 export function AppTextInput({
@@ -26,6 +27,7 @@ export function AppTextInput({
   leading,
   trailing,
   large = false,
+  labelPlacement = "above",
   style,
   onFocus,
   onBlur,
@@ -35,15 +37,18 @@ export function AppTextInput({
   const generatedId = useId();
   const [focused, setFocused] = useState(false);
   const inputId = props.nativeID ?? generatedId;
+  const labelInside = labelPlacement === "inside";
 
   return (
     <View style={styles.wrap}>
-      <Text
-        nativeID={`${inputId}-label`}
-        style={[styles.label, { color: theme.text }]}
-      >
-        {label}
-      </Text>
+      {!labelInside ? (
+        <Text
+          nativeID={`${inputId}-label`}
+          style={[styles.label, { color: theme.text }]}
+        >
+          {label}
+        </Text>
+      ) : null}
       <View
         style={[
           styles.field,
@@ -67,7 +72,7 @@ export function AppTextInput({
         <TextInput
           {...props}
           nativeID={inputId}
-          aria-labelledby={`${inputId}-label`}
+          aria-labelledby={labelInside ? undefined : `${inputId}-label`}
           aria-describedby={
             error
               ? `${inputId}-error`
@@ -77,7 +82,8 @@ export function AppTextInput({
           }
           accessibilityLabel={props.accessibilityLabel ?? label}
           accessibilityHint={props.accessibilityHint ?? helperText}
-          placeholderTextColor={theme.textSubtle}
+          placeholder={props.placeholder ?? (labelInside ? label : undefined)}
+          placeholderTextColor={theme.textMuted}
           selectionColor={theme.primary}
           onFocus={(event) => {
             setFocused(true);

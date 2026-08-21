@@ -31,7 +31,9 @@ export const messages = {
       "Your progress stays synced across web, iPhone, and Android.",
     welcomeSubtitle:
       "Turn the videos you already watch into a focused, evidence-based learning quest.",
-    authShellTagline: "Paste a video → quiz → build mastery",
+    authShellTagline: "Turn serious videos into lasting knowledge",
+    authShellDetail:
+      "Build an evidence-backed lesson from any public YouTube or bilibili link.",
     ageConfirmation: "I confirm I am at least 13 years old.",
     verifyEmail: "Check your email",
     verifyEmailBody:
@@ -218,7 +220,8 @@ export const messages = {
     alreadyHaveAccount: "已有账户？",
     authCrossDevice: "学习进度会在网页、iPhone 和 Android 设备间同步。",
     welcomeSubtitle: "把你正在观看的视频变成专注、基于证据的学习任务。",
-    authShellTagline: "粘贴视频 → 完成测验 → 真正掌握",
+    authShellTagline: "把严谨视频转化为真正掌握的知识",
+    authShellDetail: "通过公开的 YouTube 或哔哩哔哩链接生成基于证据的课程。",
     ageConfirmation: "我确认自己已满 13 岁。",
     verifyEmail: "请查看邮箱",
     verifyEmailBody: "验证链接已发送。打开链接后回到 ClipQuest。",

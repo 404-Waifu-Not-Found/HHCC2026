@@ -34,10 +34,6 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (loaded) void SplashScreen.hideAsync();
-  }, [loaded]);
-
-  useEffect(() => {
     if (Platform.OS === "web") return;
     void import("expo-notifications").then((Notifications) => {
       Notifications.setNotificationHandler({
@@ -72,7 +68,13 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { theme } = useSettings();
+  const { ready, theme } = useSettings();
+
+  useEffect(() => {
+    if (ready) void SplashScreen.hideAsync();
+  }, [ready]);
+
+  if (!ready) return null;
   return (
     <>
       <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
