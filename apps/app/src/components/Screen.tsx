@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../providers/SettingsProvider";
 import { breakpoints, layout, safeArea, spacing } from "../theme/tokens";
+import { MotionView } from "../motion/Motion";
 
 type ContentWidth = "wide" | "reading" | "lesson" | "auth" | "full";
 
@@ -46,7 +47,9 @@ export function Screen({
             ? undefined
             : layout.content;
   const content = (
-    <View
+    <MotionView
+      preset="rise"
+      testID="motion-route-content"
       style={[
         styles.content,
         centered && styles.centered,
@@ -59,7 +62,7 @@ export function Screen({
       ]}
     >
       {children}
-    </View>
+    </MotionView>
   );
 
   return (
@@ -82,7 +85,9 @@ export function Screen({
         <View style={styles.flex}>{content}</View>
       )}
       {footer ? (
-        <View
+        <MotionView
+          preset="rise"
+          delay={80}
           style={[
             styles.footer,
             footerFlush && styles.footerFlush,
@@ -94,7 +99,7 @@ export function Screen({
           ]}
         >
           {footer}
-        </View>
+        </MotionView>
       ) : null}
     </SafeAreaView>
   );

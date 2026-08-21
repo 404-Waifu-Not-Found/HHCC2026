@@ -4,6 +4,9 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
+    "brand:transparent": "node scripts/remove-asset-backgrounds.mjs",
+    "brand:assets": "npm run brand:transparent && node scripts/generate-brand-assets.mjs",
+    "motion:docs": "node scripts/generate-motion-doc.mjs && prettier --write ../../docs/MOTION-SYSTEM.md",
     "dev": "expo start",
     "prepare:web": "node scripts/prepare-web-runtime.mjs",
     "web": "npm run prepare:web && expo start --web",
@@ -21,7 +24,6 @@
     "@clipquest/local-audio-decoder": "0.1.0",
     "@expo-google-fonts/dm-sans": "^0.4.1",
     "@expo-google-fonts/fredoka": "0.4.1",
-    "@expo/vector-icons": "^15.0.3",
     "@huggingface/transformers": "4.2.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "better-auth": "1.6.25",
@@ -61,6 +63,7 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "babel-preset-expo": "~57.0.1",
+    "sharp": "^0.34.5",
     "vitest": "3.2.7"
   }
 }

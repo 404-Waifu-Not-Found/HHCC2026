@@ -221,7 +221,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       AttemptAnswerResponseSchema.parse({
         correct: false,
         explanation: grade.feedback,
-        evidenceSegmentIds: parseEvidence(question),
+        evidenceSegmentIds: parseQuestionEvidence(question),
         nextQuestion: toPublicQuestion(
           question,
           attempt.current_index,
@@ -271,7 +271,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       AttemptAnswerResponseSchema.parse({
         correct: grade.correct,
         explanation: grade.feedback,
-        evidenceSegmentIds: parseEvidence(question),
+        evidenceSegmentIds: parseQuestionEvidence(question),
         nextQuestion: null,
         completed: true,
         score,
@@ -314,7 +314,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     AttemptAnswerResponseSchema.parse({
       correct: grade.correct,
       explanation: grade.feedback,
-      evidenceSegmentIds: parseEvidence(question),
+      evidenceSegmentIds: parseQuestionEvidence(question),
       nextQuestion: toPublicQuestion(
         nextQuestion,
         nextIndex,
@@ -491,25 +491,31 @@ async function gradeAnswer(
       RubricSchema,
       "short-answer rubric",
     );
-    const transcriptObject = await env.PRIVATE_BUCKET.get(
-      `transcripts/${attempt.user_id}/${attempt.video_id}/${attempt.quiz_id}.json`,
-    );
-    if (!transcriptObject)
-      throw new ApiError(
-        500,
-        "transcript_missing",
-        "Video evidence is unavailable.",
+    const evidenceIds = new Set(parseQuestionEvidence(question));
+    let evidence: z.infer<typeof StoredTranscriptSchema>["segments"] = [];
+    if (evidenceIds.size > 0) {
+      const transcriptObject = await env.PRIVATE_BUCKET.get(
+        `transcripts/${attempt.user_id}/${attempt.video_id}/${attempt.quiz_id}.json`,
       );
-    const transcript = StoredTranscriptSchema.safeParse(
-      await transcriptObject.json(),
-    );
-    if (!transcript.success)
-      throw new ApiError(
-        500,
-        "transcript_invalid",
-        "Video evidence failed integrity checks.",
+      if (!transcriptObject)
+        throw new ApiError(
+          500,
+          "transcript_missing",
+          "Video evidence is unavailable.",
+        );
+      const transcript = StoredTranscriptSchema.safeParse(
+        await transcriptObject.json(),
       );
-    const evidenceIds = new Set(parseEvidence(question));
+      if (!transcript.success)
+        throw new ApiError(
+          500,
+          "transcript_invalid",
+          "Video evidence failed integrity checks.",
+        );
+      evidence = transcript.data.segments.filter((segment) =>
+        evidenceIds.has(segment.id),
+      );
+    }
     return gradeWrittenAnswer(env, {
       prompt: attempt.current_variant
         ? question.reformulated_prompt
@@ -517,9 +523,7 @@ async function gradeAnswer(
       answer,
       requiredIdeas: rubric.requiredIdeas,
       acceptableAlternatives: rubric.acceptableAlternatives,
-      evidence: transcript.data.segments.filter((segment) =>
-        evidenceIds.has(segment.id),
-      ),
+      evidence,
     });
   }
 
@@ -558,10 +562,12 @@ async function gradeAnswer(
   return { correct, feedback: question.explanation };
 }
 
-function parseEvidence(question: QuestionRow): string[] {
+export function parseQuestionEvidence(
+  question: Pick<QuestionRow, "evidence_segment_ids_json">,
+): string[] {
   return parseStoredJson(
     question.evidence_segment_ids_json,
-    z.array(z.string()).min(1),
+    z.array(z.string()),
     "question evidence",
   );
 }

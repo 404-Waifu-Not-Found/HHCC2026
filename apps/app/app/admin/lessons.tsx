@@ -29,7 +29,7 @@ export default function AdminLessonsScreen() {
     <AdminPage
       title={copy.lessons}
       subtitle="Read-only lesson inventory with ownership and engagement summaries."
-      icon="book-open-page-variant-outline"
+      icon="lessons"
     >
       <AdminToolbar
         search={draftSearch}
@@ -50,46 +50,39 @@ export default function AdminLessonsScreen() {
             <RecordHeading
               title={lesson.video.title}
               subtitle={`${lesson.owner.name} · ${lesson.owner.email}`}
-              badge={
-                <StatusBadge
-                  label={
-                    lesson.video.source === "youtube" ? "YouTube" : "Bilibili"
-                  }
-                  tone="primary"
-                />
-              }
+              badge={<StatusBadge label="YouTube" tone="primary" />}
             />
             <RecordMeta
               items={[
                 {
                   label: copy.questions,
                   value: String(lesson.questionCount),
-                  icon: "help-circle-outline",
+                  icon: "help",
                 },
                 {
                   label: copy.attempts,
                   value: String(lesson.attemptCount),
-                  icon: "clipboard-check-outline",
+                  icon: "checklist",
                 },
                 {
                   label: copy.language,
                   value: lesson.language,
-                  icon: "translate",
+                  icon: "translation",
                 },
                 {
                   label: "Session",
                   value: lesson.sessionLength,
-                  icon: "format-list-numbered",
+                  icon: "checklist",
                 },
                 {
                   label: "Context",
                   value: lesson.watched ? copy.watched : copy.notWatched,
-                  icon: "eye-outline",
+                  icon: "help",
                 },
                 {
                   label: copy.updated,
                   value: formatDate(lesson.createdAt, locale),
-                  icon: "calendar-outline",
+                  icon: "calendar",
                 },
               ]}
             />

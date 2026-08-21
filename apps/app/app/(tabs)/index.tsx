@@ -8,7 +8,7 @@ import {
   type LibraryResponse,
   type QuizQuestionType,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
 import { router, useFocusEffect } from "expo-router";
 import {
@@ -29,7 +29,7 @@ import {
 } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { EmptyState } from "../../src/components/EmptyState";
-import { Mascot } from "../../src/components/Mascot";
+import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
 import { Screen } from "../../src/components/Screen";
@@ -41,6 +41,12 @@ import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { preGenerateImportedQuiz } from "../../src/generation/prework";
+import {
+  FeedbackMotion,
+  MotionSkeleton,
+  MotionView,
+  StaggerItem,
+} from "../../src/motion/Motion";
 import {
   saveGenerationState,
   saveImportedVideo,
@@ -65,6 +71,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const compact = width < breakpoints.tablet;
   const narrow = width < breakpoints.compact;
+  const desktop = width >= breakpoints.desktop;
   const userEditedUrl = useRef(false);
   const importingRef = useRef(false);
   const [url, setUrl] = useState("");
@@ -173,7 +180,7 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <MotionView preset="from-left" style={styles.header}>
         <View style={styles.headerCopy}>
           <Text
             accessibilityRole="header"
@@ -194,102 +201,110 @@ export default function HomeScreen() {
             </Text>
           ) : null}
         </View>
-        <Mascot mood="ready" size={narrow ? 62 : compact ? 76 : 90} />
-      </View>
+        <LearningPrism size={narrow ? 62 : compact ? 76 : 90} variant="tile" />
+      </MotionView>
 
-      <Surface
-        elevated
-        style={
-          compact
-            ? [styles.importSurface, styles.importSurfaceCompact]
-            : styles.importSurface
-        }
-      >
-        <View style={styles.platforms}>
-          <PlatformBadge icon="youtube" label="YouTube" />
-          <PlatformBadge icon="television-play" label="bilibili" />
-        </View>
-
-        <View style={styles.questionTypeSetup}>
-          <Text style={[styles.questionTypeTitle, { color: theme.text }]}>
-            {t("questionTypes")}
-          </Text>
-          <Text style={[styles.questionTypeHelp, { color: theme.textMuted }]}>
-            {t("questionTypesHelp")}
-          </Text>
-          <QuestionTypeSelector
-            value={questionTypes}
-            onChange={setQuestionTypes}
-            disabled={importing}
-          />
-        </View>
-
-        <AppTextInput
-          large
-          label={t("pastePlaceholder")}
-          placeholder="https://youtube.com/watch?v=..."
-          value={url}
-          error={importError}
-          leading={
-            <MaterialCommunityIcons
-              name="link-variant"
-              size={24}
-              color={theme.primary}
-            />
-          }
-          onChangeText={(value) => {
-            const pastedSupportedLink =
-              value.length - url.length > 8 &&
-              Boolean(identifyVideoSource(value.trim()));
-            userEditedUrl.current = true;
-            setUrl(value);
-            setImportError(undefined);
-            if (pastedSupportedLink) void importVideo(value);
-          }}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          returnKeyType="go"
-          editable={!importing}
-          onSubmitEditing={() => void importVideo()}
-        />
-
-        <View
-          style={[styles.importAction, compact && styles.importActionCompact]}
-        >
-          <PrimaryButton
-            disabled={!url.trim()}
-            loading={importing}
-            trailingIcon={
-              <MaterialCommunityIcons
-                name="arrow-right"
-                size={20}
-                color={theme.textOnAction}
-              />
+      <FeedbackMotion signal={importing} kind="progress">
+        <MotionView preset="rise" delay={44}>
+          <Surface
+            elevated
+            style={
+              compact
+                ? [styles.importSurface, styles.importSurfaceCompact]
+                : styles.importSurface
             }
-            onPress={() => void importVideo()}
           >
-            {t("makeQuest")}
-          </PrimaryButton>
-        </View>
-      </Surface>
+            <View style={styles.platforms}>
+              <PlatformBadge icon="video" label="YouTube" />
+            </View>
+
+            <View style={styles.questionTypeSetup}>
+              <Text style={[styles.questionTypeTitle, { color: theme.text }]}>
+                {t("questionTypes")}
+              </Text>
+              <Text
+                style={[styles.questionTypeHelp, { color: theme.textMuted }]}
+              >
+                {t("questionTypesHelp")}
+              </Text>
+              <QuestionTypeSelector
+                value={questionTypes}
+                onChange={setQuestionTypes}
+                disabled={importing}
+              />
+            </View>
+
+            <AppTextInput
+              large
+              label={t("pastePlaceholder")}
+              placeholder="https://youtube.com/watch?v=..."
+              value={url}
+              error={importError}
+              leading={
+                <VoxelIcon name="link" size={24} color={theme.primary} />
+              }
+              onChangeText={(value) => {
+                const pastedSupportedLink =
+                  value.length - url.length > 8 &&
+                  Boolean(identifyVideoSource(value.trim()));
+                userEditedUrl.current = true;
+                setUrl(value);
+                setImportError(undefined);
+                if (pastedSupportedLink) void importVideo(value);
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              returnKeyType="go"
+              editable={!importing}
+              onSubmitEditing={() => void importVideo()}
+            />
+
+            <View
+              style={[
+                styles.importAction,
+                compact && styles.importActionCompact,
+              ]}
+            >
+              <PrimaryButton
+                disabled={!url.trim()}
+                loading={importing}
+                trailingIcon={
+                  <VoxelIcon name="next" size={20} color={theme.textOnAction} />
+                }
+                onPress={() => void importVideo()}
+              >
+                {t("makeQuest")}
+              </PrimaryButton>
+            </View>
+          </Surface>
+        </MotionView>
+      </FeedbackMotion>
 
       {secondaryError ? (
-        <Text
-          accessibilityRole="alert"
-          style={[styles.error, { color: theme.error }]}
-        >
-          {secondaryError}
-        </Text>
+        <FeedbackMotion signal={secondaryError} kind="error">
+          <MotionView preset="rise" exiting>
+            <Text
+              accessibilityRole="alert"
+              style={[styles.error, { color: theme.error }]}
+            >
+              {secondaryError}
+            </Text>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
 
       {loadingLibrary ? (
-        <View style={styles.loading}>
+        <MotionView preset="fade" style={styles.loading}>
           <ActivityIndicator color={theme.secondary} />
           <Text style={[styles.loadingText, { color: theme.textMuted }]}>
             {t("loading")}
           </Text>
-        </View>
+          <MotionSkeleton
+            color={theme.primarySoft}
+            style={styles.librarySkeleton}
+          />
+        </MotionView>
       ) : (
         <View style={styles.sections}>
           {library.dueReviews.length ? (
@@ -320,27 +335,41 @@ export default function HomeScreen() {
                     >
                       {t("library")}
                     </Text>
-                    <MaterialCommunityIcons
-                      name="arrow-right"
-                      color={theme.primary}
-                      size={18}
-                    />
+                    <VoxelIcon name="next" color={theme.primary} size={18} />
                   </Pressable>
                 }
               />
-              {library.saved.length ? (
+              {library.saved.length && desktop ? (
+                <View style={styles.cardGrid}>
+                  {library.saved.slice(0, 3).map((card, index) => (
+                    <StaggerItem
+                      key={card.videoId}
+                      index={index}
+                      style={styles.cardGridItem}
+                    >
+                      <VideoCard
+                        compact
+                        fill
+                        card={card}
+                        onPress={() => void open(card)}
+                      />
+                    </StaggerItem>
+                  ))}
+                </View>
+              ) : library.saved.length ? (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.cardRow}
                 >
-                  {library.saved.slice(0, 8).map((card) => (
-                    <VideoCard
-                      key={card.videoId}
-                      compact
-                      card={card}
-                      onPress={() => void open(card)}
-                    />
+                  {library.saved.slice(0, 8).map((card, index) => (
+                    <StaggerItem key={card.videoId} index={index}>
+                      <VideoCard
+                        compact
+                        card={card}
+                        onPress={() => void open(card)}
+                      />
+                    </StaggerItem>
                   ))}
                 </ScrollView>
               ) : (
@@ -350,7 +379,7 @@ export default function HomeScreen() {
                   style={styles.emptySurface}
                 >
                   <EmptyState
-                    icon="movie-open-plus-outline"
+                    icon="video"
                     title={t("emptyLibrary")}
                     description={t("tagline")}
                   />
@@ -368,7 +397,7 @@ function PlatformBadge({
   icon,
   label,
 }: {
-  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: ComponentProps<typeof VoxelIcon>["name"];
   label: string;
 }) {
   const { theme } = useSettings();
@@ -382,7 +411,7 @@ function PlatformBadge({
         { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
       ]}
     >
-      <MaterialCommunityIcons name={icon} size={18} color={theme.text} />
+      <VoxelIcon name={icon} size={18} color={theme.text} />
       <Text style={[styles.platformLabel, { color: theme.text }]}>{label}</Text>
     </View>
   );
@@ -408,9 +437,10 @@ function CardSection({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cardRow}
       >
-        {cards.map((card) => (
-          <View
+        {cards.map((card, index) => (
+          <StaggerItem
             key={card.videoId}
+            index={index}
             style={openingId === card.videoId ? styles.opening : undefined}
           >
             <VideoCard compact card={card} onPress={() => onOpen(card)} />
@@ -420,7 +450,7 @@ function CardSection({
                 color={theme.secondary}
               />
             ) : null}
-          </View>
+          </StaggerItem>
         ))}
       </ScrollView>
     </View>
@@ -516,6 +546,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.label,
   },
+  librarySkeleton: {
+    width: 220,
+    height: 10,
+    borderRadius: radii.pill,
+  },
   sections: {
     marginTop: spacing[8],
     gap: spacing[8],
@@ -524,6 +559,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
     paddingRight: spacing[5],
     gap: spacing[4],
+  },
+  cardGrid: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing[4],
+    paddingVertical: spacing[2],
+  },
+  cardGridItem: {
+    width: "31.6%",
+    minWidth: 0,
   },
   opening: {
     opacity: 0.65,

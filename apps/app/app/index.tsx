@@ -1,9 +1,9 @@
 import { Redirect } from "expo-router";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Mascot } from "../src/components/Mascot";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { BrandLockup } from "../src/components/BrandLockup";
 import { authClient } from "../src/lib/auth-client";
 import { useSettings } from "../src/providers/SettingsProvider";
-import { spacing, typography } from "../src/theme/tokens";
+import { spacing } from "../src/theme/tokens";
 
 export default function Index() {
   const { data, isPending } = authClient.useSession();
@@ -11,10 +11,7 @@ export default function Index() {
   if (isPending) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Mascot mood="thinking" size={104} />
-        <Text style={[styles.brand, { color: theme.text }]}>
-          {t("appName")}
-        </Text>
+        <BrandLockup centered size="standard" />
         <ActivityIndicator
           accessibilityLabel={t("loading")}
           size="large"
@@ -23,7 +20,7 @@ export default function Index() {
       </View>
     );
   }
-  return <Redirect href={data ? "/(tabs)" : "/(auth)/welcome"} />;
+  return <Redirect href={data ? "/(tabs)" : "/(auth)/sign-in"} />;
 }
 
 const styles = StyleSheet.create({
@@ -32,10 +29,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing[3],
-  },
-  brand: {
-    fontFamily: typography.display,
-    fontSize: typography.size.title,
-    lineHeight: typography.lineHeight.title,
   },
 });

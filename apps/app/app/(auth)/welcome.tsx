@@ -1,7 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { identifyVideoSource } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
@@ -14,7 +13,13 @@ import { spacing, typography } from "../../src/theme/tokens";
 
 export default function WelcomeScreen() {
   const { t, theme, locale, setLocale } = useSettings();
-  const [url, setUrl] = useState("");
+  const params = useLocalSearchParams<{ url?: string | string[] }>();
+  const [url, setUrl] = useState(() => {
+    const candidate = Array.isArray(params.url) ? params.url[0] : params.url;
+    return typeof candidate === "string" && identifyVideoSource(candidate)
+      ? candidate
+      : "";
+  });
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -35,25 +40,12 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <AuthShell title={t("tagline")} subtitle={t("welcomeSubtitle")}>
+    <AuthShell
+      variant="welcome"
+      title={t("tagline")}
+      subtitle={t("welcomeSubtitle")}
+    >
       <Surface tone="tinted" style={styles.linkStarter}>
-        <View style={styles.linkHeading}>
-          <View style={[styles.linkIcon, { backgroundColor: theme.surface }]}>
-            <MaterialCommunityIcons
-              name="link-variant"
-              size={23}
-              color={theme.primary}
-            />
-          </View>
-          <View style={styles.linkHeadingCopy}>
-            <Text style={[styles.linkTitle, { color: theme.text }]}>
-              {t("startWithVideo")}
-            </Text>
-            <Text style={[styles.linkHelp, { color: theme.textMuted }]}>
-              {t("youtubeAuthNotRequired")}
-            </Text>
-          </View>
-        </View>
         <AppTextInput
           label={t("pastePlaceholder")}
           accessibilityLabel={t("pastePlaceholder")}
@@ -70,78 +62,31 @@ export default function WelcomeScreen() {
           editable={!saving}
           large
           error={error}
-          leading={
-            <MaterialCommunityIcons
-              name="play-box-multiple-outline"
-              size={23}
-              color={theme.textMuted}
-            />
-          }
           onSubmitEditing={() => void continueWithLink()}
         />
         <PrimaryButton
           loading={saving}
           disabled={!url.trim()}
-          trailingIcon={
-            <MaterialCommunityIcons
-              name="arrow-right"
-              size={21}
-              color={theme.textOnAction}
-            />
-          }
           onPress={() => void continueWithLink()}
         >
           {t("makeQuest")}
         </PrimaryButton>
-      </Surface>
-      <View style={styles.orRow}>
-        <View style={[styles.orLine, { backgroundColor: theme.divider }]} />
-        <Text style={[styles.orText, { color: theme.textMuted }]}>
-          {t("orContinue")}
+        <Text style={[styles.privacyNote, { color: theme.textMuted }]}>
+          {t("welcomePrivacy")}
         </Text>
-        <View style={[styles.orLine, { backgroundColor: theme.divider }]} />
-      </View>
-      <Link href="/(auth)/sign-up" asChild>
-        <PrimaryButton
-          leadingIcon={
-            <MaterialCommunityIcons
-              name="account-plus-outline"
-              size={21}
-              color={theme.textOnAction}
-            />
-          }
-          onPress={() => undefined}
-        >
-          {t("signUp")}
-        </PrimaryButton>
-      </Link>
-      <Link href="/(auth)/sign-in" asChild>
-        <PrimaryButton
-          variant="ghost"
-          leadingIcon={
-            <MaterialCommunityIcons name="login" size={21} color={theme.text} />
-          }
-          onPress={() => undefined}
+      </Surface>
+      <View style={styles.accountRow}>
+        <Text style={[styles.accountText, { color: theme.textMuted }]}>
+          {t("alreadyHaveAccount")}
+        </Text>
+        <Link
+          href="/(auth)/sign-in"
+          style={[styles.accountLink, { color: theme.primary }]}
         >
           {t("signIn")}
-        </PrimaryButton>
-      </Link>
-      <Surface tone="tinted" style={styles.reassurance}>
-        <View style={styles.reassuranceRow}>
-          <MaterialCommunityIcons
-            name="account-lock-outline"
-            size={24}
-            color={theme.primary}
-          />
-          <Text style={[styles.reassuranceText, { color: theme.text }]}>
-            {t("authCrossDevice")}
-          </Text>
-        </View>
-      </Surface>
+        </Link>
+      </View>
       <View style={styles.languageBlock}>
-        <Text style={[styles.languageLabel, { color: theme.textMuted }]}>
-          {t("appLanguage")}
-        </Text>
         <SegmentedControl
           label={t("appLanguage")}
           value={locale}
@@ -160,71 +105,36 @@ export default function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   linkStarter: {
-    gap: spacing[4],
-    padding: spacing[5],
+    gap: spacing[5],
+    padding: spacing[6],
   },
-  linkHeading: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing[3],
-  },
-  linkIcon: {
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 14,
-  },
-  linkHeadingCopy: {
-    minWidth: 0,
-    flex: 1,
-    gap: spacing[1],
-  },
-  linkTitle: {
-    fontFamily: typography.displayMedium,
-    fontSize: typography.size.bodyLarge,
-    lineHeight: typography.lineHeight.bodyLarge,
-  },
-  linkHelp: {
+  privacyNote: {
     fontFamily: typography.body,
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
   },
-  orRow: {
+  accountRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing[3],
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: spacing[2],
   },
-  orLine: {
-    height: 1,
-    flex: 1,
+  accountText: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
   },
-  orText: {
+  accountLink: {
+    minHeight: 44,
+    paddingVertical: spacing[3],
     fontFamily: typography.bodyBold,
-    fontSize: typography.size.caption,
-    textTransform: "uppercase",
-  },
-  reassurance: {
-    padding: spacing[4],
-  },
-  reassuranceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-  },
-  reassuranceText: {
-    flex: 1,
-    fontFamily: typography.bodyMedium,
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,
   },
   languageBlock: {
-    gap: spacing[2],
-    marginTop: spacing[1],
-  },
-  languageLabel: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.caption,
-    lineHeight: typography.lineHeight.caption,
+    width: 228,
+    alignSelf: "center",
+    marginTop: -spacing[2],
   },
 });

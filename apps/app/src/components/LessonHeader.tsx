@@ -1,8 +1,15 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { spacing, typography } from "../theme/tokens";
-import { IconButton } from "./IconButton";
+import {
+  borders,
+  controls,
+  motion,
+  radii,
+  spacing,
+  typography,
+} from "../theme/tokens";
 import { ProgressBar } from "./ProgressBar";
+import { MotionPressable, MotionView } from "../motion/Motion";
 
 export function LessonHeader({
   progress,
@@ -20,14 +27,38 @@ export function LessonHeader({
   const { theme } = useSettings();
   return (
     <View style={styles.header}>
-      <IconButton icon="close" label={closeLabel} onPress={onClose} />
-      <View style={styles.progress}>
+      <MotionPressable
+        pressScale={motion.scale.iconPress}
+        pressDepth={0}
+        testID="quiz-close-button"
+        accessibilityRole="button"
+        accessibilityLabel={closeLabel}
+        onPress={onClose}
+        style={({ pressed, hovered }) => [
+          styles.closeButton,
+          {
+            backgroundColor: hovered ? theme.surfaceTint : "transparent",
+            borderColor: pressed ? theme.borderStrong : "transparent",
+            opacity: pressed ? 0.74 : 1,
+          },
+          Platform.OS === "web" && {
+            transitionDuration: `${motion.fast}ms`,
+            transitionProperty: "transform, background-color, border-color",
+            outlineColor: theme.focus,
+          },
+        ]}
+      >
+        <Text style={[styles.closeGlyph, { color: theme.textMuted }]}>×</Text>
+      </MotionPressable>
+      <MotionView preset="from-left" style={styles.progress}>
         <ProgressBar progress={progress} accessibilityLabel={progressLabel} />
-      </View>
+      </MotionView>
       {statusLabel ? (
-        <Text style={[styles.status, { color: theme.textMuted }]}>
-          {statusLabel}
-        </Text>
+        <MotionView key={statusLabel} preset="pop">
+          <Text style={[styles.status, { color: theme.textMuted }]}>
+            {statusLabel}
+          </Text>
+        </MotionView>
       ) : (
         <View style={styles.placeholder} />
       )}
@@ -41,6 +72,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[4],
+  },
+  closeButton: {
+    width: controls.iconTarget,
+    height: controls.iconTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: borders.standard,
+    borderRadius: radii.medium,
+  },
+  closeGlyph: {
+    fontFamily: typography.body,
+    fontSize: 30,
+    lineHeight: 32,
+    textAlign: "center",
   },
   progress: {
     flex: 1,

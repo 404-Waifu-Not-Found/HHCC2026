@@ -1,16 +1,17 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import type { ComponentProps, ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, spacing, typography } from "../theme/tokens";
+import { MotionView } from "../motion/Motion";
 
 export function EmptyState({
-  icon = "movie-open-outline",
+  icon = "video",
   title,
   description,
   action,
 }: {
-  icon?: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon?: ComponentProps<typeof VoxelIcon>["name"];
   title: string;
   description: string;
   action?: ReactNode;
@@ -18,24 +19,33 @@ export function EmptyState({
   const { theme } = useSettings();
   return (
     <View style={styles.wrap}>
-      <View
+      <MotionView
+        preset="pop"
         style={[
           styles.icon,
           { backgroundColor: theme.primarySoft, borderColor: theme.primary },
         ]}
       >
-        <MaterialCommunityIcons name={icon} size={34} color={theme.primary} />
-      </View>
-      <Text
-        accessibilityRole="header"
-        style={[styles.title, { color: theme.text }]}
-      >
-        {title}
-      </Text>
-      <Text style={[styles.description, { color: theme.textMuted }]}>
-        {description}
-      </Text>
-      {action ? <View style={styles.action}>{action}</View> : null}
+        <VoxelIcon name={icon} size={34} color={theme.primary} />
+      </MotionView>
+      <MotionView preset="rise" delay={44}>
+        <Text
+          accessibilityRole="header"
+          style={[styles.title, { color: theme.text }]}
+        >
+          {title}
+        </Text>
+      </MotionView>
+      <MotionView preset="rise" delay={88}>
+        <Text style={[styles.description, { color: theme.textMuted }]}>
+          {description}
+        </Text>
+      </MotionView>
+      {action ? (
+        <MotionView preset="rise" delay={132} style={styles.action}>
+          {action}
+        </MotionView>
+      ) : null}
     </View>
   );
 }

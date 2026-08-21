@@ -6,7 +6,7 @@ import {
   type MasteryState,
   type PublicQuestion,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,7 +17,7 @@ import { EmptyState } from "../../src/components/EmptyState";
 import { FeedbackPanel } from "../../src/components/FeedbackPanel";
 import { IconButton } from "../../src/components/IconButton";
 import { LessonHeader } from "../../src/components/LessonHeader";
-import { Mascot } from "../../src/components/Mascot";
+import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
@@ -25,6 +25,12 @@ import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
 import { createInitialOrdering } from "../../src/lib/quiz-order";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import {
+  FeedbackMotion,
+  MotionSkeleton,
+  MotionView,
+  StaggerItem,
+} from "../../src/motion/Motion";
 import {
   clearAttempt,
   loadAttempt,
@@ -202,12 +208,25 @@ export default function QuizScreen() {
   if (loading) {
     return (
       <Screen scroll={false} contentWidth="lesson" centered>
-        <View accessibilityLiveRegion="polite" style={styles.center}>
+        <MotionView
+          preset="pop"
+          accessibilityLiveRegion="polite"
+          style={styles.center}
+        >
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.textMuted }]}>
             {t("loading")}
           </Text>
-        </View>
+          <MotionSkeleton
+            color={theme.primarySoft}
+            style={styles.loadingLine}
+          />
+          <MotionSkeleton
+            color={theme.primarySoft}
+            delay={100}
+            style={styles.loadingLineShort}
+          />
+        </MotionView>
       </Screen>
     );
   }
@@ -216,23 +235,11 @@ export default function QuizScreen() {
     const mastered = mastery === "mastered";
     return (
       <Screen contentWidth="lesson" centered>
-        <View style={styles.complete}>
-          <View style={styles.celebrationArt}>
-            <MaterialCommunityIcons
-              name="star-four-points"
-              size={30}
-              color={theme.warning}
-              style={styles.sparkLeft}
-            />
-            <Mascot mood="happy" size={176} />
-            <MaterialCommunityIcons
-              name="star-four-points"
-              size={24}
-              color={theme.secondary}
-              style={styles.sparkRight}
-            />
-          </View>
-          <View style={styles.completeCopy}>
+        <FeedbackMotion signal={score} kind="success" style={styles.complete}>
+          <MotionView preset="pop" duration={520} style={styles.celebrationArt}>
+            <LearningPrism size={176} variant="hero" />
+          </MotionView>
+          <MotionView preset="rise" delay={88} style={styles.completeCopy}>
             <Text
               accessibilityRole="header"
               style={[styles.completeTitle, { color: theme.text }]}
@@ -242,69 +249,63 @@ export default function QuizScreen() {
             <Text style={[styles.completeBody, { color: theme.textMuted }]}>
               {mastered ? t("masteryBuilt") : t("laterReview")}
             </Text>
-          </View>
+          </MotionView>
           <View style={styles.stats}>
-            <StatTile
-              value={`${Math.round(score)}%`}
-              label={t("score")}
-              tone={score >= 80 ? "success" : "primary"}
-              icon={
-                <MaterialCommunityIcons
-                  name="target"
-                  size={22}
-                  color={score >= 80 ? theme.success : theme.primary}
-                />
-              }
-            />
-            <StatTile
-              value={t(mastery === "mastered" ? "mastered" : "learning")}
-              label={t("mastery")}
-              tone={mastered ? "success" : "secondary"}
-              icon={
-                <MaterialCommunityIcons
-                  name={
-                    mastered
-                      ? "check-decagram"
-                      : "chart-timeline-variant-shimmer"
-                  }
-                  size={22}
-                  color={mastered ? theme.success : theme.secondary}
-                />
-              }
-            />
-            {completedTotal ? (
+            <StaggerItem index={0} style={styles.statItem}>
               <StatTile
-                value={String(completedTotal)}
-                label={t("questions")}
-                tone="warning"
+                value={`${Math.round(score)}%`}
+                label={t("score")}
+                tone={score >= 80 ? "success" : "primary"}
                 icon={
-                  <MaterialCommunityIcons
-                    name="help-circle-outline"
+                  <VoxelIcon
+                    name="target"
                     size={22}
-                    color={theme.warning}
+                    color={score >= 80 ? theme.success : theme.primary}
                   />
                 }
               />
+            </StaggerItem>
+            <StaggerItem index={1} style={styles.statItem}>
+              <StatTile
+                value={t(mastery === "mastered" ? "mastered" : "learning")}
+                label={t("mastery")}
+                tone={mastered ? "success" : "secondary"}
+                icon={
+                  <VoxelIcon
+                    name={mastered ? "correct" : "progress"}
+                    size={22}
+                    color={mastered ? theme.success : theme.secondary}
+                  />
+                }
+              />
+            </StaggerItem>
+            {completedTotal ? (
+              <StaggerItem index={2} style={styles.statItem}>
+                <StatTile
+                  value={String(completedTotal)}
+                  label={t("questions")}
+                  tone="warning"
+                  icon={
+                    <VoxelIcon name="help" size={22} color={theme.warning} />
+                  }
+                />
+              </StaggerItem>
             ) : null}
           </View>
-          <View style={styles.completeButton}>
+          <MotionView preset="rise" delay={176} style={styles.completeButton}>
             <PrimaryButton
               trailingIcon={
-                <MaterialCommunityIcons
-                  name="arrow-right"
-                  size={20}
-                  color={theme.textOnAction}
-                />
+                <VoxelIcon name="next" size={20} color={theme.textOnAction} />
               }
               onPress={() => {
                 void clearAttempt(attemptId);
-                router.replace("/(tabs)");
+                router.replace("/(tabs)/library");
               }}
             >
-              {t("finish")}
+              {t("returnToLibrary")}
             </PrimaryButton>
-          </View>
-        </View>
+          </MotionView>
+        </FeedbackMotion>
       </Screen>
     );
   }
@@ -313,7 +314,7 @@ export default function QuizScreen() {
     return (
       <Screen contentWidth="reading" centered>
         <EmptyState
-          icon="alert-circle-outline"
+          icon="error"
           title={t("quizResumeFailed")}
           description={error}
           action={
@@ -330,8 +331,8 @@ export default function QuizScreen() {
   if (showPrimer && primer) {
     return (
       <Screen contentWidth="reading" centered>
-        <View style={styles.primerTop}>
-          <Mascot mood="ready" size={132} />
+        <MotionView preset="from-left" style={styles.primerTop}>
+          <LearningPrism size={132} variant="tile" />
           <View style={styles.primerHeading}>
             <Text style={[styles.eyebrow, { color: theme.primary }]}>
               {t("question")}
@@ -343,23 +344,21 @@ export default function QuizScreen() {
               {t("primerTitle")}
             </Text>
           </View>
-        </View>
-        <Surface tone="tinted" style={styles.primerCard}>
-          <View style={styles.primerLabel}>
-            <MaterialCommunityIcons
-              name="lightbulb-on-outline"
-              size={22}
-              color={theme.primary}
-            />
-            <Text style={[styles.primerLabelText, { color: theme.primary }]}>
-              {t("primerTitle")}
+        </MotionView>
+        <MotionView preset="rise" delay={80}>
+          <Surface tone="tinted" style={styles.primerCard}>
+            <View style={styles.primerLabel}>
+              <VoxelIcon name="idea" size={22} color={theme.primary} />
+              <Text style={[styles.primerLabelText, { color: theme.primary }]}>
+                {t("primerTitle")}
+              </Text>
+            </View>
+            <Text selectable style={[styles.primerText, { color: theme.text }]}>
+              {primer}
             </Text>
-          </View>
-          <Text selectable style={[styles.primerText, { color: theme.text }]}>
-            {primer}
-          </Text>
-        </Surface>
-        <View style={styles.primerButton}>
+          </Surface>
+        </MotionView>
+        <MotionView preset="rise" delay={140} style={styles.primerButton}>
           <PrimaryButton
             onPress={() => {
               setShowPrimer(false);
@@ -368,7 +367,7 @@ export default function QuizScreen() {
           >
             {t("beginQuiz")}
           </PrimaryButton>
-        </View>
+        </MotionView>
       </Screen>
     );
   }
@@ -414,19 +413,24 @@ export default function QuizScreen() {
         closeLabel={t("cancel")}
         onClose={() => router.replace("/(tabs)")}
       />
-      <View style={styles.quizBody}>
+      <MotionView
+        key={`${question.position}-${question.prompt}`}
+        preset="from-right"
+        style={styles.quizBody}
+      >
         <View style={styles.questionMeta}>
           <Text style={[styles.eyebrow, { color: theme.primary }]}>
             {questionTypeLabel(question.type)}
           </Text>
           {question.isRetry ? (
-            <View
+            <MotionView
+              preset="pop"
               style={[
                 styles.retryBadge,
                 { backgroundColor: theme.secondarySoft },
               ]}
             >
-              <MaterialCommunityIcons
+              <VoxelIcon
                 name="refresh"
                 size={16}
                 color={theme.secondaryPressed}
@@ -436,15 +440,17 @@ export default function QuizScreen() {
               >
                 {t("retryingConcept")}
               </Text>
-            </View>
+            </MotionView>
           ) : null}
         </View>
-        <Text
-          accessibilityRole="header"
-          style={[styles.question, { color: theme.text }]}
-        >
-          {question.prompt}
-        </Text>
+        <MotionView preset="rise" delay={44}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.question, { color: theme.text }]}
+          >
+            {question.prompt}
+          </Text>
+        </MotionView>
         <QuestionInput
           question={question}
           answer={answer}
@@ -454,14 +460,18 @@ export default function QuizScreen() {
           disabled={Boolean(feedback) || submitting}
         />
         {error ? (
-          <Text
-            accessibilityRole="alert"
-            style={[styles.error, { color: theme.error }]}
-          >
-            {error}
-          </Text>
+          <FeedbackMotion signal={error} kind="error">
+            <MotionView preset="rise" exiting>
+              <Text
+                accessibilityRole="alert"
+                style={[styles.error, { color: theme.error }]}
+              >
+                {error}
+              </Text>
+            </MotionView>
+          </FeedbackMotion>
         ) : null}
-      </View>
+      </MotionView>
     </Screen>
   );
 }
@@ -492,13 +502,14 @@ function QuestionInput({
     return (
       <View style={styles.options}>
         {question.options?.map((option, index) => (
-          <AnswerCard
-            key={`${index}-${option}`}
-            indexLabel={String.fromCharCode(65 + index)}
-            label={option}
-            state={stateFor(answer === index)}
-            onPress={() => setAnswer(index)}
-          />
+          <StaggerItem key={`${index}-${option}`} index={index}>
+            <AnswerCard
+              indexLabel={String.fromCharCode(65 + index)}
+              label={option}
+              state={stateFor(answer === index)}
+              onPress={() => setAnswer(index)}
+            />
+          </StaggerItem>
         ))}
       </View>
     );
@@ -506,34 +517,20 @@ function QuestionInput({
   if (question.type === "true_false") {
     return (
       <View style={styles.binary}>
-        <View style={styles.binaryOption}>
+        <StaggerItem index={0} preset="from-left" style={styles.binaryOption}>
           <AnswerCard
             label={t("true")}
-            leading={
-              <MaterialCommunityIcons
-                name="check-circle-outline"
-                size={26}
-                color={theme.success}
-              />
-            }
             state={stateFor(answer === true)}
             onPress={() => setAnswer(true)}
           />
-        </View>
-        <View style={styles.binaryOption}>
+        </StaggerItem>
+        <StaggerItem index={1} preset="from-right" style={styles.binaryOption}>
           <AnswerCard
             label={t("false")}
-            leading={
-              <MaterialCommunityIcons
-                name="close-circle-outline"
-                size={26}
-                color={theme.error}
-              />
-            }
             state={stateFor(answer === false)}
             onPress={() => setAnswer(false)}
           />
-        </View>
+        </StaggerItem>
       </View>
     );
   }
@@ -544,8 +541,10 @@ function QuestionInput({
     return (
       <View accessibilityLabel={t("arrangeItems")} style={styles.options}>
         {order.map((itemIndex, position) => (
-          <View
+          <StaggerItem
             key={itemIndex}
+            index={position}
+            layout
             style={[
               styles.orderItem,
               {
@@ -574,7 +573,7 @@ function QuestionInput({
             <View style={styles.orderActions}>
               <IconButton
                 label={t("moveUp")}
-                icon="chevron-up"
+                icon="collapse"
                 disabled={disabled || position === 0}
                 onPress={() => {
                   onInteraction();
@@ -583,7 +582,7 @@ function QuestionInput({
               />
               <IconButton
                 label={t("moveDown")}
-                icon="chevron-down"
+                icon="expand"
                 disabled={disabled || position === order.length - 1}
                 onPress={() => {
                   onInteraction();
@@ -591,7 +590,7 @@ function QuestionInput({
                 }}
               />
             </View>
-          </View>
+          </StaggerItem>
         ))}
       </View>
     );
@@ -636,6 +635,16 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.body,
+  },
+  loadingLine: {
+    width: 220,
+    height: 10,
+    borderRadius: radii.pill,
+  },
+  loadingLineShort: {
+    width: 150,
+    height: 10,
+    borderRadius: radii.pill,
   },
   quizBody: {
     width: "100%",
@@ -796,16 +805,6 @@ const styles = StyleSheet.create({
   celebrationArt: {
     position: "relative",
   },
-  sparkLeft: {
-    position: "absolute",
-    left: -28,
-    top: 28,
-  },
-  sparkRight: {
-    position: "absolute",
-    right: -22,
-    top: 10,
-  },
   completeCopy: {
     maxWidth: 560,
     alignItems: "center",
@@ -829,6 +828,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing[3],
   },
+  statItem: { minWidth: 132, flex: 1 },
   completeButton: {
     width: "100%",
     maxWidth: 440,

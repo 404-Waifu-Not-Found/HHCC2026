@@ -1,10 +1,8 @@
 import {
-  TranscriptUploadResponseSchema,
   type AppLanguage,
   type QuizQuestionType,
   type VideoImportResponse,
 } from "@clipquest/contracts";
-import { apiRequest, jsonBody } from "../lib/api";
 import {
   loadGenerationState,
   saveGenerationState,
@@ -32,6 +30,11 @@ export async function preGenerateImportedQuiz(
     }
     await saveImportedVideo({
       ...imported,
+      video: {
+        ...imported.video,
+        durationSeconds: transcript.verifiedDurationSeconds,
+        sourceLanguage: imported.video.sourceLanguage ?? transcript.language,
+      },
       captions: {
         ...imported.captions,
         available: true,
@@ -39,36 +42,19 @@ export async function preGenerateImportedQuiz(
         preferredCompleteness: transcript.completeness,
       },
       transcriptionMode: "captions",
+      capture: {
+        ...imported.capture,
+        expectedDurationSeconds: transcript.verifiedDurationSeconds,
+      },
       requiresLocalTranscription: false,
     });
-    const queued = await apiRequest(
-      "/api/transcripts",
-      {
-        method: "POST",
-        headers: { "Idempotency-Key": input.idempotencyKey },
-        body: jsonBody({
-          videoId: imported.video.id,
-          language: transcript.language,
-          origin: "captions",
-          acquisition: transcript.acquisition,
-          completeness: transcript.completeness,
-          segments: transcript.segments,
-          quizLanguage: input.quizLanguage,
-          sessionLength: "long",
-          watched: true,
-          questionTypes: input.questionTypes,
-        }),
-      },
-      TranscriptUploadResponseSchema,
-    );
     await updateMatchingState(imported.video.id, input.idempotencyKey, {
-      jobId: queued.jobId,
       preworkStatus: "ready",
     });
     console.info(
       JSON.stringify({
         scope: "generation_prework",
-        event: "quiz_queued",
+        event: "captions_cached_locally",
         videoId: imported.video.id,
         questionTypes: input.questionTypes,
         sourceSegmentCount: transcript.completeness.sourceSegmentCount,
@@ -97,7 +83,7 @@ export async function preGenerateImportedQuiz(
 async function updateMatchingState(
   videoId: string,
   idempotencyKey: string,
-  update: { jobId?: string; preworkStatus: "ready" | "unavailable" | "failed" },
+  update: { preworkStatus: "ready" | "unavailable" | "failed" },
 ) {
   const current = await loadGenerationState(videoId);
   if (!current || current.idempotencyKey !== idempotencyKey) return;

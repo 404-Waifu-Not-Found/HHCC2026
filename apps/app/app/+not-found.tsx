@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../src/components/VoxelIcon";
 import { router } from "expo-router";
 import { EmptyState } from "../src/components/EmptyState";
 import { PrimaryButton } from "../src/components/PrimaryButton";
@@ -10,17 +10,13 @@ export default function NotFoundScreen() {
   return (
     <Screen contentWidth="reading" centered>
       <EmptyState
-        icon="map-marker-question-outline"
+        icon="help"
         title={t("notFoundTitle")}
         description={t("notFoundBody")}
         action={
           <PrimaryButton
             leadingIcon={
-              <MaterialCommunityIcons
-                name="home-variant"
-                size={20}
-                color={theme.textOnAction}
-              />
+              <VoxelIcon name="home" size={20} color={theme.textOnAction} />
             }
             onPress={() => router.replace("/")}
           >

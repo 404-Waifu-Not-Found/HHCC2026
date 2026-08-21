@@ -1,4 +1,4 @@
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import {
   borders,
@@ -8,6 +8,7 @@ import {
   spacing,
   typography,
 } from "../theme/tokens";
+import { FeedbackMotion, MotionPressable } from "../motion/Motion";
 
 export type Segment<T extends string> = { value: T; label: string };
 
@@ -35,35 +36,44 @@ export function SegmentedControl<T extends string>({
       {options.map((option) => {
         const selected = value === option.value;
         return (
-          <Pressable
+          <FeedbackMotion
             key={option.value}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: selected }}
-            onPress={() => onChange(option.value)}
-            style={({ pressed, hovered }) => [
-              styles.option,
-              {
-                backgroundColor: selected ? theme.surface : "transparent",
-                borderColor: selected ? theme.primary : "transparent",
-                transform: [{ translateY: pressed ? 1 : hovered ? -1 : 0 }],
-              },
-              selected && styles.selected,
-              Platform.OS === "web" && {
-                transitionDuration: `${motion.fast}ms`,
-                transitionProperty: "transform, background-color, border-color",
-              },
-            ]}
+            signal={selected ? option.value : false}
+            kind="attention"
+            style={styles.optionWrap}
           >
-            <Text
-              style={[
-                styles.label,
-                { color: selected ? theme.primary : theme.textMuted },
+            <MotionPressable
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              onPress={() => onChange(option.value)}
+              style={({ pressed, hovered }) => [
+                styles.option,
+                {
+                  backgroundColor: selected
+                    ? theme.surface
+                    : hovered
+                      ? theme.surfaceTint
+                      : "transparent",
+                  borderColor: selected ? theme.primary : "transparent",
+                  opacity: pressed ? 0.82 : 1,
+                },
+                Platform.OS === "web" && {
+                  transitionDuration: `${motion.fast}ms`,
+                  transitionProperty: "opacity, background-color, border-color",
+                },
               ]}
-              numberOfLines={2}
             >
-              {option.label}
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.label,
+                  { color: selected ? theme.primary : theme.textMuted },
+                ]}
+                numberOfLines={2}
+              >
+                {option.label}
+              </Text>
+            </MotionPressable>
+          </FeedbackMotion>
         );
       })}
     </View>
@@ -82,14 +92,13 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: controls.buttonHeight,
     borderWidth: borders.standard,
+    borderBottomWidth: borders.tactileDepth,
     borderRadius: radii.small,
     paddingHorizontal: spacing[2],
     alignItems: "center",
     justifyContent: "center",
   },
-  selected: {
-    borderBottomWidth: borders.tactileDepth,
-  },
+  optionWrap: { flex: 1 },
   label: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.label,

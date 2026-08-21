@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -41,11 +41,7 @@ export default function VerifyEmailScreen() {
       {email ? (
         <Surface tone="tinted" style={styles.emailCard}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="email-check-outline"
-              size={27}
-              color={theme.primary}
-            />
+            <VoxelIcon name="mail" size={27} color={theme.primary} />
             <Text selectable style={[styles.email, { color: theme.text }]}>
               {email}
             </Text>
@@ -55,11 +51,7 @@ export default function VerifyEmailScreen() {
       {message ? (
         <Surface tone="success" style={styles.status}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="check-circle-outline"
-              size={22}
-              color={theme.success}
-            />
+            <VoxelIcon name="correct" size={22} color={theme.success} />
             <Text
               accessibilityLiveRegion="polite"
               style={[styles.statusText, { color: theme.text }]}
@@ -72,11 +64,7 @@ export default function VerifyEmailScreen() {
       {error ? (
         <Surface tone="error" style={styles.status}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={22}
-              color={theme.error}
-            />
+            <VoxelIcon name="error" size={22} color={theme.error} />
             <Text
               accessibilityRole="alert"
               selectable
@@ -91,24 +79,14 @@ export default function VerifyEmailScreen() {
         variant="ghost"
         loading={loading}
         disabled={!email}
-        leadingIcon={
-          <MaterialCommunityIcons
-            name="email-sync-outline"
-            size={21}
-            color={theme.text}
-          />
-        }
+        leadingIcon={<VoxelIcon name="mail" size={21} color={theme.text} />}
         onPress={() => void resend()}
       >
         {t("sendAgain")}
       </PrimaryButton>
       <PrimaryButton
         leadingIcon={
-          <MaterialCommunityIcons
-            name="login"
-            size={21}
-            color={theme.textOnAction}
-          />
+          <VoxelIcon name="sign-in" size={21} color={theme.textOnAction} />
         }
         onPress={() => router.replace("/(auth)/sign-in")}
       >

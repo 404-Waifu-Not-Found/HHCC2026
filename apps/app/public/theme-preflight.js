@@ -19,7 +19,8 @@
     (mode === "system" &&
       globalThis.matchMedia("(prefers-color-scheme: dark)").matches);
   const resolvedTheme = dark ? "dark" : "light";
-  const background = dark ? "#080F25" : "#F6F8FC";
+  const background = dark ? "#101B15" : "#F7F9F4";
+  const chromeColor = dark ? "#16231B" : "#247D49";
 
   root.dataset.cqTheme = resolvedTheme;
   root.dataset.cqDevice =
@@ -30,5 +31,5 @@
         : "mobile";
   root.style.colorScheme = resolvedTheme;
   root.style.backgroundColor = background;
-  themeMeta?.setAttribute("content", background);
+  themeMeta?.setAttribute("content", chromeColor);
 })();

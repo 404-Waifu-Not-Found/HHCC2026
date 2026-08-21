@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   createTranscriptCompleteness,
+  type PublicQuestion,
 } from "@clipquest/contracts";
 
 const BASE_URL = "http://localhost:8081";
@@ -14,7 +15,8 @@ const QUESTION_ID = "66666666-6666-4666-8666-666666666666";
 const NEXT_QUESTION_ID = "77777777-7777-4777-8777-777777777777";
 const JOB_ID = "88888888-8888-4888-8888-888888888888";
 const THUMBNAIL_URL = `${BASE_URL}/test-thumbnail.svg`;
-const SCREENSHOT_DIR = "docs/screenshots/final";
+const SCREENSHOT_DIR =
+  process.env.CLIPQUEST_SCREENSHOT_DIR ?? "docs/screenshots/final";
 const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
 
 type Scenario = {
@@ -23,7 +25,11 @@ type Scenario = {
   completedAttempt: boolean;
   generationMode: "stable" | "failed";
   importMode: "success" | "unavailable";
+  extensionCaptionImport: boolean;
   requestedPaths: string[];
+  quizImportBodies: unknown[];
+  quizImportKeys: (string | null)[];
+  question: PublicQuestion;
 };
 
 const baseQuestion = {
@@ -50,6 +56,22 @@ const nextQuestion = {
   position: 2,
   total: 5,
   isRetry: false,
+};
+
+const trueFalseQuestion: PublicQuestion = {
+  ...baseQuestion,
+  id: "67676767-6767-4767-8767-676767676767",
+  type: "true_false",
+  prompt: "Retrieval practice is the same as passively rereading notes.",
+  options: undefined,
+};
+
+const shortAnswerQuestion: PublicQuestion = {
+  ...baseQuestion,
+  id: "68686868-6868-4868-8868-686868686868",
+  type: "short_answer",
+  prompt: "Name one reason spaced retrieval improves long-term memory.",
+  options: undefined,
 };
 
 const captionSegments = [
@@ -101,8 +123,8 @@ const savedCard = {
   videoId: VIDEO_ID_TWO,
   quizId: null,
   attemptId: null,
-  originalUrl: "https://www.bilibili.com/video/BV1clipquest",
-  source: "bilibili" as const,
+  originalUrl: "https://www.youtube.com/watch?v=feynman-learning",
+  source: "youtube" as const,
   title: "A visual guide to the Feynman technique",
   bestScore: null,
   mastery: "not_started" as const,
@@ -112,11 +134,379 @@ const savedCard = {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem(
-      "clipquest:settings:v1",
-      JSON.stringify({ locale: "en", themeMode: "light", reduceMotion: true }),
-    );
+    if (window.sessionStorage.getItem("clipquest:e2e-preserve-theme") !== "1") {
+      window.localStorage.setItem(
+        "clipquest:settings:v1",
+        JSON.stringify({
+          locale: "en",
+          themeMode: "light",
+          reduceMotion: true,
+        }),
+      );
+    }
+    window.addEventListener("message", (event) => {
+      if (
+        event.source !== window ||
+        event.data?.channel !== "clipquest:captions:v1" ||
+        event.data?.source !== "clipquest-website" ||
+        window.sessionStorage.getItem("clipquest:e2e-extension-missing") === "1"
+      ) {
+        return;
+      }
+      if (event.data.type === "ping") {
+        window.postMessage(
+          {
+            channel: "clipquest:captions:v1",
+            source: "clipquest-extension",
+            type: "ready",
+            version: "e2e",
+            configured: true,
+          },
+          window.location.origin,
+        );
+      }
+      if (event.data.type === "generate") {
+        const questionCount = event.data.context?.questionCount ?? 10;
+        window.postMessage(
+          {
+            channel: "clipquest:captions:v1",
+            source: "clipquest-extension",
+            type: "generation-result",
+            requestId: event.data.requestId,
+            response: {
+              ok: true,
+              result: {
+                protocolVersion: 3,
+                pipelineVersion: 7,
+                model: "deepseek-v4-flash",
+                reasoningEffort: "high",
+                promptVersion: "quiz-local-tool-v2.0",
+                validatorVersion: "validator-local-tool-v2.0",
+                quiz: {
+                  title: "Local concept quiz",
+                  questions: Array.from(
+                    { length: questionCount },
+                    (_, index) => {
+                      const common = {
+                        id: `q${index + 1}`,
+                        concept: `Concept ${index + 1}`,
+                        question: `How does concept ${index + 1} apply?`,
+                        explanation: `Concept ${index + 1} supports this answer.`,
+                      };
+                      if (index % 3 === 1) {
+                        return {
+                          ...common,
+                          type: "true_false",
+                          answer: index % 2 === 0,
+                          correction: `Concept ${index + 1} is corrected here.`,
+                        };
+                      }
+                      if (index % 3 === 2) {
+                        return {
+                          ...common,
+                          type: "short_answer",
+                          answer: `Reference answer ${index + 1}`,
+                          rubricIdeas: [`Concept ${index + 1}`],
+                          acceptableAnswers: [`Equivalent answer ${index + 1}`],
+                        };
+                      }
+                      return {
+                        ...common,
+                        type: "multiple_choice",
+                        choices: [
+                          `Correct ${index + 1}`,
+                          `Distractor A ${index + 1}`,
+                          `Distractor B ${index + 1}`,
+                          `Distractor C ${index + 1}`,
+                        ],
+                        answerIndex: 0,
+                        answer: `Correct ${index + 1}`,
+                      };
+                    },
+                  ),
+                },
+                metrics: {
+                  aiCalls: 1,
+                  retryCount: 0,
+                  inputTokens: 100,
+                  outputTokens: 200,
+                  reasoningTokens: 50,
+                  elapsedMs: 1000,
+                },
+              },
+            },
+          },
+          window.location.origin,
+        );
+      }
+      if (event.data.type === "extract") {
+        window.postMessage(
+          {
+            channel: "clipquest:captions:v1",
+            source: "clipquest-extension",
+            type: "result",
+            requestId: event.data.requestId,
+            response: {
+              ok: true,
+              result: {
+                videoId: event.data.videoId,
+                language: "en",
+                isAutoGenerated: true,
+                method: "caption_track",
+                sourceSegmentCount: 1,
+                durationSeconds: 754,
+                segments: [
+                  {
+                    id: "youtube-extension-e2e-0",
+                    startMs: 0,
+                    endMs: 5_000,
+                    text: "The extension returned this complete caption segment.",
+                  },
+                ],
+              },
+            },
+          },
+          window.location.origin,
+        );
+      }
+    });
   });
+});
+
+test("sign-in splits on desktop and collapses cleanly on mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  await page.goto("/sign-in");
+
+  const brandPane = page.getByTestId("auth-split-brand-pane");
+  const formPane = page.getByTestId("auth-split-form-pane");
+  const divider = page.getByTestId("auth-split-divider");
+
+  await expect(brandPane).toBeVisible();
+  await expect(formPane).toBeVisible();
+  await expect(divider).toBeVisible();
+  await expect(
+    brandPane.getByText("Turn YouTube lessons into lasting knowledge"),
+  ).toBeVisible();
+  await expect(
+    formPane.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+
+  const desktopLayout = await page.evaluate(() => {
+    const brand = document.querySelector<HTMLElement>(
+      '[data-testid="auth-split-brand-pane"]',
+    );
+    const form = document.querySelector<HTMLElement>(
+      '[data-testid="auth-split-form-pane"]',
+    );
+    const split = document.querySelector<HTMLElement>(
+      '[data-testid="auth-split-divider"]',
+    );
+    if (!brand || !form || !split) throw new Error("Missing sign-in split");
+    const brandRect = brand.getBoundingClientRect();
+    const formRect = form.getBoundingClientRect();
+    const dividerRect = split.getBoundingClientRect();
+    const lockup = brand.querySelector<HTMLElement>(
+      '[data-testid="clipquest-auth-wordmark"]',
+    );
+    const lockupRect = lockup?.getBoundingClientRect();
+    return {
+      brandWidth: brandRect.width,
+      formWidth: formRect.width,
+      dividerX: dividerRect.x,
+      brandBackground: getComputedStyle(brand).backgroundColor,
+      formBackground: getComputedStyle(form).backgroundColor,
+      dividerShadow: getComputedStyle(split).boxShadow,
+      lockupWidth: lockupRect?.width,
+      markWidth: lockup?.querySelector("img")?.getBoundingClientRect().width,
+      lockupLeftGutter: lockupRect ? lockupRect.left - brandRect.left : null,
+      lockupRightGutter: lockupRect ? brandRect.right - lockupRect.right : null,
+      hasOverflow:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth + 1,
+    };
+  });
+
+  expect(desktopLayout.brandWidth).toBeCloseTo(720, 0);
+  expect(desktopLayout.formWidth).toBeCloseTo(720, 0);
+  expect(desktopLayout.dividerX).toBeCloseTo(720, 0);
+  expect(desktopLayout.brandBackground).not.toBe(desktopLayout.formBackground);
+  expect(desktopLayout.dividerShadow).not.toBe("none");
+  expect(desktopLayout.dividerShadow).toContain("24px 0px 24px -8px");
+  expect(desktopLayout.lockupWidth).toBeGreaterThan(440);
+  expect(desktopLayout.lockupWidth).toBeLessThan(480);
+  expect(desktopLayout.markWidth).toBe(148);
+  expect(desktopLayout.lockupLeftGutter).toBeCloseTo(
+    desktopLayout.lockupRightGutter ?? 0,
+    0,
+  );
+  expect(desktopLayout.hasOverflow).toBe(false);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("auth-split-brand-pane")).toHaveCount(0);
+  await expect(page.getByTestId("auth-split-form-pane")).toHaveCount(0);
+  await expect(page.getByTestId("auth-split-divider")).toHaveCount(0);
+  await expect(page.getByRole("img", { name: "ClipQuest" })).toBeVisible();
+
+  const mobileOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1,
+  );
+  expect(mobileOverflow).toBe(false);
+});
+
+test("unauthenticated entry defaults to sign-in and sign-up links to welcome", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+
+  await page.goto("/forgot-password");
+  await expect(
+    page.getByRole("heading", { name: "Forgot password?" }),
+  ).toBeVisible();
+  await expect(page.locator("img")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Send reset link" }).locator("img"),
+  ).toHaveCount(0);
+
+  await page.goto("/sign-up");
+  const trialLink = page.getByTestId("try-without-account-link");
+  await expect(trialLink).toHaveText(
+    "Don’t want to create an account but want to try?",
+  );
+  await expect(trialLink).toBeVisible();
+
+  const cornerAlignment = await page.evaluate(() => {
+    const trial = document.querySelector<HTMLElement>(
+      '[data-testid="try-without-account-link"]',
+    );
+    if (!trial) throw new Error("Missing sign-up trial link");
+    const rect = trial.getBoundingClientRect();
+    return {
+      rightGap: window.innerWidth - rect.right,
+      bottomGap: window.innerHeight - rect.bottom,
+    };
+  });
+  expect(cornerAlignment.rightGap).toBeCloseTo(32, 0);
+  expect(cornerAlignment.bottomGap).toBeCloseTo(32, 0);
+
+  await trialLink.click();
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(
+    page.getByRole("heading", {
+      name: "Paste a YouTube video. Build real mastery.",
+    }),
+  ).toBeVisible();
+
+  const quickOpenVideo = "https://www.youtube.com/watch?v=AbCdEfGhI12";
+  await page.goto(`/welcome?url=${encodeURIComponent(quickOpenVideo)}`);
+  await expect(page.locator('input[type="url"]')).toHaveValue(quickOpenVideo);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/sign-up");
+  const mobileTrialLink = page.getByTestId("try-without-account-link");
+  await expect(mobileTrialLink).toBeVisible();
+  const mobileAlignment = await page.evaluate(() => {
+    const trial = document.querySelector<HTMLElement>(
+      '[data-testid="try-without-account-link"]',
+    );
+    const input = document.querySelector<HTMLInputElement>(
+      'input[aria-label="Username"]',
+    );
+    if (!trial || !input?.parentElement)
+      throw new Error("Missing mobile sign-up controls");
+    return {
+      trialRight: trial.getBoundingClientRect().right,
+      fieldRight: input.parentElement.getBoundingClientRect().right,
+    };
+  });
+  expect(mobileAlignment.trialRight).toBeCloseTo(mobileAlignment.fieldRight, 0);
+  const mobileOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1,
+  );
+  expect(mobileOverflow).toBe(false);
+});
+
+test("requires the local caption extension and reconnects automatically", async ({
+  page,
+}) => {
+  await installMocks(page);
+  await page.goto("/");
+  await page.evaluate(() =>
+    window.sessionStorage.setItem("clipquest:e2e-extension-missing", "1"),
+  );
+  await page.reload();
+
+  await expect(
+    page.getByRole("heading", { name: "Install the Chrome extension" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("download-caption-extension")).toBeVisible();
+  await expect(
+    page.getByText("chrome://extensions", { exact: false }),
+  ).toBeVisible();
+
+  await page.evaluate(() =>
+    window.sessionStorage.removeItem("clipquest:e2e-extension-missing"),
+  );
+  await page.getByTestId("check-caption-extension").click();
+  await expect(
+    page.getByRole("heading", { name: "Install the Chrome extension" }),
+  ).toBeHidden();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(
+    page.getByRole("heading", {
+      name: "What do you want to master?",
+    }),
+  ).toBeVisible();
+});
+
+test("imports the extension quiz, opens the learner flow, and accepts an answer", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.extensionCaptionImport = true;
+  await page.goto("/");
+  await page
+    .getByLabel("Paste a YouTube link")
+    .fill("https://www.youtube.com/watch?v=SVb9OV0bLzI&t=44s");
+  await expect(page).toHaveURL(`/create/${VIDEO_ID}`);
+  await page.getByRole("radio", { name: "Short · 5" }).click();
+  await page.getByRole("button", { name: "Create my quiz" }).click();
+
+  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: baseQuestion.prompt }),
+  ).toBeVisible();
+  expect(scenario.requestedPaths).toContain("/api/videos/import");
+  expect(scenario.requestedPaths).toContain("/api/quiz-imports");
+  expect(scenario.requestedPaths).toContain(`/api/quizzes/${QUIZ_ID}/start`);
+  expect(scenario.quizImportKeys).toHaveLength(1);
+  expect(scenario.quizImportKeys[0]).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
+  expect(JSON.stringify(scenario.quizImportBodies)).not.toContain("segments");
+  expect(JSON.stringify(scenario.quizImportBodies)).not.toContain("transcript");
+
+  await page.getByRole("button", { name: baseQuestion.options[0] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(
+    page.getByText(
+      "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice.",
+    ),
+  ).toBeVisible();
 });
 
 test("desktop learning journey and visual states", async ({ page }) => {
@@ -124,14 +514,48 @@ test("desktop learning journey and visual states", async ({ page }) => {
   const scenario = await installMocks(page);
 
   await page.goto("/welcome");
-  await expect(
-    page.getByLabel("Paste a YouTube or bilibili link"),
-  ).toBeVisible();
+  await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
 
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "What do you want to master?" }),
   ).toBeVisible();
+  const homeVisuals = await page.evaluate(() => {
+    const byText = (selector: string, value: string) =>
+      [...document.querySelectorAll<HTMLElement>(selector)].find((element) =>
+        element.textContent?.includes(value),
+      );
+    const action = byText('[role="button"]', "Make my quest");
+    const questionType =
+      document.querySelector<HTMLElement>('[role="checkbox"]');
+    const savedCard = byText(
+      '[role="button"]',
+      "A visual guide to the Feynman technique",
+    );
+    if (!action || !questionType || !savedCard) {
+      throw new Error("Missing styled Home controls");
+    }
+    const actionStyle = getComputedStyle(action);
+    const questionStyle = getComputedStyle(questionType);
+    const cardStyle = getComputedStyle(savedCard);
+    return {
+      actionBackground: actionStyle.backgroundColor,
+      actionHeight: action.getBoundingClientRect().height,
+      questionBorder: questionStyle.borderTopWidth,
+      cardBorder: cardStyle.borderTopWidth,
+      cardWidth: savedCard.getBoundingClientRect().width,
+      hasOverflow:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth + 1,
+    };
+  });
+  expect(homeVisuals.actionBackground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(homeVisuals.actionHeight).toBeGreaterThanOrEqual(52);
+  expect(homeVisuals.questionBorder).not.toBe("0px");
+  expect(homeVisuals.cardBorder).not.toBe("0px");
+  expect(homeVisuals.cardWidth).toBeGreaterThan(260);
+  expect(homeVisuals.cardWidth).toBeLessThan(380);
+  expect(homeVisuals.hasOverflow).toBe(false);
   await capture(page, "desktop-link-import");
 
   await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
@@ -150,10 +574,11 @@ test("desktop learning journey and visual states", async ({ page }) => {
   await page.goto(
     `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=medium`,
   );
+  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
   await expect(
-    page.getByRole("heading", { name: "Creating questions" }),
+    page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
-  await capture(page, "desktop-processing");
+  await capture(page, "desktop-generated-quiz");
 
   await seedAttempt(page, ATTEMPT_ID, baseQuestion);
   scenario.completedAttempt = false;
@@ -162,6 +587,9 @@ test("desktop learning journey and visual states", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
+  const quizCloseButton = page.getByRole("button", { name: "Cancel" });
+  await expect(quizCloseButton).toContainText("×");
+  await expect(quizCloseButton.locator("img")).toHaveCount(0);
   await capture(page, "desktop-quiz-initial");
 
   const firstAnswer = page.getByRole("button", {
@@ -200,6 +628,14 @@ test("desktop learning journey and visual states", async ({ page }) => {
 
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Review reminders" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Privacy & storage" }),
+  ).toHaveCount(0);
   await capture(page, "desktop-settings");
 
   expect(
@@ -214,9 +650,7 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   const scenario = await installMocks(page);
 
   await page.goto("/");
-  await expect(
-    page.getByLabel("Paste a YouTube or bilibili link"),
-  ).toBeVisible();
+  await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
   await capture(page, "mobile-link-import");
 
   await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
@@ -229,10 +663,11 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   await page.goto(
     `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=medium`,
   );
+  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
   await expect(
-    page.getByRole("heading", { name: "Creating questions" }),
+    page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
-  await capture(page, "mobile-processing");
+  await capture(page, "mobile-generated-quiz");
 
   await seedAttempt(page, ATTEMPT_ID, baseQuestion);
   scenario.completedAttempt = false;
@@ -255,9 +690,101 @@ test("mobile link, processing, lesson feedback, and completion", async ({
     page.getByRole("heading", { name: "Quest complete!" }),
   ).toBeVisible();
   await capture(page, "mobile-completion");
+  await page.getByRole("button", { name: "Return to library" }).click();
+  await expect(page).toHaveURL(/\/library$/);
   expect(
     scenario.requestedPaths.filter((path) => path.startsWith("/api/youtube")),
   ).toEqual([]);
+});
+
+test("all generated question types keep the tactile learning layout", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  const scenario = await installMocks(page);
+  await page.goto("/");
+
+  scenario.question = trueFalseQuestion;
+  await seedAttempt(page, ATTEMPT_ID, trueFalseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: trueFalseQuestion.prompt }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "True" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "False" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "True" }).locator("img"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "False" }).locator("img"),
+  ).toHaveCount(0);
+  await capture(page, "tablet-quiz-true-false");
+
+  scenario.question = shortAnswerQuestion;
+  await seedAttempt(page, ATTEMPT_ID, shortAnswerQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: shortAnswerQuestion.prompt }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Short answer")).toBeVisible();
+  await capture(page, "tablet-quiz-short-answer");
+});
+
+test("dark theme stays polished across learner, auth, settings, and admin shells", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  const scenario = await installMocks(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    window.sessionStorage.setItem("clipquest:e2e-preserve-theme", "1");
+    window.localStorage.setItem(
+      "clipquest:settings:v1",
+      JSON.stringify({ locale: "en", themeMode: "dark", reduceMotion: true }),
+    );
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "What do you want to master?" }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator("body")
+        .evaluate((body) => getComputedStyle(body).backgroundColor),
+    )
+    .toBe("rgb(16, 27, 21)");
+  await capture(page, "dark-desktop-home");
+
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await capture(page, "dark-desktop-settings");
+
+  scenario.question = trueFalseQuestion;
+  await seedAttempt(page, ATTEMPT_ID, trueFalseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: trueFalseQuestion.prompt }),
+  ).toBeVisible();
+  await capture(page, "dark-desktop-quiz");
+
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await capture(page, "dark-desktop-admin");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/welcome");
+  await expect(
+    page.getByRole("heading", {
+      name: "Paste a YouTube video. Build real mastery.",
+    }),
+  ).toBeVisible();
+  await capture(page, "dark-mobile-welcome");
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "What do you want to master?" }),
+  ).toBeVisible();
+  await capture(page, "dark-mobile-home");
 });
 
 test("tablet layout and target viewport sweep remain link-first without overflow", async ({
@@ -279,9 +806,7 @@ test("tablet layout and target viewport sweep remain link-first without overflow
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await expect(
-      page.getByLabel("Paste a YouTube or bilibili link"),
-    ).toBeVisible();
+    await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
     const dimensions = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
       width: window.innerWidth,
@@ -298,36 +823,28 @@ test("tablet layout and target viewport sweep remain link-first without overflow
   ).toEqual([]);
 });
 
-test("manual YouTube and bilibili imports validate and recover from unavailable video", async ({
+test("YouTube-only imports validate and recover from unavailable video", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 850 });
   const scenario = await installMocks(page);
   await page.goto("/");
-  const input = page.getByLabel("Paste a YouTube or bilibili link");
+  const input = page.getByLabel("Paste a YouTube link");
 
   await input.fill("https://example.com/not-supported");
   await page.getByRole("button", { name: "Make my quest" }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "valid YouTube or bilibili",
-  );
+  await expect(page.getByRole("alert")).toContainText("valid public YouTube");
+
+  await input.fill("https://vimeo.com/123456789");
+  await page.getByRole("button", { name: "Make my quest" }).click();
+  await expect(page.getByRole("alert")).toContainText("valid public YouTube");
 
   scenario.importMode = "unavailable";
   await input.fill("https://www.youtube.com/watch?v=private-video");
   await expect(page.getByRole("alert")).toContainText("unavailable");
 
   scenario.importMode = "success";
-  await input.fill("https://www.bilibili.com/video/BV1clipquest");
-  await page.getByRole("button", { name: "Make my quest" }).click();
-  await expect(page).toHaveURL(new RegExp(`/create/${VIDEO_ID}$`));
-  await expect(page.getByText("Bilibili", { exact: true })).toBeVisible();
-
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "What do you want to master?" }),
-  ).toBeVisible();
-  const youtubeInput = page.getByLabel("Paste a YouTube or bilibili link");
-  await youtubeInput.fill(
+  await input.fill(
     "https://www.youtube.com/watch?v=clipquest-learning-science",
   );
   await expect(page).toHaveURL(new RegExp(`/create/${VIDEO_ID}$`));
@@ -336,35 +853,6 @@ test("manual YouTube and bilibili imports validate and recover from unavailable 
   expect(
     scenario.requestedPaths.filter((path) => path.startsWith("/api/youtube")),
   ).toEqual([]);
-});
-
-test("processing failure exposes retry and resumes the same durable job", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  const scenario = await installMocks(page);
-  scenario.generationMode = "failed";
-  await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
-  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
-    idempotencyKey: "retry-idempotency",
-    jobId: JOB_ID,
-    quizLanguage: "en",
-    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
-  });
-  await page.goto(
-    `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=medium`,
-  );
-  await expect(
-    page.getByRole("heading", { name: "Quiz creation stopped" }),
-  ).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(
-    "could not create trustworthy questions",
-  );
-  await page.getByRole("button", { name: "Retry" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Creating questions" }),
-  ).toBeVisible();
 });
 
 test("admin operations console is responsive and uses real management contracts", async ({
@@ -430,7 +918,11 @@ async function installMocks(page: Page): Promise<Scenario> {
     completedAttempt: false,
     generationMode: "stable",
     importMode: "success",
+    extensionCaptionImport: false,
     requestedPaths: [],
+    quizImportBodies: [],
+    quizImportKeys: [],
+    question: baseQuestion,
   };
 
   await page.route("**/test-thumbnail.svg", async (route) => {
@@ -666,69 +1158,53 @@ async function installMocks(page: Page): Promise<Scenario> {
         );
         return;
       }
-      const body = request.postDataJSON() as { url?: string };
-      const bilibili = body.url?.includes("bilibili");
+      const usesExtensionCaptions = scenario.extensionCaptionImport;
       await json(route, {
         ...importedVideo,
         video: {
           ...importedVideo.video,
-          source: bilibili ? "bilibili" : "youtube",
-          sourceVideoId: bilibili
-            ? "BV1clipquest"
+          source: "youtube",
+          sourceVideoId: usesExtensionCaptions
+            ? "SVb9OV0bLzI"
             : importedVideo.video.sourceVideoId,
+          durationSeconds: usesExtensionCaptions
+            ? 0
+            : importedVideo.video.durationSeconds,
         },
+        ...(usesExtensionCaptions
+          ? {
+              captions: {
+                available: true,
+                tracks: [],
+                browserSourceAvailable: false,
+                browserLookupAvailable: true,
+              },
+              capture: {
+                expectedDurationSeconds: 0,
+                requiresUserGesture: false,
+              },
+            }
+          : {}),
       });
       return;
     }
-    if (path === "/api/transcripts" && request.method() === "POST") {
-      await json(route, { jobId: JOB_ID, stage: "creating_questions" }, 201);
-      return;
-    }
-    if (path === `/api/generation/${JOB_ID}` && request.method() === "GET") {
-      if (scenario.generationMode === "failed") {
-        await json(route, {
-          jobId: JOB_ID,
-          stage: "failed",
-          progress: 0.58,
-          quizId: null,
-          error: {
-            code: "generation_failed",
-            message: "The transcript could not create trustworthy questions.",
-          },
-        });
-        return;
-      }
-      await json(route, {
-        jobId: JOB_ID,
-        stage: "creating_questions",
-        progress: 0.58,
-        quizId: null,
-        error: null,
-      });
+    if (path === "/api/quiz-imports" && request.method() === "POST") {
+      scenario.quizImportBodies.push(request.postDataJSON());
+      scenario.quizImportKeys.push(
+        request.headers()["idempotency-key"] ?? null,
+      );
+      await json(route, { quizId: QUIZ_ID }, 201);
       return;
     }
     if (
-      path === `/api/generation/${JOB_ID}/retry` &&
+      path === `/api/quizzes/${QUIZ_ID}/start` &&
       request.method() === "POST"
     ) {
-      scenario.generationMode = "stable";
-      await json(route, {
-        jobId: JOB_ID,
-        stage: "creating_questions",
-        progress: 0.08,
-        quizId: null,
-        error: null,
-      });
-      return;
-    }
-    if (path === `/api/generation/${JOB_ID}` && request.method() === "DELETE") {
-      await json(route, {
-        jobId: JOB_ID,
-        stage: "failed",
-        progress: 0,
-        quizId: null,
-        error: null,
-      });
+      await json(
+        route,
+        { attemptId: ATTEMPT_ID, primer: null, question: scenario.question },
+        201,
+      );
       return;
     }
     if (path.endsWith("/resume") && path.includes("/api/attempts/")) {
@@ -736,7 +1212,7 @@ async function installMocks(page: Page): Promise<Scenario> {
         scenario.completedAttempt || path.includes(COMPLETE_ATTEMPT_ID);
       await json(route, {
         attemptId: completed ? COMPLETE_ATTEMPT_ID : ATTEMPT_ID,
-        question: completed ? null : baseQuestion,
+        question: completed ? null : scenario.question,
         completed,
         score: completed ? 88 : null,
         mastery: completed ? "mastered" : null,
@@ -781,7 +1257,7 @@ async function seed(page: Page, key: string, value: unknown): Promise<void> {
 async function seedAttempt(
   page: Page,
   attemptId: string,
-  question: typeof baseQuestion,
+  question: PublicQuestion,
 ): Promise<void> {
   await seed(page, `clipquest:attempt:${attemptId}`, {
     attemptId,

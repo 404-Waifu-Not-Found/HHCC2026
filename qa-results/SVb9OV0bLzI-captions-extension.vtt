@@ -1,0 +1,1385 @@
+WEBVTT
+
+1
+00:00:00.080 --> 00:00:04.720
+Hello everybody. I hope this video comes
+
+2
+00:00:02.320 --> 00:00:07.440
+as a nice welcome surprise. Welcome to
+
+3
+00:00:04.720 --> 00:00:09.360
+AP Calculus Unit 1. Now, I want to be
+
+4
+00:00:07.440 --> 00:00:11.200
+very, very clear here. For the past
+
+5
+00:00:09.360 --> 00:00:12.960
+year, I covered the entire AP
+
+6
+00:00:11.200 --> 00:00:14.400
+pre-calculus course on this channel. And
+
+7
+00:00:12.960 --> 00:00:16.480
+I did this because it was the highest
+
+8
+00:00:14.400 --> 00:00:18.880
+level of math I have ever taken. But
+
+9
+00:00:16.480 --> 00:00:20.640
+now, I have received literal hundreds of
+
+10
+00:00:18.880 --> 00:00:23.039
+comments begging for me to review this
+
+11
+00:00:20.640 --> 00:00:24.960
+stupidly long course. So, here I am only
+
+12
+00:00:23.039 --> 00:00:26.560
+deciding to do 10 unit review videos
+
+13
+00:00:24.960 --> 00:00:28.640
+that are required. Just so you were
+
+14
+00:00:26.560 --> 00:00:30.240
+aware, I have had to teach myself this
+
+15
+00:00:28.640 --> 00:00:32.480
+course to be able to make these videos.
+
+16
+00:00:30.240 --> 00:00:34.160
+So, all I ask is please just follow my
+
+17
+00:00:32.480 --> 00:00:36.640
+Instagram. This took weeks to make, man,
+
+18
+00:00:34.160 --> 00:00:40.640
+please. Anyway, this unit is worth 10 to
+
+19
+00:00:36.640 --> 00:00:43.120
+12% on the AB exam and 4 to 7% on the BC
+
+20
+00:00:40.640 --> 00:00:45.920
+exam. I'll just say let's get into it
+
+21
+00:00:43.120 --> 00:00:47.920
+already. So, I've never really made unit
+
+22
+00:00:45.920 --> 00:00:49.920
+specific videos before, so I suppose
+
+23
+00:00:47.920 --> 00:00:52.239
+I'll start this simply. What is
+
+24
+00:00:49.920 --> 00:00:53.760
+calculus? It is the study of continuous
+
+25
+00:00:52.239 --> 00:00:55.280
+change. Do you remember back in the
+
+26
+00:00:53.760 --> 00:00:56.879
+first few topics of pre-calculus where
+
+27
+00:00:55.280 --> 00:00:58.640
+we covered rate of change and I sounded
+
+28
+00:00:56.879 --> 00:01:00.000
+like I was at least two wives in? Well,
+
+29
+00:00:58.640 --> 00:01:01.359
+a lot of that rate of change stuff is
+
+30
+00:01:00.000 --> 00:01:02.879
+similar to calculus with the same
+
+31
+00:01:01.359 --> 00:01:04.479
+formula for rate of change over an
+
+32
+00:01:02.879 --> 00:01:06.720
+interval and also finding rate of change
+
+33
+00:01:04.479 --> 00:01:08.880
+at a specific point. The big focus of
+
+34
+00:01:06.720 --> 00:01:10.960
+this unit is limits and a new thing
+
+35
+00:01:08.880 --> 00:01:13.119
+called continuity. That means I get to
+
+36
+00:01:10.960 --> 00:01:15.280
+split this video in half. So, welcome to
+
+37
+00:01:13.119 --> 00:01:17.200
+the limit part of this video. You might
+
+38
+00:01:15.280 --> 00:01:19.280
+remember we also covered limits in
+
+39
+00:01:17.200 --> 00:01:21.600
+pre-calculus. So, why don't we zoom in
+
+40
+00:01:19.280 --> 00:01:24.560
+on what a limit truly is? Let's take the
+
+41
+00:01:21.600 --> 00:01:26.720
+basic graph f ofx= x. And now let's say
+
+42
+00:01:24.560 --> 00:01:29.040
+we have the limit as x approaches 3 of f
+
+43
+00:01:26.720 --> 00:01:31.200
+ofx. A limit is simply about approach.
+
+44
+00:01:29.040 --> 00:01:33.600
+It is about quote getting close to a
+
+45
+00:01:31.200 --> 00:01:36.640
+number. So on this graph as x approaches
+
+46
+00:01:33.600 --> 00:01:38.320
+3 on the y or f ofx we are approaching
+
+47
+00:01:36.640 --> 00:01:40.000
+positive three. We can take this even
+
+48
+00:01:38.320 --> 00:01:41.840
+further by taking the plus and minus
+
+49
+00:01:40.000 --> 00:01:43.680
+limits. Remember minus is approaching
+
+50
+00:01:41.840 --> 00:01:45.439
+from the left plus is approaching from
+
+51
+00:01:43.680 --> 00:01:47.040
+the right. So let's see here.
+
+52
+00:01:45.439 --> 00:01:48.720
+Approaching from the left we would be
+
+53
+00:01:47.040 --> 00:01:50.640
+approaching three. And approaching from
+
+54
+00:01:48.720 --> 00:01:52.640
+the right it would also be three. But
+
+55
+00:01:50.640 --> 00:01:54.159
+this is a pretty easy example. Now let's
+
+56
+00:01:52.640 --> 00:01:56.240
+do something like this. It is a
+
+57
+00:01:54.159 --> 00:01:58.399
+peace-wise graph. Now let's answer the
+
+58
+00:01:56.240 --> 00:02:00.159
+same three limit questions. The limit as
+
+59
+00:01:58.399 --> 00:02:02.000
+x approaches three from the left is
+
+60
+00:02:00.159 --> 00:02:03.680
+still three on the y. But as x
+
+61
+00:02:02.000 --> 00:02:05.520
+approaches three from the right, it is
+
+62
+00:02:03.680 --> 00:02:06.880
+five. See how these two answers are
+
+63
+00:02:05.520 --> 00:02:08.720
+completely different. That means the
+
+64
+00:02:06.880 --> 00:02:10.720
+limit as x approaches three without the
+
+65
+00:02:08.720 --> 00:02:13.440
+plus or minus just like a girlfriend for
+
+66
+00:02:10.720 --> 00:02:15.520
+me doesn't exist. This will only happen
+
+67
+00:02:13.440 --> 00:02:17.360
+when these two are different numbers.
+
+68
+00:02:15.520 --> 00:02:19.760
+But let me ask you a question. What does
+
+69
+00:02:17.360 --> 00:02:22.000
+f of three equal? Now I mean yes we see
+
+70
+00:02:19.760 --> 00:02:24.080
+two places on the y where it is but one
+
+71
+00:02:22.000 --> 00:02:26.000
+of them is a hole where nothing exists.
+
+72
+00:02:24.080 --> 00:02:28.560
+So the only right answer here is the
+
+73
+00:02:26.000 --> 00:02:31.280
+filledin dot which is five. And if you
+
+74
+00:02:28.560 --> 00:02:32.879
+had a graph like this yes the limit as x
+
+75
+00:02:31.280 --> 00:02:35.440
+approaches two of the function would be
+
+76
+00:02:32.879 --> 00:02:37.840
+three but f of two would be five because
+
+77
+00:02:35.440 --> 00:02:39.519
+that is the filledin point. Now let's
+
+78
+00:02:37.840 --> 00:02:41.040
+move away from graphs. Time to talk
+
+79
+00:02:39.519 --> 00:02:43.120
+about a good friend of graphs called
+
+80
+00:02:41.040 --> 00:02:45.120
+tables. In this case limits are actually
+
+81
+00:02:43.120 --> 00:02:47.200
+pretty easy to estimate. For example, in
+
+82
+00:02:45.120 --> 00:02:49.120
+this table, it's pretty obvious that the
+
+83
+00:02:47.200 --> 00:02:51.040
+limit as x approaches 5 of this function
+
+84
+00:02:49.120 --> 00:02:52.560
+will be two. And that's pretty much all
+
+85
+00:02:51.040 --> 00:02:54.000
+I have for tables. Just remember to
+
+86
+00:02:52.560 --> 00:02:57.599
+always round your answer to three
+
+87
+00:02:54.000 --> 00:02:59.280
+decimal places. Um, so uh, all right.
+
+88
+00:02:57.599 --> 00:03:01.040
+Now, I'd like to move to algebra with
+
+89
+00:02:59.280 --> 00:03:02.319
+limits. I kind of relate this to log
+
+90
+00:03:01.040 --> 00:03:03.920
+properties because you find there will
+
+91
+00:03:02.319 --> 00:03:05.680
+be a lot of similarities between them
+
+92
+00:03:03.920 --> 00:03:08.159
+and the limits. The big foundational
+
+93
+00:03:05.680 --> 00:03:10.319
+property of limits is the limit of f ofx
+
+94
+00:03:08.159 --> 00:03:12.640
+plus f ofx would equal the limit of f
+
+95
+00:03:10.319 --> 00:03:15.120
+ofx plus the limit of f ofx which would
+
+96
+00:03:12.640 --> 00:03:16.720
+just be 2 * the limit of f ofx. These
+
+97
+00:03:15.120 --> 00:03:18.159
+evolve into many other properties that
+
+98
+00:03:16.720 --> 00:03:19.840
+you can try and memorize if you really
+
+99
+00:03:18.159 --> 00:03:21.519
+want to, but I'd rather just do some
+
+100
+00:03:19.840 --> 00:03:23.200
+practice problems. Essentially, the
+
+101
+00:03:21.519 --> 00:03:25.680
+basic thing to know is the limit of a
+
+102
+00:03:23.200 --> 00:03:27.519
+constant is a constant. So the limit of
+
+103
+00:03:25.680 --> 00:03:30.720
+1 is equal to 1. And the limit as x
+
+104
+00:03:27.519 --> 00:03:32.640
+approaches 3 of 1 billion is 1 billion.
+
+105
+00:03:30.720 --> 00:03:34.799
+So look at this problem. The limit as x
+
+106
+00:03:32.640 --> 00:03:36.640
+approaches 2 of f of f ofx. Remember
+
+107
+00:03:34.799 --> 00:03:38.319
+what I said back in pre-calculus. You
+
+108
+00:03:36.640 --> 00:03:41.360
+start from the inside and go to the
+
+109
+00:03:38.319 --> 00:03:43.840
+outside. So as x approaches 2, f ofx or
+
+110
+00:03:41.360 --> 00:03:45.680
+y would approach 1. So now we can fill
+
+111
+00:03:43.840 --> 00:03:48.080
+that in. Or if you wanted to do correct
+
+112
+00:03:45.680 --> 00:03:49.920
+notation, you can write this. Then now
+
+113
+00:03:48.080 --> 00:03:53.120
+we need to find the y value as x
+
+114
+00:03:49.920 --> 00:03:55.040
+approaches - 1 which is 2. So 2 is our
+
+115
+00:03:53.120 --> 00:03:57.920
+final answer. What about this problem?
+
+116
+00:03:55.040 --> 00:04:00.319
+The limit as x approaches 10 of 1 + 9
+
+117
+00:03:57.920 --> 00:04:03.040
+over 3. Solving the parenthesis we get
+
+118
+00:04:00.319 --> 00:04:05.040
+4. And remember the limit of a constant
+
+119
+00:04:03.040 --> 00:04:06.799
+is a constant. So the answer is just
+
+120
+00:04:05.040 --> 00:04:08.560
+simply four. If we were to manipulate
+
+121
+00:04:06.799 --> 00:04:11.120
+this as being the limit as x approaches
+
+122
+00:04:08.560 --> 00:04:13.680
+10 of fx plus g ofx over 3 where the
+
+123
+00:04:11.120 --> 00:04:15.920
+limit as x approaches 10 of fx= 1 and
+
+124
+00:04:13.680 --> 00:04:17.680
+the limit as x approaches 10 of g ofx=
+
+125
+00:04:15.920 --> 00:04:19.600
+9. The answer would still be the same
+
+126
+00:04:17.680 --> 00:04:21.280
+because we just be plugging in the same
+
+127
+00:04:19.600 --> 00:04:23.040
+values. What about if you have a
+
+128
+00:04:21.280 --> 00:04:24.720
+peace-wise function here? The way to
+
+129
+00:04:23.040 --> 00:04:26.560
+solve it is by plugging in the limit to
+
+130
+00:04:24.720 --> 00:04:28.400
+each problem. If they match, then that
+
+131
+00:04:26.560 --> 00:04:30.320
+is the answer. And if they don't match,
+
+132
+00:04:28.400 --> 00:04:32.160
+just like my girlfriend, the limit
+
+133
+00:04:30.320 --> 00:04:34.400
+doesn't exist. So now, say we have
+
+134
+00:04:32.160 --> 00:04:35.759
+limits but with x's in the parenthesis.
+
+135
+00:04:34.400 --> 00:04:37.360
+If you want to solve the limit, the
+
+136
+00:04:35.759 --> 00:04:39.360
+basic method you should always try first
+
+137
+00:04:37.360 --> 00:04:41.120
+is direct substitution. This is where
+
+138
+00:04:39.360 --> 00:04:43.280
+you plug in whatever x is approaching
+
+139
+00:04:41.120 --> 00:04:44.720
+for x in the argument and solve it. A
+
+140
+00:04:43.280 --> 00:04:46.479
+lot of times though, you'll find that
+
+141
+00:04:44.720 --> 00:04:47.759
+sometimes this will create a zero in the
+
+142
+00:04:46.479 --> 00:04:49.919
+denominator if it is a rational
+
+143
+00:04:47.759 --> 00:04:51.520
+function. Obviously that is undefined.
+
+144
+00:04:49.919 --> 00:04:53.759
+So we need to do something different. So
+
+145
+00:04:51.520 --> 00:04:55.680
+what do we do here? Simple. We use
+
+146
+00:04:53.759 --> 00:04:57.199
+algebra. foiling and canceling out
+
+147
+00:04:55.680 --> 00:04:59.600
+expressions, multiplying by the
+
+148
+00:04:57.199 --> 00:05:00.880
+conjugate, factoring, you choose really.
+
+149
+00:04:59.600 --> 00:05:02.400
+As long as you can manipulate the
+
+150
+00:05:00.880 --> 00:05:03.680
+function to where the denominator won't
+
+151
+00:05:02.400 --> 00:05:05.360
+equal zero when you do direct
+
+152
+00:05:03.680 --> 00:05:07.199
+substitution, then it really doesn't
+
+153
+00:05:05.360 --> 00:05:08.800
+matter what you do. Obviously, if
+
+154
+00:05:07.199 --> 00:05:10.240
+nothing works and everything you do
+
+155
+00:05:08.800 --> 00:05:11.919
+seems to only cause a zero in the
+
+156
+00:05:10.240 --> 00:05:13.840
+denominator, then the likely answer is
+
+157
+00:05:11.919 --> 00:05:15.440
+that the limit just doesn't exist. Oh,
+
+158
+00:05:13.840 --> 00:05:17.120
+and there are also these identities you
+
+159
+00:05:15.440 --> 00:05:18.960
+can use for limits. Just remember that
+
+160
+00:05:17.120 --> 00:05:20.960
+these are only able to be used if the
+
+161
+00:05:18.960 --> 00:05:22.560
+limit approaches zero. Let's remember
+
+162
+00:05:20.960 --> 00:05:24.400
+also that if the limit approaches
+
+163
+00:05:22.560 --> 00:05:26.560
+infinity or negative infinity, we have
+
+164
+00:05:24.400 --> 00:05:28.960
+handydandy tricks for polomial functions
+
+165
+00:05:26.560 --> 00:05:30.720
+in my pre-calculus 1.6 video and the
+
+166
+00:05:28.960 --> 00:05:33.360
+handydandy tricks for rational functions
+
+167
+00:05:30.720 --> 00:05:34.720
+in my pre-calculus 1.7 video. Those
+
+168
+00:05:33.360 --> 00:05:36.240
+videos will both be linked in the
+
+169
+00:05:34.720 --> 00:05:38.000
+description. Now, let me introduce you
+
+170
+00:05:36.240 --> 00:05:40.000
+to something that sounds and looks a lot
+
+171
+00:05:38.000 --> 00:05:42.160
+more complex than it actually is. The
+
+172
+00:05:40.000 --> 00:05:43.840
+squeeze theorem. The best way I think I
+
+173
+00:05:42.160 --> 00:05:46.479
+can explain this is with an example.
+
+174
+00:05:43.840 --> 00:05:50.479
+This one, the limit as x approaches 0 of
+
+175
+00:05:46.479 --> 00:05:52.720
+x * s of 1 /x. Let's ignore the x for a
+
+176
+00:05:50.479 --> 00:05:55.199
+second. From trigonometry, I know that a
+
+177
+00:05:52.720 --> 00:05:58.080
+sign graph falls between the range of -1
+
+178
+00:05:55.199 --> 00:05:59.759
+and 1. Next, if we bring the x back, we
+
+179
+00:05:58.080 --> 00:06:02.960
+now have to multiply the outer numbers
+
+180
+00:05:59.759 --> 00:06:04.479
+by x. So, we get x and negx. So, now
+
+181
+00:06:02.960 --> 00:06:06.240
+let's write them in their proper limit
+
+182
+00:06:04.479 --> 00:06:07.919
+form, which we do by simply adding on
+
+183
+00:06:06.240 --> 00:06:09.600
+the limit as x approaches zero to each
+
+184
+00:06:07.919 --> 00:06:11.039
+of them. Obviously, we can't do direct
+
+185
+00:06:09.600 --> 00:06:13.199
+substitution on the middle one because
+
+186
+00:06:11.039 --> 00:06:15.440
+we'd get zero in the denominator. But we
+
+187
+00:06:13.199 --> 00:06:17.440
+can do it to the outer ones. For both of
+
+188
+00:06:15.440 --> 00:06:19.600
+them, we'd simply get zero. So here is
+
+189
+00:06:17.440 --> 00:06:21.440
+where our squeeze theorem comes in. The
+
+190
+00:06:19.600 --> 00:06:23.280
+idea is that these numbers are squeezing
+
+191
+00:06:21.440 --> 00:06:25.600
+the limit in the middle. If these two
+
+192
+00:06:23.280 --> 00:06:27.759
+numbers are the same, then simply put
+
+193
+00:06:25.600 --> 00:06:29.919
+the answer is whatever the number is or
+
+194
+00:06:27.759 --> 00:06:31.680
+in this case zero. If the numbers are
+
+195
+00:06:29.919 --> 00:06:33.680
+not the same, then the squeeze theorem
+
+196
+00:06:31.680 --> 00:06:35.039
+cannot be used to find the limit. So say
+
+197
+00:06:33.680 --> 00:06:36.400
+that you were given functions to solve
+
+198
+00:06:35.039 --> 00:06:38.000
+for the outer parts of the squeeze
+
+199
+00:06:36.400 --> 00:06:39.520
+theorem to find an inner function's
+
+200
+00:06:38.000 --> 00:06:41.280
+limit. If I were to solve those
+
+201
+00:06:39.520 --> 00:06:43.280
+functions and get different answers,
+
+202
+00:06:41.280 --> 00:06:44.960
+then simply put, I cannot use the
+
+203
+00:06:43.280 --> 00:06:46.880
+squeeze theorem to find the limit. All
+
+204
+00:06:44.960 --> 00:06:48.240
+right, congratulations. We've now
+
+205
+00:06:46.880 --> 00:06:49.600
+finished with the limits part of the
+
+206
+00:06:48.240 --> 00:06:51.759
+video and are moving on to the
+
+207
+00:06:49.600 --> 00:06:53.600
+continuity part. So the basic definition
+
+208
+00:06:51.759 --> 00:06:55.840
+that teachers give for continuity is
+
+209
+00:06:53.600 --> 00:06:58.000
+that a graph is continuous if you can
+
+210
+00:06:55.840 --> 00:06:59.599
+with your pencil trace the entire graph
+
+211
+00:06:58.000 --> 00:07:02.400
+without having to lift it. Meaning there
+
+212
+00:06:59.599 --> 00:07:04.000
+is no breaks, jumps or holes. First
+
+213
+00:07:02.400 --> 00:07:05.840
+let's talk about the three types of
+
+214
+00:07:04.000 --> 00:07:07.759
+discontinuities. They are removable
+
+215
+00:07:05.840 --> 00:07:10.240
+discontinuity which is just holes,
+
+216
+00:07:07.759 --> 00:07:11.840
+vertical asmtote discontinuity and jump
+
+217
+00:07:10.240 --> 00:07:13.120
+discontinuity. I think holes and
+
+218
+00:07:11.840 --> 00:07:14.639
+vertical asmmptotes are pretty simple
+
+219
+00:07:13.120 --> 00:07:16.160
+for you to remember how to find. They
+
+220
+00:07:14.639 --> 00:07:17.840
+mostly will all come from rational
+
+221
+00:07:16.160 --> 00:07:19.599
+functions. Holes happen when you cancel
+
+222
+00:07:17.840 --> 00:07:20.720
+something out. And vertical asmmptotes
+
+223
+00:07:19.599 --> 00:07:22.319
+happen when functions are in the
+
+224
+00:07:20.720 --> 00:07:24.080
+denominator that don't cancel out.
+
+225
+00:07:22.319 --> 00:07:25.680
+Vertical asmmptotes can also appear in
+
+226
+00:07:24.080 --> 00:07:26.960
+tangent functions if you remember. And
+
+227
+00:07:25.680 --> 00:07:29.039
+if you want to know how to calculate
+
+228
+00:07:26.960 --> 00:07:31.199
+them, go watch my pre-calculus video
+
+229
+00:07:29.039 --> 00:07:33.199
+link in the description. And finally, a
+
+230
+00:07:31.199 --> 00:07:34.960
+jump discontinuity is actually pretty
+
+231
+00:07:33.199 --> 00:07:36.960
+simple. This is what it looks like on a
+
+232
+00:07:34.960 --> 00:07:38.800
+graph. Notice how one function jumps to
+
+233
+00:07:36.960 --> 00:07:40.639
+the other one. The way to find this in a
+
+234
+00:07:38.800 --> 00:07:42.400
+peiewise equation is by plugging in the
+
+235
+00:07:40.639 --> 00:07:43.840
+values in the inequalities. And if they
+
+236
+00:07:42.400 --> 00:07:45.840
+don't match, there is a jump
+
+237
+00:07:43.840 --> 00:07:47.759
+discontinuity. Now I want to describe
+
+238
+00:07:45.840 --> 00:07:49.680
+the math definition for continuity at
+
+239
+00:07:47.759 --> 00:07:51.680
+one point. Three things have to be true
+
+240
+00:07:49.680 --> 00:07:54.639
+for one point to be continuous at the
+
+241
+00:07:51.680 --> 00:07:57.039
+point x= c. f of c has to be defined.
+
+242
+00:07:54.639 --> 00:07:59.039
+The limit as x approaches c of f ofx has
+
+243
+00:07:57.039 --> 00:08:01.680
+to exist. And the limit as x approaches
+
+244
+00:07:59.039 --> 00:08:04.000
+c of f ofx has to equal f of c. Let's
+
+245
+00:08:01.680 --> 00:08:06.720
+try an example. This peace-wise function
+
+246
+00:08:04.000 --> 00:08:08.720
+is it continuous at c= 1. First of all,
+
+247
+00:08:06.720 --> 00:08:10.560
+let's see if f of one is defined. Yes,
+
+248
+00:08:08.720 --> 00:08:12.240
+it is because it would equal one. Okay.
+
+249
+00:08:10.560 --> 00:08:14.319
+Next, let's check the second one. The
+
+250
+00:08:12.240 --> 00:08:16.160
+limit as x approaches one. The way we do
+
+251
+00:08:14.319 --> 00:08:18.000
+this is by finding the left and right
+
+252
+00:08:16.160 --> 00:08:19.759
+limits. As x approaches one from the
+
+253
+00:08:18.000 --> 00:08:21.680
+right side, we would plug in one for
+
+254
+00:08:19.759 --> 00:08:23.680
+this function and simplifying we'd get
+
+255
+00:08:21.680 --> 00:08:26.479
+one. Then for the left limit, we
+
+256
+00:08:23.680 --> 00:08:28.479
+simplify this function and also get one.
+
+257
+00:08:26.479 --> 00:08:30.560
+Because those two match, the limit does
+
+258
+00:08:28.479 --> 00:08:32.240
+in fact exist. Okay, so for the third
+
+259
+00:08:30.560 --> 00:08:34.560
+one, now we need to see if the limit is
+
+260
+00:08:32.240 --> 00:08:36.959
+equal to f of 1. And yes, it is because
+
+261
+00:08:34.560 --> 00:08:39.519
+f of 1 is equal to 1. So yes, this
+
+262
+00:08:36.959 --> 00:08:41.200
+function is continuous at x= 1. But what
+
+263
+00:08:39.519 --> 00:08:43.120
+if we transition to finding continuity
+
+264
+00:08:41.200 --> 00:08:44.800
+over an interval instead of just at one
+
+265
+00:08:43.120 --> 00:08:46.640
+point? This is where you kind of
+
+266
+00:08:44.800 --> 00:08:48.160
+parallel it with finding domains of
+
+267
+00:08:46.640 --> 00:08:49.680
+functions. Now, I'm going to trust that
+
+268
+00:08:48.160 --> 00:08:51.519
+you know how to find the domain of most
+
+269
+00:08:49.680 --> 00:08:53.519
+functions as you literally are in
+
+270
+00:08:51.519 --> 00:08:55.680
+calculus. However, I will just offer
+
+271
+00:08:53.519 --> 00:08:57.680
+some friendly advice. Polomial,
+
+272
+00:08:55.680 --> 00:08:59.760
+rational, power, exponential,
+
+273
+00:08:57.680 --> 00:09:01.440
+logarithmic, and trig functions are all
+
+274
+00:08:59.760 --> 00:09:03.279
+continuous in their domain. Just
+
+275
+00:09:01.440 --> 00:09:05.279
+remember that rational and log functions
+
+276
+00:09:03.279 --> 00:09:07.200
+have domain holes because of asmmptotes
+
+277
+00:09:05.279 --> 00:09:08.720
+along with some trig functions. That
+
+278
+00:09:07.200 --> 00:09:10.160
+means if you find the domain of these
+
+279
+00:09:08.720 --> 00:09:12.480
+functions which I hope you already know
+
+280
+00:09:10.160 --> 00:09:14.480
+how to the functions will be continuous
+
+281
+00:09:12.480 --> 00:09:16.399
+with its domain. So that means in most
+
+282
+00:09:14.480 --> 00:09:18.240
+of these questions the answer is simply
+
+283
+00:09:16.399 --> 00:09:20.399
+the domain. The only place this gets
+
+284
+00:09:18.240 --> 00:09:22.399
+muddy is with peacewise functions just
+
+285
+00:09:20.399 --> 00:09:24.240
+like this. Obviously these two functions
+
+286
+00:09:22.399 --> 00:09:26.320
+on their own are polomials which would
+
+287
+00:09:24.240 --> 00:09:28.000
+both have domains and continuities of
+
+288
+00:09:26.320 --> 00:09:29.600
+all real numbers. But let's try
+
+289
+00:09:28.000 --> 00:09:32.640
+something here and plug in one to each
+
+290
+00:09:29.600 --> 00:09:34.080
+function. Oh boy, one is one and one is
+
+291
+00:09:32.640 --> 00:09:36.800
+two. That means there is a jump
+
+292
+00:09:34.080 --> 00:09:38.240
+discontinuity at x= 1. So the way we'd
+
+293
+00:09:36.800 --> 00:09:40.080
+write the intervals where the function
+
+294
+00:09:38.240 --> 00:09:42.480
+is continuous on is by the interval
+
+295
+00:09:40.080 --> 00:09:45.120
+notation we do for domainative infinity
+
+296
+00:09:42.480 --> 00:09:47.120
+to 1 with a union and 1 toative
+
+297
+00:09:45.120 --> 00:09:49.680
+infinity. We don't use brackets anywhere
+
+298
+00:09:47.120 --> 00:09:51.680
+here because we know at the point x= 1
+
+299
+00:09:49.680 --> 00:09:53.600
+it is discontinuous. Now let's say we
+
+300
+00:09:51.680 --> 00:09:57.600
+have a question like this. Let f be a
+
+301
+00:09:53.600 --> 00:09:59.680
+function defined by fx= x^2 - 1 / x -1.
+
+302
+00:09:57.600 --> 00:10:01.839
+What is the value of f of 1 if x is
+
+303
+00:09:59.680 --> 00:10:03.519
+continuous at x= 1? So your immediate
+
+304
+00:10:01.839 --> 00:10:05.600
+thought here is to expand the numerator,
+
+305
+00:10:03.519 --> 00:10:07.760
+cancel out the xus one and say there is
+
+306
+00:10:05.600 --> 00:10:10.399
+a whole or removable discontinuity and
+
+307
+00:10:07.760 --> 00:10:12.240
+be done and say f of one isn't defined.
+
+308
+00:10:10.399 --> 00:10:13.680
+But that is not what the question asked.
+
+309
+00:10:12.240 --> 00:10:15.600
+The question essentially created a
+
+310
+00:10:13.680 --> 00:10:18.000
+separate realm where the function is
+
+311
+00:10:15.600 --> 00:10:20.160
+continuous at x= 1. So let's just
+
+312
+00:10:18.000 --> 00:10:22.560
+algebra this out. We cancel out the x
+
+313
+00:10:20.160 --> 00:10:24.800
+-1's. Then we plug in one for x in the
+
+314
+00:10:22.560 --> 00:10:26.800
+function and we get 2 is equal to f of
+
+315
+00:10:24.800 --> 00:10:28.480
+1. And that is our answer. And last but
+
+316
+00:10:26.800 --> 00:10:30.160
+not least, I want to introduce you to a
+
+317
+00:10:28.480 --> 00:10:32.480
+theorem you will likely never use, but
+
+318
+00:10:30.160 --> 00:10:34.240
+the CED forces me to teach. If your
+
+319
+00:10:32.480 --> 00:10:36.320
+function is continuous on the interval A
+
+320
+00:10:34.240 --> 00:10:38.480
+to B, and your target number K is
+
+321
+00:10:36.320 --> 00:10:40.640
+between the two endpoint values f of A
+
+322
+00:10:38.480 --> 00:10:43.279
+and F of B, then the function must have
+
+323
+00:10:40.640 --> 00:10:45.360
+the value of K at least once for some X
+
+324
+00:10:43.279 --> 00:10:47.279
+between A and B. This is known as the
+
+325
+00:10:45.360 --> 00:10:49.440
+intermediate value theorem, and it has
+
+326
+00:10:47.279 --> 00:10:51.120
+three parts to use it. Number one, you
+
+327
+00:10:49.440 --> 00:10:53.360
+must confirm the function is continuous
+
+328
+00:10:51.120 --> 00:10:55.440
+on the interval a to b. Number two, you
+
+329
+00:10:53.360 --> 00:10:57.360
+must make sure that f of a doesn't equal
+
+330
+00:10:55.440 --> 00:11:00.160
+f of b. And number three, you must check
+
+331
+00:10:57.360 --> 00:11:02.000
+that k is between f of a and f of b. If
+
+332
+00:11:00.160 --> 00:11:04.160
+all of those are true, then the number k
+
+333
+00:11:02.000 --> 00:11:06.800
+will exist within the interval a to b.
+
+334
+00:11:04.160 --> 00:11:08.640
+And there it is. This unit is done. Not
+
+335
+00:11:06.800 --> 00:11:09.920
+too hard, right? I hope this course
+
+336
+00:11:08.640 --> 00:11:11.279
+doesn't get too difficult. But whoa,
+
+337
+00:11:09.920 --> 00:11:13.040
+whoa, whoa. Don't click off the video
+
+338
+00:11:11.279 --> 00:11:14.720
+yet. There's a ritual I like to do at
+
+339
+00:11:13.040 --> 00:11:16.640
+the end of most all of my unit review
+
+340
+00:11:14.720 --> 00:11:18.560
+videos on this channel, and that is
+
+341
+00:11:16.640 --> 00:11:20.560
+asking you to watch this video and
+
+342
+00:11:18.560 --> 00:11:22.160
+subscribe to this channel. It is my non-
+
+343
+00:11:20.560 --> 00:11:24.320
+educational channel for when I wish to
+
+344
+00:11:22.160 --> 00:11:28.700
+move away from all this AP stuff. So,
+
+345
+00:11:24.320 --> 00:11:34.010
+please just subscribe for me, man.
+
+346
+00:11:28.700 --> 00:11:34.010
+[Music]

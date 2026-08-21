@@ -30,7 +30,8 @@ export type StoredGeneration = {
 export async function saveImportedVideo(
   value: VideoImportResponse,
 ): Promise<void> {
-  await AsyncStorage.setItem(keyFor(value.video.id), JSON.stringify(value));
+  const parsed = VideoImportResponseSchema.parse(value);
+  await AsyncStorage.setItem(keyFor(parsed.video.id), JSON.stringify(parsed));
 }
 
 export async function loadImportedVideo(

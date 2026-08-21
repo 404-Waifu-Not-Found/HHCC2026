@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "ClipQuest Local AI",
+  "version": "0.4.2",
+  "description": "Reads YouTube captions and generates ClipQuest quizzes locally with your own DeepSeek API key.",
+  "permissions": ["downloads", "scripting", "storage", "tabs"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://youtube.com/*",
+    "https://clipquest.ccwu.cc/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://api.deepseek.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://clipquest.ccwu.cc/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["clipquest-bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/watch*",
+        "https://youtube.com/watch*"
+      ],
+      "js": ["youtube-page.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/watch*",
+        "https://youtube.com/watch*"
+      ],
+      "css": ["youtube-quick-open.css"],
+      "js": ["caption-core.js", "youtube-content.js", "youtube-quick-open.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon-48.png"],
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"]
+    }
+  ],
+  "action": {
+    "default_title": "ClipQuest Local AI",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

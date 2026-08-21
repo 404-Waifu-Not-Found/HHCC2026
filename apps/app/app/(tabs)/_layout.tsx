@@ -1,16 +1,16 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Redirect, Tabs } from "expo-router";
 import type { ComponentProps } from "react";
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
 import { authClient } from "../../src/lib/auth-client";
+import { BrandLockup } from "../../src/components/BrandLockup";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import {
   borders,
@@ -23,6 +23,11 @@ import {
   spacing,
   typography,
 } from "../../src/theme/tokens";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionView,
+} from "../../src/motion/Motion";
 
 type LearningTabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
@@ -42,7 +47,7 @@ export default function TabLayout() {
     );
   }
 
-  if (!data) return <Redirect href="/(auth)/welcome" />;
+  if (!data) return <Redirect href="/(auth)/sign-in" />;
 
   return (
     <Tabs
@@ -60,11 +65,7 @@ export default function TabLayout() {
         options={{
           title: t("home"),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="home-variant"
-              color={color}
-              size={size}
-            />
+            <VoxelIcon name="home" color={color} size={size} />
           ),
         }}
       />
@@ -73,11 +74,7 @@ export default function TabLayout() {
         options={{
           title: t("library"),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="bookshelf"
-              color={color}
-              size={size}
-            />
+            <VoxelIcon name="library" color={color} size={size} />
           ),
         }}
       />
@@ -86,7 +83,7 @@ export default function TabLayout() {
         options={{
           title: t("settings"),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={size} />
+            <VoxelIcon name="settings" color={color} size={size} />
           ),
         }}
       />
@@ -100,7 +97,7 @@ function LearningTabBar({
   navigation,
   insets,
 }: LearningTabBarProps) {
-  const { reduceMotion, theme } = useSettings();
+  const { theme } = useSettings();
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
 
@@ -126,33 +123,7 @@ function LearningTabBar({
             },
       ]}
     >
-      {desktop ? (
-        <View
-          style={styles.brand}
-          accessible
-          accessibilityRole="text"
-          accessibilityLabel="ClipQuest"
-        >
-          <View
-            style={[
-              styles.brandMark,
-              {
-                backgroundColor: theme.primarySoft,
-                borderColor: theme.primary,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="movie-open-play"
-              size={25}
-              color={theme.primary}
-            />
-          </View>
-          <Text style={[styles.brandName, { color: theme.text }]}>
-            ClipQuest
-          </Text>
-        </View>
-      ) : null}
+      {desktop ? <BrandLockup size="compact" style={styles.brand} /> : null}
 
       <View
         style={[
@@ -188,7 +159,7 @@ function LearningTabBar({
           };
 
           return (
-            <Pressable
+            <MotionPressable
               key={route.key}
               accessibilityRole="tab"
               accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
@@ -206,7 +177,7 @@ function LearningTabBar({
                       ? theme.surfaceSunken
                       : "transparent",
                   borderColor: selected ? theme.primary : "transparent",
-                  transform: [{ translateY: pressed && !reduceMotion ? 2 : 0 }],
+                  opacity: pressed ? 0.76 : 1,
                 },
                 Platform.OS === "web" && {
                   transitionDuration: `${motion.fast}ms`,
@@ -215,11 +186,18 @@ function LearningTabBar({
                 },
               ]}
             >
-              {options.tabBarIcon?.({
-                focused: selected,
-                color,
-                size: desktop ? 27 : 25,
-              })}
+              <FeedbackMotion
+                signal={selected ? route.key : false}
+                kind="attention"
+              >
+                <MotionView key={selected ? "selected" : "idle"} preset="pop">
+                  {options.tabBarIcon?.({
+                    focused: selected,
+                    color,
+                    size: desktop ? 27 : 25,
+                  })}
+                </MotionView>
+              </FeedbackMotion>
               <Text
                 numberOfLines={1}
                 style={[
@@ -230,7 +208,7 @@ function LearningTabBar({
               >
                 {label}
               </Text>
-            </Pressable>
+            </MotionPressable>
           );
         })}
       </View>
@@ -262,24 +240,8 @@ const styles = StyleSheet.create({
   },
   brand: {
     minHeight: 58,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
     paddingHorizontal: spacing[2],
     marginBottom: spacing[8],
-  },
-  brandMark: {
-    width: controls.iconTarget,
-    height: controls.iconTarget,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: borders.standard,
-    borderRadius: radii.medium,
-  },
-  brandName: {
-    fontFamily: typography.display,
-    fontSize: typography.size.titleSmall,
-    lineHeight: typography.lineHeight.titleSmall,
   },
   items: {
     minWidth: 0,

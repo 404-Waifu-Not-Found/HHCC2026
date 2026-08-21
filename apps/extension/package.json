@@ -1,0 +1,14 @@
+{
+  "name": "@clipquest/extension",
+  "version": "0.4.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:live": "node test/live-browser-smoke.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}

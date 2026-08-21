@@ -1,6 +1,7 @@
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { controls, motion, radii } from "../theme/tokens";
+import { borders, controls, radii } from "../theme/tokens";
+import { MotionProgressFill } from "../motion/Motion";
 
 export function ProgressBar({
   progress,
@@ -13,7 +14,7 @@ export function ProgressBar({
   tone?: "action" | "primary" | "success" | "secondary";
   compact?: boolean;
 }) {
-  const { theme, reduceMotion } = useSettings();
+  const { theme } = useSettings();
   const value = Math.max(0, Math.min(1, progress));
   const fillColor =
     tone === "primary"
@@ -32,23 +33,16 @@ export function ProgressBar({
       style={[
         styles.track,
         compact && styles.trackCompact,
-        { backgroundColor: theme.surfaceSunken },
+        { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
       ]}
     >
-      <View
-        style={[
-          styles.fill,
-          { width: `${value * 100}%`, backgroundColor: fillColor },
-          Platform.OS === "web" && !reduceMotion
-            ? {
-                transitionDuration: `${motion.route}ms`,
-                transitionProperty: "width",
-              }
-            : null,
-        ]}
+      <MotionProgressFill
+        progress={value}
+        color={fillColor}
+        style={styles.fill}
       >
         <View style={styles.highlight} />
-      </View>
+      </MotionProgressFill>
     </View>
   );
 }
@@ -57,6 +51,7 @@ const styles = StyleSheet.create({
   track: {
     height: controls.progressHeight,
     overflow: "hidden",
+    borderWidth: borders.hairline,
     borderRadius: radii.pill,
   },
   trackCompact: {

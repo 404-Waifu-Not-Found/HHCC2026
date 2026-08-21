@@ -1,5 +1,5 @@
 import type { AdminMeResponse } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../components/VoxelIcon";
 import { Redirect, Slot, router, usePathname } from "expo-router";
 import {
   createContext,
@@ -12,7 +12,6 @@ import {
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +19,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BrandLockup } from "../components/BrandLockup";
 import { EmptyState } from "../components/EmptyState";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
@@ -38,24 +38,30 @@ import {
 } from "../theme/tokens";
 import { getAdminMe } from "./api";
 import { useAdminCopy } from "./copy";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionSkeleton,
+  MotionView,
+} from "../motion/Motion";
 
 const AdminContext = createContext<AdminMeResponse | null>(null);
 
 const navigation = [
-  { href: "/admin", label: "overview", icon: "view-dashboard-outline" },
-  { href: "/admin/users", label: "users", icon: "account-group-outline" },
-  { href: "/admin/jobs", label: "jobs", icon: "progress-clock" },
+  { href: "/admin", label: "overview", icon: "operations" },
+  { href: "/admin/users", label: "users", icon: "people" },
+  { href: "/admin/jobs", label: "jobs", icon: "processing" },
   {
     href: "/admin/lessons",
     label: "lessons",
-    icon: "book-open-page-variant-outline",
+    icon: "lessons",
   },
   {
     href: "/admin/audit",
     label: "audit",
-    icon: "clipboard-text-clock-outline",
+    icon: "audit",
   },
-  { href: "/admin/system", label: "system", icon: "server-outline" },
+  { href: "/admin/system", label: "system", icon: "system" },
 ] as const;
 
 export function useAdminSession(): AdminMeResponse {
@@ -98,7 +104,7 @@ export function AdminShell() {
     return (
       <Screen contentWidth="reading" centered>
         <EmptyState
-          icon={denied ? "shield-lock-outline" : "cloud-alert-outline"}
+          icon={denied ? "privacy" : "warning"}
           title={denied ? copy.accessDenied : copy.loadFailed}
           description={
             denied ? copy.accessDeniedBody : (error?.message ?? copy.loadFailed)
@@ -129,7 +135,8 @@ function AdminLoading() {
   const { theme } = useSettings();
   const copy = useAdminCopy();
   return (
-    <View
+    <MotionView
+      preset="fade"
       style={[styles.loading, { backgroundColor: theme.background }]}
       accessibilityRole="progressbar"
     >
@@ -137,7 +144,11 @@ function AdminLoading() {
       <Text style={[styles.loadingText, { color: theme.textMuted }]}>
         {copy.loading}
       </Text>
-    </View>
+      <MotionSkeleton
+        color={theme.primarySoft}
+        style={styles.loadingSkeleton}
+      />
+    </MotionView>
   );
 }
 
@@ -223,18 +234,18 @@ function AdminMobileHeader({ me }: { me: AdminMeResponse }) {
     >
       <View style={styles.mobileTopRow}>
         <BrandBlock compact />
-        <Pressable
+        <MotionPressable
           accessibilityRole="button"
           accessibilityLabel={copy.returnToApp}
           onPress={() => router.replace("/(tabs)")}
           style={({ pressed }) => [
             styles.exitButton,
             { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
-            pressed && styles.exitPressed,
+            { opacity: pressed ? 0.76 : 1 },
           ]}
         >
-          <MaterialCommunityIcons name="close" size={23} color={theme.text} />
-        </Pressable>
+          <VoxelIcon name="close" size={23} color={theme.text} />
+        </MotionPressable>
       </View>
       <ScrollView
         horizontal
@@ -253,31 +264,14 @@ function AdminMobileHeader({ me }: { me: AdminMeResponse }) {
 }
 
 function BrandBlock({ compact = false }: { compact?: boolean }) {
-  const { theme } = useSettings();
   const copy = useAdminCopy();
   return (
     <View style={[styles.brand, compact && styles.brandCompact]}>
-      <View
-        style={[
-          styles.brandMark,
-          {
-            backgroundColor: theme.actionSoft,
-            borderColor: theme.actionPressed,
-          },
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="shield-star-outline"
-          size={compact ? 22 : 26}
-          color={theme.text}
-        />
-      </View>
-      <View style={styles.brandCopy}>
-        <Text style={[styles.brandName, { color: theme.text }]}>ClipQuest</Text>
-        <Text style={[styles.brandSection, { color: theme.primary }]}>
-          {copy.operations}
-        </Text>
-      </View>
+      <BrandLockup
+        descriptor={copy.operations}
+        size="compact"
+        style={styles.brandLockup}
+      />
     </View>
   );
 }
@@ -290,16 +284,16 @@ function AdminNavItem({
 }: {
   href: string;
   label: keyof ReturnType<typeof useAdminCopy>;
-  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: ComponentProps<typeof VoxelIcon>["name"];
   compact?: boolean;
 }) {
   const pathname = usePathname();
-  const { reduceMotion, theme } = useSettings();
+  const { theme } = useSettings();
   const copy = useAdminCopy();
   const selected =
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
   return (
-    <Pressable
+    <MotionPressable
       accessibilityRole="tab"
       accessibilityState={{ selected }}
       onPress={() => router.push(href as never)}
@@ -312,7 +306,7 @@ function AdminNavItem({
               ? theme.surfaceSunken
               : "transparent",
           borderColor: selected ? theme.primary : "transparent",
-          transform: [{ translateY: pressed && !reduceMotion ? 2 : 0 }],
+          opacity: pressed ? 0.76 : 1,
         },
         Platform.OS === "web" && {
           transitionDuration: `${motion.fast}ms`,
@@ -320,11 +314,15 @@ function AdminNavItem({
         },
       ]}
     >
-      <MaterialCommunityIcons
-        name={icon}
-        size={compact ? 20 : 23}
-        color={selected ? theme.primary : theme.textMuted}
-      />
+      <FeedbackMotion signal={selected ? href : false} kind="attention">
+        <MotionView key={selected ? "selected" : "idle"} preset="pop">
+          <VoxelIcon
+            name={icon}
+            size={compact ? 20 : 23}
+            color={selected ? theme.primary : theme.textMuted}
+          />
+        </MotionView>
+      </FeedbackMotion>
       <Text
         numberOfLines={1}
         style={[
@@ -334,7 +332,7 @@ function AdminNavItem({
       >
         {copy[label]}
       </Text>
-    </Pressable>
+    </MotionPressable>
   );
 }
 
@@ -362,6 +360,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.body,
   },
+  loadingSkeleton: {
+    width: 220,
+    height: 10,
+    borderRadius: radii.pill,
+  },
   sidebar: {
     width: layout.desktopSidebar + 24,
     borderRightWidth: borders.hairline,
@@ -371,33 +374,10 @@ const styles = StyleSheet.create({
     gap: spacing[5],
   },
   brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
     paddingHorizontal: spacing[2],
   },
   brandCompact: { paddingHorizontal: 0 },
-  brandMark: {
-    width: 46,
-    height: 46,
-    borderRadius: radii.large,
-    borderWidth: borders.standard,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brandCopy: { minWidth: 0 },
-  brandName: {
-    fontFamily: typography.displayMedium,
-    fontSize: 21,
-    lineHeight: 24,
-  },
-  brandSection: {
-    fontFamily: typography.bodyBold,
-    fontSize: 12,
-    lineHeight: 16,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
+  brandLockup: { maxWidth: "100%" },
   sidebarNav: { flex: 1, gap: spacing[2] },
   navItem: {
     minHeight: 50,
@@ -477,7 +457,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  exitPressed: { transform: [{ translateY: 2 }] },
   mobileNav: { gap: spacing[2], paddingVertical: spacing[2] },
   mobileRole: {
     fontFamily: typography.bodyMedium,

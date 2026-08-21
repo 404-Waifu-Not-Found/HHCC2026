@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export * from "./admin";
 
-export const SourceSchema = z.enum(["youtube", "bilibili"]);
+export const SourceSchema = z.literal("youtube");
 export type VideoSource = z.infer<typeof SourceSchema>;
 
 export const LanguageSchema = z.enum(["en", "zh-CN"]);
@@ -217,7 +217,7 @@ const httpUrl = z
   .refine(
     (value) => value.startsWith("https://") || value.startsWith("http://"),
     {
-      message: "Only HTTP(S) video links are supported",
+      message: "Only HTTP(S) YouTube links are supported",
     },
   );
 
@@ -304,176 +304,13 @@ export const MediaResolveResponseSchema = z.object({
 });
 export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 
-export const TranscriptUploadRequestSchema = z
-  .object({
-    videoId: z.string().uuid(),
-    language: z.string().min(2).max(35),
-    origin: z.enum(["captions", "device_whisper", "browser_tab_capture"]),
-    acquisition: z
-      .enum([
-        "server_captions",
-        "youtube_signed_captions",
-        "youtube_text_provider",
-        "youtube_browser_extension",
-        "device_whisper",
-      ])
-      .optional(),
-    completeness: TranscriptCompletenessSchema,
-    segments: z
-      .array(TranscriptSegmentSchema)
-      .min(1)
-      .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
-    quizLanguage: LanguageSchema,
-    sessionLength: SessionLengthSchema,
-    watched: z.boolean(),
-    questionTypes: QuizQuestionTypesSchema.default(DEFAULT_QUIZ_QUESTION_TYPES),
-  })
-  .superRefine((value, context) => {
-    if (
-      !transcriptCompletenessMatches(
-        value.completeness,
-        value.segments,
-        value.completeness.expectedDurationMs / 1_000,
-      )
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["completeness"],
-        message: "The transcript did not match its completeness manifest.",
-      });
-    }
-  });
-export type TranscriptUploadRequest = z.infer<
-  typeof TranscriptUploadRequestSchema
->;
-
-export const TranscriptUploadResponseSchema = z.object({
-  jobId: z.string().uuid(),
-  stage: GenerationStageSchema,
-});
-export type TranscriptUploadResponse = z.infer<
-  typeof TranscriptUploadResponseSchema
->;
-
-export const GenerationStatusSchema = z.object({
-  jobId: z.string().uuid(),
-  stage: GenerationStageSchema,
-  progress: z.number().min(0).max(1),
-  quizId: z.string().uuid().nullable(),
-  error: z
-    .object({
-      code: z.string(),
-      message: z.string(),
-    })
-    .nullable(),
-});
-export type GenerationStatus = z.infer<typeof GenerationStatusSchema>;
-
-export const ConceptSchema = z
-  .object({
-    id: z.string().min(1).max(80),
-    title: z.string().min(1).max(160),
-    summary: z.string().min(1).max(600),
-    evidenceSegmentIds: z.array(z.string()).min(1),
-  })
-  .strict();
-export type Concept = z.infer<typeof ConceptSchema>;
-
-const QuestionBaseSchema = z
-  .object({
-    id: z.string().min(1).max(80),
-    conceptId: z.string().min(1).max(80),
-    prompt: z.string().min(4).max(1_200),
-    explanation: z.string().min(4).max(600),
-    evidenceSegmentIds: z
-      .array(z.string())
-      .min(1)
-      .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
-    difficulty: z.number().int().min(1).max(5),
-    reformulatedPrompt: z.string().min(4).max(1_200),
-  })
-  .strict();
-
-export function normalizeQuizOption(value: string): string {
-  return value
-    .normalize("NFKC")
-    .toLocaleLowerCase("en-US")
-    .replace(/[\p{P}\p{S}]+/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export const MultipleChoiceQuestionSchema = QuestionBaseSchema.extend({
-  type: z.literal("multiple_choice"),
-  options: z.array(z.string().trim().min(1).max(500)).length(4),
-  correctAnswer: z.number().int().min(0).max(3),
-}).superRefine((question, context) => {
-  const normalized = question.options.map(normalizeQuizOption);
-  if (normalized.some((option) => !option)) {
-    context.addIssue({
-      code: "custom",
-      path: ["options"],
-      message: "Options must contain meaningful text",
-    });
-  }
-  if (new Set(normalized).size !== normalized.length) {
-    context.addIssue({
-      code: "custom",
-      path: ["options"],
-      message: "Options must be unique after normalization",
-    });
-  }
-});
-
-export const TrueFalseQuestionSchema = QuestionBaseSchema.extend({
-  type: z.literal("true_false"),
-  correctAnswer: z.boolean(),
-});
-
-export const OrderingQuestionSchema = QuestionBaseSchema.extend({
-  type: z.literal("ordering"),
-  items: z.array(z.string().min(1).max(300)).min(2).max(7),
-  correctAnswer: z.array(z.number().int().nonnegative()).min(2).max(7),
-}).refine(
-  (question) =>
-    question.correctAnswer.length === question.items.length &&
-    new Set(question.correctAnswer).size === question.items.length &&
-    question.correctAnswer.every((index) => index < question.items.length),
-  { message: "correctAnswer must be a permutation of item indexes" },
-);
-
-export const ShortAnswerQuestionSchema = QuestionBaseSchema.extend({
-  type: z.literal("short_answer"),
-  rubric: z.object({
-    requiredIdeas: z.array(z.string().min(1).max(300)).min(1).max(6),
-    acceptableAlternatives: z.array(z.string().min(1).max(300)).max(10),
-  }),
-});
-
-export const GeneratedQuestionSchema = z.discriminatedUnion("type", [
-  MultipleChoiceQuestionSchema,
-  TrueFalseQuestionSchema,
-  ShortAnswerQuestionSchema,
-]);
-export type GeneratedQuestion = z.infer<typeof GeneratedQuestionSchema>;
-
-export const QuizGenerationSchema = z
-  .object({
-    educational: z.literal(true),
-    classificationReason: z.string().min(4).max(500),
-    sourceLanguage: z.string().min(2).max(35),
-    primer: z.string().min(20).max(2_000),
-    concepts: z.array(ConceptSchema).min(2).max(20),
-    questions: z.array(GeneratedQuestionSchema).min(5).max(30),
-  })
-  .strict();
-export type QuizGeneration = z.infer<typeof QuizGenerationSchema>;
-
 export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
-export const LOCAL_QUIZ_PIPELINE_VERSION = 5 as const;
+export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 3 as const;
+export const LOCAL_QUIZ_PIPELINE_VERSION = 7 as const;
 export const LOCAL_QUIZ_MODEL = "deepseek-v4-flash" as const;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-v1.0" as const;
-export const LOCAL_QUIZ_VALIDATOR_VERSION = "validator-local-v1.0" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-tool-v2.0" as const;
+export const LOCAL_QUIZ_VALIDATOR_VERSION =
+  "validator-local-tool-v2.0" as const;
 
 export const LocalQuizContextSchema = z
   .object({
@@ -494,19 +331,120 @@ export const LocalQuizContextSchema = z
   .strict();
 export type LocalQuizContext = z.infer<typeof LocalQuizContextSchema>;
 
-export const LocalQuizSubmissionSchema = z
+const LocalQuestionBaseSchema = z
   .object({
-    protocolVersion: z.literal(LOCAL_QUIZ_PROTOCOL_VERSION),
+    id: z.string().regex(/^q(?:[1-9]|1[0-5])$/),
+    concept: z.string().trim().min(1).max(200),
+    question: z.string().trim().min(1).max(700),
+    explanation: z.string().trim().min(1).max(1_500),
+  })
+  .strict();
+
+export const LocalMultipleChoiceQuestionSchema = LocalQuestionBaseSchema.extend(
+  {
+    type: z.literal("multiple_choice"),
+    choices: z.tuple([
+      z.string().trim().min(1).max(500),
+      z.string().trim().min(1).max(500),
+      z.string().trim().min(1).max(500),
+      z.string().trim().min(1).max(500),
+    ]),
+    answerIndex: z.number().int().min(0).max(3),
+    answer: z.string().trim().min(1).max(500),
+  },
+)
+  .strict()
+  .superRefine((question, context) => {
+    const normalizedChoices = question.choices.map((choice) =>
+      choice.trim().toLocaleLowerCase(),
+    );
+    if (new Set(normalizedChoices).size !== 4) {
+      context.addIssue({
+        code: "custom",
+        path: ["choices"],
+        message: "All four choices must be distinct.",
+      });
+    }
+    if (question.answer !== question.choices[question.answerIndex]) {
+      context.addIssue({
+        code: "custom",
+        path: ["answer"],
+        message: "The answer must exactly match the indexed choice.",
+      });
+    }
+  });
+
+export const LocalTrueFalseQuestionSchema = LocalQuestionBaseSchema.extend({
+  type: z.literal("true_false"),
+  answer: z.boolean(),
+  correction: z.string().trim().min(1).max(700),
+}).strict();
+
+export const LocalShortAnswerQuestionSchema = LocalQuestionBaseSchema.extend({
+  type: z.literal("short_answer"),
+  answer: z.string().trim().min(1).max(1_000),
+  rubricIdeas: z.array(z.string().trim().min(1).max(500)).min(1).max(6),
+  acceptableAnswers: z.array(z.string().trim().min(1).max(1_000)).max(8),
+}).strict();
+
+export const LocalConceptQuizQuestionSchema = z.discriminatedUnion("type", [
+  LocalMultipleChoiceQuestionSchema,
+  LocalTrueFalseQuestionSchema,
+  LocalShortAnswerQuestionSchema,
+]);
+export type LocalConceptQuizQuestion = z.infer<
+  typeof LocalConceptQuizQuestionSchema
+>;
+
+export const LocalConceptQuizSchema = z
+  .object({
+    title: z.string().trim().min(1).max(300),
+    questions: z.array(LocalConceptQuizQuestionSchema).min(5).max(15),
+  })
+  .strict()
+  .superRefine((quiz, context) => {
+    if (![5, 10, 15].includes(quiz.questions.length)) {
+      context.addIssue({
+        code: "custom",
+        path: ["questions"],
+        message: "A local quiz must contain exactly 5, 10, or 15 questions.",
+      });
+    }
+    const prompts = new Set<string>();
+    quiz.questions.forEach((question, index) => {
+      if (question.id !== `q${index + 1}`) {
+        context.addIssue({
+          code: "custom",
+          path: ["questions", index, "id"],
+          message: "Question IDs must be ordered q1 through q15.",
+        });
+      }
+      const prompt = question.question.trim().toLocaleLowerCase();
+      if (prompts.has(prompt)) {
+        context.addIssue({
+          code: "custom",
+          path: ["questions", index, "question"],
+          message: "Question prompts must be unique.",
+        });
+      }
+      prompts.add(prompt);
+    });
+  });
+export type LocalConceptQuiz = z.infer<typeof LocalConceptQuizSchema>;
+
+export const LocalConceptQuizResultSchema = z
+  .object({
+    protocolVersion: z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
     pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
     model: z.literal(LOCAL_QUIZ_MODEL),
     reasoningEffort: z.literal("high"),
     promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
     validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
-    transcriptFingerprint: z.string().regex(/^[a-f0-9]{8}$/),
-    generation: QuizGenerationSchema,
+    quiz: LocalConceptQuizSchema,
     metrics: z
       .object({
-        aiCalls: z.literal(1),
+        aiCalls: z.number().int().min(1).max(3),
+        retryCount: z.number().int().min(0).max(2),
         inputTokens: z.number().int().nonnegative(),
         outputTokens: z.number().int().nonnegative(),
         reasoningTokens: z.number().int().nonnegative(),
@@ -515,14 +453,44 @@ export const LocalQuizSubmissionSchema = z
       .strict(),
   })
   .strict();
-export type LocalQuizSubmission = z.infer<typeof LocalQuizSubmissionSchema>;
+export type LocalConceptQuizResult = z.infer<
+  typeof LocalConceptQuizResultSchema
+>;
 
 export const ExtensionQuizImportRequestSchema = z
   .object({
-    transcript: TranscriptUploadRequestSchema,
-    quiz: LocalQuizSubmissionSchema,
+    videoId: z.string().uuid(),
+    quizLanguage: LanguageSchema,
+    sessionLength: SessionLengthSchema,
+    questionTypes: QuizQuestionTypesSchema,
+    watched: z.boolean(),
+    quiz: LocalConceptQuizResultSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const expectedCount = questionLimitForSession(value.sessionLength);
+    if (value.quiz.quiz.questions.length !== expectedCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["quiz", "quiz", "questions"],
+        message: "The quiz count must match the requested session length.",
+      });
+    }
+    const expectedTypes = questionTypePlanForSelection(
+      value.questionTypes,
+      expectedCount,
+    );
+    value.quiz.quiz.questions.forEach((question, index) => {
+      if (question.type !== expectedTypes[index]) {
+        context.addIssue({
+          code: "custom",
+          path: ["quiz", "quiz", "questions", index, "type"],
+          message:
+            "The generated question type must match the requested type plan.",
+        });
+      }
+    });
+  });
 export type ExtensionQuizImportRequest = z.infer<
   typeof ExtensionQuizImportRequestSchema
 >;
@@ -643,18 +611,10 @@ const youtubeHosts = new Set([
   "m.youtube.com",
   "youtu.be",
 ]);
-const bilibiliHosts = new Set([
-  "bilibili.com",
-  "www.bilibili.com",
-  "m.bilibili.com",
-  "b23.tv",
-]);
-
 export function identifyVideoSource(rawUrl: string): VideoSource | null {
   try {
     const host = new URL(rawUrl).hostname.toLowerCase();
     if (youtubeHosts.has(host)) return "youtube";
-    if (bilibiliHosts.has(host)) return "bilibili";
     return null;
   } catch {
     return null;
@@ -663,4 +623,18 @@ export function identifyVideoSource(rawUrl: string): VideoSource | null {
 
 export function questionLimitForSession(length: SessionLength): number {
   return length === "short" ? 5 : length === "medium" ? 10 : 15;
+}
+
+export function questionTypePlanForSelection(
+  types: QuizQuestionType[],
+  questionCount: number,
+): QuizQuestionType[] {
+  const selected = QuizQuestionTypesSchema.parse(types);
+  if (![5, 10, 15].includes(questionCount)) {
+    throw new Error("A question type plan must contain 5, 10, or 15 slots.");
+  }
+  return Array.from(
+    { length: questionCount },
+    (_, index) => selected[index % selected.length]!,
+  );
 }

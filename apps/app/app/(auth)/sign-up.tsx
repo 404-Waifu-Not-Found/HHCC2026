@@ -1,14 +1,25 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { borders, radii, spacing, typography } from "../../src/theme/tokens";
+import {
+  borders,
+  controls,
+  radii,
+  spacing,
+  typography,
+} from "../../src/theme/tokens";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionView,
+} from "../../src/motion/Motion";
 
 export default function SignUpScreen() {
   const { t, theme } = useSettings();
@@ -65,7 +76,7 @@ export default function SignUpScreen() {
       title={t("signUp")}
       subtitle={t("authCrossDevice")}
       footer={
-        <View style={styles.footer}>
+        <View style={styles.accountFooter}>
           <Text style={[styles.footerText, { color: theme.textMuted }]}>
             {t("alreadyHaveAccount")}
           </Text>
@@ -77,6 +88,15 @@ export default function SignUpScreen() {
           </Link>
         </View>
       }
+      cornerAction={
+        <Link
+          testID="try-without-account-link"
+          href="/(auth)/welcome"
+          style={[styles.tryLink, { color: theme.primary }]}
+        >
+          {t("tryWithoutAccount")}
+        </Link>
+      }
     >
       <AppTextInput
         label={t("username")}
@@ -84,10 +104,11 @@ export default function SignUpScreen() {
         value={username}
         onChangeText={setUsername}
         leading={
-          <MaterialCommunityIcons
-            name="account-outline"
+          <VoxelIcon
+            name="registration"
             size={22}
             color={theme.textMuted}
+            style={styles.balancedIcon}
           />
         }
         autoCapitalize="none"
@@ -101,10 +122,11 @@ export default function SignUpScreen() {
         value={email}
         onChangeText={setEmail}
         leading={
-          <MaterialCommunityIcons
-            name="email-outline"
+          <VoxelIcon
+            name="mail"
             size={22}
             color={theme.textMuted}
+            style={styles.balancedIcon}
           />
         }
         keyboardType="email-address"
@@ -118,10 +140,11 @@ export default function SignUpScreen() {
         value={password}
         onChangeText={setPassword}
         leading={
-          <MaterialCommunityIcons
-            name="lock-outline"
+          <VoxelIcon
+            name="password"
             size={22}
             color={theme.textMuted}
+            style={styles.balancedIcon}
           />
         }
         secureTextEntry
@@ -130,64 +153,61 @@ export default function SignUpScreen() {
         editable={!loading}
         onSubmitEditing={() => void submit()}
       />
-      <Pressable
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: ageConfirmed, disabled: loading }}
-        disabled={loading}
-        onPress={() => setAgeConfirmed((value) => !value)}
-        style={({ pressed, hovered }) => [
-          styles.checkboxRow,
-          {
-            backgroundColor: ageConfirmed
-              ? theme.actionSoft
-              : hovered
-                ? theme.surfaceTint
-                : theme.surface,
-            borderColor: ageConfirmed
-              ? theme.actionPressed
-              : theme.borderStrong,
-            transform: [{ scale: pressed ? 0.99 : 1 }],
-          },
-          loading && styles.disabled,
-        ]}
-      >
-        <MaterialCommunityIcons
-          name={ageConfirmed ? "checkbox-marked" : "checkbox-blank-outline"}
-          size={29}
-          color={ageConfirmed ? theme.actionPressed : theme.textMuted}
-        />
-        <Text style={[styles.checkboxText, { color: theme.text }]}>
-          {t("ageConfirmation")}
-        </Text>
-      </Pressable>
-      {error ? (
-        <Surface tone="error" style={styles.status}>
-          <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={22}
-              color={theme.error}
+      <FeedbackMotion signal={ageConfirmed} kind="attention">
+        <MotionPressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: ageConfirmed, disabled: loading }}
+          disabled={loading}
+          onPress={() => setAgeConfirmed((value) => !value)}
+          style={({ pressed, hovered }) => [
+            styles.checkboxRow,
+            {
+              backgroundColor: ageConfirmed
+                ? theme.actionSoft
+                : hovered
+                  ? theme.surfaceTint
+                  : theme.surface,
+              borderColor: ageConfirmed
+                ? theme.actionPressed
+                : theme.borderStrong,
+              opacity: pressed ? 0.82 : 1,
+            },
+            loading && styles.disabled,
+          ]}
+        >
+          <View style={styles.checkboxSlot}>
+            <VoxelIcon
+              name={ageConfirmed ? "checkbox-checked" : "checkbox-unchecked"}
+              size={32}
+              style={styles.balancedIcon}
             />
-            <Text
-              accessibilityRole="alert"
-              selectable
-              style={[styles.statusText, { color: theme.text }]}
-            >
-              {error}
-            </Text>
           </View>
-        </Surface>
+          <Text style={[styles.checkboxText, { color: theme.text }]}>
+            {t("ageConfirmation")}
+          </Text>
+        </MotionPressable>
+      </FeedbackMotion>
+      {error ? (
+        <FeedbackMotion signal={error} kind="error">
+          <MotionView preset="rise" exiting>
+            <Surface tone="error" style={styles.status}>
+              <View style={styles.statusRow}>
+                <VoxelIcon name="error" size={22} color={theme.error} />
+                <Text
+                  accessibilityRole="alert"
+                  selectable
+                  style={[styles.statusText, { color: theme.text }]}
+                >
+                  {error}
+                </Text>
+              </View>
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
       <PrimaryButton
         loading={loading}
         disabled={!canSubmit}
-        leadingIcon={
-          <MaterialCommunityIcons
-            name="account-plus-outline"
-            size={21}
-            color={theme.textOnAction}
-          />
-        }
         onPress={() => void submit()}
       >
         {t("signUp")}
@@ -197,21 +217,29 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
+  balancedIcon: {
+    transform: [{ translateX: -spacing[2] }],
+  },
   checkboxRow: {
-    minHeight: 64,
+    minHeight: controls.inputHeight,
     borderWidth: borders.standard,
-    borderRadius: radii.large,
+    borderRadius: radii.medium,
     paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing[3],
+  },
+  checkboxSlot: {
+    width: controls.iconTarget,
+    minHeight: controls.iconTarget,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkboxText: {
     flex: 1,
     fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
   },
   disabled: { opacity: 0.6 },
   status: { padding: spacing[4] },
@@ -226,7 +254,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,
   },
-  footer: {
+  accountFooter: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
@@ -236,4 +264,13 @@ const styles = StyleSheet.create({
   footerText: { fontFamily: typography.body, fontSize: typography.size.label },
   link: { fontFamily: typography.bodyBold, fontSize: typography.size.label },
   footerLink: { minHeight: 44, paddingVertical: spacing[3] },
+  tryLink: {
+    minHeight: 44,
+    alignSelf: "flex-end",
+    paddingVertical: spacing[3],
+    textAlign: "right",
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
 });

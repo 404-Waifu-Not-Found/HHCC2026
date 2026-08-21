@@ -24,7 +24,9 @@ type MediaVideoRow = {
 
 export const mediaRouter = new Hono<ApiBindings>();
 
-export function assertMediaSourceAllowed(source: VideoSource): void {
+export function assertMediaSourceAllowed(
+  source: unknown,
+): asserts source is VideoSource {
   SourceSchema.parse(source);
 }
 

@@ -1,17 +1,46 @@
 import type { ComponentProps, PropsWithChildren, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, controls, motion, radii, typography } from "../theme/tokens";
+import { MotionPressable, MotionView } from "../motion/Motion";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+
+let focusCameFromKeyboard = true;
+let focusModalityListenersInstalled = false;
+
+function installFocusModalityListeners() {
+  if (
+    Platform.OS !== "web" ||
+    focusModalityListenersInstalled ||
+    typeof document === "undefined"
+  ) {
+    return;
+  }
+
+  document.addEventListener(
+    "keydown",
+    () => {
+      focusCameFromKeyboard = true;
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      focusCameFromKeyboard = false;
+    },
+    true,
+  );
+  focusModalityListenersInstalled = true;
+}
 
 type Props = PropsWithChildren<{
   onPress(): void;
@@ -23,7 +52,7 @@ type Props = PropsWithChildren<{
   trailingIcon?: ReactNode;
   compact?: boolean;
 }> &
-  Pick<ComponentProps<typeof Pressable>, "testID">;
+  Pick<ComponentProps<typeof MotionPressable>, "testID">;
 
 export function PrimaryButton({
   children,
@@ -37,9 +66,11 @@ export function PrimaryButton({
   compact = false,
   testID,
 }: Props) {
-  const { theme, reduceMotion } = useSettings();
+  const { theme } = useSettings();
   const [focused, setFocused] = useState(false);
   const unavailable = disabled || loading;
+
+  useEffect(installFocusModalityListeners, []);
 
   const colors =
     variant === "primary"
@@ -79,14 +110,21 @@ export function PrimaryButton({
 
   return (
     <View style={[styles.slot, compact && styles.slotCompact]}>
-      <Pressable
+      <MotionPressable
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ disabled: unavailable, busy: loading }}
         disabled={unavailable}
         onPress={onPress}
-        onFocus={() => setFocused(true)}
+        onPressIn={() => {
+          if (Platform.OS === "web" && !focusCameFromKeyboard) {
+            setFocused(false);
+          }
+        }}
+        onFocus={() =>
+          setFocused(Platform.OS !== "web" || focusCameFromKeyboard)
+        }
         onBlur={() => setFocused(false)}
         style={({ pressed, hovered }) => [
           styles.button,
@@ -95,45 +133,41 @@ export function PrimaryButton({
             backgroundColor: colors.background,
             borderColor: focused ? theme.focus : colors.border,
             borderBottomColor: colors.depth,
-            borderBottomWidth: pressed
-              ? borders.standard
-              : borders.tactileDepth + borders.standard,
-            transform: [
-              {
-                translateY: pressed
-                  ? borders.tactileDepth
-                  : hovered && !reduceMotion
-                    ? -1
-                    : 0,
-              },
-            ],
+            borderBottomWidth: borders.tactileDepth + borders.standard,
+            opacity: pressed ? 0.94 : hovered ? 0.98 : 1,
           },
           Platform.OS === "web" && {
             transitionDuration: `${motion.fast}ms`,
             transitionProperty: "transform, background-color, border-color",
           },
-          focused && styles.focused,
         ]}
       >
-        {loading ? (
-          <ActivityIndicator color={colors.text} />
-        ) : (
-          <View style={styles.labelRow}>
-            {leadingIcon}
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.label,
-                compact && styles.labelCompact,
-                { color: colors.text },
-              ]}
-            >
-              {children}
-            </Text>
-            {trailingIcon}
-          </View>
-        )}
-      </Pressable>
+        <MotionView
+          key={loading ? "loading" : "label"}
+          preset="fade"
+          duration={motion.fast}
+          style={styles.labelMotion}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.text} />
+          ) : (
+            <View style={styles.labelRow}>
+              {leadingIcon}
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  compact && styles.labelCompact,
+                  { color: colors.text },
+                ]}
+              >
+                {children}
+              </Text>
+              {trailingIcon}
+            </View>
+          )}
+        </MotionView>
+      </MotionPressable>
     </View>
   );
 }
@@ -148,7 +182,7 @@ const styles = StyleSheet.create({
   button: {
     minHeight: controls.buttonHeightDesktop,
     borderRadius: radii.medium,
-    borderWidth: borders.standard,
+    borderWidth: borders.selected,
     paddingHorizontal: 22,
     alignItems: "center",
     justifyContent: "center",
@@ -157,15 +191,16 @@ const styles = StyleSheet.create({
     minHeight: controls.iconTarget,
     paddingHorizontal: 14,
   },
-  focused: {
-    borderWidth: borders.selected,
-  },
   labelRow: {
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 9,
+  },
+  labelMotion: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
     flexShrink: 1,

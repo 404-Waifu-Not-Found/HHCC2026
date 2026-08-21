@@ -1,9 +1,8 @@
 import type { LibraryCard } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import { Image } from "expo-image";
 import {
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, motion, radii, spacing, typography } from "../theme/tokens";
+import { MotionPressable, MotionView } from "../motion/Motion";
 
 const masteryKeys = {
   not_started: "notStarted",
@@ -22,10 +22,12 @@ export function VideoCard({
   card,
   onPress,
   compact = false,
+  fill = false,
 }: {
   card: LibraryCard;
   onPress(): void;
   compact?: boolean;
+  fill?: boolean;
 }) {
   const { t, theme, reduceMotion } = useSettings();
   const { width } = useWindowDimensions();
@@ -44,12 +46,13 @@ export function VideoCard({
         : theme.textMuted;
 
   return (
-    <Pressable
+    <MotionPressable
       accessibilityRole="button"
       accessibilityLabel={`${card.title}. ${t(masteryKeys[card.mastery])}. ${actionLabel}`}
       onPress={onPress}
       style={({ pressed, hovered }) => [
         styles.card,
+        fill && styles.fill,
         horizontal && styles.horizontal,
         {
           backgroundColor: theme.surface,
@@ -59,18 +62,8 @@ export function VideoCard({
             : theme.borderStrong,
         },
         {
-          borderBottomWidth: pressed
-            ? borders.standard
-            : borders.tactileDepth + borders.standard,
-          transform: [
-            {
-              translateY: pressed
-                ? borders.tactileDepth
-                : hovered && !reduceMotion
-                  ? -2
-                  : 0,
-            },
-          ],
+          borderBottomWidth: borders.tactileDepth + borders.standard,
+          opacity: pressed ? 0.94 : 1,
         },
         Platform.OS === "web" && {
           transitionDuration: `${motion.fast}ms`,
@@ -86,21 +79,17 @@ export function VideoCard({
           transition={reduceMotion ? 0 : 180}
           style={styles.image}
         />
-        <View
+        <MotionView
+          preset="from-left"
+          delay={80}
           style={[
             styles.sourceBadge,
             { backgroundColor: "rgba(11,20,48,0.78)" },
           ]}
         >
-          <MaterialCommunityIcons
-            name={card.source === "youtube" ? "youtube" : "television-play"}
-            size={15}
-            color="#FFFFFF"
-          />
-          <Text style={styles.source}>
-            {card.source === "youtube" ? "YouTube" : "bilibili"}
-          </Text>
-        </View>
+          <VoxelIcon name="video" size={15} color="#FFFFFF" />
+          <Text style={styles.source}>YouTube</Text>
+        </MotionView>
       </View>
       <View style={styles.body}>
         <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>
@@ -121,18 +110,18 @@ export function VideoCard({
             </Text>
           ) : null}
         </View>
-        <View style={[styles.actionRow, { borderTopColor: theme.divider }]}>
+        <MotionView
+          preset="from-right"
+          delay={120}
+          style={[styles.actionRow, { borderTopColor: theme.divider }]}
+        >
           <Text style={[styles.action, { color: theme.primary }]}>
             {actionLabel}
           </Text>
-          <MaterialCommunityIcons
-            name="arrow-right"
-            size={20}
-            color={theme.primary}
-          />
-        </View>
+          <VoxelIcon name="next" size={20} color={theme.primary} />
+        </MotionView>
       </View>
-    </Pressable>
+    </MotionPressable>
   );
 }
 
@@ -143,6 +132,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: borders.standard,
     borderRadius: radii.feature,
+  },
+  fill: {
+    width: "100%",
   },
   horizontal: {
     width: "100%",

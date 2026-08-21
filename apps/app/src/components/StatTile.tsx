@@ -19,7 +19,7 @@ export function StatTile({
     tone === "success"
       ? theme.success
       : tone === "warning"
-        ? theme.warning
+        ? theme.warningText
         : tone === "secondary"
           ? theme.secondary
           : theme.primary;

@@ -9,6 +9,7 @@ import {
   spacing,
   typography,
 } from "../theme/tokens";
+import { FeedbackMotion, MotionView } from "../motion/Motion";
 
 type Props = ComponentProps<typeof TextInput> & {
   label: string;
@@ -49,75 +50,94 @@ export function AppTextInput({
           {label}
         </Text>
       ) : null}
-      <View
-        style={[
-          styles.field,
-          large && styles.fieldLarge,
-          {
-            backgroundColor: theme.surface,
-            borderColor: error
-              ? theme.error
-              : focused
-                ? theme.focus
-                : theme.borderStrong,
-          },
-          focused && styles.fieldFocused,
-          Platform.OS === "web" && {
-            transitionDuration: `${motion.fast}ms`,
-            transitionProperty: "border-color, background-color",
-          },
-        ]}
-      >
-        {leading ? <View style={styles.adornment}>{leading}</View> : null}
-        <TextInput
-          {...props}
-          nativeID={inputId}
-          aria-labelledby={labelInside ? undefined : `${inputId}-label`}
-          aria-describedby={
-            error
-              ? `${inputId}-error`
-              : helperText
-                ? `${inputId}-help`
-                : undefined
-          }
-          accessibilityLabel={props.accessibilityLabel ?? label}
-          accessibilityHint={props.accessibilityHint ?? helperText}
-          placeholder={props.placeholder ?? (labelInside ? label : undefined)}
-          placeholderTextColor={theme.textMuted}
-          selectionColor={theme.primary}
-          onFocus={(event) => {
-            setFocused(true);
-            onFocus?.(event);
-          }}
-          onBlur={(event) => {
-            setFocused(false);
-            onBlur?.(event);
-          }}
+      <FeedbackMotion signal={error} kind="error">
+        <View
           style={[
-            styles.input,
-            large && styles.inputLarge,
-            { color: theme.text },
-            style,
+            styles.field,
+            large && styles.fieldLarge,
+            {
+              backgroundColor: theme.surface,
+              borderColor: error
+                ? theme.error
+                : focused
+                  ? theme.primary
+                  : theme.borderStrong,
+            },
+            Platform.OS === "web" && {
+              transitionDuration: `${motion.fast}ms`,
+              transitionProperty: "border-color, background-color",
+            },
           ]}
-        />
-        {trailing ? <View style={styles.adornment}>{trailing}</View> : null}
-      </View>
+        >
+          {leading ? <View style={styles.adornment}>{leading}</View> : null}
+          <TextInput
+            {...props}
+            nativeID={inputId}
+            aria-labelledby={labelInside ? undefined : `${inputId}-label`}
+            aria-describedby={
+              error
+                ? `${inputId}-error`
+                : helperText
+                  ? `${inputId}-help`
+                  : undefined
+            }
+            accessibilityLabel={props.accessibilityLabel ?? label}
+            accessibilityHint={props.accessibilityHint ?? helperText}
+            placeholder={props.placeholder ?? (labelInside ? label : undefined)}
+            placeholderTextColor={theme.textMuted}
+            selectionColor={theme.primary}
+            onFocus={(event) => {
+              setFocused(true);
+              onFocus?.(event);
+            }}
+            onBlur={(event) => {
+              setFocused(false);
+              onBlur?.(event);
+            }}
+            style={[
+              styles.input,
+              large && styles.inputLarge,
+              Platform.OS === "web" && styles.webInput,
+              { color: theme.text },
+              style,
+            ]}
+          />
+          {trailing ? <View style={styles.adornment}>{trailing}</View> : null}
+          {focused ? (
+            <MotionView
+              preset="fade"
+              duration={motion.quick}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[
+                styles.focusRing,
+                large && styles.focusRingLarge,
+                { borderColor: error ? theme.error : theme.primary },
+              ]}
+            />
+          ) : null}
+        </View>
+      </FeedbackMotion>
       {error ? (
-        <Text
-          nativeID={`${inputId}-error`}
-          accessibilityRole="alert"
-          selectable
-          style={[styles.support, { color: theme.error }]}
-        >
-          {error}
-        </Text>
+        <MotionView preset="rise" exiting>
+          <Text
+            nativeID={`${inputId}-error`}
+            accessibilityRole="alert"
+            selectable
+            style={[styles.support, { color: theme.error }]}
+          >
+            {error}
+          </Text>
+        </MotionView>
       ) : helperText ? (
-        <Text
-          nativeID={`${inputId}-help`}
-          style={[styles.support, { color: theme.textMuted }]}
-        >
-          {helperText}
-        </Text>
+        <MotionView preset="fade">
+          <Text
+            nativeID={`${inputId}-help`}
+            style={[styles.support, { color: theme.textMuted }]}
+          >
+            {helperText}
+          </Text>
+        </MotionView>
       ) : null}
     </View>
   );
@@ -133,6 +153,7 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.label,
   },
   field: {
+    position: "relative",
     minHeight: controls.inputHeight,
     flexDirection: "row",
     alignItems: "center",
@@ -145,8 +166,18 @@ const styles = StyleSheet.create({
     borderRadius: radii.large,
     paddingHorizontal: spacing[5],
   },
-  fieldFocused: {
+  focusRing: {
+    pointerEvents: "none",
+    position: "absolute",
+    top: -borders.standard,
+    right: -borders.standard,
+    bottom: -borders.standard,
+    left: -borders.standard,
     borderWidth: borders.selected,
+    borderRadius: radii.medium,
+  },
+  focusRingLarge: {
+    borderRadius: radii.large,
   },
   input: {
     minWidth: 0,
@@ -157,14 +188,21 @@ const styles = StyleSheet.create({
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
   },
+  webInput: {
+    outlineColor: "transparent",
+    outlineStyle: "solid",
+    outlineWidth: 0,
+    userSelect: "text",
+  },
   inputLarge: {
     minHeight: controls.urlInputHeight - borders.standard * 2,
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.bodyLarge,
   },
   adornment: {
-    minWidth: controls.iconTarget,
+    width: controls.iconTarget,
     minHeight: controls.iconTarget,
+    flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
   },

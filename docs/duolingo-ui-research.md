@@ -1,12 +1,14 @@
 # Duolingo UI research for the ClipQuest rebuild
 
-Accessed: 2026-07-31. ClipQuest implementation notes reconciled: 2026-08-04.
+Accessed and refreshed: 2026-08-06.
 
 ## Purpose and boundaries
 
-This document records public Duolingo interface patterns that informed the ClipQuest rebuild. It is historical product-design research, not current release documentation and not permission to copy Duolingo assets. Current implementation and acceptance status lives in the [README release status](../README.md#release-status).
+This document records current public Duolingo identity and interface patterns that informed the 2026 ClipQuest rebrand. It is product-design research, not permission to copy Duolingo assets. Current implementation and acceptance status lives in the [README release status](../README.md#release-status).
 
-ClipQuest will independently implement interaction principles such as focused tasks, visible progress, large controls, tactile depth, immediate feedback, and responsive navigation. It will not ship Duolingo screenshots, logos, characters, illustrations, sounds, copy, proprietary fonts, or brand colors.
+ClipQuest independently implements the useful principles: green-led hierarchy, focused tasks, visible progress, large controls, tactile depth, immediate feedback, simple silhouettes, generous negative space, and responsive navigation. It does not ship Duolingo screenshots, logos, characters, illustrations, sounds, copy, proprietary fonts, or Feather Green (`#58CC02`).
+
+The adaptation boundary is explicit: Duolingo's recognizable mascot behavior, emotional posing, character construction, and flat-vector artwork are out of scope. ClipQuest uses an original deeper green system and individually generated low-density voxel artwork. Its learning prism is an abstract interlocking video-frame and quiz-card object with no face, limbs, clothing, pose, mood, or personality cues.
 
 Authenticated Duolingo screens are cohort- and experiment-dependent. Measurements below are estimates from current public screenshots and live public pages, not extracted proprietary design tokens.
 
@@ -29,6 +31,9 @@ Authenticated Duolingo screens are cohort- and experiment-dependent. Measurement
 | [Hearing-oriented controls](https://blog.duolingo.com/learning-with-hearing-aids/)                                                                                                | Listening accessibility                     | Official listening, reveal, skip, and settings images; not stored       | Replay, slowed audio, reveal text, defer audio, independent preferences             |
 | [Duolingo typography guidance](https://design.duolingo.com/identity/typography)                                                                                                   | Brand typography                            | Official guideline examples; not stored                                 | Feather Bold is proprietary; Nunito is Duolingo's public substitute recommendation  |
 | [Duolingo color guidance](https://design.duolingo.com/identity/color)                                                                                                             | Brand color roles                           | Official palette examples; not stored                                   | Brand green and its total color combination must not be reproduced                  |
+| [Duolingo shape-language guidance](https://design.duolingo.com/illustration/shape-language)                                                                                       | Illustration construction                   | Official guideline examples; not stored                                 | Few simple shapes, clear silhouettes, minimal detail, and controlled color          |
+| [Duolingo imagery guidance](https://design.duolingo.com/identity/imagery)                                                                                                         | Brand imagery and mascot use                | Official guideline examples; not stored                                 | Recognizable imagery is systematic; ClipQuest excludes character behavior           |
+| [Duo construction guidance](https://design.duolingo.com/illustration/duo)                                                                                                         | Mascot construction principles              | Official guideline examples; not stored                                 | Simple geometry and silhouette inform only the abstraction boundary                 |
 | [Apple UI design tips](https://developer.apple.com/design/tips/)                                                                                                                  | Native touch and layout guidance            | N/A                                                                     | Use at least 44 by 44 point frequent touch targets                                  |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/)                                                                                                                                         | Web accessibility baseline                  | N/A                                                                     | Contrast, focus visibility, captions, target sizing, and status semantics           |
 
@@ -125,8 +130,8 @@ These values are visual estimates from public screenshots and browser inspection
 | Input height                 |                48-56 px |        56 px standard, 62 px URL entry |
 | Answer target minimum height |                64-84 px |                                  68 px |
 | Frequent icon target         |                44-48 px |                          44 px minimum |
-| Card radius                  |                14-20 px | 16 px standard, 22 px feature surfaces |
-| Input/button radius          |                12-16 px |                                  14 px |
+| Card radius                  |                14-20 px | 20 px standard, 24 px feature surfaces |
+| Input/button radius          |                12-16 px |                                  16 px |
 | Border thickness             |                  2-3 px |  2 px standard, 3 px selected/emphasis |
 | Tactile lower edge           |                  3-5 px |                                   4 px |
 | Progress track height        |                10-14 px |                                  12 px |
@@ -149,23 +154,24 @@ Fredoka provides an approachable rounded voice while remaining visually distinct
 
 ### Color roles
 
-ClipQuest will not reproduce Duolingo's recognizable green-white-gray combination. The system keeps ClipQuest's existing deep-indigo identity and shifts lime to a controlled action accent.
+Duolingo's official system makes green the dominant brand anchor, white the primary background, dark gray the principal text color, and bright secondary hues semantic. ClipQuest adopts that hierarchy without copying the palette. Its structural green is the original, deeper `#247D49`; its high-priority action green is `#54C878` rather than Duolingo's `#58CC02`.
 
-- Canvas: cool mist and deep midnight equivalents for light and dark themes.
-- Primary brand: indigo for structure, navigation, and selected surfaces.
-- Action accent: electric lime for the single highest-priority action.
-- Secondary accent: clear sky blue for information and active progress.
-- Success: emerald distinct from the action lime.
-- Error: warm coral-red.
-- Warning: amber.
-- Borders: cool gray-blue with stronger selected variants.
+- Light canvas and surface: `#F7F9F4` and `#FFFFFF`.
+- Dark canvas and surface: `#101B15` and `#16231B`.
+- Structural green: `#247D49` light and `#84D6A0` dark.
+- Action green: `#54C878` light and `#62D687` dark.
+- Information and focus: original blues headed by `#246FAE`.
+- Success: structural green with explicit copy and iconography.
+- Error: `#C53A43` light and `#FF8585` dark.
+- Warning: `#B57200` light and `#F3C85C` dark.
+- Borders: neutral green-gray, strengthened for selected and focus states.
 
 ### Shape and depth
 
 - Buttons and answers use 2 px borders with a 4 px lower edge.
 - Pressing removes the lower edge and translates content downward by 3-4 px.
-- Standard surfaces use 16 px corners; feature panels use 22 px; icon controls may be circular.
-- Shadows are subtle and cool-tinted. Depth comes primarily from borders and bottom edges.
+- Standard surfaces use 20 px corners; feature panels use 24 px; controls and answer choices use 16 px corners.
+- Shadows are subtle and green-tinted. Depth comes primarily from borders and bottom edges.
 - Long pages use whitespace and dividers before adding another card.
 
 ### Motion
@@ -176,11 +182,13 @@ ClipQuest will not reproduce Duolingo's recognizable green-white-gray combinatio
 - Continuous motion is limited to honest processing indicators.
 - Reduced motion removes translation, bobbing, confetti, and spring overshoot while preserving state changes.
 
-### Original illustration language
+### Original illustration and icon language
 
-- ClipQuest imagery uses a small film-clip explorer and abstract learning sparks, not birds or Duolingo characters.
-- Silhouettes, face construction, poses, colors, and animation timing must remain independent.
-- Generated or original assets are stored under ClipQuest-owned names and never use Duolingo screenshots as production material.
+- Duolingo's public illustration guidance favors a few simple shapes, recognizable silhouettes, minimal detail, limited colors, and generous negative space. ClipQuest translates those principles into coarse isometric voxel construction rather than copying flat vectors.
+- Every product icon is generated as its own still image. The family locks one orthographic three-quarter camera, one module scale, 12-30 visible cuboids, and a 6-14 module dominant span. Canonical artwork uses a transparent background so it can sit naturally on every semantic surface; required launcher backplates use structural green rather than a white field.
+- Spring Glow communicates core learning, Blue Cream information and processing, Amber Dusk warnings, Grapefruit errors, and Moon Pearl neutral utilities. Only whole-preset tone shifts are used.
+- The learning prism combines a green video frame, a light quiz-card prism, a yellow knowledge marker, and a restrained blue companion block. It has no human or animal traits, moods, poses, or reaction variants.
+- The same prism silhouette produces the ClipQuest mark, favicon/PWA art, launcher and splash art, browser-extension icons, and a responsive Fredoka wordmark lockup through a deterministic derivative script. The primary lockup color-splits `Clip` and `Quest` to distinguish source media from the learning action; symbol-only applications remain reserved for constrained icon surfaces. Canonical generated sources are never resized in place.
 
 ## Accessibility observations and requirements
 

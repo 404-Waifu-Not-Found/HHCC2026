@@ -1,7 +1,7 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
@@ -9,6 +9,11 @@ import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { radii, spacing, typography } from "../../src/theme/tokens";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionView,
+} from "../../src/motion/Motion";
 
 export default function SignInScreen() {
   const { t, theme } = useSettings();
@@ -46,7 +51,9 @@ export default function SignInScreen() {
 
   return (
     <AuthShell
-      title={t("signIn")}
+      variant="split"
+      title={t("welcomeBack")}
+      subtitle={t("welcomeBackSubtitle")}
       footer={
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: theme.textMuted }]}>
@@ -66,13 +73,6 @@ export default function SignInScreen() {
         labelPlacement="inside"
         value={identifier}
         onChangeText={setIdentifier}
-        leading={
-          <MaterialCommunityIcons
-            name="account-outline"
-            size={22}
-            color={theme.textMuted}
-          />
-        }
         autoCapitalize="none"
         autoComplete="username"
         returnKeyType="next"
@@ -83,13 +83,6 @@ export default function SignInScreen() {
         labelPlacement="inside"
         value={password}
         onChangeText={setPassword}
-        leading={
-          <MaterialCommunityIcons
-            name="lock-outline"
-            size={22}
-            color={theme.textMuted}
-          />
-        }
         secureTextEntry
         autoComplete="current-password"
         returnKeyType="done"
@@ -97,24 +90,25 @@ export default function SignInScreen() {
         onSubmitEditing={() => void submit()}
       />
       {error ? (
-        <Surface tone="error" style={styles.status}>
-          <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={22}
-              color={theme.error}
-            />
-            <Text
-              accessibilityRole="alert"
-              selectable
-              style={[styles.statusText, { color: theme.text }]}
-            >
-              {error}
-            </Text>
-          </View>
-        </Surface>
+        <FeedbackMotion signal={error} kind="error">
+          <MotionView preset="rise" exiting>
+            <Surface tone="error" style={styles.status}>
+              <View style={styles.statusRow}>
+                <VoxelIcon name="error" size={22} color={theme.error} />
+                <Text
+                  accessibilityRole="alert"
+                  selectable
+                  style={[styles.statusText, { color: theme.text }]}
+                >
+                  {error}
+                </Text>
+              </View>
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
-      <Pressable
+      <MotionPressable
+        pressDepth={0}
         accessibilityRole="link"
         onPress={() => router.push("/(auth)/forgot-password")}
         style={({ pressed }) => [
@@ -122,25 +116,13 @@ export default function SignInScreen() {
           { backgroundColor: pressed ? theme.surfaceTint : "transparent" },
         ]}
       >
-        <MaterialCommunityIcons
-          name="help-circle-outline"
-          size={19}
-          color={theme.primary}
-        />
         <Text style={[styles.link, { color: theme.primary }]}>
           {t("forgotPassword")}
         </Text>
-      </Pressable>
+      </MotionPressable>
       <PrimaryButton
         loading={loading}
         disabled={!canSubmit}
-        leadingIcon={
-          <MaterialCommunityIcons
-            name="login"
-            size={21}
-            color={theme.textOnAction}
-          />
-        }
         onPress={() => void submit()}
       >
         {t("signIn")}
@@ -167,9 +149,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-end",
-    gap: spacing[2],
     borderRadius: radii.medium,
-    paddingHorizontal: spacing[3],
+    paddingHorizontal: spacing[2],
   },
   link: { fontFamily: typography.bodyBold, fontSize: typography.size.label },
   footer: {

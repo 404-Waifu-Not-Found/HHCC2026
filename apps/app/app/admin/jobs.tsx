@@ -76,7 +76,7 @@ export default function AdminJobsScreen() {
     <AdminPage
       title={copy.jobs}
       subtitle="Inspect durable generation work and recover stalled learning journeys."
-      icon="progress-clock"
+      icon="processing"
     >
       {notice ? <Notice tone="success" text={notice} /> : null}
       <AdminToolbar
@@ -165,21 +165,20 @@ export default function AdminJobsScreen() {
               items={[
                 {
                   label: "Platform",
-                  value:
-                    job.video.source === "youtube" ? "YouTube" : "Bilibili",
-                  icon: "video-outline",
+                  value: "YouTube",
+                  icon: "video",
                 },
                 {
                   label: "Stage",
                   value: job.stage.replaceAll("_", " "),
-                  icon: "timeline-clock-outline",
+                  icon: "processing",
                 },
                 {
                   label: copy.updated,
                   value: formatDate(job.updatedAt, locale),
-                  icon: "clock-outline",
+                  icon: "time",
                 },
-                { label: "Job ID", value: job.id, icon: "identifier" },
+                { label: "Job ID", value: job.id, icon: "database" },
               ]}
             />
             {job.errorMessage ? (

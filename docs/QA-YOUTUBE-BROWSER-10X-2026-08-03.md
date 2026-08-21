@@ -57,6 +57,6 @@ Real Chrome QA against the local Worker and web client used three unrelated publ
 
 For each run, structured client and Worker logs reported `transcriptComplete: true`; the stored manifest matched the loaded transcript; classification and every generation batch received the complete serialized subtitle set. The final observed paste/create-to-question flow completed in 3.646 seconds using the deterministic evidence-grounded fallback after DeepSeek timed out.
 
-Automated regression coverage adds synthetic 12,005-event YouTube and bilibili subtitle documents and verifies the last event survives parsing. The complete local gate passed 66 Vitest tests (33 API, 23 app, 10 contracts), workspace typecheck, lint, build, Wrangler dry deployment, and `git diff --check`.
+Automated regression coverage adds synthetic 12,005-event provider subtitle documents and verifies the last event survives parsing. The complete local gate passed 66 Vitest tests (33 API, 23 app, 10 contracts), workspace typecheck, lint, build, Wrangler dry deployment, and `git diff --check`.
 
 This proves lossless handling for accepted inputs inside the documented 60,000-normalized-segment and 750,000-canonical-character safety envelope. It does not claim that private, deleted, geo-restricted, active-live, or upstream-blocked videos can provide subtitles; those inputs must fail explicitly rather than create a quiz from partial text.
