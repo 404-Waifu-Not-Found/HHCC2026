@@ -17,6 +17,7 @@ import {
 } from "./lib/generation-rollout";
 import { ApiError, errorResponse } from "./lib/errors";
 import { clearExpiredRateLimits } from "./lib/rate-limit";
+import { isAllowedRequestOrigin } from "./lib/request-origin";
 import { publicWorkerVersion } from "./lib/worker-version";
 import { authenticated, type ApiBindings } from "./middleware/authenticated";
 import { adminRouter } from "./routes/admin";
@@ -47,26 +48,7 @@ app.use(
 
 app.use("*", async (c, next) => {
   const origin = c.req.header("origin");
-  const requestHostname = new URL(c.req.url).hostname;
-  const localWranglerRequest =
-    requestHostname === "localhost" || requestHostname === "127.0.0.1";
-  const allowedOrigins = new Set([
-    c.env.APP_ORIGIN,
-    "http://localhost:8081",
-    "http://localhost:19006",
-    "http://127.0.0.1:8081",
-    ...(localWranglerRequest
-      ? [
-          "http://localhost",
-          "http://localhost:8787",
-          "http://127.0.0.1",
-          "http://127.0.0.1:8787",
-        ]
-      : []),
-  ]);
-  const allowed =
-    !origin || allowedOrigins.has(origin) || origin.startsWith("clipquest://");
-  if (origin && !allowed) {
+  if (!isAllowedRequestOrigin(origin, c.env)) {
     console.warn(
       JSON.stringify({ scope: "request_origin", event: "rejected", origin }),
     );

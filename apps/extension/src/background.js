@@ -7,11 +7,7 @@ import {
 import { replayGenerationOutboxEntries } from "./generation-outbox.js";
 import { isClipQuestPageOrigin } from "./origin-policy.js";
 
-const CLIPQUEST_MATCHES = [
-  "https://clipquest.ccwu.cc/*",
-  "http://localhost/*",
-  "http://127.0.0.1/*",
-];
+const CLIPQUEST_MATCHES = ["https://clipquest.ccwu.cc/*"];
 const TAB_READY_TIMEOUT_MS = 20_000;
 const EXTRACTION_TIMEOUT_MS = 45_000;
 const API_KEY_STORAGE_KEY = "deepseekApiKey";

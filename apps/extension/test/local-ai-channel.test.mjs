@@ -145,6 +145,8 @@ test("website privileges are bound to exact ClipQuest origins", () => {
     false,
   );
   assert.deepEqual([...CLIPQUEST_PAGE_ORIGINS], ["https://clipquest.ccwu.cc"]);
+  assert.doesNotMatch(background, /http:\/\/localhost/);
+  assert.doesNotMatch(background, /http:\/\/127\.0\.0\.1/);
   assert.equal(
     manifest.host_permissions.some((entry) => entry.includes("localhost")),
     false,
