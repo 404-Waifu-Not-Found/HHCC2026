@@ -294,14 +294,19 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
-    const grounded = value.promptVersion === "quiz-local-json-stream-v5.4";
+    const groundedV55 = value.promptVersion === "quiz-local-json-stream-v5.5";
+    const groundedV54 = value.promptVersion === "quiz-local-json-stream-v5.4";
+    const grounded = groundedV55 || groundedV54;
     const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
     const metadataMatches = grounded
       ? value.resultProtocolVersion === 8 &&
         value.importVersion === "extension-progressive-import-v6" &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.3" &&
+        value.validatorVersion ===
+          (groundedV55
+            ? "validator-local-progressive-v4.4"
+            : "validator-local-progressive-v4.3") &&
         value.generationProfile === "evidence_grounded_auto_v5_4" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&

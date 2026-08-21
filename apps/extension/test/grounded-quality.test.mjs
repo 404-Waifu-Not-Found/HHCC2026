@@ -9,6 +9,8 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  questionTestsTaughtConcept,
+  stripQuestionSourceFraming,
 } from "../src/grounded-quality.js";
 import { formulaFingerprint } from "../src/math-expression.js";
 
@@ -24,6 +26,86 @@ test("instructional excerpts exclude course administration when lesson content e
   const focus = focusExcerptForOrdinal(transcript, 0, 5);
   assert.ok(excerpts.some((value) => value.includes("Average rate of change")));
   assert.doesNotMatch(focus, /complaints|office hours|grading/iu);
+});
+
+test("instructional excerpts reject numeric course metadata without losing concepts", () => {
+  const transcript = [
+    "Unit 1 weighs 10 percent of the AP Calculus BC exam.",
+    "The instructor has taught this course for 12 years.",
+    "A function is continuous at x = c when f(c) exists, the limit exists, and the limit equals f(c).",
+    "The derivative represents the instantaneous rate of change of a function.",
+  ].join(" ");
+  const excerpts = buildInstructionalExcerpts(transcript).join(" ");
+  assert.doesNotMatch(excerpts, /10 percent|taught this course for 12 years/iu);
+  assert.match(excerpts, /continuous at x = c/iu);
+  assert.match(excerpts, /instantaneous rate of change/iu);
+});
+
+test("a source containing only course metadata yields no quiz focus", () => {
+  const transcript = [
+    "Welcome to the course and subscribe to the channel.",
+    "Unit 1 weighs 10 percent of the AP Calculus BC exam.",
+    "Office hours are listed on the course website.",
+    "The instructor has taught this course for 12 years.",
+  ].join(" ");
+  assert.deepEqual(buildInstructionalExcerpts(transcript), []);
+  assert.equal(focusExcerptForOrdinal(transcript, 0, 5), "");
+});
+
+test("source framing is removed without rewriting the concept question", () => {
+  assert.equal(
+    stripQuestionSourceFraming(
+      "According to the lesson, what three conditions must be true for a function to be continuous at x = c?",
+    ),
+    "What three conditions must be true for a function to be continuous at x = c?",
+  );
+  assert.equal(
+    stripQuestionSourceFraming(
+      "In the lecture, how does the quotient rule combine u, v, u', and v'?",
+    ),
+    "How does the quotient rule combine u, v, u', and v'?",
+  );
+  assert.equal(
+    stripQuestionSourceFraming("根据本课，连续的三个条件是什么？"),
+    "连续的三个条件是什么？",
+  );
+});
+
+test("question focus gate rejects source and course trivia but accepts taught concepts", () => {
+  const rejected = [
+    "What is the weighting of Unit 1 on the AP Calculus BC exam?",
+    "What percentage of the AP BC exam is Unit 1 worth?",
+    "Who is the instructor for this course?",
+    "How long has the professor been teaching this class?",
+    "What will the next module cover?",
+    "What did the presenter say about continuity?",
+    "Which formula was mentioned in the video?",
+  ];
+  for (const question of rejected) {
+    assert.equal(
+      questionTestsTaughtConcept({ concept: "course information", question }),
+      false,
+      question,
+    );
+  }
+
+  const accepted = [
+    "What three conditions must hold for a function to be continuous at x = c?",
+    "How is the average rate of change calculated on an interval?",
+    "Where are protons and neutrons located in an atom?",
+    "What role does CRISPR-Cas9 play in targeted gene editing?",
+    "A force of 12 N acts on a 3 kg mass. What acceleration does it produce?",
+  ];
+  for (const question of accepted) {
+    assert.equal(
+      questionTestsTaughtConcept({
+        concept: "instructional concept",
+        question,
+      }),
+      true,
+      question,
+    );
+  }
 });
 
 test("true false answer is constructed from exact evidence instead of model polarity", () => {

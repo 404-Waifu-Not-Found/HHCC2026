@@ -64,10 +64,16 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.4 and stream v4 for evidence-grounded recovery", () => {
+  it("requires v0.8.5 and stream v4 for concept-focused grounded recovery", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.4",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(false);

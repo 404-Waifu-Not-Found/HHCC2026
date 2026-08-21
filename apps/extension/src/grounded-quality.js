@@ -36,13 +36,30 @@ const ENGLISH_STOP_WORDS = new Set([
 ]);
 
 const LOGISTICS_PATTERNS = [
-  /\b(?:office hours?|teaching assistants?|t\.?a\.?s?|complaints?|syllabus|grading|grade policy|course roadmap|course website|class website|homework|assignments?|essays?|prerequisites?|required readings?|textbooks?|share (?:the )?book|email me|contact me|subscribe|sponsor(?:ed)?|promo code|welcome back|my name is|i(?:'m| am) your (?:teacher|instructor|professor))\b/iu,
-  /(?:课程安排|课程大纲|助教|办公时间|作业|评分|教材|投诉|订阅|赞助|推广|欢迎来到|讲师介绍)/u,
+  /\b(?:office hours?|teaching assistants?|t\.?a\.?s?|complaints?|syllabus|grading|grade policy|course roadmap|course website|class website|homework|assignments?|essays?|prerequisites?|required readings?|textbooks?|share (?:the )?book|email me|contact me|subscribe|sponsor(?:ed)?|promo code|welcome back|my name is|i(?:'m| am) your (?:teacher|instructor|professor)|course logistics|class schedule|exam schedule|test date|upload date|video duration|channel name)\b/iu,
+  /\b(?:ap\s+(?:calculus\s+)?(?:ab\/?bc|ab|bc)?\s*exam|exam|test|assessment|course|class|unit\s*\d+|module\s*\d+)\b.{0,90}\b(?:weight(?:ing)?|weighs?|worth|percentage|percent|points?|score|grade|duration|weeks?|hours?)\b/iu,
+  /\b(?:weight(?:ing)?|weighs?|worth|percentage|percent|points?|score|grade)\b.{0,90}\b(?:ap\s+(?:calculus\s+)?(?:ab\/?bc|ab|bc)?\s*exam|exam|test|assessment|course|class|unit\s*\d+|module\s*\d+)\b/iu,
+  /\b(?:who (?:is|was) (?:the )?(?:teacher|instructor|professor|presenter|speaker|teaching assistant|t\.?a\.?)|(?:teacher|instructor|professor|presenter|speaker|teaching assistant|t\.?a\.?).{0,50}(?:name|biography|background|degree|university|college|has taught|started teaching)|how long .{0,50}(?:taught|been teaching)|what (?:will|does) (?:the )?(?:(?:next|following) )?(?:course|class|unit|module) cover|what (?:is|was) covered (?:next|later)|how many (?:lessons?|videos?|weeks?|hours?) (?:are|were) in)\b/iu,
+  /(?:课程安排|课程大纲|助教|办公时间|作业|评分|教材|投诉|订阅|赞助|推广|欢迎来到|讲师介绍|考试占比|考试权重|考试分值|单元占比|课程进度|考试时间|教师姓名|讲师姓名|教师简介|讲师简介|视频时长|上传日期)/u,
 ];
 
 const INSTRUCTIONAL_PATTERNS = [
-  /\b(?:means?|defined as|definition|therefore|because|causes?|results? in|for example|consider|calculate|equation|formula|derivative|integral|theorem|principle|process|mechanism|function|system|evidence|experiment|observed|measured)\b/iu,
-  /(?:定义|意味着|因此|因为|导致|例如|公式|方程|导数|积分|定理|原理|过程|机制|函数|系统|实验|测量)/u,
+  /\b(?:means?|defined as|definition|therefore|because|causes?|results? in|for example|consider|calculate|equation|formula|derivative|integral|theorem|principle|process|mechanism|function|system|evidence|experiment|observed|measured|contains?|consists? of|composed of|located|represents?|relationship|condition|property|characteristic|purpose|role|used to|classified|originates?|produces?|converts?|solves?|applies?|predicts?|describes?)\b/iu,
+  /(?:定义|意味着|因此|因为|导致|例如|公式|方程|导数|积分|定理|原理|过程|机制|函数|系统|实验|测量|包含|组成|位于|表示|关系|条件|性质|特征|用途|作用|用于|分类|产生|转换|求解|应用|预测|描述)/u,
+];
+
+const SOURCE_FRAMING_PREFIX_PATTERNS = [
+  /^\s*(?:(?:according to|based on)\s+(?:the\s+)?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:in|from)\s+(?:the\s+)?(?:lesson|video|lecture|course|class|transcript|episode|presentation))\s*[,;:\-]?\s*/iu,
+  /^\s*(?:the\s+)?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)\s+(?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|supports?|describes?)\s+(?:that\s+)?/iu,
+  /^\s*(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)[，,:：;；\-]?\s*/u,
+  /^\s*(?:在|从)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示)中[，,:：;；\-]?\s*/u,
+];
+
+const SOURCE_REFERENCE_PATTERNS = [
+  /\b(?:(?:according to|based on) (?:the )?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:lesson|video|lecture|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator) (?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|covers?))\b/iu,
+  /\b(?:what|which|how) (?:did|does|was|were) (?:the )?(?:lesson|video|lecture|presenter|instructor|teacher|professor|speaker|narrator).{0,80}\b(?:say|state|mention|show|explain|call|name|cover|teach|discuss)\b/iu,
+  /\b(?:mentioned|shown|said|stated|covered|discussed) (?:in|by) (?:the )?(?:lesson|video|lecture|transcript|presenter|instructor|teacher|professor|speaker|narrator)\b/iu,
+  /(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)|(?:课|课程|视频|讲座|讲解|老师|讲师|主讲人)(?:中|里)?(?:提到|说到|讲到|介绍|展示)/u,
 ];
 
 const SEMANTIC_ALIASES = [
@@ -106,14 +123,27 @@ function sentenceUnits(plainText) {
 function instructionalScore(value) {
   const text = String(value ?? "");
   let score = 0;
+  let hasInstructionalSignal = false;
   for (const pattern of INSTRUCTIONAL_PATTERNS) {
-    if (pattern.test(text)) score += 4;
+    if (pattern.test(text)) {
+      score += 4;
+      hasInstructionalSignal = true;
+    }
   }
   for (const pattern of LOGISTICS_PATTERNS) {
     if (pattern.test(text)) score -= 12;
   }
-  if (/[=+*/^≤≥≈]|\b\d+(?:\.\d+)?\b/u.test(text)) score += 2;
-  if (text.length >= 80 && text.length <= 650) score += 2;
+  const hasConceptualNotation = /[=+*/^≤≥≈]/u.test(text);
+  if (hasConceptualNotation) {
+    score += 2;
+    hasInstructionalSignal = true;
+  }
+  if (hasInstructionalSignal && /\b\d+(?:\.\d+)?\b/u.test(text)) {
+    score += 1;
+  }
+  if (hasInstructionalSignal && text.length >= 80 && text.length <= 650) {
+    score += 2;
+  }
   if (
     /\b(?:hello|hi everyone|thanks for watching|see you next)\b/iu.test(text)
   ) {
@@ -122,10 +152,60 @@ function instructionalScore(value) {
   return score;
 }
 
+function capitalizeFirstLetter(value) {
+  return value.replace(
+    /^([^\p{L}]*)(\p{Ll})/u,
+    (_match, prefix, letter) => `${prefix}${letter.toLocaleUpperCase("en-US")}`,
+  );
+}
+
+/**
+ * Remove empty source attribution from a generated learner-facing sentence.
+ * This is a bounded presentation normalization: it never rewrites the actual
+ * claim, answer, polarity, formula, or question type.
+ */
+export function stripQuestionSourceFraming(value) {
+  if (typeof value !== "string") return value;
+  let result = value.normalize("NFC").trim();
+  for (let pass = 0; pass < 2; pass += 1) {
+    const previous = result;
+    for (const pattern of SOURCE_FRAMING_PREFIX_PATTERNS) {
+      result = result.replace(pattern, "");
+    }
+    if (result === previous) break;
+  }
+  return capitalizeFirstLetter(result.replace(/\s+/g, " ").trim());
+}
+
+/**
+ * Fail closed when a candidate tests the recording, presenter, course
+ * logistics, or assessment metadata instead of a transferable taught concept.
+ * Evidence grounding is validated separately by the generation validator.
+ */
+export function questionTestsTaughtConcept(candidate) {
+  const question = String(candidate?.question ?? "").trim();
+  if (!question) return false;
+  const claim = candidate?.claim;
+  const inspected = [
+    question,
+    candidate?.concept,
+    claim?.subject,
+    claim?.relation,
+    claim?.value,
+    claim?.cluster,
+  ]
+    .filter((value) => typeof value === "string" && value.trim())
+    .join(" ");
+  if (SOURCE_REFERENCE_PATTERNS.some((pattern) => pattern.test(inspected))) {
+    return false;
+  }
+  return !LOGISTICS_PATTERNS.some((pattern) => pattern.test(inspected));
+}
+
 /**
  * Build bounded lesson excerpts while filtering administrative and promotional
  * transcript material. The original transcript remains the authoritative
- * prompt prefix; these excerpts are the only spans v5.4 questions may cite.
+ * prompt prefix; these excerpts are the only spans grounded questions may cite.
  */
 export function buildInstructionalExcerpts(plainText) {
   const rawSentences = sentenceUnits(plainText);
@@ -159,20 +239,10 @@ export function buildInstructionalExcerpts(plainText) {
     }
   }
   if (current.length) groups.push(current.join(" "));
-  if (!groups.length && String(plainText ?? "").trim()) {
-    groups.push(String(plainText).trim().slice(0, 900));
-  }
   const ranked = groups
     .map((text, index) => ({ text, index, score: instructionalScore(text) }))
     .filter((entry) => entry.score > -8);
-  const candidates = ranked.length
-    ? ranked
-    : groups.map((text, index) => ({
-        text,
-        index,
-        score: 0,
-      }));
-  return candidates
+  return ranked
     .sort((left, right) => left.index - right.index)
     .map((entry) => entry.text.slice(0, 1_200));
 }
@@ -184,7 +254,7 @@ export function focusExcerptForOrdinal(
   repairCycle = 0,
 ) {
   const excerpts = buildInstructionalExcerpts(plainText);
-  if (!excerpts.length) return String(plainText ?? "").slice(0, 1_200);
+  if (!excerpts.length) return "";
   const base = Math.min(
     excerpts.length - 1,
     Math.floor(
@@ -418,7 +488,7 @@ export function groundedTrueFalseQuestion(candidate, focusExcerpt) {
       question: supported,
       answer: true,
       correction: "The statement is accurate as written.",
-      explanation: `The lesson supports this statement: ${supported}`,
+      explanation: `This statement matches the supporting evidence: ${supported}`,
     };
   }
   if (candidate.mode !== "mutated") return null;
@@ -433,7 +503,7 @@ export function groundedTrueFalseQuestion(candidate, focusExcerpt) {
     question: mutated,
     answer: false,
     correction: supported,
-    explanation: `The lesson supports ${supported} The displayed statement changes ${candidate.mutation.sourceValue} to ${candidate.mutation.replacementValue}.`,
+    explanation: `The supported statement is: ${supported} The displayed statement changes ${candidate.mutation.sourceValue} to ${candidate.mutation.replacementValue}.`,
   };
 }
 

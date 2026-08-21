@@ -27,6 +27,7 @@ import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
+import { presentQuizPrompt } from "../../src/lib/question-presentation";
 import {
   createChoicePresentation,
   createInitialOrdering,
@@ -557,6 +558,8 @@ export default function QuizScreen() {
   }
   if (!question) return null;
 
+  const displayPrompt = presentQuizPrompt(question.prompt);
+
   if (showPrimer && primer) {
     return (
       <Screen contentWidth="reading" centered floating={streamIndicator}>
@@ -648,7 +651,7 @@ export default function QuizScreen() {
         onClose={() => router.replace("/(tabs)")}
       />
       <MotionView
-        key={`${question.position}-${question.prompt}`}
+        key={`${question.position}-${displayPrompt}`}
         preset="from-right"
         style={styles.quizBody}
       >
@@ -682,7 +685,7 @@ export default function QuizScreen() {
             accessibilityRole="header"
             style={[styles.question, { color: theme.text }]}
           >
-            {question.prompt}
+            {displayPrompt}
           </MathText>
         </MotionView>
         <QuestionInput

@@ -191,7 +191,7 @@ test("release ZIPs normalize metadata for reproducible matching artifacts", () =
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.4");
+  assert.equal(manifest.version, "0.8.5");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -206,7 +206,8 @@ test("the popup exposes only DeepSeek configuration", () => {
   assert.match(background, /captionsToPlainText/);
 });
 
-test("release 0.8.4 uses prompt v5.4 and retains v5.3 compatibility", () => {
+test("release 0.8.5 uses prompt v5.5 and retains v5.4 compatibility", () => {
+  assert.match(generator, /quiz-local-json-stream-v5\.5/);
   assert.match(generator, /quiz-local-json-stream-v5\.4/);
   assert.match(generator, /quiz-local-json-stream-v5\.3/);
   assert.match(generator, /quiz-local-json-stream-v5\.2/);

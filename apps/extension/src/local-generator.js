@@ -1,6 +1,7 @@
 import { captionsToPlainText } from "./caption-text.js";
 import {
   answerSupportedByEvidence,
+  buildInstructionalExcerpts,
   candidateDuplicatesAccepted,
   choicesLikelyEquivalent,
   claimKeyForCandidate,
@@ -9,14 +10,16 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  questionTestsTaughtConcept,
+  stripQuestionSourceFraming,
 } from "./grounded-quality.js";
 import { formulaFingerprint } from "./math-expression.js";
 
 const MODEL = "deepseek-v4-flash";
 const PROTOCOL_VERSION = 8;
 const PIPELINE_VERSION = 9;
-const PROMPT_VERSION = "quiz-local-json-stream-v5.4";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.3";
+const PROMPT_VERSION = "quiz-local-json-stream-v5.5";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.4";
 const IMPORT_VERSION = "extension-progressive-import-v6";
 const GENERATION_PROFILE = "evidence_grounded_auto_v5_4";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
@@ -290,18 +293,19 @@ function exampleQuestion(
   const common = {
     id,
     type,
-    concept: "lesson concept",
-    question: "A self-contained question grounded in the lesson?",
-    explanation: "A concise lesson-grounded explanation.",
+    concept: "average rate of change",
+    question: "What does the average rate of change of a function represent?",
+    explanation:
+      "It represents the change in output divided by the change in input over an interval.",
     ...(groundedMode
       ? {
           sourceEvidence:
-            "The lesson explicitly states that the supported value is 12 units.",
+            "Average rate of change is the change in output divided by the change in input over an interval.",
           claim: {
-            subject: "supported value",
-            relation: "equals",
-            value: "12 units",
-            cluster: "supported measurement",
+            subject: "average rate of change",
+            relation: "represents",
+            value: "change in output divided by change in input",
+            cluster: "average rate of change",
           },
         }
       : {}),
@@ -310,7 +314,9 @@ function exampleQuestion(
     if (automaticMode) {
       return {
         ...common,
-        correctAnswer: groundedMode ? "12 units" : "supported answer",
+        correctAnswer: groundedMode
+          ? "change in output divided by the change in input"
+          : "supported answer",
         distractors: groundedMode
           ? [
               {
@@ -362,8 +368,12 @@ function exampleQuestion(
   }
   return {
     ...common,
-    answer: "A concise complete reference answer.",
-    rubricIdeas: ["required idea"],
+    answer: groundedMode
+      ? "change in output divided by the change in input"
+      : "A concise complete reference answer.",
+    rubricIdeas: groundedMode
+      ? ["change in output divided by the change in input"]
+      : ["required idea"],
     acceptableAnswers: [],
   };
 }
@@ -408,10 +418,13 @@ function generationMessages(input, isTransientRetry) {
   const groundedInstructions = input.groundedMode
     ? `Every question must include sourceEvidence copied exactly from the primary source focus and a structured claim describing that evidence. Never cite material outside the primary focus. For multiple choice, correctAnswer must be an exact phrase contained in sourceEvidence. Each distractor must contain text and a specific whyWrong explanation; equivalent wording, algebraic identities, and another defensible answer are forbidden. For true/false, never return an answer boolean. Copy sourceEvidence into supportedStatement. For mode=supported, question must equal supportedStatement and mutation must be null. For mode=mutated, change exactly one occurrence using mutation.sourceValue and mutation.replacementValue; question must equal the locally reproducible mutation. Prefer the requested polarity, but use supported mode whenever a safe mutation is unavailable.`
     : "";
+  const conceptMasteryInstructions = input.conceptMasteryMode
+    ? `Test only transferable instructional concepts taught in the source: definitions, relationships, mechanisms, formulas, methods, reasoning, applications, or examples needed to understand those concepts. Ask the concept directly. Never begin with or use phrases such as "According to the lesson", "According to the video", "In the lecture", or "What did the presenter say?" Never test exam or unit weighting, points, grades, course schedules, requirements, readings, assignments, instructor or teaching-assistant identity or biography, video metadata, introductions, outros, promotions, jokes, or what the course will cover. Include a number only when it is necessary to understand or solve the instructional concept, never merely because it appeared in the source.`
+    : "";
   return [
     {
       role: "system",
-      content: `You create rigorous quizzes from a supplied lesson transcript. Use only claims explicitly supported by that transcript. Ignore greetings, promotions, jokes, repeated filler, and transcription noise. Never infer unseen visuals or add outside facts. Questions must be self-contained, specific, pedagogically useful, and must not mention captions, timestamps, or the video.
+      content: `You create rigorous quizzes from a supplied lesson transcript. Use only claims explicitly supported by that transcript. Ignore greetings, promotions, jokes, repeated filler, and transcription noise. Never infer unseen visuals or add outside facts. Questions must be self-contained, specific, pedagogically useful, and must not mention captions, timestamps, or the recording. ${conceptMasteryInstructions}
 
 Return JSON only: one JSON object containing a questions array. Finish each question object before starting the next. ${input.automaticMode ? "For multiple choice, return one correctAnswer and exactly three unique distractors; ClipQuest assigns the stored choice order and answer index locally." : "Multiple-choice questions need four unique plausible choices, exactly one supported answer, and answer must equal choices[answerIndex]."} ${input.groundedMode ? groundedInstructions : "For true/false, write a statement first, then set answer to its transcript-supported truth value; never force a false answer onto a true statement or a true answer onto a false statement. Treat preferred_answer as a diversity target: when false is preferred, change one explicit factual detail so the statement is clearly false and provide the correct detail in correction. If a safe supported transformation is not possible, return a true statement with answer=true instead. Include a correction or confirmation."} Short answers need a complete answer, every required rubric idea, and optional equivalent answers. A formula answer must be a standalone canonical formula. For a formula question, also return formulaTokens: a bounded ordered token list using identifier, number, operator, left_paren, right_paren, comma, and prime; its locally serialized expression must exactly match answer after Unicode operator normalization. Use explicit * and ^ operators and parenthesize both sides of division, for example (f(b)-f(a))/(b-a). Put notation variants only in acceptableAnswers. Omit formulaTokens for prose answers. Never include fields for another question type.`,
     },
@@ -453,7 +466,12 @@ function normalizeFormulaTokens(value) {
 
 export function normalizeGeneratedQuestion(
   rawQuestion,
-  { expectedId, automaticMode = false, groundedMode = false } = {},
+  {
+    expectedId,
+    automaticMode = false,
+    groundedMode = false,
+    conceptMasteryMode = false,
+  } = {},
 ) {
   if (
     !rawQuestion ||
@@ -467,8 +485,12 @@ export function normalizeGeneratedQuestion(
     id: automaticMode && expectedId ? expectedId : cleanString(rawQuestion.id),
     type,
     concept: cleanString(rawQuestion.concept),
-    question: cleanString(rawQuestion.question),
-    explanation: cleanString(rawQuestion.explanation),
+    question: conceptMasteryMode
+      ? stripQuestionSourceFraming(cleanString(rawQuestion.question))
+      : cleanString(rawQuestion.question),
+    explanation: conceptMasteryMode
+      ? stripQuestionSourceFraming(cleanString(rawQuestion.explanation))
+      : cleanString(rawQuestion.explanation),
     ...(groundedMode
       ? {
           sourceEvidence: cleanString(rawQuestion.sourceEvidence),
@@ -777,6 +799,7 @@ function validateQuiz(quiz, input) {
       expectedId,
       automaticMode: input.automaticMode,
       groundedMode: input.groundedMode,
+      conceptMasteryMode: input.conceptMasteryMode,
     });
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       validationFailure(`Question ${index + 1} is not a JSON object.`);
@@ -817,6 +840,11 @@ function validateQuiz(quiz, input) {
           "duplicate_question",
         );
       }
+    }
+    if (input.conceptMasteryMode && !questionTestsTaughtConcept(question)) {
+      validationFailure(
+        `Question ${index + 1} must directly test a taught concept rather than source or course metadata.`,
+      );
     }
     if (
       prompts.some(
@@ -1716,9 +1744,24 @@ export async function generateQuizFromPlainText(
     !stableV52Mode &&
     (rawInput?.generationProfile === "stable_auto_recovery_v5_3" ||
       input.continuation?.promptVersion === "quiz-local-json-stream-v5.3");
+  const groundedV54Mode =
+    !legacyMode &&
+    !stableV52Mode &&
+    !automaticV53Mode &&
+    input.continuation?.promptVersion === "quiz-local-json-stream-v5.4";
   const automaticMode = !legacyMode && !stableV52Mode;
   const groundedMode = automaticMode && !automaticV53Mode;
   input.groundedMode = groundedMode;
+  input.conceptMasteryMode = groundedMode && !groundedV54Mode;
+  if (
+    input.conceptMasteryMode &&
+    buildInstructionalExcerpts(input.plainText).length === 0
+  ) {
+    throw new GenerationFailure(
+      "This source does not contain enough transferable instructional content for a concept quiz.",
+      "schema_invalid",
+    );
+  }
   const selectedTypes = validateQuestionTypes(input.questionTypes);
   let questionPlan;
   if (input.continuation?.questionPlan) {
@@ -1857,8 +1900,12 @@ export async function generateQuizFromPlainText(
             pipelineVersion: PIPELINE_VERSION,
             model: MODEL,
             reasoningEffort: "none",
-            promptVersion: PROMPT_VERSION,
-            validatorVersion: VALIDATOR_VERSION,
+            promptVersion: groundedV54Mode
+              ? "quiz-local-json-stream-v5.4"
+              : PROMPT_VERSION,
+            validatorVersion: groundedV54Mode
+              ? "validator-local-progressive-v4.3"
+              : VALIDATOR_VERSION,
             importVersion: IMPORT_VERSION,
             generationProfile: GENERATION_PROFILE,
             generationId: input.generationId,
@@ -2506,7 +2553,7 @@ function repairGuidanceFor(retryKind, acceptedQuestions = []) {
     truncated_output:
       "Keep every field concise and close the singleton JSON object.",
     content_repair:
-      "Follow the exact singleton type schema and required fields.",
+      "Follow the exact singleton type schema and required fields. Ask a direct, self-contained question about a central taught concept. Do not mention the lesson, video, lecture, presenter, course logistics, exam weighting, grades, schedules, assignments, readings, introductions, or video metadata.",
     duplicate_repair: `Use a different supported claim from this slot's focus excerpt and do not paraphrase any accepted prompt.${usedConcepts ? ` Do not reuse these concepts: ${usedConcepts}.` : ""}`,
     answer_repair:
       "Make the correct answer and distractors distinct and unambiguous.",

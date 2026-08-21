@@ -473,7 +473,7 @@ test("v5.3 uses singleton primary calls and local answer mapping", async (contex
   );
 });
 
-test("v5.4 streams evidence-grounded singleton calls with protocol 8 telemetry", async (context) => {
+test("v5.5 streams concept-focused grounded singleton calls with protocol 8 telemetry", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
   context.after(() => {
@@ -491,8 +491,8 @@ test("v5.4 streams evidence-grounded singleton calls with protocol 8 telemetry",
   );
 
   assert.equal(result.protocolVersion, 8);
-  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.4");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.3");
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.5");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.4");
   assert.equal(result.importVersion, "extension-progressive-import-v6");
   assert.equal(result.generationProfile, "evidence_grounded_auto_v5_4");
   assert.equal(calls.length, 5);
@@ -508,7 +508,7 @@ test("v5.4 streams evidence-grounded singleton calls with protocol 8 telemetry",
   );
 });
 
-test("v5.4 validates grounded true-false and short-answer singletons", async (context) => {
+test("v5.5 validates grounded true-false and short-answer singletons", async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {
     globalThis.fetch = originalFetch;
@@ -537,7 +537,7 @@ test("v5.4 validates grounded true-false and short-answer singletons", async (co
   );
 });
 
-test("v5.4 grants content repair budgets independently to each ordinal", async (context) => {
+test("v5.5 grants content repair budgets independently to each ordinal", async (context) => {
   const originalFetch = globalThis.fetch;
   const attempts = new Map();
   const calls = [];
@@ -580,6 +580,98 @@ test("v5.4 grants content repair budgets independently to each ordinal", async (
       .map((event) => event.retryKind),
     ["answer_repair", "answer_repair", "answer_repair"],
   );
+});
+
+test("v5.5 removes empty lesson framing locally without an extra model call", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) =>
+    responseForRequest(init.body, (value, task) => {
+      if (task.slots[0].ordinal === 1) {
+        value.questions[0].question =
+          "According to the lesson, what exact supported value is reported for instructional claim 1?";
+        value.questions[0].explanation =
+          "According to the lesson, the source evidence explicitly states the supported value.";
+      }
+      return value;
+    });
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.metrics.aiCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.doesNotMatch(result.quiz.questions[0].question, /according to/iu);
+  assert.equal(
+    result.quiz.questions[0].question,
+    "What exact supported value is reported for instructional claim 1?",
+  );
+  assert.ok(calls.every((event) => event.classification === "primary"));
+});
+
+test("v5.5 automatically repairs a grounded course-trivia question before storage", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const attempts = new Map();
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = taskFromRequest(init.body);
+    const ordinal = task.slots[0].ordinal;
+    const attempt = (attempts.get(ordinal) ?? 0) + 1;
+    attempts.set(ordinal, attempt);
+    return responseForRequest(init.body, (value) => {
+      if (ordinal === 1 && attempt === 1) {
+        value.questions[0].concept = "AP Calculus BC exam weighting";
+        value.questions[0].question =
+          "What percentage of the AP Calculus BC exam is Unit 1 worth?";
+        value.questions[0].claim = {
+          subject: "Unit 1",
+          relation: "is worth",
+          value: "10 percent of the AP Calculus BC exam",
+          cluster: "AP exam weighting",
+        };
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(attempts.get(1), 2);
+  assert.equal(
+    result.metrics.retryCount,
+    calls.filter((event) => event.classification === "automatic_retry").length,
+  );
+  assert.equal(calls[0]?.outcome, "schema_invalid");
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        !/exam|weight|percentage|unit 1 worth/iu.test(question.question),
+    ),
+  );
+  const retry = calls.find(
+    (event) => event.classification === "automatic_retry",
+  );
+  assert.equal(retry?.retryKind, "content_repair");
+  assert.equal(retry?.startIndex, 0);
 });
 
 test("question one is emitted from one-character SSE before its response resolves", async (context) => {

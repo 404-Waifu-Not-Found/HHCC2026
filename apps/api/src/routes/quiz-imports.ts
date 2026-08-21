@@ -780,7 +780,8 @@ async function persistProgressiveQuiz(input: {
     source: "extension-local-json-stream",
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.4"
+      (chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.4"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
         : chunk.promptVersion === "quiz-local-json-stream-v5.3"
           ? "extension-progressive-import-v5"
@@ -810,7 +811,8 @@ async function persistProgressiveQuiz(input: {
     telemetryAvailable:
       chunk.promptVersion === "quiz-local-json-stream-v5.2" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.3" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.4",
+      chunk.promptVersion === "quiz-local-json-stream-v5.4" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.5",
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]
       : [],

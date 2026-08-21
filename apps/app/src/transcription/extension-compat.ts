@@ -6,7 +6,7 @@ import {
   type LocalGenerationProfile,
 } from "@clipquest/contracts";
 
-export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.4";
+export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.5";
 export const MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION = "0.8.3";
 export const MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION = "0.8.2";
 export const MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION = "0.8.0";

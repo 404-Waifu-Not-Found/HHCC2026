@@ -67,11 +67,11 @@ describe("quiz generation rollout", () => {
     );
   });
 
-  it("gives an exact v5.4 grounded rollout precedence", () => {
+  it("requires extension 0.8.5 for the concept-focused grounded rollout", () => {
     const canary = env("enabled", "", "enabled", "", "canary", "learner-1");
     expect(quizGenerationProfile(canary, "learner-1")).toEqual({
       generationProfile: "evidence_grounded_auto_v5_4",
-      minimumExtensionVersion: "0.8.4",
+      minimumExtensionVersion: "0.8.5",
       requiredCapability: "question-stream-v4",
     });
     expect(quizGenerationProfile(canary, "learner-2").generationProfile).toBe(

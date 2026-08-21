@@ -43,7 +43,7 @@ export function quizGenerationProfile(
   if (grounded) {
     return QuizGenerationProfileResponseSchema.parse({
       generationProfile: "evidence_grounded_auto_v5_4",
-      minimumExtensionVersion: "0.8.4",
+      minimumExtensionVersion: "0.8.5",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     });
   }

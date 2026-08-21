@@ -303,8 +303,8 @@ function createGroundedDatabase(timestamp = Date.now()) {
     ...automaticSummary("generating", timestamp),
     importVersion: "extension-progressive-import-v6",
     resultProtocolVersion: 8,
-    promptVersion: "quiz-local-json-stream-v5.4",
-    validatorVersion: "validator-local-progressive-v4.3",
+    promptVersion: "quiz-local-json-stream-v5.5",
+    validatorVersion: "validator-local-progressive-v4.4",
     generationProfile: "evidence_grounded_auto_v5_4",
   };
   db.sqlite
