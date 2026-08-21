@@ -19,5 +19,6 @@ apps/app/expo-env.d.ts
 apps/app/public/runtime/
 apps/api/worker-configuration.d.ts
 modules/*/android/build/
+modules/*/android/.gradle/
 *.apk
 *.ipa
