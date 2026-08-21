@@ -1052,11 +1052,24 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
     learnerAnswer,
     groundingSource,
   );
+  const supportCandidateDistractors = Array.isArray(candidate?.distractors)
+    ? candidate.distractors.map((entry) =>
+        typeof entry === "string" ? entry : String(entry?.text ?? "").trim(),
+      )
+    : [];
+  const learnerAnswerIsUniquelyGrounded =
+    answerSupportedByEvidence(learnerAnswer, groundingSource) &&
+    supportCandidateDistractors.length === 3 &&
+    supportCandidateDistractors.every(
+      (distractor) =>
+        distractor && !answerSupportedByEvidence(distractor, groundingSource),
+    );
   const answerRepresentationsAgree =
     Boolean(exactRequestedAnswerSpan || exactLearnerAnswerSpan) ||
     normalizeGroundedText(requestedAnswerSpan) ===
       normalizeGroundedText(learnerAnswer) ||
-    choicesLikelyEquivalent(requestedAnswerSpan, learnerAnswer);
+    choicesLikelyEquivalent(requestedAnswerSpan, learnerAnswer) ||
+    learnerAnswerIsUniquelyGrounded;
   // DeepSeek occasionally paraphrases the private answerSpan even though the
   // learner-facing answerText is copied exactly from the evidence. Preserve a
   // valid exact source-language span for translated quizzes; otherwise resolve
@@ -1066,6 +1079,7 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
   const correctAnswer =
     exactRequestedAnswerSpan ??
     exactLearnerAnswerSpan ??
+    (learnerAnswerIsUniquelyGrounded ? learnerAnswer : null) ??
     (answerRepresentationsAgree &&
     answerSupportedByEvidence(requestedAnswerSpan, groundingSource) &&
     answerSupportedByEvidence(learnerAnswer, groundingSource)

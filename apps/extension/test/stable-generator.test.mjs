@@ -1092,6 +1092,53 @@ test("v5.8 resolves grading-sensitive values against the local focus when a priv
   );
 });
 
+test("v5.8 accepts one uniquely grounded learner answer when the private MC span is malformed", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value) => {
+      const question = value.questions[0];
+      const pathway = question.answerText;
+      question.evidenceQuote =
+        "A private paraphrase that does not reproduce the instructional sentence.";
+      question.answerSpan = "an unsupported private span hint";
+      question.answerText = `${pathway} energy`;
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    result.quiz.questions.every((question) =>
+      question.choices.includes(question.answer),
+    ),
+  );
+  assert.ok(
+    calls
+      .filter((event) => event.lifecycleState === "completed")
+      .every(
+        (event) =>
+          event.classification === "primary" && event.outcome === "complete",
+      ),
+  );
+});
+
 test("v5.8 rejects presentation statistics before storage and repairs only that ordinal", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
