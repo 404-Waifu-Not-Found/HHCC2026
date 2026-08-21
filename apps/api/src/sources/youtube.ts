@@ -12,7 +12,6 @@ import {
 import type { SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
 
-const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const YOUTUBE_CAPTION_CLIENTS = ["IOS", "ANDROID"] as const;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
@@ -21,6 +20,32 @@ const METADATA_FETCH_TIMEOUT_MS = 15_000;
 const AUDIO_FETCH_TIMEOUT_MS = 30_000;
 const AUDIO_UPSTREAM_ATTEMPTS = 3;
 const AUDIO_RETRY_DELAY_MS = 250;
+
+type YouTubeAudioFormatRequest = {
+  client: "IOS" | "ANDROID";
+  type: "audio" | "video+audio";
+};
+
+/**
+ * YouTube's iOS audio-only URLs are compact, but the CDN currently rejects a
+ * full-file request without a Range header from some Worker egress IPs. The
+ * Android client exposes a progressive MP4 that accepts a normal 200 response
+ * and still contains the source audio track. Keep the request choice explicit
+ * so a native/browser full download does not get stuck on that CDN quirk.
+ */
+export function selectYouTubeAudioFormatRequests(
+  hasRange: boolean,
+): readonly YouTubeAudioFormatRequest[] {
+  return hasRange
+    ? [
+        { client: "IOS", type: "audio" },
+        { client: "ANDROID", type: "video+audio" },
+      ]
+    : [
+        { client: "ANDROID", type: "video+audio" },
+        { client: "IOS", type: "audio" },
+      ];
+}
 
 type YouTubeCaptionTrack = {
   base_url: string;
@@ -614,14 +639,17 @@ export class YouTubeAdapter implements SourceAdapter {
           }
         | undefined;
       let lastError: unknown;
+      const formatRequests = selectYouTubeAudioFormatRequests(Boolean(range));
       for (let attempt = 1; attempt <= AUDIO_UPSTREAM_ATTEMPTS; attempt += 1) {
+        const formatRequest =
+          formatRequests[(attempt - 1) % formatRequests.length]!;
         try {
           // Resolve the signed format again on every retry. Reusing the URL
           // is the common cause of a repeat 403/503 after a transient edge
           // failure.
           const format = await client.getStreamingData(sourceVideoId, {
-            client: YOUTUBE_INFO_CLIENT,
-            type: "audio",
+            client: formatRequest.client,
+            type: formatRequest.type,
             quality: "bestefficiency",
           });
           if (!format.url) throw new Error("audio_url_missing");
@@ -667,6 +695,8 @@ export class YouTubeAdapter implements SourceAdapter {
               event: "stream.retry",
               sourceVideoId,
               attempt,
+              client: formatRequest.client,
+              formatType: formatRequest.type,
               status,
             }),
           );
@@ -681,6 +711,8 @@ export class YouTubeAdapter implements SourceAdapter {
               event: "stream.retry",
               sourceVideoId,
               attempt,
+              client: formatRequest.client,
+              formatType: formatRequest.type,
               errorName: safeErrorName(error),
               errorCode: safeAudioErrorCode(error),
             }),
