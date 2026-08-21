@@ -8,7 +8,11 @@
   const WEBSITE_SOURCE = "clipquest-website";
   const EXTENSION_SOURCE = "clipquest-extension";
   const LOCAL_AI_PORT = "clipquest-local-ai-v1";
-  const HEARTBEAT_INTERVAL_MS = 20_000;
+  // Keep the page-side generation watchdog informed while the service worker
+  // is doing bounded local evidence work or waiting for a slow DeepSeek
+  // stream. The port heartbeat alone keeps Chrome's worker alive, but it is
+  // invisible to the app and can otherwise look like a disconnected request.
+  const HEARTBEAT_INTERVAL_MS = 15_000;
 
   function post(message) {
     window.postMessage(
@@ -160,6 +164,7 @@
         return;
       }
       let settled = false;
+      let lastProgress = 0.2;
       const finish = (response) => {
         if (settled) return;
         settled = true;
@@ -170,6 +175,15 @@
       const heartbeat = setInterval(() => {
         try {
           port.postMessage({ type: "heartbeat", requestId });
+          post({
+            type: "generation-progress",
+            requestId,
+            stage: "creating_questions",
+            progress: lastProgress,
+            attempt: 1,
+            maxAttempts: 3,
+            status: "generating",
+          });
         } catch {
           finish({
             ok: false,
@@ -180,6 +194,9 @@
       port.onMessage.addListener((response) => {
         if (response?.requestId !== requestId) return;
         if (response.type === "progress") {
+          if (typeof response.progress === "number") {
+            lastProgress = Math.max(lastProgress, response.progress);
+          }
           post({
             type: "generation-progress",
             requestId,

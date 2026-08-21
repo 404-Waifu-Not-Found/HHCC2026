@@ -116,6 +116,10 @@ test("long local generation uses a heartbeat port", () => {
   assert.match(bridge, /setInterval\([\s\S]*type: "heartbeat"/);
   assert.match(
     bridge,
+    /type: "generation-progress"[\s\S]*stage: "creating_questions"[\s\S]*status: "generating"/,
+  );
+  assert.match(
+    bridge,
     /"question-stream-v1",[\s\S]*"question-stream-v2",[\s\S]*"question-stream-v3",[\s\S]*"ensure-source-ready-v1"/,
   );
   assert.match(bridge, /type: "generation-call"/);
