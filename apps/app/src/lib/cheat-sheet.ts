@@ -4,7 +4,14 @@ import {
   type CheatSheetContext,
   type CheatSheetDocument,
 } from "@clipquest/contracts";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+// Use pdf-lib's prebundled ESM artifact on Expo web/native. The package module
+// entry imports tslib as a bare dependency, which Expo's web resolver exposes
+// as an undefined default export during app bootstrap.
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+} from "pdf-lib/dist/pdf-lib.esm.js";
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
