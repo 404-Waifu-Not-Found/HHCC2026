@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Platform, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
@@ -24,10 +24,7 @@ export default function ForgotPasswordScreen() {
     try {
       const result = await authClient.requestPasswordReset({
         email: email.trim().toLowerCase(),
-        redirectTo:
-          Platform.OS === "web"
-            ? "/reset-password"
-            : "clipquest://reset-password",
+        redirectTo: "https://clipquest.ccwu.cc/reset-password",
       });
       if (result.error) {
         setError(result.error.message ?? t("emailSendFailed"));

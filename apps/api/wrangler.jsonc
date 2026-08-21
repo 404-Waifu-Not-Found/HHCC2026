@@ -18,6 +18,7 @@
       "/api/*",
       "/health",
       "/.well-known/assetlinks.json",
+      "/.well-known/apple-app-site-association",
       "/",
       "/_sitemap*",
       "/admin",

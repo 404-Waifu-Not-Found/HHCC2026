@@ -133,26 +133,29 @@ test("website privileges are bound to exact ClipQuest origins", () => {
   );
   assert.equal(
     isClipQuestPageOrigin("http://localhost:8081/create/video"),
-    true,
+    false,
   );
-  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8081/"), true);
-  assert.equal(isClipQuestPageOrigin("http://localhost:19006/"), true);
-  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:19006/"), true);
+  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8081/"), false);
+  assert.equal(isClipQuestPageOrigin("http://localhost:19006/"), false);
+  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:19006/"), false);
   assert.equal(isClipQuestPageOrigin("http://localhost:3000/"), false);
   assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8787/"), false);
   assert.equal(
     isClipQuestPageOrigin("https://clipquest.ccwu.cc.evil.test/"),
     false,
   );
-  assert.deepEqual(
-    [...CLIPQUEST_PAGE_ORIGINS],
-    [
-      "https://clipquest.ccwu.cc",
-      "http://localhost:8081",
-      "http://127.0.0.1:8081",
-      "http://localhost:19006",
-      "http://127.0.0.1:19006",
-    ],
+  assert.deepEqual([...CLIPQUEST_PAGE_ORIGINS], ["https://clipquest.ccwu.cc"]);
+  assert.equal(
+    manifest.host_permissions.some((entry) => entry.includes("localhost")),
+    false,
+  );
+  assert.equal(
+    manifest.content_scripts.some((script) =>
+      script.matches.some(
+        (entry) => entry.includes("localhost") || entry.includes("127.0.0.1"),
+      ),
+    ),
+    false,
   );
 });
 

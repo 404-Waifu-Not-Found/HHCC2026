@@ -10,6 +10,7 @@ import {
 import { createAuth } from "./auth";
 import { preventStaleAppShell, publicAssetShell } from "./lib/asset-shell";
 import { androidAssetLinks } from "./lib/android-app-links";
+import { appleAppSiteAssociation } from "./lib/apple-app-site-association";
 import {
   quizGenerationProfile,
   quizGenerationRolloutMode,
@@ -100,6 +101,17 @@ app.get("/.well-known/assetlinks.json", (c) => {
     return c.json([], 503, { "Cache-Control": "no-store" });
   }
   return c.json(links, 200, { "Cache-Control": "public, max-age=3600" });
+});
+
+app.get("/.well-known/apple-app-site-association", (c) => {
+  const association = appleAppSiteAssociation(c.env.IOS_APP_LINKS_TEAM_ID);
+  if (!association) {
+    return c.json({}, 503, { "Cache-Control": "no-store" });
+  }
+  return c.json(association, 200, {
+    "Cache-Control": "public, max-age=3600",
+    "Content-Type": "application/json",
+  });
 });
 
 app.use("*", async (c, next) => {

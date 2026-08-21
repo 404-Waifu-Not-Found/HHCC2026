@@ -30,6 +30,7 @@ export function nativeRouteForUrl(rawUrl: string): NativeDeepLinkRoute | null {
   if (path === "/forgot-password") return "/(auth)/forgot-password";
   if (path === "/library") return "/(tabs)/library";
   if (path === "/reset-password") {
+    if (!webLink) return null;
     const query = new URLSearchParams();
     for (const name of ["token", "error"]) {
       const value = url.searchParams.get(name);

@@ -16,6 +16,7 @@ const config: ExpoConfig = {
     icon: "./assets/platform/app-icon-1024.png",
     supportsTablet: true,
     bundleIdentifier: "cc.ccwu.clipquest",
+    associatedDomains: ["applinks:clipquest.ccwu.cc"],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
     },

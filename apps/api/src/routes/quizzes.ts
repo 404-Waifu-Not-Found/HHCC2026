@@ -24,7 +24,6 @@ import {
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
-import { gradeWrittenAnswer } from "../lib/ai-services";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
 import { requireIdempotencyKey } from "../lib/idempotency";
@@ -37,7 +36,6 @@ import {
   type ProgressiveGenerationSnapshot,
 } from "../lib/progressive-quiz";
 import { enforceRateLimit } from "../lib/rate-limit";
-import { StoredTranscriptSchema } from "../lib/stored-transcript";
 import { parseJson, parseStoredJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 
@@ -524,7 +522,12 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     const generation = generationState.generation;
     const timestamp = now();
     const answerInsert = c.env.DB.prepare(
-      "INSERT INTO answers (id, attempt_id, question_id, answer_json, is_correct, feedback, variant_index, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      `INSERT INTO answers (id, attempt_id, question_id, answer_json, is_correct, feedback, variant_index, created_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE EXISTS (
+         SELECT 1 FROM attempts
+         WHERE id = ? AND user_id = ? AND grading_token = ?
+       )`,
     ).bind(
       createId(),
       attempt.id,
@@ -534,15 +537,19 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       grade.feedback,
       attempt.current_variant,
       timestamp,
+      attempt.id,
+      user.id,
+      gradingToken,
     );
 
     if (!grade.correct && !attempt.retry_pending) {
-      await c.env.DB.batch([
+      const results = await c.env.DB.batch([
         answerInsert,
         c.env.DB.prepare(
           "UPDATE attempts SET retry_pending = 1, current_variant = 1, total_answered = total_answered + 1, target_difficulty = MAX(1, target_difficulty - 0.5), grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
         ).bind(timestamp, attempt.id, user.id, gradingToken),
       ]);
+      requireAnswerCommit(results);
       reservationCommitted = true;
       return c.json(
         AttemptAnswerResponseSchema.parse({
@@ -573,15 +580,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       nextIndex >= attempt.item_count && generation.state === "ready";
     if (completed) {
       const score = Math.round((nextCorrectCount / attempt.item_count) * 100);
-      const mastery = await updateMastery(c.env.DB, {
-        userId: user.id,
-        videoId: attempt.video_id,
-        attemptId: attempt.id,
-        mode: attempt.mode,
-        score,
-        timestamp,
-      });
-      await c.env.DB.batch([
+      const results = await c.env.DB.batch([
         answerInsert,
         c.env.DB.prepare(
           "UPDATE attempts SET status = 'complete', current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, score = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ?, completed_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
@@ -597,7 +596,16 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
           gradingToken,
         ),
       ]);
+      requireAnswerCommit(results);
       reservationCommitted = true;
+      const mastery = await updateMastery(c.env.DB, {
+        userId: user.id,
+        videoId: attempt.video_id,
+        attemptId: attempt.id,
+        mode: attempt.mode,
+        score,
+        timestamp,
+      });
       return c.json(
         AttemptAnswerResponseSchema.parse({
           correct: grade.correct,
@@ -626,7 +634,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       }
     }
 
-    await c.env.DB.batch([
+    const results = await c.env.DB.batch([
       answerInsert,
       c.env.DB.prepare(
         "UPDATE attempts SET current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
@@ -640,6 +648,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
         gradingToken,
       ),
     ]);
+    requireAnswerCommit(results);
     reservationCommitted = true;
 
     if (!progressive) {
@@ -1383,6 +1392,20 @@ async function releaseAnswerReservation(
     .run();
 }
 
+function requireAnswerCommit(results: D1Result<unknown>[]): void {
+  if (
+    results.length !== 2 ||
+    results[0]?.meta.changes !== 1 ||
+    results[1]?.meta.changes !== 1
+  ) {
+    throw new ApiError(
+      409,
+      "answer_reservation_lost",
+      "This answer was checked by a newer request. Resume the quiz to continue.",
+    );
+  }
+}
+
 async function getAttempt(
   db: D1Database,
   attemptId: string,
@@ -1428,7 +1451,7 @@ async function getAttemptQuestion(
 }
 
 async function gradeAnswer(
-  env: ApiBindings["Bindings"],
+  _env: ApiBindings["Bindings"],
   attempt: AttemptRow,
   question: QuestionRow,
   answer: z.infer<typeof AnswerValueSchema>,
@@ -1450,53 +1473,17 @@ async function gradeAnswer(
       RubricSchema,
       "short-answer rubric",
     );
-    if (attempt.quiz_pipeline_version === LOCAL_QUIZ_PIPELINE_VERSION) {
-      const decision = gradeProgressiveShortAnswerDecision({
-        answer,
-        requiredIdeas: rubric.requiredIdeas,
-        acceptableAlternatives: rubric.acceptableAlternatives,
-        rubricV2: rubric.v2,
-      });
-      return {
-        correct: decision.correct,
-        feedback: question.explanation,
-        gradingPath: decision.path,
-      };
-    }
-    const evidenceIds = new Set(parseQuestionEvidence(question));
-    let evidence: z.infer<typeof StoredTranscriptSchema>["segments"] = [];
-    if (evidenceIds.size > 0) {
-      const transcriptObject = await env.PRIVATE_BUCKET.get(
-        `transcripts/${attempt.user_id}/${attempt.video_id}/${attempt.quiz_id}.json`,
-      );
-      if (!transcriptObject)
-        throw new ApiError(
-          500,
-          "transcript_missing",
-          "Video evidence is unavailable.",
-        );
-      const transcript = StoredTranscriptSchema.safeParse(
-        await transcriptObject.json(),
-      );
-      if (!transcript.success)
-        throw new ApiError(
-          500,
-          "transcript_invalid",
-          "Video evidence failed integrity checks.",
-        );
-      evidence = transcript.data.segments.filter((segment) =>
-        evidenceIds.has(segment.id),
-      );
-    }
-    return gradeWrittenAnswer(env, {
-      prompt: attempt.current_variant
-        ? question.reformulated_prompt
-        : question.prompt,
+    const decision = gradeProgressiveShortAnswerDecision({
       answer,
       requiredIdeas: rubric.requiredIdeas,
       acceptableAlternatives: rubric.acceptableAlternatives,
-      evidence,
+      rubricV2: rubric.v2,
     });
+    return {
+      correct: decision.correct,
+      feedback: question.explanation,
+      gradingPath: decision.path,
+    };
   }
 
   const expected = parseStoredJson(

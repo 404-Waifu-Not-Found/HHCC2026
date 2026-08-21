@@ -426,6 +426,13 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
   const complete = nextCount === summary.plannedCount;
   const questionId = createId();
   const timestamp = now();
+  const liveClaim = isAutomaticGenerationProfile(summary.generationProfile)
+    ? {
+        key: importKey,
+        recoverySessionId: snapshot.claimRecoverySessionId,
+        timestamp,
+      }
+    : undefined;
   const nextSummary = ProgressiveQuizSummarySchema.parse({
     ...summary,
     source: clientTransitionAllowed
@@ -503,12 +510,15 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
         input.chunk,
         questionId,
         qualityFlags,
+        liveClaim,
       ),
       c.env.DB.prepare(
         "INSERT OR IGNORE INTO attempt_items (attempt_id, ordinal, question_id) SELECT id, ?, ? FROM attempts WHERE quiz_id = ?",
       ).bind(input.chunk.startIndex, questionId, bank.id),
       c.env.DB.prepare(
-        "UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ?, concepts_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating'",
+        `UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ?, concepts_json = ?
+         WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating'
+         ${liveClaim ? "AND EXISTS (SELECT 1 FROM quiz_generation_claims claim WHERE claim.quiz_id = quiz_banks.id AND claim.claim_key = ? AND claim.lease_expires_at > ? AND (? IS NULL OR claim.recovery_session_id = ?))" : ""}`,
       ).bind(
         complete ? "passed" : "generating",
         JSON.stringify(nextSummary),
@@ -517,6 +527,14 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
         user.id,
         importKey,
         LOCAL_QUIZ_PIPELINE_VERSION,
+        ...(liveClaim
+          ? [
+              liveClaim.key,
+              liveClaim.timestamp,
+              liveClaim.recoverySessionId,
+              liveClaim.recoverySessionId,
+            ]
+          : []),
       ),
     ]);
     if (results[0]?.meta.changes !== 1 || results[2]?.meta.changes !== 1) {
@@ -950,15 +968,21 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
 quizImportsRouter.patch("/:quizId/progress", async (c) => {
   const user = c.get("user");
   const importKey = requireIdempotencyKey(c);
-  const input = await parseJson(
-    c,
-    ExtensionQuizGenerationProgressRequestSchema,
-  );
+  await enforceRateLimit(c.env.DB, {
+    namespace: "extension-progressive-progress",
+    identifier: user.id,
+    maximum: 90,
+    windowSeconds: 60,
+  });
   const bank = await progressiveBank(
     c.env.DB,
     c.req.param("quizId"),
     user.id,
     importKey,
+  );
+  const input = await parseJson(
+    c,
+    ExtensionQuizGenerationProgressRequestSchema,
   );
   const snapshot = await readProgressiveGenerationSnapshot(c.env.DB, bank.id);
   if (snapshot.qualityStatus !== "passed") {
@@ -1018,8 +1042,11 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
           ? summary.stateChangedAt
           : timestamp,
     });
+    const automatic = isAutomaticGenerationProfile(summary.generationProfile);
     const updateSummary = c.env.DB.prepare(
-      "UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating' AND quality_summary_json = ?",
+      `UPDATE quiz_banks SET quality_summary_json = ?
+       WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating' AND quality_summary_json = ?
+       ${automatic ? "AND EXISTS (SELECT 1 FROM quiz_generation_claims claim WHERE claim.quiz_id = quiz_banks.id AND claim.claim_key = ? AND claim.lease_expires_at > ? AND (? IS NULL OR claim.recovery_session_id = ?))" : ""}`,
     ).bind(
       JSON.stringify(nextSummary),
       bank.id,
@@ -1027,6 +1054,14 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
       importKey,
       LOCAL_QUIZ_PIPELINE_VERSION,
       snapshot.qualitySummaryJson,
+      ...(automatic
+        ? [
+            importKey,
+            timestamp,
+            input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+            input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+          ]
+        : []),
     );
     if (
       input.state === "retry_required" ||
@@ -1983,9 +2018,9 @@ async function renewGenerationClaim(
     recoverySessionId || isAutomaticGenerationProfile(profile)
       ? AUTOMATIC_GENERATION_CLAIM_LEASE_MS
       : LEGACY_GENERATION_CLAIM_LEASE_MS;
-  await db
+  const result = await db
     .prepare(
-      "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ?, heartbeat_at = COALESCE(?, heartbeat_at) WHERE quiz_id = ? AND claim_key = ? AND (? IS NULL OR recovery_session_id = ?)",
+      "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ?, heartbeat_at = COALESCE(?, heartbeat_at) WHERE quiz_id = ? AND claim_key = ? AND lease_expires_at > ? AND (? IS NULL OR recovery_session_id = ?)",
     )
     .bind(
       timestamp + leaseMs,
@@ -1993,10 +2028,18 @@ async function renewGenerationClaim(
       recoverySessionId ? timestamp : null,
       quizId,
       importKey,
+      timestamp,
       recoverySessionId ?? null,
       recoverySessionId ?? null,
     )
     .run();
+  if (isAutomaticGenerationProfile(profile) && result.meta.changes !== 1) {
+    throw new ApiError(
+      409,
+      "generation_claim_expired",
+      "This generation lease expired before it could be renewed.",
+    );
+  }
 }
 
 async function materializeGenerationTelemetry(
@@ -2162,48 +2205,69 @@ function questionInsert(
   >,
   questionId = createId(),
   qualityFlags: QuestionQualityFlag[] = [],
+  liveClaim?: {
+    key: string;
+    recoverySessionId: string | null;
+    timestamp: number;
+  },
 ): D1PreparedStatement {
   const stored = storedQuestionFields(question);
   const difficulty = structuralDifficulty(question);
-  return db
-    .prepare(
-      `INSERT INTO questions
-       (id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?)`,
-    )
-    .bind(
-      questionId,
-      quizId,
-      ordinal,
-      question.id,
-      question.type,
-      question.id,
-      question.question,
-      question.question,
-      stored.optionsJson,
-      stored.correctAnswerJson,
-      stored.rubricJson,
-      stored.explanation,
-      difficulty,
-      JSON.stringify({
-        source: "extension-local-tool",
-        blueprintSlot: question.id,
-        concept: question.concept,
-        ...(question.claimKey ? { claimKey: question.claimKey } : {}),
-        ...(question.conceptCluster
-          ? { conceptCluster: question.conceptCluster }
-          : {}),
-        questionType: question.type,
-        pipelineVersion: metadata.pipelineVersion,
-        model: metadata.model,
-        promptVersion: metadata.promptVersion,
-        validatorVersion: metadata.validatorVersion,
-        structuralDifficulty: difficulty,
-        qualityFlags,
-        schemaValidated: true,
-        transcriptStored: false,
-      }),
-    );
+  const columns = `(id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)`;
+  const placeholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?`;
+  const statement = liveClaim
+    ? `INSERT INTO questions ${columns}
+       SELECT ${placeholders}
+       WHERE EXISTS (
+         SELECT 1 FROM quiz_generation_claims claim
+         WHERE claim.quiz_id = ? AND claim.claim_key = ? AND claim.lease_expires_at > ?
+           AND (? IS NULL OR claim.recovery_session_id = ?)
+       )`
+    : `INSERT INTO questions
+       ${columns}
+       VALUES (${placeholders})`;
+  return db.prepare(statement).bind(
+    questionId,
+    quizId,
+    ordinal,
+    question.id,
+    question.type,
+    question.id,
+    question.question,
+    question.question,
+    stored.optionsJson,
+    stored.correctAnswerJson,
+    stored.rubricJson,
+    stored.explanation,
+    difficulty,
+    JSON.stringify({
+      source: "extension-local-tool",
+      blueprintSlot: question.id,
+      concept: question.concept,
+      ...(question.claimKey ? { claimKey: question.claimKey } : {}),
+      ...(question.conceptCluster
+        ? { conceptCluster: question.conceptCluster }
+        : {}),
+      questionType: question.type,
+      pipelineVersion: metadata.pipelineVersion,
+      model: metadata.model,
+      promptVersion: metadata.promptVersion,
+      validatorVersion: metadata.validatorVersion,
+      structuralDifficulty: difficulty,
+      qualityFlags,
+      schemaValidated: true,
+      transcriptStored: false,
+    }),
+    ...(liveClaim
+      ? [
+          quizId,
+          liveClaim.key,
+          liveClaim.timestamp,
+          liveClaim.recoverySessionId,
+          liveClaim.recoverySessionId,
+        ]
+      : []),
+  );
 }
 
 export function storedQuestionFields(question: LocalConceptQuizQuestion): {

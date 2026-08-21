@@ -6338,6 +6338,17 @@ async function parseDeepSeekEventStream(
   let emittedQuestions = 0;
   let finishReason = null;
   let usage = {};
+  let receivedBytes = 0;
+  const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+  const MAX_EVENT_BUFFER_CHARACTERS = 512 * 1024;
+  const MAX_RESPONSE_CONTENT_CHARACTERS = 2 * 1024 * 1024;
+
+  const rejectOversizedResponse = () => {
+    throw new GenerationFailure(
+      "DeepSeek returned more data than ClipQuest can process safely.",
+      "local_state_conflict",
+    );
+  };
 
   const emitCompletedQuestions = async () => {
     const parsed = parseCompletedQuizObjects(responseContent);
@@ -6373,6 +6384,9 @@ async function parseDeepSeekEventStream(
     if (choice.finish_reason) finishReason = choice.finish_reason;
     if (typeof choice.delta?.content === "string") {
       responseContent += choice.delta.content;
+      if (responseContent.length > MAX_RESPONSE_CONTENT_CHARACTERS) {
+        rejectOversizedResponse();
+      }
     }
     await emitCompletedQuestions();
   };
@@ -6380,7 +6394,11 @@ async function parseDeepSeekEventStream(
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (value?.byteLength) onActivity();
+      if (value?.byteLength) {
+        onActivity();
+        receivedBytes += value.byteLength;
+        if (receivedBytes > MAX_RESPONSE_BYTES) rejectOversizedResponse();
+      }
       eventBuffer += decoder.decode(value, { stream: !done });
       eventBuffer = eventBuffer.replace(/\r\n/g, "\n");
       let boundary = eventBuffer.indexOf("\n\n");
@@ -6389,6 +6407,9 @@ async function parseDeepSeekEventStream(
         eventBuffer = eventBuffer.slice(boundary + 2);
         await processEvent(frame);
         boundary = eventBuffer.indexOf("\n\n");
+      }
+      if (eventBuffer.length > MAX_EVENT_BUFFER_CHARACTERS) {
+        rejectOversizedResponse();
       }
       if (done) break;
     }
@@ -6437,6 +6458,40 @@ async function parseDeepSeekEventStream(
     quiz,
     usage: usageMetrics(usage),
   };
+}
+
+async function readBoundedDeepSeekResponse(response) {
+  const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+  const declared = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+    throw new GenerationFailure(
+      "DeepSeek returned more data than ClipQuest can process safely.",
+      "local_state_conflict",
+    );
+  }
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let received = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > MAX_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new GenerationFailure(
+          "DeepSeek returned more data than ClipQuest can process safely.",
+          "local_state_conflict",
+        );
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return text + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 async function callDeepSeekJson(
@@ -6557,7 +6612,7 @@ async function callDeepSeekJson(
         )
       : parseCompletedJsonResponse(
           strictJson(
-            await response.text(),
+            await readBoundedDeepSeekResponse(response),
             "DeepSeek transport envelope",
             "network_interrupted",
             true,

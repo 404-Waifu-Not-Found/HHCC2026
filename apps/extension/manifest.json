@@ -8,8 +8,6 @@
     "https://www.youtube.com/*",
     "https://youtube.com/*",
     "https://clipquest.ccwu.cc/*",
-    "http://localhost/*",
-    "http://127.0.0.1/*",
     "https://api.deepseek.com/*"
   ],
   "background": {
@@ -18,11 +16,7 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://clipquest.ccwu.cc/*",
-        "http://localhost/*",
-        "http://127.0.0.1/*"
-      ],
+      "matches": ["https://clipquest.ccwu.cc/*"],
       "js": ["clipquest-bridge.js"],
       "run_at": "document_start"
     },

@@ -49,11 +49,10 @@ videosRouter.patch("/:videoId/source-metadata", async (c) => {
   const timestamp = now();
   const result = await c.env.DB.prepare(
     `UPDATE videos
-     SET duration_seconds = ?, source_language = ?, caption_source_category = ?, caption_segment_count = ?, caption_word_count = ?, source_metadata_verified_at = ?, updated_at = ?
+     SET source_language = ?, caption_source_category = ?, caption_segment_count = ?, caption_word_count = ?, source_metadata_verified_at = ?, updated_at = ?
      WHERE id = ? AND owner_id = ?`,
   )
     .bind(
-      input.durationSeconds,
       input.sourceLanguage.toLocaleLowerCase("en-US"),
       input.captionSourceCategory,
       input.captionSegmentCount,
@@ -355,6 +354,19 @@ videosRouter.post("/:videoId/captions/resolve", async (c) => {
 
 thumbnailRouter.get("/:videoId/thumbnail", async (c) => {
   const videoId = c.req.param("videoId");
+  const requestIp = c.req.header("cf-connecting-ip") ?? "unknown";
+  await enforceRateLimit(c.env.DB, {
+    namespace: "public-thumbnail-ip",
+    identifier: requestIp,
+    maximum: 120,
+    windowSeconds: 60,
+  });
+  await enforceRateLimit(c.env.DB, {
+    namespace: "public-thumbnail-video",
+    identifier: videoId,
+    maximum: 30,
+    windowSeconds: 60,
+  });
   const video = await c.env.DB.prepare(
     "SELECT source_video_id, thumbnail_key, thumbnail_remote_url FROM videos WHERE id = ?",
   )

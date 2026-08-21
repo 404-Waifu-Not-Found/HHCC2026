@@ -40,6 +40,7 @@ export type AppEnv = Omit<
     QUIZ_V5_12_ROLLOUT?: string;
     QUIZ_V5_12_CANARY_USER_IDS?: string;
     ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINT?: string;
+    IOS_APP_LINKS_TEAM_ID?: string;
   };
 
 import type { AdminRole } from "@clipquest/contracts";
