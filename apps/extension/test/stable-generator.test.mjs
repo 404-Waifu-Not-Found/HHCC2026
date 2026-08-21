@@ -4032,21 +4032,63 @@ test("v5.12 retries an exact repeated question and grading target", async (conte
   );
 });
 
+test("v5.12 abandons a low-value evidence slot before automatic retry", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        value.questions[0].concept = "historical scope";
+        value.questions[0].question =
+          "What is the historical scope of this field?";
+        value.questions[0].answer = "It dates back to antiquity.";
+        value.questions[0].requiredItems = ["dates back to antiquity"];
+        value.questions[0].acceptableAnswers = [
+          "The field dates back to antiquity.",
+        ];
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+  assert.doesNotMatch(result.quiz.questions[0].question, /historical scope/iu);
+});
+
 test("v5.12 repairs an interrogative true-false retry before storage", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
+  const requests = [];
+  const primaryClaims = [];
   let firstQuestionAttempts = 0;
   context.after(() => {
     globalThis.fetch = originalFetch;
   });
-  globalThis.fetch = async (_url, init) =>
-    promptFirstResponse(init.body, (value, task) => {
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task.body.messages.at(-1).content);
+    primaryClaims.push(task.primaryClaim);
+    return promptFirstResponse(init.body, (value, task) => {
       if (task.ordinal === 1 && firstQuestionAttempts++ === 0) {
         value.questions[0].retryQuestion =
           "Under this relationship, does pathway 1 transfer or block energy?";
       }
       return value;
     });
+  };
 
   const result = await generateQuizFromPlainText(
     promptFirstInput(5, ["true_false"]),
@@ -4065,6 +4107,11 @@ test("v5.12 repairs an interrogative true-false retry before storage", async (co
     calls.some((event) => event.outcome === "retry_question_invalid"),
     true,
   );
+  assert.match(
+    requests[1],
+    /previous retryQuestion was missing, copied the original prompt, or used the wrong response format/u,
+  );
+  assert.notEqual(primaryClaims[0], primaryClaims[1]);
 });
 
 test("v5.12 locally normalizes a collapsed false item without another model request", async (context) => {
@@ -4306,6 +4353,7 @@ test("v5.12 preserves a role-reversal false contrast instead of relabeling it tr
       if (task.type === "true_false" && !task.polarity) {
         value.questions[0].supportedStatement = `In market ${task.ordinal}, a price change moves along the demand curve and changes quantity demanded, not demand.`;
         value.questions[0].falseStatement = `In market ${task.ordinal}, a price change moves along the demand curve and changes demand, not quantity demanded.`;
+        value.questions[0].retryQuestion = `A price change in market ${task.ordinal} moves along the existing demand curve and changes demand, not quantity demanded.`;
         value.questions[0].explanation =
           "The false statement swaps demand with quantity demanded; a price change moves along the existing curve.";
       }

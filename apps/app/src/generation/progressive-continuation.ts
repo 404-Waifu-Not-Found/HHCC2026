@@ -545,6 +545,11 @@ async function runAutomaticRecoveryOnce(
     continuation.retryBudgetUsedCount ?? automaticRetryCount;
   let latestOrdinalAttempt = continuation.nextOrdinalAttempt ?? 1;
   let latestModelFailureReason: GenerationFailureCode | undefined;
+  let recoveryStep:
+    | "flush_outbox"
+    | "refresh_after_replay"
+    | "generate_suffix"
+    | "verify_complete" = "flush_outbox";
   const stopLocalHeartbeat = startGenerationRecordHeartbeat(generationId);
 
   const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
@@ -687,6 +692,7 @@ async function runAutomaticRecoveryOnce(
     );
     await ingestion;
     if (replayed.questions > 0) {
+      recoveryStep = "refresh_after_replay";
       const refreshed = await readStatus(attemptId, signal);
       latest = refreshed.generation;
       publishAttemptGeneration(attemptId, status.quizId, latest);
@@ -710,6 +716,7 @@ async function runAutomaticRecoveryOnce(
         previousOutcome: refreshed.continuation.previousOutcome,
       };
     }
+    recoveryStep = "generate_suffix";
     await requestLocalQuiz(
       context,
       signal,
@@ -771,6 +778,7 @@ async function runAutomaticRecoveryOnce(
       enqueueCall,
     );
     await ingestion;
+    recoveryStep = "verify_complete";
     if (latest.state !== "ready") {
       throw new Error("Automatic recovery ended before the bank was complete.");
     }
@@ -778,6 +786,24 @@ async function runAutomaticRecoveryOnce(
   } catch (error) {
     await Promise.allSettled([ingestion, callIngestion]);
     if (signal.aborted || isLeaseConflict(error)) return;
+    console.warn(
+      JSON.stringify({
+        scope: "automatic_generation_recovery",
+        event: "failed",
+        attemptId,
+        quizId: status.quizId,
+        recoveryStep,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        errorMessage:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : "Automatic recovery failed.",
+        reasonCode:
+          error instanceof LocalGenerationRequestError
+            ? error.reasonCode
+            : undefined,
+      }),
+    );
     const reasonCode = authoritativeRecoveryFailureCode({
       requestReasonCode:
         error instanceof LocalGenerationRequestError

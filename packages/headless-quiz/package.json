@@ -1,0 +1,15 @@
+{
+  "name": "@clipquest/headless-quiz",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/cli.js",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@clipquest/contracts": "0.1.0",
+    "@clipquest/local-quiz-engine": "0.1.0",
+    "@clipquest/youtube-source": "0.1.0"
+  }
+}

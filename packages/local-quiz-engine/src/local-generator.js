@@ -772,7 +772,7 @@ Treat assertions, recommendations, political positions, and interpretations as v
 
 SELECTION GATE: prefer the candidate only when it is complete, literal, independently meaningful, and not represented in the blocked list. Discard it when it is presentation text, credits, a classroom story detail, a joke, a source-status comment, an incidental count, a tautology, an incomplete fragment, an unresolved reference, or a fact already represented in the blocked list. Never turn a blocked answer into a False statement, distractor, paraphrase, application, or definition. Blocked material is unavailable evidence. When the candidate fails this gate, choose a stronger complete fact from the additional private context.
 
-1. Choose one complete, literal, transferable fact. Prefer a definition, necessary condition, causal relationship, mechanism, method, formula, or application. This priority is mandatory: a supplied preferred candidate is only a search hint and MUST be discarded when it is an analogy, anecdote, presentation example, isolated statistic, list of incidental examples, logistics, biography, joke, promotion, sponsor, brand, publicity, secrecy, or media commentary. Also discard classroom advice about connecting concepts to everyday life; a colored graph line; a table row, answer-choice label, diagram letter, or hidden visual; a speaker's numerical scenario bookkeeping; and a ceremonial mishap. Extract a standalone scientific, mathematical, historical, or civic relationship from the private content instead. Unless the topic itself is history, never test who first discovered, invented, believed, presented, named, coined, published, or revealed something, nor when or where that happened; assess the mechanism or concept instead. Even in a historical topic, assess a cause, consequence, institution, decision, or relationship—not a date or name by itself. Never mention a lesson, video, transcript, material, source, evidence, excerpt, passage, speaker, presenter, narrator, lecturer, or recording.
+1. Choose one complete, literal, transferable fact. Prefer a definition, necessary condition, causal relationship, mechanism, method, formula, or application. This priority is mandatory: a supplied preferred candidate is only a search hint and MUST be discarded when it is an analogy, anecdote, presentation example, isolated statistic, list of incidental examples, logistics, biography, joke, promotion, sponsor, brand, publicity, secrecy, or media commentary. Also discard classroom advice about connecting concepts to everyday life; a colored graph line; a table row, answer-choice label, diagram letter, or hidden visual; a speaker's numerical scenario bookkeeping; and a ceremonial mishap. Extract a standalone scientific, mathematical, historical, or civic relationship from the private content instead. Unless the topic itself is history, never test who first discovered, invented, believed, presented, named, coined, published, or revealed something, nor when or where that happened; assess the mechanism or concept instead. Even in a historical topic, assess a cause, consequence, institution, decision, or relationship—not a date or name by itself. Never ask for the historical scope of a field, whether it dates back to antiquity, what a named person showed or demonstrated, or whether a named person promoted or publicized something. Convert that framing into the direct relationship, mechanism, cause, consequence, or institutional decision; if the evidence does not support one, choose a different fact. Never mention a lesson, video, transcript, material, source, evidence, excerpt, passage, speaker, presenter, narrator, lecturer, or recording.
 
 Never ask what is important, central, useful, necessary, or helpful for understanding a subject. That tests presentation advice rather than the subject itself. Ask the supported definition, relationship, mechanism, method, formula, or application directly. For historical chronology, never claim that one event finalized, completed, triggered, or immediately caused another dated event unless the supplied content explicitly dates both events and states their order. If that complete chronology is absent, choose a different causal or institutional fact.
 
@@ -2778,6 +2778,12 @@ function promptFirstV512StructuralRetryInstruction(reasonCode) {
   }
   if (reasonCode === "schema_invalid") {
     return "Structural retry correction: return every required field in the exact schema. Keep the assigned fact and type unchanged. The explanation must add a reason or mechanism rather than copy the question, answer, supportedStatement, or falseStatement.";
+  }
+  if (reasonCode === "retry_question_invalid") {
+    return "Structural retry correction: the previous retryQuestion was missing, copied the original prompt, or used the wrong response format. Return a nonempty retryQuestion with genuinely different wording but exactly the same grading target. For True/False, write one declarative assertion with the assigned truth value, no question mark, and no interrogative opening. For multiple choice or short answer, write a direct question that has the identical correct answer. Do not change the main question, answer, polarity, or assessed fact merely to create the retryQuestion.";
+  }
+  if (reasonCode === "low_pedagogical_value") {
+    return "Structural retry correction: abandon the biography, publicity, broad timeline, or presentation-trivia objective. Use the newly assigned evidence to test a direct definition, cause, consequence, relationship, mechanism, method, formula, or application. Do not ask what a named person showed, demonstrated, promoted, publicized, or whether the public recognized named people.";
   }
   return promptFirstV511StructuralRetryInstruction(reasonCode);
 }
@@ -5840,11 +5846,41 @@ export function promptFirstLearnerQualityFailure(
   primaryClaim,
   enforceSourceGrounding = false,
 ) {
-  const prompt = normalize(question.question ?? "");
+  const rawPrompt = String(question.question ?? "").trim();
+  const prompt = normalize(rawPrompt);
   const rawTarget = String(promptFirstGradingTarget(question) ?? "");
   const target = normalize(rawTarget);
   const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
   if (!prompt || !target) return null;
+
+  // Keep history and biography scaffolding out of the learner-facing bank.
+  // Models occasionally turn a useful relationship into name recall ("What
+  // did Ampere show?") or select a broad timeline aside ("dates back to
+  // antiquity"). Those items are source-grounded but still have little study
+  // value, so repair them into the direct relationship or choose another fact.
+  const namedAttributionPrompt =
+    /^(?:What|Which)(?:\s+[\p{L}-]+){0,4}\s+did\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}(?:['’]s)?(?:\s+(?:experiments?|research|work|observations?|studies)(?:\s+[^?]{0,80}?)?)?\s+(?:show|demonstrate|discover|find|establish|prove|observe|reveal)\b/u;
+  const namedPublicityRecall =
+    /^(?:[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}\s+(?:promoted|advocated|publicized|campaigned|advertised|endorsed)|(?:How|Why)\s+did\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}\s+(?:promote|advocate|publicize|campaign|advertise|endorse)|What\s+(?:method|approach|strategy)\s+did\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}\s+use\s+to\s+(?:promote|advocate|publicize|campaign|advertise|endorse))\b/u;
+  const historicalFameRecall =
+    /\b(?:average|ordinary|typical)\s+(?:person|people|public)\b.{0,90}\b(?:know|knew|known|recognize|recognized|familiar)\b|\b(?:know|knew|known|recognize|recognized|familiar)\b.{0,90}\b(?:average|ordinary|typical)\s+(?:person|people|public)\b/iu.test(
+      `${rawPrompt} ${rawTarget}`,
+    );
+  const historicalScopeRecall =
+    /^(?:what|which|when)\s+(?:is|was|does|did)\s+(?:the\s+)?historical\s+(?:scope|origin|beginning|start)\b/u.test(
+      prompt,
+    ) ||
+    /\b(?:dates?|dated|goes?|went|stretches?|stretched)\s+(?:all\s+the\s+way\s+)?back\s+to\s+(?:antiquity|ancient\s+times?|the\s+\d{1,2}(?:st|nd|rd|th)?\s+century)\b/u.test(
+      `${prompt} ${target}`,
+    );
+  if (
+    namedAttributionPrompt.test(rawPrompt) ||
+    namedPublicityRecall.test(rawPrompt) ||
+    historicalFameRecall ||
+    historicalScopeRecall
+  ) {
+    return "low_pedagogical_value";
+  }
 
   if (
     enforceSourceGrounding &&
@@ -5967,6 +6003,19 @@ export function promptFirstRetryQuestionFailure(
       ))
   ) {
     return "retry_question_invalid";
+  }
+  if (
+    question?.type === "true_false" &&
+    (promptFirstV512FalseContrastAddsBareNegation(
+      rawRetryQuestion,
+      question.question,
+    ) ||
+      promptFirstV512FalseContrastAddsBareNegation(
+        question.question,
+        rawRetryQuestion,
+      ))
+  ) {
+    return "polarity_mismatch";
   }
   const retryQualityFailure = promptFirstLearnerQualityFailure(
     { ...question, question: rawRetryQuestion },
@@ -8284,6 +8333,20 @@ async function generateAutomaticQuiz({
       continue;
     }
     if (!nextRetryKind || retryDelayMs <= 0) throw callFailure;
+    if (
+      input.promptFirstV512Mode &&
+      ["low_pedagogical_value", "retry_question_invalid"].includes(
+        callFailure.reasonCode,
+      )
+    ) {
+      // A structural rewrite cannot rescue a slot whose assigned evidence is
+      // itself biography, publicity, or timeline trivia. A model that copied
+      // the adaptive prompt also tends to repeat that shape for the same fact.
+      // Release either window before the automatic retry so allocation moves
+      // to the next unused fact instead of spending the whole budget on one
+      // stuck objective.
+      promptFirstEvidenceIndexByOrdinal.delete(questionOffset);
+    }
     lastFailureReason = callFailure.reasonCode;
     lastRepairContext = callFailure.repairContext;
     retryKind = nextRetryKind;
@@ -8464,7 +8527,7 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
     course_logistics_invalid:
       "Discard the administrative candidate. Choose a different supported definition, relationship, mechanism, method, formula, causal explanation, or application from the eligible instructional evidence.",
     low_pedagogical_value:
-      "Discard the recall-only or presentation-scaffold candidate. Test why, how, a literal relationship, a mechanism, a method, a formula, or an application instead of a name, date, institution, destination, count, biography detail, weave, tapestry, strand, link, unraveling, or jacket metaphor.",
+      "Discard the recall-only or presentation-scaffold candidate. Test why, how, a literal relationship, a mechanism, a method, a formula, or an application instead of historical scope, whether a field dates back to antiquity, what a named person showed or demonstrated, whether a named person promoted or publicized something, a name, date, institution, destination, count, biography detail, weave, tapestry, strand, link, unraveling, or jacket metaphor.",
     rubric_invalid:
       "Keep the repair-context question, answer, evidence, and claim unchanged. Replace only the rubric with 1 to 3 independent indispensable ideas and 3 to 6 complete paraphrases. Put the shortest full-credit answer first and make every alternative satisfy every rubric idea.",
     mc_evidence_span_invalid:

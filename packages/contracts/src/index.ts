@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-export * from "./admin";
+// Keep the emitted ESM directly executable in Node-based QA tools. TypeScript
+// resolves this .js specifier to admin.ts while the compiled package retains
+// the extension Node requires at runtime.
+export * from "./admin.js";
 
 export const SourceSchema = z.literal("youtube");
 export type VideoSource = z.infer<typeof SourceSchema>;
