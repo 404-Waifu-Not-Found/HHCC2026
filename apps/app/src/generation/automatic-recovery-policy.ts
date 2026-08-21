@@ -10,6 +10,18 @@ export const CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES = 12;
 export const CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT = 7;
 export const CONCEPT_ONLY_GENERATION_MAX_RECOVERY_CYCLES = 3;
 
+export function authoritativeRecoveryFailureCode(input: {
+  requestReasonCode?: GenerationFailureCode;
+  endedBeforeComplete?: boolean;
+  latestModelFailureReason?: GenerationFailureCode;
+}): GenerationFailureCode {
+  if (input.requestReasonCode) return input.requestReasonCode;
+  if (input.endedBeforeComplete && input.latestModelFailureReason) {
+    return input.latestModelFailureReason;
+  }
+  return "local_state_conflict";
+}
+
 export function groundedRecoveryIsExhausted(input: {
   reasonCode: GenerationFailureCode;
   record?: GenerationRecord | null;

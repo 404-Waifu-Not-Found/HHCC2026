@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
   GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
+  authoritativeRecoveryFailureCode,
   groundedRecoveryCooldownMs,
   groundedRecoveryIsExhausted,
 } from "../src/generation/automatic-recovery-policy";
@@ -39,5 +40,24 @@ describe("grounded automatic recovery policy", () => {
         ordinalAttempt: GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
       }),
     ).toBe(true);
+  });
+
+  it("preserves the newest model outcome when an incomplete bank ends", () => {
+    expect(
+      authoritativeRecoveryFailureCode({
+        endedBeforeComplete: true,
+        latestModelFailureReason: "mc_evidence_span_invalid",
+      }),
+    ).toBe("mc_evidence_span_invalid");
+    expect(
+      authoritativeRecoveryFailureCode({
+        requestReasonCode: "stream_idle_timeout",
+        endedBeforeComplete: true,
+        latestModelFailureReason: "duplicate_question",
+      }),
+    ).toBe("stream_idle_timeout");
+    expect(authoritativeRecoveryFailureCode({})).toBe(
+      "local_state_conflict",
+    );
   });
 });
