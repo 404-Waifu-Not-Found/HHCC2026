@@ -19,6 +19,8 @@ const MAX_OEMBED_BYTES = 64 * 1024;
 const MAX_AUDIO_BYTES = 180 * 1024 * 1024;
 const METADATA_FETCH_TIMEOUT_MS = 15_000;
 const AUDIO_FETCH_TIMEOUT_MS = 30_000;
+const AUDIO_UPSTREAM_ATTEMPTS = 3;
+const AUDIO_RETRY_DELAY_MS = 250;
 
 type YouTubeCaptionTrack = {
   base_url: string;
@@ -41,6 +43,20 @@ type TimedTextPayload = {
     segs?: { utf8?: string }[];
   }[];
 };
+
+/**
+ * YouTube's signed media URLs are short-lived and occasionally return a
+ * transient 403/429/5xx even when the same video is immediately available
+ * through a freshly resolved format. Keep this retry narrow: permanent
+ * client/source errors should still surface without hiding them.
+ */
+export function isRetryableYouTubeAudioStatus(status: number): boolean {
+  return status === 401 || status === 403 || status === 429 || status >= 500;
+}
+
+function waitForAudioRetry(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, AUDIO_RETRY_DELAY_MS));
+}
 
 class YouTubeMetadataLoadError extends Error {
   constructor(readonly reason: string) {
@@ -560,40 +576,101 @@ export class YouTubeAdapter implements SourceAdapter {
     const startedAt = Date.now();
     try {
       const client = await createYouTubeClient(true);
-      const info = await client.getInfo(sourceVideoId, {
-        client: YOUTUBE_INFO_CLIENT,
-      });
-      const format = info.chooseFormat({
-        type: "audio",
-        quality: "bestefficiency",
-      });
-      if (!format.url) throw new Error("audio_url_missing");
-      const declaredLength = Number(format.content_length ?? 0);
-      if (declaredLength > MAX_AUDIO_BYTES) {
-        throw new ApiError(
-          422,
-          "audio_too_large",
-          "This video's audio is too large for browser transcription.",
-        );
-      }
       const headers = new Headers({
         Accept: "audio/*,*/*;q=0.8",
         "Cache-Control": "no-store",
       });
       const range = request.headers.get("range");
       if (range) headers.set("Range", range);
-      const response = await fetchWithTimeout(
-        format.url,
-        { headers },
-        AUDIO_FETCH_TIMEOUT_MS,
-      );
-      if (!response.ok || !response.body)
-        throw new Error(`audio_http_${response.status}`);
+      let opened:
+        | {
+            response: Response;
+            body: ReadableStream<Uint8Array>;
+            contentType: string;
+            formatLength: number;
+          }
+        | undefined;
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= AUDIO_UPSTREAM_ATTEMPTS; attempt += 1) {
+        try {
+          // Resolve the signed format again on every retry. Reusing the URL
+          // is the common cause of a repeat 403/503 after a transient edge
+          // failure.
+          const info = await client.getInfo(sourceVideoId, {
+            client: YOUTUBE_INFO_CLIENT,
+          });
+          const format = info.chooseFormat({
+            type: "audio",
+            quality: "bestefficiency",
+          });
+          if (!format.url) throw new Error("audio_url_missing");
+          const declaredLength = Number(format.content_length ?? 0);
+          if (declaredLength > MAX_AUDIO_BYTES) {
+            throw new ApiError(
+              422,
+              "audio_too_large",
+              "This video's audio is too large for browser transcription.",
+            );
+          }
+          const response = await fetchWithTimeout(
+            format.url,
+            { headers },
+            AUDIO_FETCH_TIMEOUT_MS,
+          );
+          if (response.ok && response.body) {
+            opened = {
+              response,
+              body: response.body,
+              contentType:
+                response.headers.get("content-type") ??
+                format.mime_type?.split(";")[0] ??
+                "audio/mp4",
+              formatLength: declaredLength,
+            };
+            break;
+          }
+          const status = response.status;
+          await response.body?.cancel(`audio_http_${status}`);
+          lastError = new Error(`audio_http_${status}`);
+          if (
+            attempt >= AUDIO_UPSTREAM_ATTEMPTS ||
+            !isRetryableYouTubeAudioStatus(status)
+          ) {
+            break;
+          }
+          console.warn(
+            JSON.stringify({
+              scope: "youtube_audio",
+              event: "stream.retry",
+              sourceVideoId,
+              attempt,
+              status,
+            }),
+          );
+          await waitForAudioRetry();
+        } catch (error) {
+          if (error instanceof ApiError) throw error;
+          lastError = error;
+          if (attempt >= AUDIO_UPSTREAM_ATTEMPTS) break;
+          console.warn(
+            JSON.stringify({
+              scope: "youtube_audio",
+              event: "stream.retry",
+              sourceVideoId,
+              attempt,
+              errorName: safeErrorName(error),
+            }),
+          );
+          await waitForAudioRetry();
+        }
+      }
+      if (!opened) throw lastError ?? new Error("audio_stream_unavailable");
+      const { response, body, contentType, formatLength } = opened;
       const responseLength = Number(
         response.headers.get("content-length") ?? 0,
       );
-      if (responseLength > MAX_AUDIO_BYTES) {
-        await response.body.cancel("audio_too_large");
+      if (formatLength > MAX_AUDIO_BYTES || responseLength > MAX_AUDIO_BYTES) {
+        await body.cancel("audio_too_large");
         throw new ApiError(
           422,
           "audio_too_large",
@@ -610,11 +687,8 @@ export class YouTubeAdapter implements SourceAdapter {
         }),
       );
       return {
-        body: limitAudioStream(response.body),
-        contentType:
-          response.headers.get("content-type") ??
-          format.mime_type?.split(";")[0] ??
-          "audio/mp4",
+        body: limitAudioStream(body),
+        contentType,
         ...(response.headers.get("content-length")
           ? { contentLength: response.headers.get("content-length")! }
           : {}),
