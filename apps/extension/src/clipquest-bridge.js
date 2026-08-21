@@ -13,6 +13,7 @@
   // stream. The port heartbeat alone keeps Chrome's worker alive, but it is
   // invisible to the app and can otherwise look like a disconnected request.
   const HEARTBEAT_INTERVAL_MS = 15_000;
+  const MAX_GENERATION_PORT_RECONNECTS = 2;
 
   function post(message) {
     window.postMessage(
@@ -147,51 +148,74 @@
     ) {
       const requestId = message.requestId;
       let port;
-      try {
-        port = chrome.runtime.connect({ name: LOCAL_AI_PORT });
-      } catch (error) {
-        post({
-          type: "generation-result",
-          requestId,
-          response: {
-            ok: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : "The ClipQuest extension could not start local generation.",
-          },
-        });
-        return;
-      }
+      let heartbeat;
+      let reconnectTimer;
+      let reconnectAttempts = 0;
       let settled = false;
       let lastProgress = 0.2;
+      const outbound = {
+        type: "generate",
+        requestId,
+        context: message.context,
+        kind: message.kind,
+      };
       const finish = (response) => {
         if (settled) return;
         settled = true;
-        clearInterval(heartbeat);
+        if (heartbeat) clearInterval(heartbeat);
+        if (reconnectTimer) clearTimeout(reconnectTimer);
         post({ type: "generation-result", requestId, response });
-        port.disconnect();
-      };
-      const heartbeat = setInterval(() => {
         try {
-          port.postMessage({ type: "heartbeat", requestId });
-          post({
-            type: "generation-progress",
-            requestId,
-            stage: "creating_questions",
-            progress: lastProgress,
-            attempt: 1,
-            maxAttempts: 3,
-            status: "generating",
-          });
+          port?.disconnect();
         } catch {
-          finish({
-            ok: false,
-            error: "The ClipQuest extension stopped responding.",
-          });
+          // The port may already be disconnected during worker recovery.
         }
-      }, HEARTBEAT_INTERVAL_MS);
-      port.onMessage.addListener((response) => {
+      };
+      const sendOutbound = (nextPort) => {
+        try {
+          nextPort.postMessage(outbound);
+        } catch (error) {
+          // Chrome's extension boundary only accepts structured-cloneable
+          // values. Retry once with a plain JSON object so a client-side
+          // prototype/typed-value cannot become an opaque dispatch timeout.
+          try {
+            nextPort.postMessage({
+              ...outbound,
+              context: JSON.parse(JSON.stringify(message.context)),
+            });
+          } catch (retryError) {
+            finish({
+              ok: false,
+              error:
+                retryError instanceof Error
+                  ? retryError.message
+                  : error instanceof Error
+                    ? error.message
+                    : "The ClipQuest extension could not dispatch local generation.",
+            });
+          }
+        }
+      };
+      const startHeartbeat = () => {
+        if (heartbeat) clearInterval(heartbeat);
+        heartbeat = setInterval(() => {
+          try {
+            port.postMessage({ type: "heartbeat", requestId });
+            post({
+              type: "generation-progress",
+              requestId,
+              stage: "creating_questions",
+              progress: lastProgress,
+              attempt: 1,
+              maxAttempts: 3,
+              status: "generating",
+            });
+          } catch {
+            scheduleReconnect();
+          }
+        }, HEARTBEAT_INTERVAL_MS);
+      };
+      const handleResponse = (response) => {
         if (response?.requestId !== requestId) return;
         if (response.type === "progress") {
           if (typeof response.progress === "number") {
@@ -231,43 +255,54 @@
           return;
         }
         if (response.type === "result") finish(response.response);
-      });
-      port.onDisconnect.addListener(() => {
-        finish({
-          ok: false,
-          error:
-            chrome.runtime.lastError?.message ??
-            "The ClipQuest extension stopped responding.",
-        });
-      });
-      const outbound = {
-        type: "generate",
-        requestId,
-        context: message.context,
-        kind: message.kind,
       };
-      try {
-        port.postMessage(outbound);
-      } catch (error) {
-        // Chrome's extension boundary only accepts structured-cloneable
-        // values. Retry once with a plain JSON object so a client-side
-        // prototype/typed-value cannot become an opaque dispatch timeout.
-        try {
-          port.postMessage({
-            ...outbound,
-            context: JSON.parse(JSON.stringify(message.context)),
-          });
-        } catch (retryError) {
+      function scheduleReconnect() {
+        if (settled || reconnectTimer) return;
+        if (heartbeat) clearInterval(heartbeat);
+        if (reconnectAttempts >= MAX_GENERATION_PORT_RECONNECTS) {
           finish({
             ok: false,
             error:
-              retryError instanceof Error
-                ? retryError.message
-                : error instanceof Error
-                  ? error.message
-                  : "The ClipQuest extension could not dispatch local generation.",
+              chrome.runtime.lastError?.message ??
+              "The ClipQuest extension stopped responding.",
           });
+          return;
         }
+        reconnectAttempts += 1;
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = undefined;
+          if (settled) return;
+          try {
+            port = chrome.runtime.connect({ name: LOCAL_AI_PORT });
+            attachPort(port);
+          } catch (error) {
+            finish({
+              ok: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "The ClipQuest extension stopped responding.",
+            });
+          }
+        }, reconnectAttempts * 1_000);
+      }
+      function attachPort(nextPort) {
+        port = nextPort;
+        port.onMessage.addListener(handleResponse);
+        port.onDisconnect.addListener(scheduleReconnect);
+        startHeartbeat();
+        sendOutbound(port);
+      }
+      try {
+        attachPort(chrome.runtime.connect({ name: LOCAL_AI_PORT }));
+      } catch (error) {
+        finish({
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "The ClipQuest extension could not start local generation.",
+        });
       }
       return;
     }
