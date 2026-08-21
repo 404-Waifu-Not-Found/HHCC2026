@@ -90,7 +90,12 @@ export default function SignUpScreen() {
         value={username}
         onChangeText={setUsername}
         leading={
-          <VoxelIcon name="registration" size={22} color={theme.textMuted} />
+          <VoxelIcon
+            name="registration"
+            size={22}
+            color={theme.textMuted}
+            style={styles.balancedIcon}
+          />
         }
         autoCapitalize="none"
         autoComplete="username-new"
@@ -102,7 +107,14 @@ export default function SignUpScreen() {
         labelPlacement="inside"
         value={email}
         onChangeText={setEmail}
-        leading={<VoxelIcon name="mail" size={22} color={theme.textMuted} />}
+        leading={
+          <VoxelIcon
+            name="mail"
+            size={22}
+            color={theme.textMuted}
+            style={styles.balancedIcon}
+          />
+        }
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
@@ -114,7 +126,12 @@ export default function SignUpScreen() {
         value={password}
         onChangeText={setPassword}
         leading={
-          <VoxelIcon name="password" size={22} color={theme.textMuted} />
+          <VoxelIcon
+            name="password"
+            size={22}
+            color={theme.textMuted}
+            style={styles.balancedIcon}
+          />
         }
         secureTextEntry
         autoComplete="new-password"
@@ -147,6 +164,7 @@ export default function SignUpScreen() {
           <VoxelIcon
             name={ageConfirmed ? "checkbox-checked" : "checkbox-unchecked"}
             size={32}
+            style={styles.balancedIcon}
           />
         </View>
         <Text style={[styles.checkboxText, { color: theme.text }]}>
@@ -179,6 +197,9 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
+  balancedIcon: {
+    transform: [{ translateX: -spacing[2] }],
+  },
   checkboxRow: {
     minHeight: controls.inputHeight,
     borderWidth: borders.standard,
