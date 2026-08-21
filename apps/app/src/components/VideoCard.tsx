@@ -218,12 +218,12 @@ export function VideoCard({
               style={[
                 styles.tooltip,
                 {
-                  backgroundColor: theme.text,
+                  backgroundColor: theme.surfaceRaised,
                   borderColor: theme.borderStrong,
                 },
               ]}
             >
-              <Text style={[styles.tooltipText, { color: theme.background }]}>
+              <Text style={[styles.tooltipText, { color: theme.text }]}>
                 {notesLabel}
               </Text>
             </MotionView>
@@ -268,12 +268,12 @@ export function VideoCard({
               style={[
                 styles.tooltip,
                 {
-                  backgroundColor: theme.text,
+                  backgroundColor: theme.surfaceRaised,
                   borderColor: theme.borderStrong,
                 },
               ]}
             >
-              <Text style={[styles.tooltipText, { color: theme.background }]}>
+              <Text style={[styles.tooltipText, { color: theme.text }]}>
                 {actionLabel}
               </Text>
             </MotionView>

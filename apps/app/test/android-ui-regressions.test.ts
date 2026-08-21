@@ -140,6 +140,8 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain("card.cheatSheet.status");
     expect(videoCard).toContain("onGenerateNotes");
     expect(videoCard).toContain("theme.surfaceTint");
+    expect(videoCard).toContain("backgroundColor: theme.surfaceRaised");
+    expect(videoCard).toContain("color: theme.text");
     expect(videoCard).toContain(
       'transitionProperty: "transform, background-color, border-color"',
     );
