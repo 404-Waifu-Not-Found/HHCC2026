@@ -3,6 +3,7 @@ import {
   formatMathText,
   isMathExpressionText,
   isStandaloneMathExpressionText,
+  mathTextToLatex,
   segmentMathText,
 } from "../src/lib/math-text";
 
@@ -49,5 +50,40 @@ describe("math text presentation", () => {
       { text: "(f(b)-f(a))/(b-a)", mathematical: true },
     ]);
     expect(segments[0]?.mathematical).toBe(false);
+  });
+
+  it("isolates every expression in a limit question and its choices", () => {
+    const question =
+      "When evaluating the limit as x approaches 0 of (4x cos 2x) / (5 tan 2x), how is the expression split to apply the identity that (2x)/(tan 2x) approaches 1?";
+    expect(
+      segmentMathText(question)
+        .filter((segment) => segment.mathematical)
+        .map((segment) => segment.text),
+    ).toEqual([
+      "x approaches 0",
+      "(4x cos 2x) / (5 tan 2x)",
+      "(2x)/(tan 2x) approaches 1",
+    ]);
+
+    const choice =
+      "It is split into the limit of (2x)/(tan 2x) times the limit of (2 cos 2x)/5.";
+    expect(
+      segmentMathText(choice)
+        .filter((segment) => segment.mathematical)
+        .map((segment) => segment.text),
+    ).toEqual(["(2x)/(tan 2x)", "(2 cos 2x)/5"]);
+  });
+
+  it("converts plaintext formulas into semantic typesetting input", () => {
+    expect(mathTextToLatex("x approaches 0")).toBe("x \\to 0");
+    expect(mathTextToLatex("(4x cos 2x) / (5 tan 2x)")).toBe(
+      "\\frac{4x \\cos 2x}{5 \\tan 2x}",
+    );
+    expect(mathTextToLatex("(2x)/(tan 2x) approaches 1")).toBe(
+      "\\frac{2x}{\\tan 2x} \\to 1",
+    );
+    expect(mathTextToLatex("(f(b)-f(a))/(b-a)")).toBe("\\frac{f(b)-f(a)}{b-a}");
+    expect(mathTextToLatex("$\\frac{x}{2}$")).toBe("\\frac{x}{2}");
+    expect(mathTextToLatex("\\(x^2 + y^2\\)")).toBe("x^2 + y^2");
   });
 });

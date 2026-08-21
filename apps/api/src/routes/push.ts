@@ -1,4 +1,9 @@
-import { PushRegisterRequestSchema } from "@clipquest/contracts";
+import {
+  PushRegisterRequestSchema,
+  PushRegisterResponseSchema,
+  PushUnregisterRequestSchema,
+  PushUnregisterResponseSchema,
+} from "@clipquest/contracts";
 import { Hono } from "hono";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
@@ -21,6 +26,10 @@ export const DEVICE_TOKEN_UPSERT_SQL = `
     locale = excluded.locale,
     updated_at = excluded.updated_at
   RETURNING id`;
+
+export const DEVICE_TOKEN_REASSIGN_SQL = `
+  DELETE FROM device_tokens
+  WHERE token = ? AND user_id <> ?`;
 
 export const DEVICE_TOKEN_PRUNE_SQL = `
   DELETE FROM device_tokens
@@ -84,6 +93,7 @@ pushRouter.post("/register", async (c) => {
   });
   const timestamp = now();
   await c.env.DB.batch([
+    c.env.DB.prepare(DEVICE_TOKEN_REASSIGN_SQL).bind(input.token, user.id),
     c.env.DB.prepare(DEVICE_TOKEN_UPSERT_SQL).bind(
       createId(),
       user.id,
@@ -99,7 +109,35 @@ pushRouter.post("/register", async (c) => {
       MAX_DEVICE_TOKENS_PER_USER,
     ),
   ]);
-  return c.json({ registered: true });
+  return c.json(PushRegisterResponseSchema.parse({ registered: true }));
+});
+
+pushRouter.delete("/register", async (c) => {
+  const user = c.get("user");
+  const input = await parseJson(c, PushUnregisterRequestSchema);
+  if (!isValidExpoPushToken(input.token)) {
+    throw new ApiError(
+      422,
+      "invalid_push_token",
+      "The device returned an invalid Expo push token.",
+    );
+  }
+  await enforceRateLimit(c.env.DB, {
+    namespace: "push-unregister",
+    identifier: user.id,
+    maximum: PUSH_REGISTRATIONS_PER_MINUTE,
+    windowSeconds: 60,
+  });
+  const result = await c.env.DB.prepare(
+    "DELETE FROM device_tokens WHERE user_id = ? AND token = ?",
+  )
+    .bind(user.id, input.token)
+    .run();
+  return c.json(
+    PushUnregisterResponseSchema.parse({
+      removed: result.meta.changes > 0,
+    }),
+  );
 });
 
 type DueReviewRow = {
@@ -111,51 +149,90 @@ type DueReviewRow = {
   scheduled_for: number;
 };
 
+export function classifyExpoPushTickets(
+  deliveries: Array<Pick<DueReviewRow, "review_id" | "token">>,
+  tickets: unknown,
+): { deliveredReviewIds: string[]; invalidTokens: string[] } | null {
+  if (!Array.isArray(tickets) || tickets.length !== deliveries.length) {
+    return null;
+  }
+  const deliveredReviewIds = new Set<string>();
+  const invalidTokens = new Set<string>();
+  tickets.forEach((candidate, index) => {
+    if (!candidate || typeof candidate !== "object") return;
+    const ticket = candidate as {
+      status?: unknown;
+      details?: { error?: unknown };
+    };
+    const delivery = deliveries[index]!;
+    if (ticket.status === "ok") {
+      deliveredReviewIds.add(delivery.review_id);
+    } else if (
+      ticket.details?.error === "DeviceNotRegistered" &&
+      isValidExpoPushToken(delivery.token)
+    ) {
+      invalidTokens.add(delivery.token);
+    }
+  });
+  return {
+    deliveredReviewIds: [...deliveredReviewIds],
+    invalidTokens: [...invalidTokens],
+  };
+}
+
 export async function sendDueReviewNotifications(env: AppEnv): Promise<void> {
   const result = await env.DB.prepare(DUE_REVIEW_NOTIFICATION_SQL)
     .bind(now())
     .all<DueReviewRow>();
   if (!result.results.length) return;
 
-  const messages = result.results
-    .filter((row) => isValidExpoPushToken(row.token))
-    .map((row) => ({
-      to: row.token!,
-      sound: "default",
-      title:
-        row.locale === "zh-CN" ? "复习时间到！" : "A quick review is ready",
-      body:
-        row.locale === "zh-CN"
-          ? `回来巩固《${row.title}》吧。`
-          : `Come back and lock in what you learned from “${row.title}.”`,
-      data: { videoId: row.video_id, route: "/library" },
-    }));
-  if (messages.length) {
-    const response = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Accept-Encoding": "gzip, deflate",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(messages),
-    });
-    if (!response.ok) {
-      console.error(
-        "Expo push request failed",
-        response.status,
-        await response.text(),
-      );
-      return;
-    }
+  const deliveries = result.results.filter((row) =>
+    isValidExpoPushToken(row.token),
+  );
+  if (!deliveries.length) return;
+  const messages = deliveries.map((row) => ({
+    to: row.token as string,
+    sound: "default",
+    title: row.locale === "zh-CN" ? "复习时间到！" : "A quick review is ready",
+    body:
+      row.locale === "zh-CN"
+        ? `回来巩固《${row.title}》吧。`
+        : `Come back and lock in what you learned from “${row.title}.”`,
+    data: { videoId: row.video_id, route: "/library" },
+  }));
+  const response = await fetch("https://exp.host/--/api/v2/push/send", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Accept-Encoding": "gzip, deflate",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(messages),
+  });
+  if (!response.ok) {
+    console.error("Expo push request failed", response.status);
+    return;
+  }
+
+  const payload = (await response.json().catch(() => null)) as {
+    data?: unknown;
+  } | null;
+  const classified = classifyExpoPushTickets(deliveries, payload?.data);
+  if (!classified) {
+    console.error("Expo push request returned an invalid ticket set");
+    return;
   }
   const notificationTime = now();
-  await env.DB.batch(
-    [...new Set(result.results.map((row) => row.review_id))].map((reviewId) =>
+  const statements = [
+    ...classified.invalidTokens.map((token) =>
+      env.DB.prepare("DELETE FROM device_tokens WHERE token = ?").bind(token),
+    ),
+    ...classified.deliveredReviewIds.map((reviewId) =>
       env.DB.prepare("UPDATE reviews SET notified_at = ? WHERE id = ?").bind(
         notificationTime,
         reviewId,
       ),
     ),
-  );
+  ];
+  if (statements.length) await env.DB.batch(statements);
 }

@@ -67,12 +67,15 @@ export default function CreateQuestScreen() {
   const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
     ...DEFAULT_QUIZ_QUESTION_TYPES,
   ]);
+  const [preworkStatus, setPreworkStatus] = useState<
+    "running" | "ready" | "unavailable" | "failed"
+  >();
 
   useEffect(() => {
-    if (!videoId) return;
+    if (!videoId || !session?.user.id) return;
     void Promise.all([
-      loadImportedVideo(videoId),
-      loadQuestPreferences(videoId),
+      loadImportedVideo(session.user.id, videoId),
+      loadQuestPreferences(session.user.id, videoId),
     ]).then(([value, preferences]) => {
       if (value) {
         setVideo(value);
@@ -80,7 +83,32 @@ export default function CreateQuestScreen() {
         setQuestionTypes(preferences.questionTypes);
       } else setError(t("videoSetupExpired"));
     });
-  }, [t, videoId]);
+  }, [session?.user.id, t, videoId]);
+
+  useEffect(() => {
+    if (!generationId || !videoId || !session?.user.id) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const syncPrework = async () => {
+      const [record, latestVideo] = await Promise.all([
+        loadGenerationRecord(generationId),
+        loadImportedVideo(session.user.id, videoId),
+      ]);
+      if (!active) return;
+      setPreworkStatus(record?.preworkStatus);
+      if (record?.preworkStatus === "ready" && latestVideo) {
+        setVideo(latestVideo);
+      }
+      if (record?.preworkStatus === "running") {
+        timer = setTimeout(() => void syncPrework(), 500);
+      }
+    };
+    void syncPrework();
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [generationId, session?.user.id, videoId]);
 
   if (!video && !error) {
     return (
@@ -122,18 +150,33 @@ export default function CreateQuestScreen() {
     Platform.OS === "web" &&
     !canTranscribeInBrowser(video.video.durationSeconds);
   const compact = width < breakpoints.tablet;
+  const nativeCaptionState =
+    Platform.OS !== "web" && generationId ? preworkStatus : undefined;
+  const captionsPending =
+    Platform.OS !== "web" &&
+    Boolean(generationId) &&
+    (nativeCaptionState === undefined || nativeCaptionState === "running");
+  const captionsUnavailable = nativeCaptionState === "unavailable";
+  const captionsFailed = nativeCaptionState === "failed";
   const transcriptStatus = (
-    video.requiresLocalTranscription
-      ? t("localTranscript")
-      : t("sourceCaptions")
+    captionsPending
+      ? t("sourceCaptionsPreparing")
+      : captionsUnavailable
+        ? t("sourceCaptionsUnavailable")
+        : captionsFailed
+          ? t("sourceCaptionsFailed")
+          : video.requiresLocalTranscription
+            ? t("localTranscript")
+            : t("sourceCaptions")
   ).replace(/[—–]/g, "-");
+  const captionsBlocked = captionsUnavailable || captionsFailed;
   const proceed = async () => {
     blurActiveWebElement();
     if (!session?.user.id) {
       setError("Sign in again before creating a quiz.");
       return;
     }
-    await saveQuestPreferences(video.video.id, {
+    await saveQuestPreferences(session.user.id, video.video.id, {
       quizLanguage,
       questionTypes,
     });
@@ -191,7 +234,8 @@ export default function CreateQuestScreen() {
       footer={
         <View style={styles.footerInner}>
           <PrimaryButton
-            disabled={tooLong || tooLongForWeb}
+            loading={captionsPending}
+            disabled={tooLong || tooLongForWeb || captionsBlocked}
             onPress={() => void proceed()}
           >
             {t("generate")}
@@ -239,26 +283,34 @@ export default function CreateQuestScreen() {
                   style={[
                     styles.captionStatus,
                     {
-                      backgroundColor: video.requiresLocalTranscription
-                        ? theme.secondarySoft
-                        : theme.successSoft,
-                      borderColor: video.requiresLocalTranscription
-                        ? theme.secondary
-                        : theme.success,
+                      backgroundColor: captionsBlocked
+                        ? theme.errorSoft
+                        : captionsPending || video.requiresLocalTranscription
+                          ? theme.secondarySoft
+                          : theme.successSoft,
+                      borderColor: captionsBlocked
+                        ? theme.error
+                        : captionsPending || video.requiresLocalTranscription
+                          ? theme.secondary
+                          : theme.success,
                     },
                   ]}
                 >
                   <VoxelIcon
                     name={
-                      video.requiresLocalTranscription
-                        ? "processing"
-                        : "captions"
+                      captionsBlocked
+                        ? "error"
+                        : captionsPending || video.requiresLocalTranscription
+                          ? "processing"
+                          : "captions"
                     }
                     size={22}
                     color={
-                      video.requiresLocalTranscription
-                        ? theme.secondaryPressed
-                        : theme.successPressed
+                      captionsBlocked
+                        ? theme.error
+                        : captionsPending || video.requiresLocalTranscription
+                          ? theme.secondaryPressed
+                          : theme.successPressed
                     }
                   />
                   <Text

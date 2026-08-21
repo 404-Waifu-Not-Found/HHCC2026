@@ -91,9 +91,9 @@ function metadataTestApp(userId: string) {
       }
       expect(sql).toContain("caption_source_category");
       expect(sql).toContain("WHERE id = ? AND owner_id = ?");
+      expect(sql).not.toContain("duration_seconds =");
       return {
         bind(
-          durationSeconds: number,
           sourceLanguage: string,
           captionSourceCategory: string,
           captionSegmentCount: number,
@@ -109,7 +109,6 @@ function metadataTestApp(userId: string) {
                 return { meta: { changes: 0 } };
               }
               Object.assign(stored, {
-                durationSeconds,
                 sourceLanguage,
                 captionSourceCategory,
                 captionSegmentCount,
@@ -186,12 +185,12 @@ describe("verified source metadata", () => {
       VerifiedVideoMetadataResponseSchema.parse(await response.json()),
     ).toEqual({ videoId: VIDEO_ID, verified: true });
     expect(stored).toMatchObject({
-      durationSeconds: 643,
       sourceLanguage: "en-us",
       captionSourceCategory: "automatic",
       captionSegmentCount: 224,
       captionWordCount: 1_905,
     });
+    expect(stored).not.toHaveProperty("durationSeconds");
     expect(JSON.stringify(stored)).not.toMatch(
       /captionText|transcript|apiKey/i,
     );

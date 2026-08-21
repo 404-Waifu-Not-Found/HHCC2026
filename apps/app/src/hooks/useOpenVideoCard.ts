@@ -8,11 +8,14 @@ import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import { apiRequest, jsonBody } from "../lib/api";
 import { useSettings } from "../providers/SettingsProvider";
+import { useAppSession } from "../lib/auth-client";
 import { saveAttemptStart } from "../state/attempt";
 import { saveImportedVideo } from "../state/creation";
 
 export function useOpenVideoCard() {
   const { t } = useSettings();
+  const { data: session } = useAppSession();
+  const userId = session?.user.id;
   const [openingId, setOpeningId] = useState<string>();
   const [error, setError] = useState<string>();
 
@@ -56,7 +59,8 @@ export function useOpenVideoCard() {
           { method: "POST", body: jsonBody({ url: card.originalUrl }) },
           VideoImportResponseSchema,
         );
-        await saveImportedVideo(imported);
+        if (!userId) throw new Error("Sign in to open this video.");
+        await saveImportedVideo(userId, imported);
         router.push({
           pathname: "/create/[videoId]",
           params: { videoId: imported.video.id },
@@ -67,7 +71,7 @@ export function useOpenVideoCard() {
         setOpeningId(undefined);
       }
     },
-    [t],
+    [t, userId],
   );
 
   return { open, openingId, error, clearError: () => setError(undefined) };

@@ -62,7 +62,10 @@ export default function TabLayout() {
         tabBarPosition: desktop ? "left" : "bottom",
         tabBarHideOnKeyboard: true,
         sceneStyle: { backgroundColor: theme.background },
-        animation: reduceMotion ? "none" : "fade",
+        // Keep the native navigator mode stable. Changing this option while a
+        // tab transition is active can leave the destination scene detached;
+        // Screen/MotionView already owns the accessible route transition.
+        animation: Platform.OS === "web" && !reduceMotion ? "fade" : "none",
       }}
     >
       <Tabs.Screen

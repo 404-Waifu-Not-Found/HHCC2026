@@ -34,6 +34,18 @@ const generationSource = await readFile(
   new URL("../../app/app/generation/[videoId].tsx", import.meta.url),
   "utf8",
 );
+const quizImportsSource = await readFile(
+  new URL("../src/routes/quiz-imports.ts", import.meta.url),
+  "utf8",
+);
+const videosSource = await readFile(
+  new URL("../src/routes/videos.ts", import.meta.url),
+  "utf8",
+);
+const validationSource = await readFile(
+  new URL("../src/lib/validation.ts", import.meta.url),
+  "utf8",
+);
 const libraryOpenSource = await readFile(
   new URL("../../app/src/hooks/useOpenVideoCard.ts", import.meta.url),
   "utf8",
@@ -190,6 +202,47 @@ describe("security resource guards", () => {
     );
     expect(libraryOpenSource).toMatch(
       /headers: \{ "Idempotency-Key": Crypto\.randomUUID\(\) \}/,
+    );
+  });
+
+  it("makes stale answer reservations side-effect free", () => {
+    expect(quizSource).toMatch(
+      /INSERT INTO answers[\s\S]+SELECT[\s\S]+WHERE EXISTS[\s\S]+grading_token = \?/,
+    );
+    expect(quizSource).toContain("requireAnswerCommit(results)");
+    expect(quizSource.indexOf("requireAnswerCommit(results)")).toBeLessThan(
+      quizSource.indexOf("const mastery = await updateMastery"),
+    );
+    expect(quizSource).not.toContain("gradeWrittenAnswer");
+    expect(quizSource).not.toContain("transcripts/${attempt.user_id}");
+  });
+
+  it("requires a live generation lease for automatic mutations", () => {
+    expect(quizImportsSource).toMatch(
+      /INSERT INTO questions[\s\S]+WHERE EXISTS[\s\S]+lease_expires_at > \?/,
+    );
+    expect(quizImportsSource).toMatch(
+      /UPDATE quiz_banks SET quality_summary_json[\s\S]+lease_expires_at > \?/,
+    );
+    expect(quizImportsSource).toMatch(
+      /renewGenerationClaim[\s\S]+lease_expires_at > \?/,
+    );
+  });
+
+  it("bounds JSON work and leaves source duration server-authoritative", () => {
+    expect(validationSource).toContain("DEFAULT_MAX_JSON_BYTES");
+    expect(validationSource).toContain('"request_too_large"');
+    expect(quizImportsSource).toContain(
+      'namespace: "extension-progressive-progress"',
+    );
+    expect(videosSource).not.toContain("SET duration_seconds = ?");
+    expect(videosSource).toContain('namespace: "public-thumbnail-ip"');
+    expect(videosSource).toContain('namespace: "public-thumbnail-video"');
+    expect(videosSource.indexOf("if (object)")).toBeLessThan(
+      videosSource.indexOf('namespace: "public-thumbnail-ip"'),
+    );
+    expect(quizImportsSource).toMatch(
+      /INSERT OR IGNORE INTO attempt_items[\s\S]+JOIN questions ON questions\.id = \?/,
     );
   });
 

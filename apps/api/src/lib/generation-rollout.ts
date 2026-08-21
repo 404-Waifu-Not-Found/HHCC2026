@@ -1,5 +1,6 @@
 import {
   AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -13,10 +14,10 @@ import {
 import type { AppEnv } from "../types";
 
 export function quizGenerationRolloutMode(
-  env: Pick<AppEnv, "QUIZ_V5_4_ROLLOUT">,
+  env: Pick<AppEnv, "QUIZ_V5_12_ROLLOUT">,
 ): QuizGenerationRolloutMode {
   return QuizGenerationRolloutModeSchema.catch("disabled").parse(
-    env.QUIZ_V5_4_ROLLOUT,
+    env.QUIZ_V5_12_ROLLOUT,
   );
 }
 
@@ -29,10 +30,101 @@ export function quizGenerationProfile(
     | "QUIZ_V5_3_CANARY_USER_IDS"
     | "QUIZ_V5_4_ROLLOUT"
     | "QUIZ_V5_4_CANARY_USER_IDS"
+    | "QUIZ_V5_9_ROLLOUT"
+    | "QUIZ_V5_9_CANARY_USER_IDS"
+    | "QUIZ_V5_10_ROLLOUT"
+    | "QUIZ_V5_10_CANARY_USER_IDS"
+    | "QUIZ_V5_11_ROLLOUT"
+    | "QUIZ_V5_11_CANARY_USER_IDS"
+    | "QUIZ_V5_12_ROLLOUT"
+    | "QUIZ_V5_12_CANARY_USER_IDS"
   >,
   userId: string,
 ): QuizGenerationProfileResponse {
-  const groundedMode = quizGenerationRolloutMode(env);
+  const promptFirstV512Mode = quizGenerationRolloutMode(env);
+  const promptFirstV512CanaryUsers = new Set(
+    String(env.QUIZ_V5_12_CANARY_USER_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  const promptFirstV512 =
+    promptFirstV512Mode === "enabled" ||
+    (promptFirstV512Mode === "canary" &&
+      promptFirstV512CanaryUsers.has(userId));
+  if (promptFirstV512) {
+    return QuizGenerationProfileResponseSchema.parse({
+      generationProfile: "prompt_first_auto_v5_12",
+      minimumExtensionVersion: "0.8.17",
+      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+    });
+  }
+
+  const promptFirstV511Mode = QuizGenerationRolloutModeSchema.catch(
+    "disabled",
+  ).parse(env.QUIZ_V5_11_ROLLOUT);
+  const promptFirstV511CanaryUsers = new Set(
+    String(env.QUIZ_V5_11_CANARY_USER_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  const promptFirstV511 =
+    promptFirstV511Mode === "enabled" ||
+    (promptFirstV511Mode === "canary" &&
+      promptFirstV511CanaryUsers.has(userId));
+  if (promptFirstV511) {
+    return QuizGenerationProfileResponseSchema.parse({
+      generationProfile: "prompt_first_auto_v5_11",
+      minimumExtensionVersion: "0.8.16",
+      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+    });
+  }
+
+  const promptFirstV510Mode = QuizGenerationRolloutModeSchema.catch(
+    "disabled",
+  ).parse(env.QUIZ_V5_10_ROLLOUT);
+  const promptFirstV510CanaryUsers = new Set(
+    String(env.QUIZ_V5_10_CANARY_USER_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  const promptFirstV510 =
+    promptFirstV510Mode === "enabled" ||
+    (promptFirstV510Mode === "canary" &&
+      promptFirstV510CanaryUsers.has(userId));
+  if (promptFirstV510) {
+    return QuizGenerationProfileResponseSchema.parse({
+      generationProfile: "prompt_first_auto_v5_10",
+      minimumExtensionVersion: "0.8.15",
+      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+    });
+  }
+
+  const promptFirstV59Mode = QuizGenerationRolloutModeSchema.catch(
+    "disabled",
+  ).parse(env.QUIZ_V5_9_ROLLOUT);
+  const promptFirstV59CanaryUsers = new Set(
+    String(env.QUIZ_V5_9_CANARY_USER_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  const promptFirstV59 =
+    promptFirstV59Mode === "enabled" ||
+    (promptFirstV59Mode === "canary" && promptFirstV59CanaryUsers.has(userId));
+  if (promptFirstV59) {
+    return QuizGenerationProfileResponseSchema.parse({
+      generationProfile: "prompt_first_auto_v5_9",
+      minimumExtensionVersion: "0.8.14",
+      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+    });
+  }
+
+  const groundedMode = QuizGenerationRolloutModeSchema.catch("disabled").parse(
+    env.QUIZ_V5_4_ROLLOUT,
+  );
   const groundedCanaryUsers = new Set(
     String(env.QUIZ_V5_4_CANARY_USER_IDS ?? "")
       .split(",")
@@ -45,8 +137,8 @@ export function quizGenerationProfile(
   if (grounded) {
     return QuizGenerationProfileResponseSchema.parse({
       generationProfile: "concept_first_auto_v5_8",
-      minimumExtensionVersion: "0.8.8",
-      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      minimumExtensionVersion: "0.8.13",
+      requiredCapability: CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     });
   }
 

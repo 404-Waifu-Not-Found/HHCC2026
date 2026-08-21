@@ -56,6 +56,16 @@ export function Surface({
                 theme.mode === "dark" ? shadows.darkFloating : shadows.floating,
             }
           : null,
+        elevated && Platform.OS !== "web"
+          ? {
+              shadowColor:
+                theme.mode === "dark" ? "#000000" : theme.primaryPressed,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: theme.mode === "dark" ? 0.28 : 0.14,
+              shadowRadius: 14,
+              elevation: 6,
+            }
+          : null,
         style,
       ]}
     >

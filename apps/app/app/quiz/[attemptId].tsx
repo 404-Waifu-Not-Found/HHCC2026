@@ -43,7 +43,7 @@ import {
   subscribeToAttemptGeneration,
 } from "../../src/generation/progressive-coordinator";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { subscribeToClipQuestExtension } from "../../src/transcription/clipquest-extension";
+import { subscribeToLocalGenerationClient } from "../../src/generation/local-generation-client";
 import {
   FeedbackMotion,
   MotionSkeleton,
@@ -306,8 +306,13 @@ export default function QuizScreen() {
 
   useEffect(() => {
     if (generation?.state !== "action_required") return;
-    return subscribeToClipQuestExtension((extension) => {
-      if (!extension.configured || recoveryAttemptedRef.current) return;
+    return subscribeToLocalGenerationClient((client) => {
+      if (
+        !client.available ||
+        !client.configured ||
+        recoveryAttemptedRef.current
+      )
+        return;
       recoveryAttemptedRef.current = true;
       void ensureProgressiveAttemptRecovery(attemptId).finally(() => {
         recoveryAttemptedRef.current = false;
@@ -614,9 +619,12 @@ export default function QuizScreen() {
                 {t("primerTitle")}
               </Text>
             </View>
-            <Text selectable style={[styles.primerText, { color: theme.text }]}>
+            <MathText
+              selectable
+              style={[styles.primerText, { color: theme.text }]}
+            >
               {primer}
-            </Text>
+            </MathText>
           </Surface>
         </MotionView>
         <MotionView preset="rise" delay={140} style={styles.primerButton}>
@@ -850,9 +858,9 @@ function QuestionInput({
                 {position + 1}
               </Text>
             </View>
-            <Text style={[styles.orderText, { color: theme.text }]}>
-              {question.items?.[itemIndex]}
-            </Text>
+            <MathText style={[styles.orderText, { color: theme.text }]}>
+              {question.items?.[itemIndex] ?? ""}
+            </MathText>
             <View style={styles.orderActions}>
               <IconButton
                 label={t("moveUp")}

@@ -9,9 +9,13 @@ import {
   gradeProgressiveShortAnswerDecision,
   parseProgressiveQuizSummary,
   readProgressiveGenerationSnapshot,
+  sharedEngineClientTransitionAllowed,
   tryProgressiveQuizSummary,
 } from "../src/lib/progressive-quiz";
-import { formulaFingerprint } from "../src/lib/math-expression";
+import {
+  compareFormulaAnswer,
+  formulaFingerprint,
+} from "../src/lib/math-expression";
 
 const questionTypes = [
   "multiple_choice",
@@ -210,6 +214,48 @@ describe("progressive quiz storage state", () => {
     ).toBe(true);
   });
 
+  it("allows an explicit shared-engine transition only for compatible current banks", () => {
+    const legacy = ProgressiveQuizSummarySchema.parse(summary());
+    const current = {
+      ...legacy,
+      resultProtocolVersion: 10 as const,
+      promptVersion: "quiz-local-json-stream-v5.12" as const,
+      validatorVersion: "validator-minimal-gradeability-v5.3" as const,
+      client: {
+        kind: "chrome_extension" as const,
+        version: "0.8.18",
+        capability: "question-stream-v7" as const,
+      },
+    };
+    const android = {
+      kind: "android_app" as const,
+      version: "0.2.0",
+      capability: "question-stream-v7" as const,
+    };
+    const ios = { ...android, kind: "ios_app" as const };
+    expect(sharedEngineClientTransitionAllowed(current, android)).toBe(true);
+    expect(sharedEngineClientTransitionAllowed(current, ios)).toBe(true);
+    expect(
+      sharedEngineClientTransitionAllowed(
+        { ...current, client: android },
+        current.client,
+      ),
+    ).toBe(false);
+    expect(
+      sharedEngineClientTransitionAllowed(
+        { ...current, client: undefined },
+        android,
+      ),
+    ).toBe(true);
+    expect(sharedEngineClientTransitionAllowed(legacy, android)).toBe(false);
+    expect(
+      sharedEngineClientTransitionAllowed(current, {
+        ...android,
+        version: "0.1.9",
+      }),
+    ).toBe(false);
+  });
+
   it("adds pipeline-9 indexes without dropping the pipeline-7 index", () => {
     const migration = readFileSync(
       resolve(
@@ -263,6 +309,28 @@ describe("progressive short-answer grading", () => {
         answer:
           "It is the rate of change dA/dx, the added area divided by dx; as dx approaches zero it approaches x², the graph's height at x.",
         ...areaDerivativeRubric,
+      }),
+    ).toBe(true);
+  });
+
+  it("treats unchanged and does-not-change as the same bounded proposition", () => {
+    const requiredIdeas = [
+      "seawater warms",
+      "volume increases",
+      "mass does not change",
+    ];
+    expect(
+      gradeProgressiveShortAnswer({
+        answer:
+          "When seawater warms, its volume increases while its mass stays the same.",
+        requiredIdeas,
+        acceptableAlternatives: [],
+        rubricV2: {
+          version: 2,
+          mode: "proposition",
+          requiredIdeas,
+          acceptableAnswers: [],
+        },
       }),
     ).toBe(true);
   });
@@ -322,6 +390,56 @@ describe("progressive short-answer grading", () => {
     }
   });
 
+  it("accepts concise prediction and interpretability paraphrases", () => {
+    const predictionAnswer =
+      "With very limited training data, prediction is uncertain; with more examples, prediction becomes more reliable.";
+    const predictionRubric = {
+      version: 2 as const,
+      mode: "proposition" as const,
+      requiredIdeas: [predictionAnswer],
+      acceptableAnswers: [predictionAnswer],
+    };
+    for (const answer of [
+      "More training data makes predictions more reliable.",
+      "Predictions become more reliable with more examples.",
+      "Limited data is uncertain; more data improves reliability.",
+    ]) {
+      expect(
+        gradeProgressiveShortAnswerDecision({
+          answer,
+          requiredIdeas: predictionRubric.requiredIdeas,
+          acceptableAlternatives: predictionRubric.acceptableAnswers,
+          rubricV2: predictionRubric,
+        }),
+      ).toMatchObject({ correct: true });
+    }
+
+    const interpretabilityAnswer =
+      "Because the neural network has so many layers, making it difficult to trace how inputs lead to outputs.";
+    const interpretabilityRubric = {
+      version: 2 as const,
+      mode: "proposition" as const,
+      requiredIdeas: [interpretabilityAnswer],
+      acceptableAnswers: [interpretabilityAnswer],
+    };
+    expect(
+      gradeProgressiveShortAnswerDecision({
+        answer: "Too many layers make the reasoning difficult to trace.",
+        requiredIdeas: interpretabilityRubric.requiredIdeas,
+        acceptableAlternatives: interpretabilityRubric.acceptableAnswers,
+        rubricV2: interpretabilityRubric,
+      }),
+    ).toMatchObject({ correct: true });
+    expect(
+      gradeProgressiveShortAnswerDecision({
+        answer: "Neural networks are complex.",
+        requiredIdeas: interpretabilityRubric.requiredIdeas,
+        acceptableAlternatives: interpretabilityRubric.acceptableAnswers,
+        rubricV2: interpretabilityRubric,
+      }),
+    ).toEqual({ correct: false, path: "required_idea_missing" });
+  });
+
   describe("formula-aware grading", () => {
     const quotientRuleRubric = {
       requiredIdeas: [
@@ -359,6 +477,13 @@ describe("progressive short-answer grading", () => {
       expect(formulaFingerprint("(f(b)-f(a))/(b-a)")).not.toBe(
         formulaFingerprint("(f(a)-f(b))/(b-a)"),
       );
+    });
+
+    it("accepts compact equations with implicit or explicit multiplication", () => {
+      expect(compareFormulaAnswer("F=ma", ["F=m*a"])).toBe("match");
+      expect(formulaFingerprint("a=(W1-W2)/(m1+m2)")).not.toBeNull();
+      expect(formulaFingerprint("a=F_net/m_total")).not.toBeNull();
+      expect(compareFormulaAnswer("F=m+a", ["F=m*a"])).toBe("mismatch");
     });
 
     it("accepts the equivalent product-of-fractions wording seen in production", () => {

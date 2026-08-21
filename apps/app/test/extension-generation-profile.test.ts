@@ -64,7 +64,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.8 and stream v6 for new concept-first generation", () => {
+  it("requires v0.8.17 and stream v7 for current prompt-first generation", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -91,13 +91,49 @@ describe("extension generation profile compatibility", () => {
     ).toBe(false);
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.8",
+        "0.8.13",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.14",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.15",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.16",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.17",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(true);
-    expect(supportsQuestionStream(["question-stream-v5"])).toBe(false);
+    expect(supportsQuestionStream(["question-stream-v6"])).toBe(false);
     expect(
-      supportsQuestionStream(["question-stream-v5", "question-stream-v6"]),
+      supportsQuestionStream(["question-stream-v6", "question-stream-v7"]),
+    ).toBe(true);
+    expect(
+      supportsQuestionStream(["question-stream-v7"], "prompt_first_auto_v5_10"),
+    ).toBe(true);
+    expect(
+      supportsQuestionStream(["question-stream-v7"], "prompt_first_auto_v5_11"),
+    ).toBe(true);
+    expect(
+      supportsQuestionStream(["question-stream-v7"], "prompt_first_auto_v5_12"),
+    ).toBe(true);
+    expect(
+      supportsQuestionStream(["question-stream-v6"], "concept_first_auto_v5_8"),
     ).toBe(true);
     expect(
       supportsQuestionStream(
@@ -120,6 +156,7 @@ describe("extension generation profile compatibility", () => {
     );
     for (const source of files) {
       expect(source).not.toMatch(/Continue generating/i);
+      expect(source).not.toMatch(/Automatic(?:ally)? repair/i);
       expect(source).not.toMatch(/onContinue/);
       expect(source).not.toMatch(/continuingGeneration/);
     }
@@ -135,6 +172,17 @@ describe("extension generation profile compatibility", () => {
     );
     expect(source).toContain("let questionIngestion = Promise.resolve()");
     expect(source).toContain("let callIngestion = Promise.resolve()");
+    expect(source).toContain(
+      "const pendingCallEvents: LocalGenerationCallEvent[] = []",
+    );
+    expect(source).not.toContain("pendingStartedCall");
+    expect(source).toContain(
+      "The Worker event is authoritative. Losing the best-effort browser",
+    );
+    expect(source).toContain(
+      "A conflicting progress snapshot must never poison the",
+    );
+    expect(source).toContain(").catch(() => undefined);");
     expect(source).toContain(
       "if (!attemptId) await startAttempt(response.quizId)",
     );
@@ -169,6 +217,6 @@ describe("extension generation profile compatibility", () => {
     expect(source).toContain(
       "/api/videos/${encodeURIComponent(continuation.videoId)}/recovery",
     );
-    expect(source).toContain("saveImportedVideo(imported)");
+    expect(source).toContain("saveImportedVideo(session.user.id, imported)");
   });
 });

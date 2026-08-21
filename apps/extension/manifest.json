@@ -1,15 +1,13 @@
 {
   "manifest_version": 3,
   "name": "ClipQuest Local AI",
-  "version": "0.8.8",
+  "version": "0.8.18",
   "description": "Reads YouTube captions and generates ClipQuest quizzes locally with your own DeepSeek API key.",
   "permissions": ["downloads", "scripting", "storage", "tabs"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://youtube.com/*",
     "https://clipquest.ccwu.cc/*",
-    "http://localhost/*",
-    "http://127.0.0.1/*",
     "https://api.deepseek.com/*"
   ],
   "background": {
@@ -18,11 +16,7 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://clipquest.ccwu.cc/*",
-        "http://localhost/*",
-        "http://127.0.0.1/*"
-      ],
+      "matches": ["https://clipquest.ccwu.cc/*"],
       "js": ["clipquest-bridge.js"],
       "run_at": "document_start"
     },

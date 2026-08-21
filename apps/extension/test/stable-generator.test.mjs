@@ -7,10 +7,2273 @@ import {
   buildQuestionTypePlanFromSeed,
   buildTrueFalseAnswerPlanFromSeed,
   CONCEPT_FIRST_SYSTEM_PROMPT,
+  PROMPT_FIRST_SYSTEM_PROMPT,
   generateQuizFromPlainText,
+  hasPromptFirstV511FormulaEvidence,
+  hasPromptFirstV512FormulaEvidence,
   normalizeGeneratedQuestion,
+  promptFirstV512AssessmentText,
+  promptFirstV512DistinctContext,
+  promptFirstV512EvidenceIndex,
+  promptFirstV512RepeatsAcceptedFamily,
   serializeFormulaTokens,
 } from "../src/local-generator.js";
+
+test("v5.12 evidence allocation avoids an already used narrative window", () => {
+  const input = {
+    promptFirstPrimaryClaims: [
+      "Leukocytes originate in bone marrow.",
+      "Autoimmune diseases attack healthy cells.",
+      "A mosquito injects chemicals into the skin.",
+    ],
+    promptFirstEvidenceWindows: [
+      "A mosquito injects chemicals into the skin. Leukocytes originate in bone marrow.",
+      "B and T cells create long-term immunity. Autoimmune diseases attack healthy cells.",
+      "A mosquito injects chemicals into the skin. A red itchy bump appears after the bite.",
+    ],
+  };
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "leukocyte origin",
+      question: "Where do leukocytes originate?",
+      answer: "They originate in bone marrow.",
+    },
+  ];
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 1, accepted, new Set([0])),
+    1,
+  );
+});
+
+test("v5.12 evidence allocation prefers a used distinct family over an unused repeated family", () => {
+  const input = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Burning fossil fuels releases greenhouse gases and other air pollutants.",
+      "Nonrenewable energy sources exist in a fixed amount and cannot be easily replaced.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Burning fossil fuels releases greenhouse gases and other air pollutants.",
+      "Nonrenewable resources are finite because they form too slowly to be replenished quickly.",
+    ],
+  };
+  const accepted = [
+    {
+      type: "short_answer",
+      concept: "finite nonrenewable resources",
+      question: "Why are nonrenewable resources finite?",
+      answer: "They form too slowly to be replenished quickly.",
+      explanation:
+        "Their current supply cannot be renewed on a human timescale.",
+    },
+  ];
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 4, accepted, new Set([0])),
+    0,
+  );
+});
+
+test("v5.12 family integrity catches synonym and cross-type repeats", () => {
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "median for an even-sized data set",
+      question: "How is the median found when a data set has an even count?",
+      answer: "Take the mean of the two middle values.",
+      explanation: "The two central values share the middle position.",
+    },
+    {
+      type: "short_answer",
+      concept: "conventional current direction",
+      question:
+        "How does conventional current direction compare with electron flow?",
+      answer: "They point in opposite directions.",
+      explanation:
+        "Conventional current goes from positive to negative while electrons move the other way.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "true_false",
+        concept: "median calculation",
+        question:
+          "For an even-sized data set, the median is the average of the two central values.",
+        answer: true,
+        correction:
+          "For an even-sized data set, the median is the average of the two central values.",
+        explanation: "No single observation occupies the middle position.",
+      },
+      accepted,
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "true_false",
+        concept: "historical current convention",
+        question:
+          "Conventional electric current points in the same direction as electron flow.",
+        answer: false,
+        correction:
+          "Conventional electric current points opposite to electron flow.",
+        explanation: "The sign convention predates the discovery of electrons.",
+      },
+      accepted,
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "multiple_choice",
+        concept: "mean application",
+        question: "What is the mean of 23, 29, 20, 32, 23, 21, 33, and 25?",
+        answer: "25.75",
+        explanation: "Their sum is 206, and 206 divided by 8 is 25.75.",
+      },
+      [accepted[0]],
+    ),
+    false,
+  );
+
+  const acceptedDomainFamilies = [
+    {
+      type: "true_false",
+      concept: "energy release in cellular respiration",
+      question: "Cellular respiration releases energy from glucose.",
+      answer: true,
+      correction: "Cellular respiration releases energy from glucose.",
+    },
+    {
+      type: "short_answer",
+      concept: "nonpolar covalent bond condition",
+      question: "When is a covalent bond nonpolar?",
+      answer:
+        "When equal electronegativities cause the electrons to be shared equally.",
+    },
+    {
+      type: "short_answer",
+      concept: "sound wave mechanism",
+      question: "What are sound waves physically?",
+      answer: "Pressure waves traveling through air.",
+    },
+    {
+      type: "short_answer",
+      concept: "selective breeding mechanism",
+      question: "How does selective breeding change a population?",
+      answer: "Desired heritable traits become more common over generations.",
+    },
+    {
+      type: "true_false",
+      concept: "polar bond charge distribution",
+      question:
+        "The more electronegative atom in a polar bond becomes partially negative.",
+      answer: true,
+      correction:
+        "The more electronegative atom in a polar bond becomes partially negative.",
+    },
+    {
+      type: "multiple_choice",
+      concept: "wavelength-dependent transmission",
+      question:
+        "What determines how much light a material transmits at each wavelength?",
+      answer: "The wavelength and the material's properties.",
+    },
+    {
+      type: "short_answer",
+      concept: "light transmission through a lens",
+      question: "What happens when light passes through a lens?",
+      answer: "It exits the other side and continues onward.",
+    },
+    {
+      type: "short_answer",
+      concept: "photosynthesis mass source",
+      question: "Where does most new plant mass come from?",
+      answer: "Carbon dioxide and water become plant biomass.",
+    },
+  ];
+
+  for (const candidate of [
+    {
+      type: "multiple_choice",
+      concept: "cellular respiration energy conversion",
+      question: "How does cellular respiration provide usable energy?",
+      answer: "It releases chemical energy while breaking down glucose.",
+    },
+    {
+      type: "short_answer",
+      concept: "equal electronegativity",
+      question:
+        "How are electrons distributed when bonded atoms have equal electronegativity?",
+      answer: "They are shared evenly, producing a nonpolar bond.",
+    },
+    {
+      type: "short_answer",
+      concept: "sound transmission",
+      question: "Which wave travels through air as pressure changes?",
+      answer: "Sound waves.",
+    },
+    {
+      type: "true_false",
+      concept: "selective breeding outcome",
+      question:
+        "Selecting desired traits over generations changes breed characteristics.",
+      answer: true,
+    },
+    {
+      type: "short_answer",
+      concept: "electronegativity and partial charge",
+      question:
+        "Why does carbon become partially positive when bonded to oxygen?",
+      answer:
+        "Oxygen pulls shared electron density toward itself more strongly.",
+    },
+    {
+      type: "true_false",
+      concept: "selective light transmission",
+      question:
+        "A material transmits different wavelengths of light by different amounts.",
+      answer: true,
+      correction:
+        "A material transmits different wavelengths of light by different amounts.",
+    },
+    {
+      type: "true_false",
+      concept: "lens transmission path",
+      question:
+        "Light is absorbed by a lens instead of continuing to the other side.",
+      answer: false,
+      correction: "Light passes through the lens and continues onward.",
+    },
+    {
+      type: "short_answer",
+      concept: "photosynthesis inputs",
+      question: "Which environmental substances enter photosynthesis?",
+      answer: "Carbon dioxide and water.",
+    },
+  ]) {
+    assert.equal(
+      promptFirstV512RepeatsAcceptedFamily(candidate, acceptedDomainFamilies),
+      true,
+    );
+  }
+});
+
+test("v5.12 family integrity catches Fresh12 free-energy and elasticity repeats", () => {
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "true_false",
+        concept: "free energy and equilibrium",
+        question:
+          "The standard free energy change is related to the equilibrium constant by an equation.",
+        answer: true,
+      },
+      [
+        {
+          type: "multiple_choice",
+          concept: "calculating the equilibrium constant",
+          question:
+            "How can the equilibrium constant be calculated from standard free energy?",
+          choices: [
+            "Divide by negative RT and exponentiate.",
+            "Multiply by RT.",
+            "Add RT.",
+            "Square RT.",
+          ],
+          answerIndex: 0,
+          explanation:
+            "The equation delta G naught equals negative RT ln K is solved by dividing by negative RT and exponentiating.",
+        },
+      ],
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "multiple_choice",
+        concept: "equilibrium direction",
+        question:
+          "What does positive standard free energy imply about equilibrium?",
+        correctAnswer: "K is below one and reactants are favored.",
+      },
+      [
+        {
+          type: "true_false",
+          concept: "positive free energy and K",
+          question: "If delta G naught is positive, K is less than one.",
+          answer: true,
+        },
+      ],
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "multiple_choice",
+        concept: "income elasticity",
+        question: "What does positive income elasticity indicate?",
+        correctAnswer: "The good is normal.",
+      },
+      [
+        {
+          type: "true_false",
+          concept: "normal good",
+          question: "A positive income elasticity identifies a normal good.",
+          answer: true,
+        },
+      ],
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "true_false",
+        concept: "income elasticity",
+        question:
+          "Demand can fall as income rises, producing negative income elasticity.",
+        answer: true,
+      },
+      [
+        {
+          type: "short_answer",
+          concept: "inferior good",
+          question: "What type of good has negative income elasticity?",
+          answer: "inferior good",
+        },
+      ],
+    ),
+    true,
+  );
+});
+
+test("v5.12 family integrity catches Fresh13 repeated objectives", () => {
+  const repeatedPairs = [
+    [
+      {
+        type: "short_answer",
+        concept: "nonrenewable resources",
+        question: "Why are nonrenewable resources finite?",
+        answer: "They form too slowly to replace the fixed supply.",
+      },
+      {
+        type: "true_false",
+        concept: "nonrenewable supply",
+        question: "Nonrenewable resources exist in a fixed amount.",
+        answer: true,
+      },
+    ],
+    [
+      {
+        type: "multiple_choice",
+        concept: "sexual reproduction",
+        question: "Why are sexually produced offspring genetically varied?",
+        correctAnswer: "They combine genes from two parents.",
+      },
+      {
+        type: "true_false",
+        concept: "genetic diversity",
+        question: "Sexual reproduction creates genetic variation.",
+        answer: true,
+      },
+    ],
+    [
+      {
+        type: "multiple_choice",
+        concept: "phylogenetic parsimony",
+        question: "Which phylogenetic hypothesis is preferred?",
+        correctAnswer: "The simplest hypothesis explaining the traits.",
+      },
+      {
+        type: "short_answer",
+        concept: "parsimony",
+        question: "What principle favors the fewest evolutionary changes?",
+        answer: "Phylogenetic parsimony.",
+      },
+    ],
+    [
+      {
+        type: "multiple_choice",
+        concept: "long-run monopolistic competition",
+        question: "What happens to economic profit after long-run entry?",
+        correctAnswer: "It falls to zero.",
+      },
+      {
+        type: "short_answer",
+        concept: "firm entry",
+        question: "Why does further entry stop in the long run?",
+        answer: "There is no economic profit left to attract firms.",
+      },
+    ],
+    [
+      {
+        type: "true_false",
+        concept: "energy resource categories",
+        question:
+          "Energy resources are divided into renewable and nonrenewable groups.",
+        answer: true,
+      },
+      {
+        type: "short_answer",
+        concept: "energy classification",
+        question: "What are the two groups of energy resources?",
+        answer: "Renewable energy and nonrenewable energy.",
+      },
+    ],
+    [
+      {
+        type: "short_answer",
+        concept: "right to organize",
+        question: "Which economic right protects union organization?",
+        answer: "The right to organize a labor union.",
+      },
+      {
+        type: "multiple_choice",
+        concept: "union membership",
+        question: "What does the right to join a union protect?",
+        correctAnswer:
+          "A worker's freedom to organize without employer interference.",
+      },
+    ],
+    [
+      {
+        type: "multiple_choice",
+        concept: "fossil fuel formation",
+        question: "What process forms fossil fuels?",
+        correctAnswer:
+          "Ancient organic remains are transformed by burial, heat, and pressure.",
+      },
+      {
+        type: "short_answer",
+        concept: "fossil fuel origin",
+        question: "What is the origin of fossil fuels?",
+        answer:
+          "Fossil fuels formed from the remains of ancient organisms in the geologic past.",
+      },
+    ],
+  ];
+  for (const [accepted, candidate] of repeatedPairs) {
+    assert.equal(
+      promptFirstV512RepeatsAcceptedFamily(candidate, [accepted]),
+      true,
+    );
+  }
+});
+
+test("v5.12 scopes political recommendations as viewpoints before prompting", () => {
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "On the other hand, someone who really cares about equality of opportunity might say, well, hold on a second, not everyone is born into the same circumstance.",
+    ),
+    "An equality-of-opportunity viewpoint argues that unequal starting circumstances can justify a government role in leveling the playing field.",
+  );
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "Instead of only learning household skills or etiquette, women should learn philosophy and mathematics.",
+    ),
+    "Republican motherhood advocated expanding women's education beyond household skills and etiquette to include philosophy and mathematics.",
+  );
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "To some degree, they feed into these first two bullet points, that if there truly is equality of oppurtunity, it kind of backs up the idea that, hey, let's just let people take care of themselves.",
+    ),
+    "An equality-of-opportunity viewpoint argues that unequal starting circumstances can justify a government role in leveling the playing field.",
+  );
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "The entire core, as far as we know, is made up of the same stuff.",
+    ),
+    "Earth's inner and outer core share the same metallic composition even though the outer core is liquid and the inner core is solid.",
+  );
+});
+
+test("v5.12 family integrity catches Fresh10 atomic and monopsony repeats", () => {
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "short_answer",
+        concept: "photon absorption relationship",
+        question: "What determines whether an atom absorbs a photon?",
+        answer:
+          "The photon energy must match an allowed electron energy-level difference.",
+        explanation:
+          "Electrons can occupy only discrete allowed energy levels.",
+      },
+      [
+        {
+          type: "multiple_choice",
+          concept: "photon absorption condition",
+          question: "What condition allows an electron to absorb a photon?",
+          answer:
+            "The photon energy exactly equals the gap to an allowed higher energy level.",
+          explanation:
+            "A photon passes through when its energy does not match an allowed transition.",
+        },
+      ],
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "short_answer",
+        concept: "monopsony marginal factor cost",
+        question:
+          "How does marginal factor cost relate to the labor supply curve in a monopsony?",
+        answer:
+          "The marginal factor cost curve lies above the labor supply curve.",
+        explanation:
+          "Hiring one more worker requires raising the wage paid to all workers.",
+      },
+      [
+        {
+          type: "multiple_choice",
+          concept: "monopsony wage setting",
+          question:
+            "What wage condition applies when a monopsonist hires another worker?",
+          answer: "The higher wage must be paid to every worker.",
+          explanation:
+            "The labor supply curve slopes upward for the sole employer.",
+        },
+      ],
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "true_false",
+        concept: "S-wave shadow zone",
+        question:
+          "S-waves are not detected in the shadow zone opposite an earthquake.",
+        correction:
+          "S-waves are not detected in the shadow zone opposite an earthquake.",
+        explanation:
+          "The liquid outer core blocks S-waves from reaching that region.",
+      },
+      [
+        {
+          type: "short_answer",
+          concept: "S-wave propagation through the core",
+          question: "Why can S-waves not travel through Earth's outer core?",
+          answer:
+            "The outer core is liquid, and S-waves require a solid medium.",
+          explanation: "The liquid outer core creates the S-wave shadow zone.",
+        },
+      ],
+    ),
+    true,
+  );
+  assert.equal(
+    promptFirstV512RepeatsAcceptedFamily(
+      {
+        type: "true_false",
+        concept: "domestication and settlement",
+        question:
+          "Domesticating plants and animals allowed people to settle and live more sedentary lives.",
+        correction:
+          "Domesticating plants and animals allowed people to settle and live more sedentary lives.",
+        explanation:
+          "A dependable food supply reduced the need to move in search of food.",
+      },
+      [
+        {
+          type: "multiple_choice",
+          concept: "agriculture and settlement",
+          question:
+            "How did adopting agriculture change a group's settlement pattern?",
+          answer: "It allowed the group to become more sedentary.",
+          explanation:
+            "Agriculture let groups stay in one place for longer periods.",
+        },
+      ],
+    ),
+    true,
+  );
+});
+
+test("v5.12 family allocation blocks the Fresh9 repeated objectives", () => {
+  const cases = [
+    {
+      accepted: {
+        type: "true_false",
+        concept: "peppered moth visibility",
+        question:
+          "White peppered moths are easier for predators to see on dark surfaces.",
+        answer: true,
+        correction:
+          "White peppered moths are easier for predators to see on dark surfaces.",
+        explanation:
+          "The light coloration contrasts with soot-darkened resting surfaces.",
+      },
+      candidate: {
+        type: "short_answer",
+        concept: "peppered moth survival",
+        question: "When do birds pick off white peppered moths more easily?",
+        answer: "When the resting background is dark.",
+        explanation:
+          "The white moths lose camouflage against a dark background.",
+      },
+    },
+    {
+      accepted: {
+        type: "short_answer",
+        concept: "English varieties",
+        question:
+          "How does Standard American English relate to other English varieties?",
+        answer: "It is one of many valid English varieties.",
+        explanation: "No English variety is inherently superior.",
+      },
+      candidate: {
+        type: "multiple_choice",
+        concept: "dialect legitimacy",
+        question:
+          "What is appropriate when two people use different forms of English?",
+        answer: "Recognize both as legitimate varieties.",
+        explanation: "Different English varieties are equally valid.",
+      },
+    },
+    {
+      accepted: {
+        type: "short_answer",
+        concept: "entropy and gas expansion",
+        question: "Why does a gas spread into a larger volume?",
+        answer:
+          "The dispersed arrangement has far more accessible molecular states.",
+        explanation:
+          "Random motion makes the more numerous dispersed states overwhelmingly probable.",
+      },
+      candidate: {
+        type: "multiple_choice",
+        concept: "return to an ordered gas state",
+        question:
+          "Why do gas molecules not spontaneously return to one side of a container?",
+        answer: "The ordered arrangement is overwhelmingly unlikely.",
+        explanation:
+          "Disordered molecular arrangements greatly outnumber the ordered arrangement.",
+      },
+    },
+  ];
+
+  for (const { accepted, candidate } of cases) {
+    assert.equal(
+      promptFirstV512RepeatsAcceptedFamily(candidate, [accepted]),
+      true,
+    );
+  }
+});
+
+test("v5.12 uses a bounded window as a family hint for pronoun fragments", () => {
+  const input = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "The darker ones are easier to spot in the cleaner environment.",
+      "Gas initially confined to one side spreads through the container.",
+      "White peppered moths stand out against soot-darkened surfaces.",
+    ],
+    promptFirstEvidenceWindows: [
+      "In a cleaner environment, darker peppered moths are easier for predators to spot.",
+      "Gas particles spread through the available container volume because dispersed arrangements are more numerous.",
+      "White peppered moths stand out against soot-darkened surfaces and are easier for birds to catch.",
+    ],
+  };
+  const accepted = [
+    {
+      type: "true_false",
+      concept: "peppered moth camouflage",
+      question:
+        "Darker peppered moths are easier to spot on clean, light surfaces.",
+      answer: true,
+      correction:
+        "Darker peppered moths are easier to spot on clean, light surfaces.",
+      explanation: "Their coloration contrasts with the resting surface.",
+    },
+  ];
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 1, accepted, new Set([0])),
+    1,
+  );
+});
+
+test("v5.12 reserves predictable crop production after population growth", () => {
+  const input = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Domesticating crops increased the food supply and allowed population density to rise.",
+      "Planting crops enabled predictable harvesting and a predictable food supply.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Domesticating crops increased the food supply and allowed population density to rise.",
+      "Instead of gathering plants wherever they emerged, people planted crops so they could harvest predictably and maintain a predictable food supply.",
+    ],
+  };
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "agriculture and population growth",
+      question: "How did agriculture permit population density to increase?",
+      answer: "It increased the food supply so more people could be supported.",
+      explanation:
+        "Domesticated crops and animals increased the available food supply.",
+    },
+  ];
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 1, accepted, new Set([0])),
+    1,
+  );
+});
+
+test("v5.12 normalizes misleading caption shorthand before prompting", () => {
+  const normalized = promptFirstV512AssessmentText(
+    [
+      "Data of any kind can be kept secret through a process known as encryption, descrambling or changing of the message to hide the original text.",
+      "Here we will call our system this beaker that has the solution inside of it.",
+      "The energy level diagram gives us a way to show what energy the electron has without having to draw an atom with a bunch of circles all the time.",
+      "Instead of shifting every letter by the same amount, let's shift each letter by a different amount.",
+      "Maybe you had positive climate change, at least from a human point of view, that allowed land to support agriculture.",
+      "These extra electrons move freely, making the material negatively charged.",
+      "Until, we talk about secondary effects, it led to a wage spiral.",
+      "In order for this money supply to be inflationary, you need to see the transaction levels or that velocity of money go up again.",
+      "That means it's infeasible to compute in the reverse direction. If I show you some string of 1s and 0s, and ask you to find an input so that the SHA256 hash of that input gives this exact string of bits, you will have no better method than to just guess and check.",
+    ].join(" "),
+  );
+
+  assert.match(normalized, /scrambling or transforming a message/u);
+  assert.doesNotMatch(normalized, /encryption, descrambling/iu);
+  assert.match(normalized, /system consists of the beaker and its solution/u);
+  assert.match(normalized, /discrete energies that an electron is allowed/u);
+  assert.match(normalized, /multi-shift key specifies/u);
+  assert.match(normalized, /Post-glacial climate conditions/u);
+  assert.match(normalized, /electrically neutral overall/u);
+  assert.match(normalized, /wage-price spiral/u);
+  assert.match(normalized, /cash-hoarding situation/u);
+  assert.match(normalized, /remaining held as cash/u);
+  assert.match(normalized, /brute-force guessing and checking/u);
+  assert.match(normalized, /computationally infeasible/u);
+  assert.match(
+    promptFirstV512AssessmentText(
+      "The place where the plates collide is called a subduction zone.",
+    ),
+    /denser plate bends and descends beneath another plate/u,
+  );
+  assert.match(
+    promptFirstV512AssessmentText(
+      "The sun, the remaining dust and gas particles collided with each other and eventually formed larger objects like Earth.",
+    ),
+    /After the Sun formed, the remaining dust and gas particles/u,
+  );
+  assert.match(
+    promptFirstV512AssessmentText(
+      "In 1543, Nicolaus Copernicus publishes On the Revolutions of the Heavenly Spheres, famous for suggesting that earth is not the center of the universe but that the earth revolves around the sun.",
+    ),
+    /Copernicus proposed that Earth is not the center/u,
+  );
+  assert.doesNotMatch(normalized, /material negatively charged/u);
+  assert.doesNotMatch(normalized, /Until, we talk/u);
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "Instead of saying, okay let's just gather those berries there where it happens to emerge, oh let's actually start to plant things.",
+    ),
+    "Plant cultivation involves deliberately planting crops so they can be harvested predictably instead of gathering plants only where they happen to grow.",
+  );
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "But if you do the math based on the shadow, and you know the speed of the material, and all of that type of thing, then you can figure out the depth at which these transitions occur.",
+    ),
+    "Scientists can calculate the depth of an internal boundary by combining seismic shadow-zone geometry with the wave speed in the material.",
+  );
+  assert.match(
+    promptFirstV512AssessmentText(
+      "If we look at differences in amino acid sequences, species one, once again, has the most differences in amino acid sequences, so that confirms our belief that it might be the most different from the unknown plant species.",
+    ),
+    /Fewer amino-acid sequence differences indicate a closer evolutionary relationship/u,
+  );
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "The amount of income to capital is 52, the value of the capital is 1,050 gold pieces.",
+    ),
+    "Return on capital equals capital income divided by the value of the capital stock.",
+  );
+  assert.match(
+    promptFirstV512AssessmentText(
+      "Some of this carbonate might go and nab some of these hydrogen ions, less likely to form an ionic bond with the calcium.",
+    ),
+    /Additional hydrogen ions bind with carbonate ions/u,
+  );
+  const commanderInChief = promptFirstV512AssessmentText(
+    "States and clearly they don't say all of the different forces of the United States because we didn't have an Air Force then. [Jeffrey] Yes. [Sal] Or Marines. [Jeffrey] We sure didn't, but there was a concern about the king controlling the military.",
+  );
+  assert.match(
+    commanderInChief,
+    /establishes unified civilian control of the military under the President/u,
+  );
+  assert.doesNotMatch(commanderInChief, /Or Marines|We sure didn't/u);
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "But S-waves, S for secondary, these are the transverse waves, these can only travel through solids.",
+    ),
+    "S-waves travel through solids but not liquids.",
+  );
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "But if it goes into a liquid, in general, sound waves, or I should say P-waves, seismic waves move slower in liquids.",
+    ),
+    "P-waves travel more slowly in liquids than in comparable solid material.",
+  );
+  assert.equal(
+    promptFirstV512AssessmentText(
+      "But the real way to know that we have an inner core that's solid, as opposed to the whole thing being liquid, is that the P-waves is the pattern of when and how the P-waves reach essentially the other side of the globe.",
+    ),
+    "The arrival pattern of P-waves on the far side of Earth is evidence for a solid inner core within the liquid outer core.",
+  );
+});
+
+test("v5.12 removes already accepted answer-bearing facts from later context", () => {
+  const primary =
+    "Long-term potentiation strengthens synaptic connections during memory formation.";
+  const context = [
+    "Activating tagged hippocampal neurons triggered the same learned behavior.",
+    primary,
+    "Repeated signaling adds receptors and increases neurotransmitter release.",
+  ].join(" ");
+  const distinct = promptFirstV512DistinctContext(context, primary, [
+    {
+      type: "multiple_choice",
+      question: "What happened when tagged hippocampal neurons were activated?",
+      answer: "They triggered the same learned behavior.",
+    },
+  ]);
+
+  assert.doesNotMatch(distinct, /tagged hippocampal neurons/iu);
+  assert.match(distinct, /Long-term potentiation/iu);
+  assert.match(distinct, /increases neurotransmitter release/iu);
+});
+
+test("v5.12 avoids a previously assessed concept family in later evidence", () => {
+  const input = {
+    promptFirstPrimaryClaims: [
+      "Plastic makes up most marine debris.",
+      "The Antarctic Circumpolar Current flows continuously around Antarctica.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The North Pacific Garbage Patch is a dispersed soup of microplastics. Plastic makes up most marine debris.",
+      "The Antarctic Circumpolar Current flows continuously around Antarctica. Garbage patches concentrate marine plastic.",
+    ],
+  };
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "marine plastic debris",
+      question: "What material makes up most marine debris?",
+      answer: "Plastic.",
+    },
+  ];
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 1, accepted, new Set([0])),
+    1,
+  );
+  const distinct = promptFirstV512DistinctContext(
+    input.promptFirstEvidenceWindows[1],
+    input.promptFirstPrimaryClaims[1],
+    accepted,
+  );
+  assert.match(distinct, /Antarctic Circumpolar Current/iu);
+  assert.doesNotMatch(distinct, /marine plastic|garbage patch/iu);
+});
+
+test("v5.12 ranks the candidate fact rather than mixed neighboring context", () => {
+  const sharedContext =
+    "Transmission depends on wavelength and material. Sound crosses a wall when its particles vibrate. Light exits the other side of a lens.";
+  const input = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Transmission depends on wavelength and material.",
+      "Sound crosses a wall when its particles vibrate.",
+      "Light exits the other side of a lens.",
+    ],
+    promptFirstEvidenceWindows: [sharedContext, sharedContext, sharedContext],
+  };
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "wavelength-dependent transmission",
+      question:
+        "What determines how much light a material transmits at each wavelength?",
+      answer: "The wavelength and the material's properties.",
+    },
+  ];
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 1, accepted, new Set([0])),
+    1,
+  );
+});
+
+test("v5.12 keeps quality-ranked facts ahead of overlapping window tails", () => {
+  const sharedWindow =
+    "Trait evidence refines a phylogenetic tree. A tree is a hypothesis. An outgroup locates the root. Derived traits mark divergence. Parsimony favors fewer changes.";
+  const input = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Additional trait, protein, and DNA evidence refines phylogenetic trees.",
+      "A phylogenetic tree is a hypothesis about evolutionary relationships.",
+      "An outgroup helps locate the root of common ancestry.",
+      "A derived trait evolves after a lineage diverges.",
+      "Parsimony favors the hypothesis with the fewest evolutionary changes.",
+      "A branch label can identify a pictured species.",
+    ],
+    // Neighboring caption windows intentionally share context. That overlap
+    // must not cause an unused low-quality tail fact to jump ahead of the
+    // selector's quality-ranked primary claims.
+    promptFirstEvidenceWindows: Array.from({ length: 6 }, () => sharedWindow),
+  };
+
+  assert.equal(promptFirstV512EvidenceIndex(input, 1, [], new Set([0])), 1);
+});
+
+test("v5.12 allocates distinct Fresh14 cell, atomic, and dice objectives", () => {
+  const cellInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Chloroplasts give plant cells their green coloration and are absent from animal cells.",
+      "Animal cells do not contain chloroplasts, unlike plant cells.",
+      "Both animal and plant cells have a cell membrane that regulates what enters and leaves the cell.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Chloroplasts give plant cells their green coloration and are absent from animal cells.",
+      "Animal cells do not contain chloroplasts, unlike plant cells.",
+      "Both animal and plant cells have a cell membrane that regulates what enters and leaves the cell.",
+    ],
+  };
+  const acceptedChloroplast = [
+    {
+      type: "short_answer",
+      concept: "chloroplast role",
+      question: "Which organelle performs photosynthesis in plant cells?",
+      answer: "Chloroplasts.",
+      explanation: "Chloroplasts capture light energy for photosynthesis.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      cellInput,
+      1,
+      acceptedChloroplast,
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const atomicInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "A particular element is identified by the number of protons in its atoms.",
+      "The number of protons in an atom is its atomic number.",
+      "Elements in the same periodic-table column tend to have similar properties.",
+    ],
+    promptFirstEvidenceWindows: [
+      "A particular element is identified by the number of protons in its atoms.",
+      "The number of protons in an atom is its atomic number.",
+      "Elements in the same periodic-table column tend to have similar properties.",
+    ],
+  };
+  const acceptedProtons = [
+    {
+      type: "multiple_choice",
+      concept: "element identity",
+      question: "What determines an element's identity?",
+      answer: "Its number of protons.",
+      explanation: "Changing proton count changes the element.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512EvidenceIndex(atomicInput, 1, acceptedProtons, new Set([0])),
+    2,
+  );
+
+  const diceInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "When two fair six-sided dice are rolled, six of the 36 equally likely ordered outcomes have a sum of seven, so P(sum = 7) = 1/6.",
+      "Rolling two fair six-sided dice produces 36 equally likely ordered outcomes.",
+      "When two fair six-sided dice are rolled, five of the 36 equally likely ordered outcomes have a sum of 10 or 11, so P(sum = 10 or 11) = 5/36.",
+    ],
+    promptFirstEvidenceWindows: [
+      "When two fair six-sided dice are rolled, six of the 36 equally likely ordered outcomes have a sum of seven, so P(sum = 7) = 1/6.",
+      "Rolling two fair six-sided dice produces 36 equally likely ordered outcomes.",
+      "When two fair six-sided dice are rolled, five of the 36 equally likely ordered outcomes have a sum of 10 or 11, so P(sum = 10 or 11) = 5/36.",
+    ],
+  };
+  assert.equal(promptFirstV512EvidenceIndex(diceInput, 1, [], new Set([0])), 1);
+});
+
+test("v5.12 keeps gravity and childbirth objectives from repeating", () => {
+  const gravityInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Gravitational force exists between all objects with mass.",
+      "Any object with mass generates a gravitational pull.",
+      "The gravitational force between two objects depends on their masses and the distance between them.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Gravitational force exists between all objects with mass.",
+      "Any object with mass generates a gravitational pull.",
+      "The gravitational force between two objects depends on their masses and the distance between them.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      gravityInput,
+      1,
+      [
+        {
+          type: "short_answer",
+          concept: "gravitational attraction",
+          question: "Between which objects does gravitational force exist?",
+          answer: "All objects with mass.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const gravityStrengthInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "The gravitational force between two objects depends on their masses and the distance between them.",
+      "The mass of each object is proportional to the gravitational force.",
+      "Gravitational force attracts every pair of objects that have mass.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The gravitational force between two objects depends on their masses and the distance between them.",
+      "The mass of each object is proportional to the gravitational force.",
+      "Gravitational force attracts every pair of objects that have mass.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      gravityStrengthInput,
+      1,
+      [
+        {
+          type: "true_false",
+          concept: "gravitational force strength",
+          question:
+            "Gravitational force depends on the masses and distance between two objects.",
+          answer: true,
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const childbirthInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "The baby's head pressing against the cervix triggers the oxytocin feedback loop.",
+      "Pressure from the baby's head against the cervix provides the stimulus that initiates childbirth.",
+      "Negative feedback counteracts a change to restore internal conditions.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The baby's head pressing against the cervix triggers the oxytocin feedback loop.",
+      "Pressure from the baby's head against the cervix provides the stimulus that initiates childbirth.",
+      "Negative feedback counteracts a change to restore internal conditions.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      childbirthInput,
+      1,
+      [
+        {
+          type: "true_false",
+          concept: "childbirth feedback",
+          question:
+            "Pressure from the baby's head against the cervix triggers oxytocin signaling.",
+          answer: true,
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const acidRainInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Wind can carry acid-rain pollutants to downwind communities and natural environments.",
+      "Acid rain affects distant natural environments because pollutants can travel far from their source.",
+      "Acid rain can leach aluminum from soil and rocks into lakes.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Wind can carry acid-rain pollutants to downwind communities and natural environments.",
+      "Acid rain affects distant natural environments because pollutants can travel far from their source.",
+      "Acid rain can leach aluminum from soil and rocks into lakes.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      acidRainInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "pollutant transport",
+          question: "Where can wind carry acid-rain pollutants?",
+          answer: "To downwind communities and natural environments.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const salmonInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Salmon restore internal salt balance by changing salt exchange at the gills and urine dilution.",
+      "Osmoregulation in salmon is an example of a negative feedback loop.",
+      "Physiological responses are unconscious internal changes, while behavioral responses are conscious actions.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Salmon restore internal salt balance by changing salt exchange at the gills and urine dilution.",
+      "Osmoregulation in salmon is an example of a negative feedback loop.",
+      "Physiological responses are unconscious internal changes, while behavioral responses are conscious actions.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      salmonInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "salmon osmoregulation",
+          question:
+            "How does a salmon restore its internal salt concentration?",
+          answer:
+            "It adjusts salt exchange at the gills and changes urine dilution.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const cellInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "The variety of protein structures enables a wide range of cellular functions.",
+      "A protein's structure and amino-acid chemistry determine its function.",
+      "Groups of specialized cells are organized into tissues.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The variety of protein structures enables a wide range of cellular functions.",
+      "A protein's structure and amino-acid chemistry determine its function.",
+      "Groups of specialized cells are organized into tissues.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      cellInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "protein structure and function",
+          question: "How does protein structure relate to cellular function?",
+          answer: "Different structures enable different functions.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const heatInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Thermal equilibrium occurs when there is no heat transfer in a system.",
+      "When particles in both objects have the same kinetic energy, the system reaches thermal equilibrium.",
+      "Heat is the transfer of energy between objects at different temperatures.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Thermal equilibrium occurs when there is no heat transfer in a system.",
+      "When particles in both objects have the same kinetic energy, the system reaches thermal equilibrium.",
+      "Heat is the transfer of energy between objects at different temperatures.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      heatInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "thermal equilibrium",
+          question: "What condition defines thermal equilibrium?",
+          answer: "There is no heat transfer in the system.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+});
+
+test("v5.12 treats food-web heat loss and grammar context as single families", () => {
+  const foodInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "A rabbit releases some stored food energy as heat while living.",
+      "Every organism releases some of the energy it uses as heat.",
+      "Producers use sunlight to build energy-rich molecules.",
+    ],
+    promptFirstEvidenceWindows: [
+      "A rabbit releases some stored food energy as heat while living.",
+      "Every organism releases some of the energy it uses as heat.",
+      "Producers use sunlight to build energy-rich molecules.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      foodInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "energy dissipation",
+          question: "What happens to some energy when an animal uses it?",
+          answer: "Some energy is released as heat.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const grammarInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "The kind of grammar used changes with context.",
+      "Grammar depends on the audience, message, and manner of expression.",
+      "Grammar is a set of conventions and rules that govern language.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The kind of grammar used changes with context.",
+      "Grammar depends on the audience, message, and manner of expression.",
+      "Grammar is a set of conventions and rules that govern language.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      grammarInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "context-dependent grammar",
+          question: "What determines the kind of grammar a person uses?",
+          answer: "The audience, message, and manner of expression.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+});
+
+test("v5.12 treats social-contract exchange and bond-distance energy as single families", () => {
+  const socialInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Under a social contract, people give up some rights to a government that protects their remaining rights.",
+      "A government protects retained rights in exchange for authority surrendered under the social contract.",
+      "Natural rights include life, liberty, and property.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Under a social contract, people give up some rights to a government that protects their remaining rights.",
+      "A government protects retained rights in exchange for authority surrendered under the social contract.",
+      "Natural rights include life, liberty, and property.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      socialInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "social contract",
+          question:
+            "How does the social contract exchange rights and protection?",
+          answer:
+            "People surrender some rights and government protects the rest.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+
+  const bondInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Two bonded atoms have minimum potential energy at their stable equilibrium distance.",
+      "Moving bonded atoms farther than equilibrium raises their potential energy.",
+      "As charged particles move farther apart, the Coulomb force weakens.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Two bonded atoms have minimum potential energy at their stable equilibrium distance.",
+      "Moving bonded atoms farther than equilibrium raises their potential energy.",
+      "As charged particles move farther apart, the Coulomb force weakens.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      bondInput,
+      1,
+      [
+        {
+          type: "multiple_choice",
+          concept: "bond potential energy",
+          question: "Where is the potential energy of two bonded atoms lowest?",
+          answer: "At their stable equilibrium distance.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+});
+
+test("v5.12 treats the small-population genetic-drift effect as one family", () => {
+  const input = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Genetic drift is much more likely to occur in small populations than in large populations.",
+      "In a small population, random fluctuations in allele frequencies have a larger relative impact.",
+      "A bottleneck randomly reduces population size regardless of fitness.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Genetic drift is much more likely to occur in small populations than in large populations.",
+      "In a small population, random fluctuations in allele frequencies have a larger relative impact.",
+      "A bottleneck randomly reduces population size regardless of fitness.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      input,
+      1,
+      [
+        {
+          type: "true_false",
+          concept: "genetic drift and population size",
+          question: "Where does genetic drift have a larger effect?",
+          answer: true,
+          correction:
+            "Genetic drift has a larger relative effect in small populations.",
+        },
+      ],
+      new Set([0]),
+    ),
+    2,
+  );
+});
+
+test("v5.12 avoids repeated rain-shadow, ionization, and VA-incentive objectives", () => {
+  const cases = [
+    {
+      claims: [
+        "Descending dry air warms on a mountain's leeward side and increases evaporation.",
+        "Mountains block moisture and create a dry rain shadow on the leeward side.",
+        "A nearby ocean moderates annual temperature ranges.",
+      ],
+      accepted: {
+        concept: "rain shadow",
+        question:
+          "What happens to dry air descending a mountain's leeward side?",
+        answer: "It compresses, warms, and increases evaporation.",
+      },
+    },
+    {
+      claims: [
+        "Ultraviolet radiation can eject electrons from atoms and ionize them.",
+        "High-frequency electromagnetic waves can knock electrons out of atoms.",
+        "Absorbed electromagnetic energy is generally converted to thermal energy.",
+      ],
+      accepted: {
+        concept: "ionizing radiation",
+        question: "How can ultraviolet radiation ionize atoms?",
+        answer: "It can eject electrons from atoms.",
+      },
+    },
+    {
+      claims: [
+        "VA wait-time bonuses encouraged officials to falsify records.",
+        "The VA abandoned an unrealistic wait-time goal to remove the perverse incentive.",
+        "The bureaucracy's size and independence make oversight difficult.",
+      ],
+      accepted: {
+        concept: "VA wait-time incentive",
+        question: "How did wait-time bonuses distort officials' incentives?",
+        answer: "Officials falsified records to appear eligible for bonuses.",
+      },
+    },
+  ];
+
+  for (const fixture of cases) {
+    const input = {
+      totalQuestionCount: 5,
+      promptFirstPrimaryClaims: fixture.claims,
+      promptFirstEvidenceWindows: fixture.claims,
+    };
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        input,
+        1,
+        [{ type: "multiple_choice", ...fixture.accepted }],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates Fresh20 banks into nonrepeating assessment families", () => {
+  const cases = [
+    [
+      [
+        "Ionization energy increases from left to right across a period.",
+        "Across a period, increasing effective nuclear charge pulls outer electrons more strongly.",
+        "Ionization energy decreases down a group as outer shells become farther from the nucleus.",
+      ],
+      "Ionization energy increases from left to right across a period.",
+    ],
+    [
+      [
+        "The standard cell potential is the sum of the standard reduction and oxidation potentials.",
+        "The half-reaction potentials determine standard cell potential.",
+        "A positive standard cell potential indicates a spontaneous galvanic-cell reaction.",
+      ],
+      "The standard cell potential equals the sum of reduction and oxidation half-reaction potentials.",
+    ],
+    [
+      [
+        "The surface-area-to-volume ratio of a sphere is 3/r.",
+        "Simplifying a sphere's surface-area-to-volume ratio gives 3/r.",
+        "As a cell grows, surface area per unit volume decreases.",
+      ],
+      "A sphere's surface-area-to-volume ratio is 3/r.",
+    ],
+    [
+      [
+        "A growing cell eventually has insufficient surface area for exchange across its volume.",
+        "As cell volume increases, surface area per unit volume decreases and limits exchange.",
+        "A sphere's surface-area-to-volume ratio is 3/r.",
+      ],
+      "A large cell can have insufficient surface area for exchange required by its volume.",
+    ],
+    [
+      [
+        "The Necessary and Proper Clause lets Congress execute its enumerated powers.",
+        "Congress may make laws necessary and proper for carrying its enumerated powers into execution.",
+        "Enumerated powers are explicitly listed in the Constitution.",
+      ],
+      "The Necessary and Proper Clause authorizes laws that execute enumerated powers.",
+    ],
+    [
+      [
+        "A negative delta G favors the forward reaction and products.",
+        "A positive delta G favors the reverse reaction and reactants.",
+        "At delta G equal to zero, a process is at equilibrium.",
+      ],
+      "When delta G is negative, the forward reaction is thermodynamically favored.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates Fresh21 repeated genome, figurative, investment, and field objectives", () => {
+  const cases = [
+    [
+      [
+        "Specialized cells contain the same genetic information but develop into different cell types.",
+        "Most cells contain the organism's complete genetic information.",
+        "Cells are the basic building blocks of multicellular organisms.",
+      ],
+      "Specialized cells share the same genetic information.",
+    ],
+    [
+      [
+        "Figurative language says one thing but means another.",
+        "The intended meaning of figurative language differs from its literal wording.",
+        "A simile compares two things using like or as.",
+      ],
+      "Figurative language has a nonliteral intended meaning.",
+    ],
+    [
+      [
+        "More capital goods today increase future production but reduce current consumption.",
+        "Producing capital goods today raises future economic growth.",
+        "A production possibilities curve shows feasible combinations of output.",
+      ],
+      "Capital investment trades current consumption for future production.",
+    ],
+    [
+      [
+        "Moving a mass against a field's force increases stored energy.",
+        "Moving a charge opposite the electric force requires work and increases potential energy.",
+        "Opposite point charges attract each other.",
+      ],
+      "Moving against a field force increases stored energy.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates economies and diseconomies of scale families", () => {
+  const cases = [
+    [
+      [
+        "A falling long-run average total cost as output rises indicates economies of scale.",
+        "Economies of scale occur while long-run average total cost declines.",
+        "A flat long-run average total cost curve indicates constant returns to scale.",
+      ],
+      "Falling long-run average total cost indicates economies of scale.",
+    ],
+    [
+      [
+        "Rising long-run average total cost indicates diseconomies of scale.",
+        "Coordination problems cause diseconomies of scale as an organization grows.",
+        "A flat long-run average total cost curve indicates constant returns to scale.",
+      ],
+      "Rising long-run average total cost indicates diseconomies of scale.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates Fresh23 evolution, genotype, kinetic, force, and body families", () => {
+  const cases = [
+    [
+      [
+        "Homologous features help infer evolutionary relationships and common ancestry.",
+        "Species sharing more homologous features likely share a more recent common ancestor.",
+        "Analogous features have similar functions but different evolutionary origins.",
+      ],
+      "Homologous features provide clues about common ancestry.",
+    ],
+    [
+      [
+        "A genotype is the set of alleles an organism carries.",
+        "Homozygous and heterozygous describe an organism's genotype.",
+        "A phenotype is an observable trait.",
+      ],
+      "A genotype identifies an organism's alleles.",
+    ],
+    [
+      [
+        "Kinetic energy is energy due to an object's motion.",
+        "Kinetic energy is the motion energy of an object.",
+        "Kinetic energy is proportional to mass at constant speed.",
+      ],
+      "Kinetic energy is an object's motion energy.",
+    ],
+    [
+      [
+        "A table exerts an equal opposite force on a finger pressing it.",
+        "Pressing a table applies a force to the table and compresses the finger.",
+        "Action-reaction forces act on different objects.",
+      ],
+      "The table pushes back on the finger with an equal opposite force.",
+    ],
+    [
+      [
+        "The human body has a hierarchy of cells, tissues, organs, and organ systems.",
+        "The human body is made of nested layers that increase in complexity.",
+        "Organ systems work together to keep the body alive.",
+      ],
+      "The human body has nested organizational levels.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates Fresh24 environment, photosynthesis, and covalent-network families", () => {
+  const cases = [
+    [
+      [
+        "Environmental stress can change gene expression.",
+        "Food and hormones can activate or inactivate genes.",
+        "A trait can be influenced by both genes and the environment.",
+      ],
+      "Environmental factors can change gene expression.",
+    ],
+    [
+      [
+        "Plants store some sugars made during photosynthesis for later use.",
+        "Stored sugars provide energy when immediate photosynthesis is unavailable.",
+        "Photosynthesis produces oxygen and sugars.",
+      ],
+      "Sugars made during photosynthesis can store energy for later use.",
+    ],
+    [
+      [
+        "Covalent network solids consist of atoms joined in a continuous network of covalent bonds.",
+        "Covalent bonds form the extended structure of a covalent network solid.",
+        "Melting graphite requires breaking strong covalent bonds.",
+      ],
+      "Covalent bonds form the continuous structure of a covalent network solid.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates Fresh25 ecology, organelle, momentum, and angular-momentum families", () => {
+  const cases = [
+    [
+      [
+        "A community contains all living species in the same area.",
+        "A community collectively includes all living organisms in an area.",
+        "An ecosystem includes living organisms and nonliving environmental components.",
+      ],
+      "A community includes all living organisms in one area.",
+    ],
+    [
+      [
+        "Organelles have different functions and work together on cellular tasks.",
+        "Cell structures each make a unique functional contribution to life's processes.",
+        "The cell membrane is a selective barrier controlling entry and exit.",
+      ],
+      "Organelles coordinate their specialized functions to perform cellular tasks.",
+    ],
+    [
+      [
+        "A truck has more momentum than a Formula One car at the same velocity because it has greater mass.",
+        "The Formula One car has less momentum than the truck when both move at the same velocity.",
+        "Momentum depends on the observer's frame of reference.",
+      ],
+      "The truck has greater momentum than the Formula One car at equal velocity.",
+    ],
+    [
+      [
+        "Angular momentum remains unchanged when no external torque acts on a system.",
+        "Final angular momentum equals initial angular momentum when external torque is zero.",
+        "Moment of inertia depends on mass distribution relative to the rotation axis.",
+      ],
+      "Without external torque, angular momentum is conserved.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates Fresh26 vessel, protein, energy, demand, and gas-law families", () => {
+  const cases = [
+    [
+      [
+        "The pulmonary artery carries deoxygenated blood away from the heart, while the pulmonary vein carries oxygenated blood toward it.",
+        "Pulmonary arteries and pulmonary veins reverse the usual systemic oxygenation pattern.",
+        "Hemoglobin binds oxygen and maintains a diffusion gradient.",
+      ],
+      "Pulmonary arteries and veins carry blood with the opposite oxygenation pattern from systemic vessels.",
+    ],
+    [
+      [
+        "Quaternary structure describes multiple polypeptide chains assembled into a protein complex.",
+        "Proteins with more than one polypeptide chain have quaternary structure.",
+        "DNA encodes the amino-acid order of primary protein structure.",
+      ],
+      "Multiple polypeptide chains form a protein's quaternary structure.",
+    ],
+    [
+      [
+        "Total mechanical energy remains constant in a closed system without dissipative forces.",
+        "Mechanical energy is conserved when no dissipative forces act on a closed system.",
+        "Friction transforms mechanical energy into thermal energy.",
+      ],
+      "A closed nondissipative system conserves total mechanical energy.",
+    ],
+    [
+      [
+        "A decrease in demand shifts the demand curve to the left.",
+        "When demand decreases, quantity demanded falls at every price point.",
+        "Higher production costs reduce supply at each price.",
+      ],
+      "Lower demand produces a leftward demand-curve shift.",
+    ],
+    [
+      [
+        "The ideal gas law relates pressure, volume, moles, and absolute temperature as PV=nRT.",
+        "Rearranging the ideal gas law for moles gives n=PV/(RT).",
+        "A balanced equation supplies the mole ratio between reactants and products.",
+      ],
+      "The ideal gas law is PV=nRT.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 separates Fresh27 oxygenation, atomic, inflation, probability, and plate families", () => {
+  const cases = [
+    [
+      [
+        "The Great Oxygenation Event raised atmospheric oxygen and harmed many anaerobic organisms.",
+        "The Oxygen Catastrophe caused extinction because oxygen was poisonous to anaerobic organisms.",
+        "Photosynthesis produces sugars and oxygen from carbon dioxide and water.",
+      ],
+      "Rising atmospheric oxygen was toxic to many anaerobic organisms.",
+    ],
+    [
+      [
+        "For identical bonded atoms, atomic radius is half the distance between their nuclei.",
+        "Atomic radius measures atomic size using half the internuclear distance in a covalent bond.",
+        "Atomic radius increases down a periodic-table group.",
+      ],
+      "Atomic radius can be measured as half the distance between bonded nuclei.",
+    ],
+    [
+      [
+        "Unexpected inflation lowers a fixed-rate lender's real return because repaid dollars lose purchasing power.",
+        "A fixed-rate lender receives a negative real return when inflation makes the repaid dollars worth less.",
+        "Deflation raises the real burden on a fixed-rate borrower.",
+      ],
+      "Higher-than-expected inflation reduces a fixed lender's real return.",
+    ],
+    [
+      [
+        "Events are independent when a conditional probability equals the corresponding unconditional probability.",
+        "Delayed and snowy are independent if P(delayed given snowy) equals P(delayed).",
+        "More trials make an experimental probability more likely to approach the theoretical probability.",
+      ],
+      "Independence means conditioning does not change the event probability.",
+    ],
+    [
+      [
+        "Experimental probabilities estimate theoretical probabilities and can differ from them.",
+        "More experiments make experimental probability more likely to approximate true theoretical probability.",
+        "Independent events preserve their probabilities after conditioning.",
+      ],
+      "Experimental probability can differ from the true probability it estimates.",
+    ],
+    [
+      [
+        "Lithospheric plates include Earth's crust and the solid upper mantle.",
+        "Calling tectonic plates crustal plates is incomplete because the lithosphere also includes upper mantle.",
+        "The outer core is liquid at very high temperature.",
+      ],
+      "Tectonic plates contain crust and rigid upper mantle.",
+    ],
+  ];
+
+  for (const [claims, answer] of cases) {
+    assert.equal(
+      promptFirstV512EvidenceIndex(
+        {
+          totalQuestionCount: 5,
+          promptFirstPrimaryClaims: claims,
+          promptFirstEvidenceWindows: claims,
+        },
+        1,
+        [
+          {
+            type: "short_answer",
+            concept: claims[0],
+            question: claims[0],
+            answer,
+          },
+        ],
+        new Set([0]),
+      ),
+      2,
+    );
+  }
+});
+
+test("v5.12 keeps semiconductor-role and hippocampal-memory objectives distinct", () => {
+  const accepted = [
+    {
+      type: "true_false",
+      concept: "semiconductors in modern technology",
+      question: "Semiconductors are at the core of modern technology.",
+      correction: "Semiconductors are at the core of modern technology.",
+    },
+    {
+      type: "short_answer",
+      concept: "hippocampal memory formation",
+      question: "What did HM's case reveal about the hippocampus?",
+      answer: "The hippocampus is critical for forming declarative memories.",
+    },
+  ];
+  const input = {
+    promptFirstPrimaryClaims: [
+      "Semiconductors form the backbone of modern computing and telecommunications.",
+      "Doping changes the concentration of mobile charge carriers.",
+      "Henry Molaison's surgery showed that hippocampal removal prevents forming new declarative memories.",
+      "Long-term potentiation strengthens synaptic connections.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Semiconductors form the backbone of modern computing and telecommunications.",
+      "Doping changes the concentration of mobile charge carriers.",
+      "Henry Molaison's surgery showed that hippocampal removal prevents forming new declarative memories.",
+      "Long-term potentiation strengthens synaptic connections.",
+    ],
+  };
+
+  assert.ok(
+    [1, 3].includes(
+      promptFirstV512EvidenceIndex(input, 2, accepted, new Set([0, 2])),
+    ),
+  );
+});
+
+test("v5.12 does not reuse action-potential generation as propagation", () => {
+  const accepted = [
+    {
+      type: "short_answer",
+      concept: "action potential propagation",
+      question: "How does an action potential spread along an axon?",
+      answer:
+        "Depolarization opens voltage-gated sodium channels in the neighboring region.",
+    },
+  ];
+  const input = {
+    promptFirstPrimaryClaims: [
+      "An excitable cell generates an action potential from a stimulus.",
+      "The sodium-potassium pump maintains the resting membrane potential.",
+    ],
+    promptFirstEvidenceWindows: [
+      "An excitable cell generates an electrical signal called an action potential from a stimulus.",
+      "The sodium-potassium pump moves three sodium ions out for every two potassium ions moved in.",
+    ],
+  };
+
+  assert.equal(promptFirstV512EvidenceIndex(input, 1, accepted, new Set()), 1);
+});
+
+test("v5.12 allocates an equilibrium-pressure objective only once", () => {
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "gas equilibrium under pressure",
+      question: "Which side is favored when pressure is applied?",
+      answer: "The side with fewer gas molecules.",
+    },
+  ];
+  const input = {
+    promptFirstPrimaryClaims: [
+      "Applying pressure favors the side with fewer gas molecules.",
+      "Adding a product shifts equilibrium toward the reactants.",
+      "If I have a container—nope, too shocking.",
+    ],
+    promptFirstEvidenceWindows: [
+      "A gaseous equilibrium under pressure shifts toward the side with fewer gas molecules because that side is easier to compress.",
+      "Adding more product causes the system to consume products and form reactants.",
+      "A container under pressure may hold four molecules that merge to make two molecules.",
+    ],
+  };
+
+  assert.equal(promptFirstV512EvidenceIndex(input, 1, accepted, new Set()), 1);
+});
+
+test("v5.12 does not allocate the same scarcity family after it is answered", () => {
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "scarcity from limited resources",
+      question: "What relationship creates scarcity?",
+      answer: "Unlimited wants combined with limited resources.",
+    },
+  ];
+  const input = {
+    promptFirstPrimaryClaims: [
+      "Unlimited wants and limited resources create scarcity.",
+      "A need is something necessary for survival, while a want is optional.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Scarcity forces people to choose because resources cannot satisfy every want.",
+      "Food and shelter are needs, while optional goods are wants.",
+    ],
+  };
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 1, accepted, new Set([0])),
+    1,
+  );
+});
+
+test("v5.12 allocates the land-measurement decision method only once", () => {
+  const accepted = [
+    {
+      type: "multiple_choice",
+      concept: "information for space allocation",
+      question: "How does the group decide how much space to allocate?",
+      answer:
+        "They measure the land and research each item's space requirement.",
+      explanation:
+        "Measurements provide the area and the space required by each option.",
+    },
+  ];
+  const input = {
+    promptFirstPrimaryClaims: [
+      "Measuring the land provides its available area.",
+      "The board chose a playground instead of additional parking.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The group measures the land and searches online for each item's space requirement.",
+      "The limited land could be used for a playground or for parking.",
+    ],
+  };
+
+  assert.equal(
+    promptFirstV512EvidenceIndex(input, 4, accepted, new Set([0])),
+    1,
+  );
+});
+
+test("v5.12 avoids repeated statistics and natural-selection families", () => {
+  const statisticsInput = {
+    promptFirstPrimaryClaims: [
+      "The median is the mean of the two middle values when the count is even.",
+      "The range is the maximum value minus the minimum value.",
+    ],
+    promptFirstEvidenceWindows: [
+      "For an even-sized sample, average the two middle values to find the median.",
+      "Subtract the smallest observation from the largest observation to calculate the range.",
+    ],
+  };
+  const acceptedMedian = [
+    {
+      type: "multiple_choice",
+      concept: "median for an even-sized sample",
+      question:
+        "How is the median found when a sample has an even number of values?",
+      answer: "Average the two middle values.",
+      explanation: "The two central observations share the middle position.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      statisticsInput,
+      1,
+      acceptedMedian,
+      new Set([0]),
+    ),
+    1,
+  );
+
+  const repeatedMeanInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "So if I say 206 divided by 8 gets us 25.75.",
+      "The range is the maximum value minus the minimum value.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The sum of all the numbers is 206, and 206 divided by 8 gets us 25.75.",
+      "Subtract the smallest observation from the largest observation to calculate the range.",
+    ],
+  };
+  const acceptedMean = [
+    {
+      type: "short_answer",
+      concept: "arithmetic mean method",
+      question: "How is the arithmetic mean calculated?",
+      answer: "Add all values and divide the sum by the number of values.",
+      explanation:
+        "The arithmetic mean distributes the total equally across the observations.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      repeatedMeanInput,
+      4,
+      acceptedMean,
+      new Set([0]),
+    ),
+    1,
+  );
+
+  const exhaustedStatisticsInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "The sum of all the numbers is 206, and 206 divided by 8 gets 25.75.",
+      "The mean is called the arithmetic mean because it sums values and divides by their count.",
+    ],
+    promptFirstEvidenceWindows: [
+      "For 23, 29, 20, 32, 23, 21, 33, and 25, the sum is 206 and 206 divided by 8 is 25.75.",
+      "The arithmetic mean sums the values and divides by their count.",
+    ],
+  };
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      exhaustedStatisticsInput,
+      4,
+      acceptedMean,
+      new Set(),
+    ),
+    0,
+  );
+
+  const selectionInput = {
+    promptFirstPrimaryClaims: [
+      "The favored triangular trait becomes more common across generations.",
+      "Mutation and sexual reproduction create heritable variation.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Individuals with the triangular trait survive and reproduce more, so its frequency rises.",
+      "Mutation creates alleles and sexual reproduction recombines them.",
+    ],
+  };
+  const acceptedTrait = [
+    {
+      type: "true_false",
+      concept: "favored trait frequency",
+      question: "The favored triangular trait decreases across generations.",
+      correction: "The favored triangular trait increases across generations.",
+      explanation:
+        "Individuals with the trait survive and reproduce more often.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      selectionInput,
+      4,
+      acceptedTrait,
+      new Set([0]),
+    ),
+    1,
+  );
+
+  const brakingInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "The acceleration is backwards, which slows the train.",
+      "Distance equals average velocity multiplied by elapsed time.",
+    ],
+    promptFirstEvidenceWindows: [
+      "The force pulls back, so the acceleration is backwards and slows the train.",
+      "For uniform acceleration, multiply average velocity by time to calculate distance.",
+    ],
+  };
+  const acceptedBraking = [
+    {
+      type: "true_false",
+      concept: "braking-force direction",
+      question: "A backward braking force produces backward acceleration.",
+      correction: "A backward braking force produces backward acceleration.",
+      explanation:
+        "The acceleration points with the net force and slows the train.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      brakingInput,
+      3,
+      acceptedBraking,
+      new Set([0]),
+    ),
+    1,
+  );
+
+  const circuitInput = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Benjamin Franklin did not know about electrons when the current convention was chosen.",
+      "An open circuit interrupts the conducting path, so current cannot flow.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Conventional electric current points opposite to electron flow because the convention predates the discovery of electrons.",
+      "Opening a switch breaks the conducting path and stops current in the circuit.",
+    ],
+  };
+  const acceptedCurrentDirection = [
+    {
+      type: "short_answer",
+      concept: "conventional current direction",
+      question:
+        "How does conventional current direction compare with electron flow?",
+      answer: "They point in opposite directions.",
+      explanation:
+        "Conventional current points from positive to negative while electrons move the other way.",
+    },
+  ];
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      circuitInput,
+      4,
+      acceptedCurrentDirection,
+      new Set(),
+    ),
+    1,
+  );
+});
 
 const IDS = {
   generation: "11111111-1111-4111-8111-111111111111",
@@ -191,6 +2454,244 @@ function conceptFirstInput(
       ][index % 6];
     }).join(" "),
   };
+}
+
+function promptFirstInput(
+  questionCount = 5,
+  questionTypes = ["multiple_choice", "true_false", "short_answer"],
+) {
+  return {
+    ...conceptFirstInput(questionCount, questionTypes),
+    generationProfile: "prompt_first_auto_v5_12",
+  };
+}
+
+function promptFirstV511Input(
+  questionCount = 5,
+  questionTypes = ["multiple_choice", "true_false", "short_answer"],
+) {
+  return {
+    ...conceptFirstInput(questionCount, questionTypes),
+    generationProfile: "prompt_first_auto_v5_11",
+  };
+}
+
+function promptFirstV510Input(
+  questionCount = 5,
+  questionTypes = ["multiple_choice", "true_false", "short_answer"],
+) {
+  return {
+    ...conceptFirstInput(questionCount, questionTypes),
+    generationProfile: "prompt_first_auto_v5_10",
+  };
+}
+
+function promptFirstV59Input(
+  questionCount = 5,
+  questionTypes = ["multiple_choice", "true_false", "short_answer"],
+) {
+  return {
+    ...conceptFirstInput(questionCount, questionTypes),
+    generationProfile: "prompt_first_auto_v5_9",
+  };
+}
+
+function promptFirstTaskFromRequest(request) {
+  const body = typeof request === "string" ? JSON.parse(request) : request;
+  const task = body.messages.at(-1).content;
+  const slot = task.match(
+    /Create q(\d+) of (\d+)\. Required type: (multiple_choice|true_false|short_answer)\./u,
+  );
+  assert.ok(slot, "request contains one prompt-first slot");
+  const focusExcerpt =
+    task.match(
+      /Additional private context — preserve its original order\. Use it to clarify the assigned fact\. Select an alternative from it only when the assigned fact is forbidden, incomplete, corrected later, or duplicates a blocked grading target:\n([\s\S]*?)\n\nBLOCKED prior questions and grading targets/u,
+    )?.[1] ??
+    task.match(
+      /Additional private context — preserve its original order\. Use this as the only alternative source when the candidate is forbidden, incomplete, corrected later, or duplicates a blocked grading target:\n([\s\S]*?)\n\nBLOCKED prior questions and grading targets/u,
+    )?.[1] ??
+    task.match(
+      /Additional private context — preserve its original order and use it only to clarify the selected target:\n([\s\S]*?)\n\nForbidden prior grading targets/u,
+    )?.[1] ??
+    task.match(
+      /Additional private context — preserve its original order\. Use it to explain the assigned fact\. Select a different precise supported fact only when the assigned fact is forbidden, incomplete, corrected later, or duplicates a blocked grading target:\n([\s\S]*?)\n\nPreviously accepted questions, complete grading targets, concepts, and objectives/u,
+    )?.[1] ??
+    task.match(
+      /Additional private context — preserve its original order\. If the preferred candidate is provisional, vague, corrected later, or duplicates an accepted item, select one different precise supported fact from this context instead:\n([\s\S]*?)\n\nPreviously accepted questions and concept-objective pairs/u,
+    )?.[1] ??
+    task.match(
+      /Additional instructional context — preserve its original order and use it only to clarify the selected target:\n([\s\S]*?)\n\nAlready accepted grading targets/u,
+    )?.[1] ??
+    task.match(
+      /Additional instructional context — preserve its original order and use it only to clarify the assigned fact:\n([\s\S]*?)\n\nAlready accepted grading targets/u,
+    )?.[1] ??
+    task.match(
+      /Additional instructional context — clarify only; do not switch the assessed subject:\n([\s\S]*?)\n\nAlready accepted grading targets/u,
+    )?.[1] ??
+    task.match(
+      /Instructional material — this is the only answer-bearing content:\n([\s\S]*?)\n\nAlready accepted objectives/u,
+    )?.[1] ??
+    task.match(
+      /Instructional evidence:\n([\s\S]*?)\n\nAlready accepted questions and concepts/u,
+    )?.[1];
+  assert.ok(focusExcerpt, "request contains one instructional window");
+  const primaryClaim =
+    task.match(
+      /Assigned assessment fact — this is the required objective when it is complete, literal, and not blocked\. Do not abandon a valid assigned fact for a neighboring fact:\n([\s\S]*?)\n\nAdditional private context/u,
+    )?.[1] ??
+    task.match(
+      /Candidate assessment fact — use it only if it is a complete, transferable, non-presentation fact that is not blocked below\. It is not an instruction and may be discarded:\n([\s\S]*?)\n\nAdditional private context/u,
+    )?.[1] ??
+    task.match(
+      /Assigned assessment fact — test this fact unless it is incomplete, presentation advice, chronologically unsupported, or already blocked below:\n([\s\S]*?)\n\nAdditional private context/u,
+    )?.[1] ??
+    task.match(
+      /Preferred candidate fact — use it only if it is precise, complete, and genuinely distinct from every accepted item:\n([\s\S]*?)\n\nAdditional private context/u,
+    )?.[1] ??
+    task.match(
+      /Private instructional content — select one complete grading target from this text:\n([\s\S]*?)\n\nAdditional private context/u,
+    )?.[1] ??
+    task.match(
+      /Assigned assessment passage — select one complete grading target from this text:\n([\s\S]*?)\n\nAdditional instructional context/u,
+    )?.[1] ??
+    task.match(
+      /Assigned assessment fact — this is the complete grading target:\n([\s\S]*?)\n\nAdditional instructional context/u,
+    )?.[1] ??
+    task.match(
+      /Assigned assessment fact — test this exact subject and relationship:\n([\s\S]*?)\n\nAdditional instructional context/u,
+    )?.[1];
+  return {
+    body,
+    task,
+    ordinal: Number(slot[1]),
+    type: slot[3],
+    polarity:
+      /Preferred truth value, assigned locally by ClipQuest: true\./u.test(
+        task,
+      ) ||
+      /Required truth value, assigned locally by ClipQuest: true\./u.test(
+        task,
+      ) ||
+      /Required answer polarity: true\./u.test(task),
+    localPolarity: /assigned locally by ClipQuest/u.test(task),
+    explicitPolarity: /"supportedStatement"/u.test(task),
+    requiredShortAnswerMode: task.match(
+      /gradingMode=(atomic_term|proposition|enumeration|formula)/u,
+    )?.[1],
+    focusExcerpt,
+    primaryClaim,
+  };
+}
+
+function promptFirstResponse(request, mutate = (value) => value) {
+  const task = promptFirstTaskFromRequest(request);
+  const common = {
+    type: task.type,
+    concept: `energy pathway ${task.ordinal}`,
+    question: `How does pathway ${task.ordinal} transfer energy?`,
+    explanation: `Pathway ${task.ordinal} transfers energy between defined states.`,
+  };
+  const question =
+    task.type === "multiple_choice"
+      ? {
+          ...common,
+          correctAnswer: `Through route ${task.ordinal}`,
+          distractors: [
+            `By stopping route ${task.ordinal}`,
+            `By removing state ${task.ordinal}`,
+            `By isolating input ${task.ordinal}`,
+          ],
+        }
+      : task.type === "true_false"
+        ? task.localPolarity
+          ? task.explicitPolarity
+            ? task.polarity
+              ? {
+                  type: common.type,
+                  concept: common.concept,
+                  supportedStatement:
+                    task.primaryClaim ??
+                    `Pathway ${task.ordinal} transfers energy between the states.`,
+                  explanation: `Pathway ${task.ordinal} transfers energy because the route couples the defined states.`,
+                }
+              : {
+                  type: common.type,
+                  concept: common.concept,
+                  supportedStatement:
+                    task.primaryClaim ??
+                    `Pathway ${task.ordinal} transfers energy between the states.`,
+                  falseStatement: (
+                    task.primaryClaim ??
+                    `Pathway ${task.ordinal} transfers energy between the states.`
+                  ).replace(
+                    /\b(?:transfers?|enters?|connects?|carries|relays|routes?|occurs?|increases?)\b/iu,
+                    (value) =>
+                      /^enter/iu.test(value)
+                        ? "leaves"
+                        : /^connect/iu.test(value)
+                          ? "separates"
+                          : /^occur/iu.test(value)
+                            ? "stops"
+                            : /^increase/iu.test(value)
+                              ? "decreases"
+                              : "blocks",
+                  ),
+                  explanation: `Blocking route ${task.ordinal} would prevent rather than transfer energy between the states.`,
+                }
+            : task.polarity
+              ? {
+                  ...common,
+                  question:
+                    task.primaryClaim ??
+                    `Pathway ${task.ordinal} transfers energy between the states.`,
+                }
+              : {
+                  ...common,
+                  question: `Pathway ${task.ordinal} blocks energy transfer between the states.`,
+                  correction: `Pathway ${task.ordinal} transfers energy between the states.`,
+                }
+          : {
+              ...common,
+              question: task.polarity
+                ? `Pathway ${task.ordinal} transfers energy between the states.`
+                : `Pathway ${task.ordinal} prevents energy transfer between the states.`,
+              answer: task.polarity,
+              correction: `Pathway ${task.ordinal} transfers energy between the states.`,
+            }
+        : task.requiredShortAnswerMode === "formula"
+          ? {
+              ...common,
+              question: `What equation relates force, mass, and acceleration for pathway ${task.ordinal}?`,
+              answer: "F=m*a",
+              gradingMode: "formula",
+              acceptableAnswers: [],
+              requiredItems: [],
+              formulaTokens: [
+                { kind: "identifier", value: "F" },
+                { kind: "operator", value: "=" },
+                { kind: "identifier", value: "m" },
+                { kind: "operator", value: "*" },
+                { kind: "identifier", value: "a" },
+              ],
+            }
+          : task.requiredShortAnswerMode === "proposition"
+            ? {
+                ...common,
+                question: `How does pathway ${task.ordinal} transfer energy?`,
+                answer: `Pathway ${task.ordinal} transfers energy between defined states.`,
+                gradingMode: "proposition",
+                acceptableAnswers: [],
+                requiredItems: [`transfers energy between defined states`],
+              }
+            : {
+                ...common,
+                question: `What term names energy route ${task.ordinal}?`,
+                answer: `route ${task.ordinal}`,
+                gradingMode: "atomic_term",
+                acceptableAnswers: [],
+                requiredItems: [],
+              };
+  return completionResponse(mutate({ questions: [question] }, task));
 }
 
 const RECORDED_BENCHMARK_TOPICS = [
@@ -738,6 +3239,41 @@ function oneCharacterSseResponse(value, options = {}) {
   return { response, release };
 }
 
+function rawContentSseResponse(content) {
+  const encoder = new TextEncoder();
+  const frame = (payload) =>
+    encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          frame({
+            choices: [{ finish_reason: null, delta: { content } }],
+          }),
+        );
+        controller.enqueue(
+          frame({
+            choices: [{ finish_reason: "stop", delta: { content: "" } }],
+          }),
+        );
+        controller.enqueue(
+          frame({
+            choices: [],
+            usage: {
+              prompt_tokens: 103,
+              completion_tokens: 41,
+              completion_tokens_details: { reasoning_tokens: 0 },
+            },
+          }),
+        );
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    }),
+    { status: 200, headers: { "content-type": "text/event-stream" } },
+  );
+}
+
 function interruptedSseResponse(value, acceptedCount) {
   const encoder = new TextEncoder();
   const source = JSON.stringify(value);
@@ -941,7 +3477,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
 
   assert.equal(result.protocolVersion, 9);
   assert.equal(result.promptVersion, "quiz-local-json-stream-v5.8");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.7");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.12");
   assert.equal(result.importVersion, "extension-progressive-import-v7");
   assert.equal(result.generationProfile, "concept_first_auto_v5_8");
   assert.match(result.promptFingerprint, /^[a-f0-9]{64}$/u);
@@ -1077,6 +3613,1388 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
   );
 });
 
+test("v5.12 sends the grading-consistent local-polarity contract", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  let framedAttempts = 0;
+  globalThis.fetch = async (_url, init) => {
+    const parsed = promptFirstTaskFromRequest(init.body);
+    requests.push(parsed);
+    return promptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 2 && framedAttempts++ === 0) {
+        value.questions[0].question =
+          "In the described mechanism, how does route 2 transfer energy?";
+        value.questions[0].explanation =
+          "The passage states that route 2 transfers energy between defined states.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.protocolVersion, 10);
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.12");
+  assert.equal(result.validatorVersion, "validator-minimal-gradeability-v5.3");
+  assert.equal(result.importVersion, "extension-progressive-import-v8");
+  assert.equal(result.generationProfile, "prompt_first_auto_v5_12");
+  assert.equal(requests.length, 5);
+  assert.equal(
+    calls.filter((event) => event.lifecycleState === "started").length,
+    5,
+  );
+  assert.equal(
+    calls.filter(
+      (event) =>
+        event.lifecycleState === "started" &&
+        event.classification === "automatic_retry",
+    ).length,
+    0,
+  );
+  assert.equal(
+    requests[0].body.messages[0].content,
+    PROMPT_FIRST_SYSTEM_PROMPT,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /assigns the desired truth value/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /sponsor, brand/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /SUBJECT → RELATION OR ACTION → OBJECT/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /Never begin with this, that/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /every technical qualifier/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /isolated statistic/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Never build a False item by changing an incidental measurement/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /never reverse n-k/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /sufficient suitable habitat is available/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /continents were once connected and later moved apart/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /must not introduce not, no, never, without/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Never write "the evidence indicates/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /"and ideally,"/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Never write "the described process/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Never write "the context specifies/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /omit who approved or knew/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /lithosphere composition/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /B-cells, activated with help/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Do not say antibodies attack cells/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /three additional required effects/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /exchange route information/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /two interpretations/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /must not contain the answer/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /correction or refinement/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Neighboring claims are independent by default/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /particles on the left/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /never say that energy cycles/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Do not create a False item by replacing one possible location/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /provisional claim followed by/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /weakened but living/u);
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /action–reaction pair/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /cannot establish what causes most cases/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /A selected fact must name the actual subject, relationship, and direction/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Those descriptions are mathematically equivalent/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Do not rename a contact or normal force as gravity/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /A method answer states the operation/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /Do not merely repeat/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Never ask what is important, central, useful, necessary, or helpful for understanding/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /explicitly dates both events and states their order/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /distractor may not restate one true stage/u,
+  );
+  assert.match(PROMPT_FIRST_SYSTEM_PROMPT, /same electrical-signal mechanism/u);
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Treat the assigned candidate as a search lead, not as text to copy/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Never turn a blocked answer into a False statement/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /Once opportunity cost has been defined/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /assess that decision method directly/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /breaking a chemical bond requires energy/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /tidal-force explanation compares the gravitational pull on the near and far sides/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /a subduction zone is a convergent boundary where one plate descends beneath another/u,
+  );
+  assert.match(
+    PROMPT_FIRST_SYSTEM_PROMPT,
+    /the grading target must name the actual alternatives or allocation/u,
+  );
+  assert.match(
+    requests[1].body.messages.at(-1).content,
+    /BLOCKED prior questions and grading targets/u,
+  );
+  assert.match(
+    requests[1].body.messages.at(-1).content,
+    /these are unavailable evidence/u,
+  );
+  assert.equal(
+    createHash("sha256")
+      .update(requests[0].body.messages[0].content)
+      .digest("hex"),
+    result.promptFingerprint,
+  );
+  assert.match(requests[0].task, /Required objective:/u);
+  assert.match(requests[0].task, /Assigned assessment fact/u);
+  assert.match(requests[0].task, /Additional private context/u);
+  assert.match(
+    requests[0].task,
+    /BLOCKED prior questions and grading targets/u,
+  );
+  assert.doesNotMatch(requests[1].task, /prior question:/u);
+  assert.match(requests[1].task, /blocked assessment families:/u);
+  assert.doesNotMatch(requests[1].task, /\nblocked grading target:/u);
+  assert.doesNotMatch(requests[1].task, /prior question:/u);
+  assert.match(
+    requests[0].task,
+    /definition and a purpose question are duplicates/u,
+  );
+  assert.match(requests.at(-1).task, /blocked assessment families:/u);
+  assert.match(
+    requests.find((request) => request.type === "true_false").task,
+    /Never assess a claim that the internal context labels as an oversimplification/u,
+  );
+  assert.match(
+    requests.find((request) => request.type === "true_false").task,
+    /Preserve every (?:source )?negation/u,
+  );
+  assert.match(
+    requests.find((request) => request.type === "true_false").task,
+    /rewrite the chosen complete fact as one concise, standalone true sentence/u,
+  );
+  assert.match(
+    requests.find((request) => request.type === "true_false").task,
+    /supportedStatement is always the TRUE correction/u,
+  );
+  assert.match(requests[0].task, /Never attribute a fact to a speaker/u);
+  assert.match(requests[0].task, /ClipQuest constructs them locally/u);
+  assert.match(
+    requests[0].task,
+    /When the chosen fact states only a relationship, category, or association/u,
+  );
+  assert.match(
+    requests[0].task,
+    /if they supply no additional reason, briefly restate the fact/u,
+  );
+  assert.doesNotMatch(requests[0].task, /repairContext|answerSpan/u);
+  assert.ok(
+    requests.every((request) =>
+      /Required objective: (?!formula)/u.test(request.task),
+    ),
+    "v5.12 never forces a formula objective onto formula-free evidence",
+  );
+  assert.ok(
+    requests
+      .filter((request) => request.type === "short_answer")
+      .every((request) =>
+        /"gradingMode":"proposition"|"gradingMode":"enumeration"/u.test(
+          request.task,
+        ),
+      ),
+    "the structure example matches the supported short-answer objective",
+  );
+  assert.doesNotMatch(
+    result.quiz.questions[1].question,
+    /(?:According to the lesson|described mechanism)/iu,
+  );
+  assert.doesNotMatch(
+    result.quiz.questions[1].explanation,
+    /(?:reference material|the passage states)/iu,
+  );
+});
+
+test("v5.12 retries an exact repeated question and grading target", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let q2Attempts = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) =>
+    promptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 2 && q2Attempts++ === 0) {
+        value.questions[0].question = "How does pathway 1 transfer energy?";
+        value.questions[0].answer =
+          "Pathway 1 transfers energy between defined states.";
+        value.questions[0].requiredItems = [
+          "transfers energy between defined states",
+        ];
+      }
+      return value;
+    });
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["short_answer"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(q2Attempts, 2);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(
+    calls.some(
+      (event) =>
+        event.outcome === "schema_invalid" && event.acceptedCount === 0,
+    ),
+    true,
+  );
+  assert.equal(
+    new Set(result.quiz.questions.map((question) => question.answer)).size,
+    5,
+  );
+});
+
+test("v5.12 locally normalizes a collapsed false item without another model request", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let injected = false;
+  let requests = 0;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value, task) => {
+      if (!injected && task.type === "true_false" && !task.polarity) {
+        injected = true;
+        delete value.questions[0].falseStatement;
+        value.questions[0].explanation =
+          "The route couples the two states, allowing energy to move between them.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 5);
+  assert.equal(
+    calls.filter(
+      (event) =>
+        event.lifecycleState === "completed" &&
+        event.outcome === "polarity_mismatch",
+    ).length,
+    0,
+  );
+  assert.equal(
+    calls.filter(
+      (event) =>
+        event.lifecycleState === "started" &&
+        event.classification === "automatic_retry",
+    ).length,
+    0,
+  );
+  assert.ok(
+    result.quiz.questions.some(
+      (question) =>
+        question.answer === true && question.correction === question.question,
+    ),
+  );
+  for (const question of result.quiz.questions) {
+    assert.doesNotMatch(question.correction, /statement is true/iu);
+    assert.notEqual(question.explanation, question.correction);
+  }
+});
+
+test("v5.12 keeps a nonexclusive modal contrast as the supported true fact", () => {
+  const question = normalizeGeneratedQuestion(
+    {
+      type: "true_false",
+      concept: "environmental selection",
+      supportedStatement:
+        "Environmental factors can make some traits more favorable than others.",
+      falseStatement:
+        "Environmental factors can make some traits less favorable than others.",
+      explanation:
+        "Environmental conditions affect which traits improve survival and reproduction.",
+    },
+    {
+      expectedId: "q1",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+      expectedTrueFalseAnswer: false,
+    },
+  );
+
+  assert.equal(question.answer, true);
+  assert.equal(
+    question.question,
+    "Environmental factors can make some traits more favorable than others.",
+  );
+  assert.equal(question.correction, question.question);
+  assert.equal(question.localPolarityFallback, true);
+  assert.match(question.explanation, /^This statement is true:/u);
+});
+
+test("v5.12 keeps a bare-negation contrast as the supported true fact", () => {
+  const supportedStatement =
+    "The Shah Hamdan mosque served as a place of worship, interaction, and learning that spread Islamic tradition.";
+  const question = normalizeGeneratedQuestion(
+    {
+      type: "true_false",
+      concept: "mosque cultural role",
+      supportedStatement,
+      falseStatement:
+        "The Shah Hamdan mosque served as a place of worship but not interaction or learning, so it did not spread Islamic tradition.",
+      explanation:
+        "Worship, interaction, and learning made the mosque a center of cultural transmission.",
+    },
+    {
+      expectedId: "q1",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+      expectedTrueFalseAnswer: false,
+    },
+  );
+
+  assert.equal(question.answer, true);
+  assert.equal(question.question, supportedStatement);
+  assert.equal(question.correction, supportedStatement);
+  assert.equal(question.localPolarityFallback, true);
+  assert.equal(
+    question.explanation,
+    `This statement is true: ${supportedStatement}`,
+  );
+  assert.doesNotMatch(question.explanation, /false statement/iu);
+});
+
+test("v5.12 removes a described-setup prefix without changing the fact", () => {
+  const question = normalizeGeneratedQuestion(
+    {
+      type: "true_false",
+      concept: "thermodynamic system boundary",
+      supportedStatement:
+        "In the described setup, the system consists of the beaker and its solution, excluding the external burner.",
+      explanation:
+        "The burner and everything beyond the beaker boundary are surroundings.",
+    },
+    {
+      expectedId: "q1",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+      expectedTrueFalseAnswer: true,
+    },
+  );
+
+  assert.equal(
+    question.question,
+    "The system consists of the beaker and its solution, excluding the external burner.",
+  );
+  assert.equal(question.correction, question.question);
+});
+
+test("v5.11 does not classify an ordinal fraction as a formula", () => {
+  assert.equal(
+    hasPromptFirstV511FormulaEvidence(
+      "The compromise counted an enslaved person as 3/5ths for representation and taxation.",
+    ),
+    false,
+  );
+  assert.equal(
+    hasPromptFirstV511FormulaEvidence(
+      "Average speed is calculated with the formula v=d/t.",
+    ),
+    true,
+  );
+});
+
+test("v5.12 requires a complete formula target rather than an equation example", () => {
+  assert.equal(
+    hasPromptFirstV512FormulaEvidence(
+      "Memory is learning that has persisted over time.",
+    ),
+    false,
+  );
+  assert.equal(
+    hasPromptFirstV512FormulaEvidence(
+      "If 1 + 2 = 3 and 4 + 2 = 6, subtracting the equations gives 3 = 3.",
+    ),
+    false,
+  );
+  assert.equal(
+    hasPromptFirstV512FormulaEvidence(
+      "Net force is expressed by the equation F=ma.",
+    ),
+    true,
+  );
+  assert.equal(
+    hasPromptFirstV512FormulaEvidence(
+      "Average speed is calculated with the formula v=d/t.",
+    ),
+    true,
+  );
+  assert.equal(
+    hasPromptFirstV512FormulaEvidence(
+      "Return on capital equals capital income divided by the value of the capital stock.",
+    ),
+    false,
+  );
+});
+
+test("v5.12 uses explicit True/False field ownership and explanatory feedback", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const parsed = promptFirstTaskFromRequest(init.body);
+    requests.push(parsed);
+    return promptFirstResponse(init.body);
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+  );
+
+  assert.equal(requests.length, 5);
+  assert.ok(requests.every((request) => request.explicitPolarity));
+  assert.ok(
+    requests.every((request) => /"supportedStatement"/u.test(request.task)),
+  );
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.explanation !== question.question &&
+        question.explanation !== question.correction,
+    ),
+  );
+});
+
+test("v5.12 preserves a role-reversal false contrast instead of relabeling it true", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) =>
+    promptFirstResponse(init.body, (value, task) => {
+      if (task.type === "true_false" && !task.polarity) {
+        value.questions[0].supportedStatement = `In market ${task.ordinal}, a price change moves along the demand curve and changes quantity demanded, not demand.`;
+        value.questions[0].falseStatement = `In market ${task.ordinal}, a price change moves along the demand curve and changes demand, not quantity demanded.`;
+        value.questions[0].explanation =
+          "The false statement swaps demand with quantity demanded; a price change moves along the existing curve.";
+      }
+      return value;
+    });
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+  );
+  const contrast = result.quiz.questions.find((question) =>
+    /changes demand, not quantity demanded/u.test(question.question),
+  );
+  assert.ok(contrast);
+  assert.equal(contrast.answer, false);
+  assert.match(contrast.correction, /changes quantity demanded, not demand/u);
+});
+
+test("v5.12 removes presentation scaffolding without requesting another question", () => {
+  const normalized = normalizeGeneratedQuestion(
+    {
+      type: "multiple_choice",
+      concept: "prediction",
+      question:
+        "What relationship does the example illustrate between training data and prediction reliability?",
+      explanation:
+        "The private content states that more relevant training data makes prediction more reliable, as shown by repeated trials.",
+      correctAnswer:
+        "More relevant training data generally makes prediction more reliable.",
+      distractors: [
+        "Training data prevents prediction.",
+        "Prediction reliability never changes.",
+        "Less relevant data always guarantees accuracy.",
+      ],
+    },
+    {
+      expectedId: "q1",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+    },
+  );
+  assert.equal(
+    normalized.question,
+    "What is the relationship between training data and prediction reliability?",
+  );
+  assert.equal(
+    normalized.explanation,
+    "More relevant training data makes prediction more reliable. For example, repeated trials.",
+  );
+  const hiddenDiagram = normalizeGeneratedQuestion(
+    {
+      type: "multiple_choice",
+      concept: "energy conversion",
+      question:
+        "What relationship does the diagram show between petroleum and electricity?",
+      explanation:
+        "Petroleum can be used directly or converted into electricity for use by different sectors.",
+      correctAnswer:
+        "Petroleum can be used directly or converted into electricity.",
+      distractors: [
+        "Petroleum can only be used directly.",
+        "Electricity is converted into petroleum.",
+        "Petroleum cannot contribute to electricity generation.",
+      ],
+    },
+    {
+      expectedId: "q2",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+    },
+  );
+  assert.equal(
+    hiddenDiagram.question,
+    "What is the relationship between petroleum and electricity?",
+  );
+  const describedCovalent = normalizeGeneratedQuestion(
+    {
+      type: "short_answer",
+      concept: "hydrogen duet",
+      question:
+        "In the described covalent sharing between hydrogen and oxygen, why does hydrogen achieve a stable electron configuration?",
+      explanation:
+        "Hydrogen shares an electron with oxygen and fills its 1s shell with two electrons.",
+      answer: "Its 1s shell contains two shared electrons.",
+      gradingMode: "proposition",
+      acceptableAnswers: [],
+      requiredItems: [],
+    },
+    {
+      expectedId: "q3",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+    },
+  );
+  assert.equal(
+    describedCovalent.question,
+    "When hydrogen shares electrons with oxygen, why does hydrogen achieve a stable electron configuration?",
+  );
+  const contextNormalized = normalizeGeneratedQuestion(
+    {
+      type: "short_answer",
+      concept: "hippocampal memory",
+      question: "What role does the hippocampus play in memory?",
+      explanation:
+        "The context indicates that the hippocampus is necessary for forming new declarative memories.",
+      answer: "It helps form new declarative memories.",
+      gradingMode: "proposition",
+      acceptableAnswers: [],
+      requiredItems: [],
+    },
+    {
+      expectedId: "q2",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+    },
+  );
+  assert.equal(
+    contextNormalized.explanation,
+    "The hippocampus is necessary for forming new declarative memories.",
+  );
+  const normalizedContrast = normalizeGeneratedQuestion(
+    {
+      type: "short_answer",
+      concept: "prediction reliability",
+      question:
+        "How does additional training data affect prediction reliability?",
+      explanation:
+        "The private content contrasts limited training data with more data., the additional examples improve prediction reliability.",
+      answer: "More training data improves prediction reliability.",
+      gradingMode: "proposition",
+      acceptableAnswers: [],
+      requiredItems: ["more training data improves prediction reliability"],
+    },
+    {
+      expectedId: "q2",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+    },
+  );
+  assert.equal(
+    normalizedContrast.explanation,
+    "Limited training data with more data; the additional examples improve prediction reliability.",
+  );
+  const normalizedTrueFalse = normalizeGeneratedQuestion(
+    {
+      type: "true_false",
+      concept: "next-word prediction",
+      question:
+        "A language model ignores the words that precede the next word.",
+      correction:
+        "A language model predicts the next word by seeing certain types of words in context.",
+      explanation:
+        "Seeing certain types of words helps predict the next word in the described scenario.",
+    },
+    {
+      expectedId: "q2",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+      expectedTrueFalseAnswer: false,
+    },
+  );
+  assert.doesNotMatch(
+    `${normalizedTrueFalse.correction} ${normalizedTrueFalse.explanation}`,
+    /certain types|described scenario/iu,
+  );
+  const midSentenceAttribution = normalizeGeneratedQuestion(
+    {
+      type: "true_false",
+      concept: "contact forces",
+      question:
+        "Contact forces arise from electromagnetic interactions between matter.",
+      correction:
+        "Contact forces arise from electromagnetic interactions between matter.",
+      explanation:
+        "The statement is true. The context specifies that the forces between contacting materials are electromagnetic interactions.",
+    },
+    {
+      expectedId: "q3",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+      expectedTrueFalseAnswer: true,
+    },
+  );
+  assert.doesNotMatch(
+    midSentenceAttribution.explanation,
+    /context specifies/iu,
+  );
+  assert.match(
+    midSentenceAttribution.explanation,
+    /forces between contacting materials are electromagnetic interactions/iu,
+  );
+});
+
+test("v5.12 removes hidden example feedback and fixes environment grammar locally", () => {
+  const normalized = normalizeGeneratedQuestion(
+    {
+      type: "short_answer",
+      concept: "evolutionary adaptation",
+      question:
+        "How does evolution operate relative to the environment in which the organisms are in?",
+      explanation:
+        "Evolution changes trait frequencies across generations. In the given data, 23 appears twice while every other number appears once.",
+      answer:
+        "Traits change relative to the environment in which the organisms are in.",
+      gradingMode: "proposition",
+      acceptableAnswers: [],
+      requiredItems: ["Traits change relative to the environment"],
+    },
+    {
+      expectedId: "q1",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV512Mode: true,
+    },
+  );
+
+  assert.doesNotMatch(
+    `${normalized.question} ${normalized.answer} ${normalized.explanation}`,
+    /environment in which the organisms are in|given data/iu,
+  );
+  assert.match(normalized.question, /environment the organisms inhabit/iu);
+  assert.equal(
+    normalized.explanation,
+    "Evolution changes trait frequencies across generations.",
+  );
+});
+
+test("v5.12 requires formula tokens in the DeepSeek schema when the assigned fact is a formula", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  let injectedMeaningQuestion = false;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const parsed = promptFirstTaskFromRequest(init.body);
+    requests.push(parsed);
+    return promptFirstResponse(init.body, (value) => {
+      if (!injectedMeaningQuestion) {
+        injectedMeaningQuestion = true;
+        value.questions[0].question =
+          "In the equation F=m*a, what does F represent?";
+        value.questions[0].explanation =
+          "F is the net force in the described scenario.";
+      }
+      return value;
+    });
+  };
+  const input = promptFirstInput(5, ["short_answer"]);
+  input.plainText = [
+    "Newton's second law uses the complete formula F=m*a, where F is net force, m is mass, and a is acceleration.",
+    "Average speed uses the complete formula v=d/t, where v is speed, d is distance, and t is time.",
+    "Momentum uses the complete formula p=m*v, where p is momentum, m is mass, and v is velocity.",
+    "Electrical power uses the complete formula P=V*I, where P is power, V is voltage, and I is current.",
+    "Density uses the complete formula rho=m/V, where rho is density, m is mass, and V is volume.",
+  ].join(" ");
+
+  const result = await generateQuizFromPlainText(
+    input,
+    "sk-local-test",
+    () => undefined,
+  );
+
+  assert.equal(requests.length, 5);
+  for (const request of requests) {
+    assert.match(request.task, /gradingMode=formula/u);
+    assert.match(request.task, /"required":\[[^\]]*"formulaTokens"/u);
+  }
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.shortAnswerMode === "formula" &&
+        question.rubricV2.canonicalFormula,
+    ),
+  );
+  assert.match(result.quiz.questions[0].question, /^What is the formula for/u);
+  assert.match(result.quiz.questions[0].explanation, /^The formula is /u);
+});
+
+test("v5.11 fills non-grading labels locally instead of retrying", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1) {
+        value.questions[0].topic = value.questions[0].concept;
+        delete value.questions[0].concept;
+        value.questions[0].prompt = value.questions[0].question;
+        delete value.questions[0].question;
+        value.questions[0].rationale = "";
+        delete value.questions[0].explanation;
+        value.questions[0].answer = value.questions[0].correctAnswer;
+        delete value.questions[0].correctAnswer;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+  );
+
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.ok(result.quiz.questions[0].concept.length > 0);
+  assert.equal(
+    result.quiz.questions[0].question,
+    "How does pathway 1 transfer energy?",
+  );
+  assert.equal(
+    result.quiz.questions[0].explanation,
+    result.quiz.questions[0].answer,
+  );
+});
+
+test("v5.11 assigns false polarity locally without a changed-detail contract", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value, task) => {
+      if (!task.polarity) {
+        delete value.questions[0].changedDetail;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstV511Input(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 5);
+  assert.equal(
+    calls.filter(
+      (event) =>
+        event.lifecycleState === "started" &&
+        event.classification === "automatic_retry",
+    ).length,
+    0,
+  );
+  assert.ok(
+    result.quiz.questions.some(
+      (question) => question.type === "true_false" && question.answer === false,
+    ),
+  );
+});
+
+test("v5.11 keeps a collapsed false candidate as a supported true item without retrying", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value, task) => {
+      if (!task.polarity) {
+        value.questions[0].question = `Pathway ${task.ordinal} transfers energy between the states.`;
+        if (task.ordinal % 2 === 0) {
+          delete value.questions[0].correction;
+        } else {
+          value.questions[0].correction = value.questions[0].question;
+        }
+        value.questions[0].incorrectText = "transfers";
+        value.questions[0].correctText = "transfers";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstV511Input(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(
+    calls.filter(
+      (event) =>
+        event.lifecycleState === "started" &&
+        event.classification === "automatic_retry",
+    ).length,
+    0,
+  );
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.answer === true && question.correction === question.question,
+    ),
+  );
+});
+
+test("v5.11 collapses a deictic or nonexclusive false paraphrase without undefined feedback", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value, task) => {
+      if (!task.polarity) {
+        value.questions[0].question = `Mineral composition in rock layers can indicate when volcanic event ${task.ordinal} occurred.`;
+        value.questions[0].correction =
+          task.ordinal % 2 === 0
+            ? `This principle can indicate when event ${task.ordinal} occurred.`
+            : `Differences in mineral composition can indicate when volcanic event ${task.ordinal} occurred.`;
+        value.questions[0].explanation =
+          "The statement is false because the same relationship is true.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstV511Input(5, ["true_false"]),
+    "sk-local-test",
+  );
+
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.answer === true &&
+        question.correction === question.question &&
+        !/undefined|statement is (?:true|false)/iu.test(question.explanation),
+    ),
+  );
+});
+
+test("v5.11 assigns complete nonvisual facts and avoids repeated source families", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const primaryClaims = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    primaryClaims.push(task.primaryClaim);
+    return promptFirstResponse(init.body);
+  };
+  const input = promptFirstV511Input(5, ["multiple_choice"]);
+  input.title = "Scientific relationships";
+  input.plainText = [
+    "Relative to this diagram, the region below the membrane is inside the cell.",
+    "At most you might have two electrons on one side of helium, which would cause some imbalance.",
+    "Credit card APRs can reach the 30% range.",
+    "Phospholipids form bilayers because hydrophilic heads face water while hydrophobic tails cluster away from water.",
+    "Glycolipids act as recognition tags that help immune cells distinguish self cells from foreign cells.",
+    "Larger electron clouds are more polarizable and therefore produce stronger London dispersion forces.",
+    "Index fossils correlate rock layers because each index fossil existed during a limited geologic interval.",
+    "Stare decisis guides courts to use prior decisions when current cases are materially similar.",
+    "A resistor's impedance is independent of angular frequency because its impedance contains no frequency term.",
+    "A market forms when multiple parties exchange things of value.",
+  ].join(" ");
+
+  await generateQuizFromPlainText(input, "sk-local-test");
+
+  assert.equal(primaryClaims.length, 5);
+  assert.doesNotMatch(
+    primaryClaims.join(" "),
+    /diagram|region below|two electrons|30% range/iu,
+  );
+  assert.equal(new Set(primaryClaims).size, primaryClaims.length);
+});
+
+test("v5.11 recovers a complete singleton emitted after a leaked non-thinking trace", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    if (requests !== 1) return promptFirstResponse(init.body);
+    const task = promptFirstTaskFromRequest(init.body);
+    const question = {
+      type: "multiple_choice",
+      concept: "energy pathway",
+      question: "How does the pathway transfer energy?",
+      explanation: "The pathway transfers energy between defined states.",
+      correctAnswer: "Through the defined route",
+      distractors: [
+        "By blocking the route",
+        "By removing every state",
+        "By isolating the input",
+      ],
+    };
+    const leaked =
+      '{"questions":[{"type":"multiple_choice","explanation":"private trace' +
+      `<｜end▁of▁thinking｜>${JSON.stringify({ questions: [question] })}`;
+    assert.equal(task.type, "multiple_choice");
+    return rawContentSseResponse(leaked);
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+  );
+
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(
+    result.quiz.questions[0].question,
+    "How does the pathway transfer energy?",
+  );
+});
+
+test("v5.11 leaves editorial ranking review to the prompt and QA audit", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value) => {
+      if (requests === 1) {
+        value.questions[0].question =
+          "Which route most directly transfers energy?";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+});
+
+test("v5.11 requires the evidence-assigned short-answer mode", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value) => {
+      const question = value.questions[0];
+      if (requests === 1) {
+        question.question = "What term names the energy route?";
+        question.answer = "energy route";
+        question.gradingMode = "atomic_term";
+        question.requiredItems = [];
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(result.quiz.questions[0].shortAnswerMode, "proposition");
+});
+
+test("v5.11 accepts a proposition answering one explicit condition", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value, task) => {
+      const question = value.questions[0];
+      question.question = `Under what condition does process ${task.ordinal} begin?`;
+      question.answer = `Process ${task.ordinal} begins when input ${task.ordinal} exceeds its activation threshold.`;
+      question.gradingMode = "proposition";
+      question.acceptableAnswers = [];
+      question.requiredItems = [
+        `input ${task.ordinal} exceeds its activation threshold`,
+      ];
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.quiz.questions[0].shortAnswerMode, "proposition");
+});
+
+test("v5.11 accepts a compact parseable equation without requiring formula tokens", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value, task) => {
+      delete value.questions[0].formulaTokens;
+      value.questions[0].answer = ["F=m*a", "p=m*v", "v=d/t", "P=W/t", "a=F/m"][
+        task.ordinal - 1
+      ];
+      return value;
+    });
+  };
+
+  const input = promptFirstInput(5, ["short_answer"]);
+  input.plainText = Array.from(
+    { length: 12 },
+    (_, index) =>
+      `Newton's second law uses the equation F=m*a to relate force, mass, and acceleration for system ${index + 1}.`,
+  ).join(" ");
+  const result = await generateQuizFromPlainText(input, "sk-local-test");
+
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.shortAnswerMode === "formula" && question.answer.includes("="),
+    ),
+  );
+});
+
+test("v5.9 compatibility sends its original compact prompt-first contract", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const parsed = promptFirstTaskFromRequest(init.body);
+    requests.push(parsed);
+    return promptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 2) {
+        value.questions[0].question =
+          "According to the lesson, what route transfers energy?";
+      }
+      if (task.ordinal === 3) {
+        value.questions[0].concept = "the same broad energy concept";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstV59Input(),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.protocolVersion, 10);
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.9");
+  assert.equal(result.validatorVersion, "validator-minimal-structural-v5.0");
+  assert.equal(result.importVersion, "extension-progressive-import-v8");
+  assert.equal(result.generationProfile, "prompt_first_auto_v5_9");
+  assert.equal(requests.length, 5);
+  assert.equal(
+    calls.filter((event) => event.lifecycleState === "started").length,
+    5,
+  );
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    0,
+  );
+  assert.ok(calls.every((event) => event.protocolVersion === 10));
+  assert.equal(requests[0].body.messages.length, 2);
+  assert.notEqual(
+    requests[0].body.messages[0].content,
+    PROMPT_FIRST_SYSTEM_PROMPT,
+  );
+  assert.equal(
+    createHash("sha256")
+      .update(requests[0].body.messages[0].content)
+      .digest("hex"),
+    result.promptFingerprint,
+  );
+  assert.match(requests[0].task, /Preferred objective:/u);
+  assert.match(requests[0].task, /Exact JSON schema:/u);
+  assert.doesNotMatch(
+    requests[0].task,
+    /repairContext|Final learner-copy gate|answerSpan/u,
+  );
+  assert.ok(
+    result.quiz.questions.some((question) =>
+      question.question.startsWith("According to the lesson"),
+    ),
+    "editorial wording is accepted instead of causing a runtime retry",
+  );
+});
+
+test("v5.9 retries only structurally unusable singleton output", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value) => {
+      if (requests === 1)
+        value.questions[0].distractors = ["same", "same", "other"];
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstV59Input(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 6);
+  const retries = calls.filter(
+    (event) =>
+      event.lifecycleState === "started" &&
+      event.classification === "automatic_retry",
+  );
+  assert.equal(retries.length, 1);
+  assert.equal(retries[0].retryKind, "structural");
+});
+
+test("v5.9 keeps mathematical operators when checking choice uniqueness", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value) => {
+      value.questions[0].correctAnswer = "(1 + 1) / 2";
+      value.questions[0].distractors = [
+        "(1 - 1) / 2",
+        "(1 * 1) / 2",
+        "(1 + 1) * 2",
+      ];
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstV59Input(5, ["multiple_choice"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
+});
+
+test("v5.8 does not revalidate an already persisted streamed singleton", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => conceptFirstResponse(init.body);
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(calls.length, 10);
+  assert.ok(
+    calls
+      .filter((event) => event.lifecycleState === "completed")
+      .every(
+        (event) => event.outcome === "complete" && event.acceptedCount === 1,
+      ),
+  );
+});
+
 test("v5.8 does not retry source wording confined to private MC validation aids", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
@@ -1134,7 +5052,7 @@ test("v5.8 rejects a pre-release continuation with a different prompt fingerprin
             startIndex: 1,
             resultProtocolVersion: 9,
             promptVersion: "quiz-local-json-stream-v5.8",
-            validatorVersion: "validator-local-progressive-v4.7",
+            validatorVersion: "validator-local-progressive-v4.12",
             promptFingerprint: "0".repeat(64),
             generationProfile: "concept_first_auto_v5_8",
             acceptedQuestions: [
@@ -1277,7 +5195,7 @@ test("v5.8 repairs a relationship answer that drops its directional qualifier", 
     startIndex: 4,
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
-    validatorVersion: "validator-local-progressive-v4.7",
+    validatorVersion: "validator-local-progressive-v4.12",
     promptFingerprint: createHash("sha256")
       .update(CONCEPT_FIRST_SYSTEM_PROMPT)
       .digest("hex"),
@@ -1373,7 +5291,7 @@ test("v5.8 rejects presentation statistics before storage and repairs only that 
         })),
     ),
   );
-  assert.equal(calls[1]?.outcome, "low_pedagogical_value");
+  assert.equal(calls[1]?.outcome, "source_framing_invalid");
   assert.equal(calls[2]?.classification, "automatic_retry");
   assert.equal(calls[2]?.retryKind, "content_repair");
   assert.doesNotMatch(result.quiz.questions[0].question, /monetary value/iu);
@@ -1818,7 +5736,7 @@ test("v5.5 validates grounded true-false and short-answer singletons", async (co
   );
 });
 
-test("v5.5 grants content repair budgets independently to each ordinal", async (context) => {
+test("v5.5 grants content retry budgets independently to each ordinal", async (context) => {
   const originalFetch = globalThis.fetch;
   const attempts = new Map();
   const calls = [];
@@ -2275,7 +6193,7 @@ test("formula token structures are serialized locally into canonical stored answ
   );
 });
 
-test("a formula question without a valid token structure uses only bounded automatic repairs", async (context) => {
+test("a formula question without a valid token structure uses only bounded automatic retries", async (context) => {
   const originalFetch = globalThis.fetch;
   let fetchCount = 0;
   const events = [];
@@ -2304,14 +6222,20 @@ test("a formula question without a valid token structure uses only bounded autom
     ),
     (error) => error?.reasonCode === "schema_invalid",
   );
-  assert.equal(fetchCount, 3);
+  assert.equal(fetchCount, 5);
   assert.deepEqual(
     events.map((event) => event.classification),
-    ["primary", "automatic_retry", "automatic_retry"],
+    [
+      "primary",
+      "automatic_retry",
+      "automatic_retry",
+      "automatic_retry",
+      "automatic_retry",
+    ],
   );
   assert.deepEqual(
     events.slice(1).map((event) => event.retryKind),
-    ["content_repair", "content_repair"],
+    ["content_repair", "content_repair", "content_repair", "content_repair"],
   );
 });
 
@@ -2357,7 +6281,7 @@ for (const failure of [
         ? "empty_content"
         : "truncated_output";
   }
-  test(`${failure.name} exhausts exactly two bounded content repairs`, async (context) => {
+  test(`${failure.name} exhausts exactly four bounded automatic retries`, async (context) => {
     const originalFetch = globalThis.fetch;
     let fetchCount = 0;
     const events = [];
@@ -2379,19 +6303,33 @@ for (const failure of [
       ),
       (error) => error?.reasonCode === failure.expected,
     );
-    assert.equal(fetchCount, 3);
-    assert.equal(events.length, 3);
+    assert.equal(fetchCount, 5);
+    assert.equal(events.length, 5);
     assert.deepEqual(
       events.map((event) => event.classification),
-      ["primary", "automatic_retry", "automatic_retry"],
+      [
+        "primary",
+        "automatic_retry",
+        "automatic_retry",
+        "automatic_retry",
+        "automatic_retry",
+      ],
     );
     assert.deepEqual(
       events.map((event) => event.outcome),
-      [failure.expected, failure.expected, failure.expected],
+      [
+        failure.expected,
+        failure.expected,
+        failure.expected,
+        failure.expected,
+        failure.expected,
+      ],
     );
     assert.equal(events[1].retryKind, failure.retryKind);
     assert.equal(events[2].retryKind, failure.retryKind);
-    assert.equal(events[2].retryDelayMs, 0);
+    assert.equal(events[3].retryKind, failure.retryKind);
+    assert.equal(events[4].retryKind, failure.retryKind);
+    assert.equal(events[4].retryDelayMs, 0);
   });
 }
 
@@ -2692,8 +6630,9 @@ test("v5.1 continuation uses singleton automatic recovery on original metadata",
   assert.equal(result.protocolVersion, 5);
   assert.equal(result.promptVersion, "quiz-local-json-stream-v5.1");
   assert.equal(result.validatorVersion, "validator-local-progressive-v4.0");
-  assert.ok(requests.every((request) => request.thinking.type === "enabled"));
-  assert.ok(requests.every((request) => request.reasoning_effort === "high"));
+  assert.ok(requests.every((request) => request.thinking.type === "disabled"));
+  assert.ok(requests.every((request) => !("reasoning_effort" in request)));
+  assert.ok(requests.every((request) => request.temperature === 0.2));
   assert.ok(events.every((event) => event.classification === "primary"));
   assert.ok(events.every((event) => event.protocolVersion === 5));
   assert.ok(events.every((event) => event.purpose === "automatic_recovery"));
@@ -2852,7 +6791,9 @@ test("a disabled rollout can start a new bank on the v5.1 profile", async (conte
   assert.equal(result.protocolVersion, 5);
   assert.equal(result.promptVersion, "quiz-local-json-stream-v5.1");
   assert.equal(result.generationProfile, "legacy_reasoning_v5_1");
-  assert.ok(requests.every((request) => request.thinking.type === "enabled"));
+  assert.ok(requests.every((request) => request.thinking.type === "disabled"));
+  assert.ok(requests.every((request) => !("reasoning_effort" in request)));
+  assert.ok(requests.every((request) => request.temperature === 0.2));
 });
 
 test("10,000 seeded plans are balanced, reproducible, and avoid avoidable runs", () => {

@@ -72,6 +72,7 @@ export function AppTextInput({
           {leading ? <View style={styles.adornment}>{leading}</View> : null}
           <TextInput
             {...props}
+            secureTextEntry={props.secureTextEntry === true}
             nativeID={inputId}
             aria-labelledby={labelInside ? undefined : `${inputId}-label`}
             aria-describedby={

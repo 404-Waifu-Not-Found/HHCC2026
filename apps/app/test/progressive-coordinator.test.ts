@@ -3,6 +3,7 @@ import {
   getOrStartProgressiveGenerationTask,
   getOrStartProgressiveRecoveryTask,
   hasActiveProgressiveGenerationForAttempt,
+  pauseAllProgressiveGenerationTasks,
 } from "../src/generation/progressive-coordinator";
 
 function deferred() {
@@ -65,6 +66,50 @@ describe("progressive generation coordinator", () => {
     expect(hasActiveProgressiveGenerationForAttempt(attemptId)).toBe(true);
     background.resolve();
     await first.completion;
+    expect(hasActiveProgressiveGenerationForAttempt(attemptId)).toBe(false);
+  });
+
+  it("aborts generation and recovery when Android enters the background", async () => {
+    const attemptId = "44444444-4444-4444-8444-444444444444";
+    const generation = getOrStartProgressiveGenerationTask(
+      "coordinator-test-native-background",
+      async ({ signal, resolveFirst }) => {
+        resolveFirst({
+          attemptId,
+          primer: null,
+          question: {
+            id: "55555555-5555-4555-8555-555555555555",
+            type: "true_false",
+            prompt: "This is a test statement.",
+            difficulty: 1,
+            position: 1,
+            total: 5,
+            isRetry: false,
+          },
+          generation: {
+            state: "generating",
+            availableQuestions: 1,
+            totalQuestions: 5,
+          },
+        });
+        await new Promise<void>((resolve) =>
+          signal.addEventListener("abort", () => resolve(), { once: true }),
+        );
+      },
+    );
+    const recovery = getOrStartProgressiveRecoveryTask(
+      attemptId,
+      async (signal) => {
+        await new Promise<void>((resolve) =>
+          signal.addEventListener("abort", () => resolve(), { once: true }),
+        );
+      },
+    );
+
+    await generation.firstReady;
+    pauseAllProgressiveGenerationTasks();
+    expect(generation.controller.signal.aborted).toBe(true);
+    await Promise.all([generation.completion, recovery.completion]);
     expect(hasActiveProgressiveGenerationForAttempt(attemptId)).toBe(false);
   });
 });

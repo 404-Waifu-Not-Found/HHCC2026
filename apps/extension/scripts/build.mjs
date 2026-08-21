@@ -22,6 +22,13 @@ const stableExtensionOutput = resolve(
 const appIcon = resolve(root, "../app/assets/brand/learning-prism.png");
 const appBrandRoot = resolve(root, "../app/assets/brand");
 const generatedIconRoot = resolve(root, "../app/assets/platform/extension");
+const sharedEngineRoot = resolve(root, "../../packages/local-quiz-engine/src");
+const sharedEngineFiles = new Set([
+  "caption-text.js",
+  "grounded-quality.js",
+  "local-generator.js",
+  "math-expression.js",
+]);
 
 mkdirSync(outputRoot, { recursive: true });
 const stagingRoot = mkdtempSync(resolve(outputRoot, ".clipquest-build-"));
@@ -50,7 +57,13 @@ for (const file of [
   "youtube-quick-open.css",
   "youtube-quick-open.js",
 ]) {
-  cpSync(resolve(root, "src", file), resolve(extensionOutput, file));
+  cpSync(
+    resolve(
+      sharedEngineFiles.has(file) ? sharedEngineRoot : resolve(root, "src"),
+      file,
+    ),
+    resolve(extensionOutput, file),
+  );
 }
 for (const size of [16, 48, 128]) {
   const generated = resolve(generatedIconRoot, `icon-${size}.png`);
@@ -89,7 +102,7 @@ JSON.parse(readFileSync(resolve(extensionOutput, "manifest.json"), "utf8"));
 
 const archive = resolve(outputRoot, "clipquest-captions-extension.zip");
 rmSync(archive, { force: true });
-mkdirSync(stableExtensionOutput, { recursive: true });
+rmSync(stableExtensionOutput, { recursive: true, force: true });
 cpSync(extensionOutput, stableExtensionOutput, {
   recursive: true,
   force: true,

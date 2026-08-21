@@ -37,13 +37,13 @@ The current [ten-video production report](../qa-results/live-production-quiz-gen
 
 This table is a dated observation, not a substitute for checking the live service before the next release.
 
-## Current 0.8.8 canary
+## Current web and Android source candidate
 
-The current pushed candidate uses extension `0.8.8`, result protocol `9`, capability `question-stream-v6`, pipeline `9`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.7`, progressive import `v7`, and generation profile `concept_first_auto_v5_8`.
+The current supported contract uses extension `0.8.18`, result protocol `10`, capability `question-stream-v7`, pipeline `9`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, progressive import `v8`, and generation profile `prompt_first_auto_v5_12` when assigned. Chrome 0.8.17 remains accepted. Android 0.2.0 consumes the same engine and reports `android_app` client metadata; web reports `chrome_extension`.
 
-Its compatibility path preserves accepted legacy prefixes and uses the original bank and attempt. Previously failed ordinals are retried as singleton `automatic_retry` requests; never-attempted ordinals remain `primary`. New `manual_continuation` inserts are rejected after the exact historical replay check, but existing rows remain immutable evidence. Prompt v5.7 treats the transcript as private evidence, fails closed when no positively scored instructional excerpt exists, rejects source framing, logistics, presentation metadata, and low-value recall across every learner-visible field, and repairs only the affected singleton. The display compatibility guard removes only complete grammar-safe source-attribution clauses from old prompts. Prose short-answer rubrics are bounded to independent propositions and complete paraphrases, while the deterministic grader adds conservative alias and acronym normalization without lowering its threshold.
+The checked-in rollout keeps v5.12 disabled and v5.11 enabled. `/health` reports the supported contract and effective default separately; `/api/local-ai/profile` is authoritative for a learner. Protocol 10 accepts every well-formed, gradeable singleton immediately and retries only transport/service failures or unusable storage/grading structures. Existing banks preserve their original prompt, validator, telemetry, client integrity, and continuation behavior without metadata mixing.
 
-Migration `0020_generation_call_lifecycle.sql` is additive and remains compatible with rollback. The candidate is pushed, deployed, installed, and canary-assigned, but it is not generally enabled because the required live matrices have not passed.
+The same release adds backward-compatible Android client metadata, push-token unregister behavior, safe Android generation status, and a certificate-gated App Links endpoint. No D1 migration is required. Worker deployment, extension installation, EAS signing, physical-device acceptance, and real-video matrices remain separate release actions.
 
 ## One-time Cloudflare version affinity
 
@@ -69,6 +69,7 @@ References:
 - The worktree is clean so source, version tag, app assets, Worker code, and extension ZIP refer to one immutable revision.
 - Every migration has a backward-compatible rollout plan. A Worker rollback does not roll back D1.
 - The compatible unpacked extension has been built and its exact version has passed Chrome acceptance.
+- For an Android beta, the Expo account/project, EAS-managed keystore, FCM credentials, release certificate, authenticated internal distribution, and physical-device acceptance must also be available.
 - The target generation rollout mode is deliberate. Enabling a profile is a separate product gate from merely deploying code that supports it.
 - No API key, transcript, DeepSeek body, raw prompt, answer export, or QA credential is present in release evidence.
 
@@ -142,12 +143,28 @@ Require the health response to identify the promoted Worker version and report:
 - pipeline 9;
 - backend quiz generation disabled;
 - extension quiz generation enabled and required;
+- Android in-app generation enabled, foreground-only, and requiring Android 0.2.0 plus `question-stream-v7`;
 - expected model, current prompt, validator, and rollout mode;
 - the expected newest applied D1 migration.
 
 Probe `/`, `/library`, `/settings`, `/admin`, `/admin/jobs`, `/admin/system`, and representative dynamic quiz routes. Parse each HTML shell, request every same-origin script/module preload/stylesheet/font/image reference, and require the expected content type and a successful response.
 
 Health metadata alone is insufficient for a generation-profile release. Create a disposable quiz through the real Chrome extension, then verify its stored `generationProfile`, `promptVersion`, `validatorVersion`, `protocolVersion`, and planned count. `/health` describes the deployed code's current capability; rollout flags can still assign a compatibility profile to a newly created bank.
+
+## Android private-beta release
+
+The Worker/app rollout may proceed before the private APK because the API additions are backward compatible. APK distribution is a separate gate:
+
+1. Run the guarded Cloudflare release first and record the exact active Worker version.
+2. Create/authenticate the EAS project from `apps/app`, supply the real project ID, and configure FCM.
+3. Run `npx eas-cli build --platform android --profile internal` from `apps/app` at the exact pushed Git SHA.
+4. Verify the APK is release-signed, version 0.2.0/code 2, min API 29, target API 36, and contains no key, transcript fixture, environment secret, or signing material.
+5. Back up the EAS-managed keystore securely and configure its SHA-256 certificate fingerprint as `ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINT`.
+6. Configure `IOS_APP_LINKS_TEAM_ID` from the production Apple signing identity and verify both `/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association` before treating HTTPS authentication links as native-ready.
+7. Verify notification delivery/tap routing, install and upgrade behavior, and the full API 29/API 36/physical-device matrix.
+8. Run and complete the ten-video Android matrix before sharing the restricted APK URL.
+
+Do not distribute a locally debug-signed Gradle artifact. See [Android private beta](./ANDROID-BETA.md) and the [current dated QA report](./QA-ANDROID-BETA-2026-08-16.md).
 
 ## Generation rollout gate
 

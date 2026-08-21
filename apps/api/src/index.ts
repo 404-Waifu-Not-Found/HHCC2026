@@ -9,6 +9,8 @@ import {
 } from "@clipquest/contracts";
 import { createAuth } from "./auth";
 import { preventStaleAppShell, publicAssetShell } from "./lib/asset-shell";
+import { androidAssetLinks } from "./lib/android-app-links";
+import { appleAppSiteAssociation } from "./lib/apple-app-site-association";
 import {
   quizGenerationProfile,
   quizGenerationRolloutMode,
@@ -91,6 +93,27 @@ app.use("*", async (c, next) => {
   c.res = response;
 });
 
+app.get("/.well-known/assetlinks.json", (c) => {
+  const links = androidAssetLinks(
+    c.env.ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINT,
+  );
+  if (!links) {
+    return c.json([], 503, { "Cache-Control": "no-store" });
+  }
+  return c.json(links, 200, { "Cache-Control": "public, max-age=3600" });
+});
+
+app.get("/.well-known/apple-app-site-association", (c) => {
+  const association = appleAppSiteAssociation(c.env.IOS_APP_LINKS_TEAM_ID);
+  if (!association) {
+    return c.json({}, 503, { "Cache-Control": "no-store" });
+  }
+  return c.json(association, 200, {
+    "Cache-Control": "public, max-age=3600",
+    "Content-Type": "application/json",
+  });
+});
+
 app.use("*", async (c, next) => {
   if (c.req.method === "GET" || c.req.method === "HEAD") {
     const shellPath = publicAssetShell(c.req.path);
@@ -118,6 +141,8 @@ app.get("/health", (c) => {
     backendQuizGeneration: false,
     extensionQuizGeneration: true,
     extensionRequired: true,
+    androidQuizGeneration: true,
+    iosQuizGeneration: true,
     email: Boolean(c.env.RESEND_API_KEY),
     youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
     youtubeOpenSourceAcquisition: true,
@@ -135,16 +160,32 @@ app.get("/health", (c) => {
     pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
-    generationProfile: "concept_first_auto_v5_8",
+    generationProfile: "prompt_first_auto_v5_12",
     rolloutMode,
     generationSelection: {
-      supportedProfile: "concept_first_auto_v5_8",
+      supportedProfile: "prompt_first_auto_v5_12",
       supportedPromptVersion: LOCAL_QUIZ_PROMPT_VERSION,
       supportedValidatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
       rolloutMode,
       effectiveDefaultProfile: effectiveDefaultProfile.generationProfile,
-      requiredExtensionVersion: "0.8.8",
+      requiredExtensionVersion: "0.8.17",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      clients: {
+        chromeExtension: {
+          minimumVersion: "0.8.17",
+          requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+        },
+        androidApp: {
+          minimumVersion: "0.2.0",
+          requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+          foregroundOnly: true,
+        },
+        iosApp: {
+          minimumVersion: "0.2.0",
+          requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+          foregroundOnly: true,
+        },
+      },
     },
     worker: publicWorkerVersion(c.env),
     versionAffinity: {

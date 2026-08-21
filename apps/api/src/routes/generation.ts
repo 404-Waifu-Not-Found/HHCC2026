@@ -5,10 +5,21 @@ import type { ApiBindings } from "../middleware/authenticated";
 
 export const generationRouter = new Hono<ApiBindings>();
 
-generationRouter.get("/profile", (c) =>
-  c.json(
-    QuizGenerationProfileResponseSchema.parse(
-      quizGenerationProfile(c.env, c.get("user").id),
-    ),
-  ),
-);
+generationRouter.get("/profile", (c) => {
+  const profile = quizGenerationProfile(c.env, c.get("user").id);
+  return c.json(
+    QuizGenerationProfileResponseSchema.parse({
+      ...profile,
+      clientRequirements: {
+        chromeExtension: {
+          minimumVersion: profile.minimumExtensionVersion,
+          requiredCapability: profile.requiredCapability,
+        },
+        androidApp: {
+          minimumVersion: "0.2.0",
+          requiredCapability: "question-stream-v7",
+        },
+      },
+    }),
+  );
+});

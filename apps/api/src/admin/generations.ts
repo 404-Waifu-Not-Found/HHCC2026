@@ -67,7 +67,7 @@ const STATE_EXPRESSION =
   "json_extract(q.quality_summary_json, '$.generationState')";
 const PROFILE_EXPRESSION =
   "COALESCE(json_extract(q.quality_summary_json, '$.generationProfile'), 'legacy_reasoning_v5_1')";
-const AUTOMATIC_PROFILE_EXPRESSION = `${PROFILE_EXPRESSION} IN ('stable_auto_recovery_v5_3', 'evidence_grounded_auto_v5_4', 'concept_first_auto_v5_8')`;
+const AUTOMATIC_PROFILE_EXPRESSION = `${PROFILE_EXPRESSION} IN ('stable_auto_recovery_v5_3', 'evidence_grounded_auto_v5_4', 'concept_first_auto_v5_8', 'prompt_first_auto_v5_9', 'prompt_first_auto_v5_10', 'prompt_first_auto_v5_11', 'prompt_first_auto_v5_12')`;
 const AUTOMATIC_RECOVERY_EXPRESSION = `(
   ${AUTOMATIC_PROFILE_EXPRESSION}
   OR (
@@ -157,6 +157,11 @@ export function adminGenerationFromSnapshot(
   );
   return AdminGenerationSchema.parse({
     quizId: snapshot.quizId,
+    client: snapshot.summary.client ?? {
+      kind: "chrome_extension",
+      version: "historical",
+      capability: "question-stream-v7",
+    },
     state: snapshot.availability.state,
     acceptedQuestions: snapshot.availability.availableQuestions,
     plannedQuestions: snapshot.availability.totalQuestions,
@@ -391,7 +396,7 @@ function validProgressiveGenerationWhere(): string {
   return `q.pipeline_version = ${LOCAL_QUIZ_PIPELINE_VERSION}
     AND v.source = 'youtube'
     AND json_valid(q.quality_summary_json) = 1
-    AND json_extract(q.quality_summary_json, '$.source') = 'extension-local-json-stream'
+    AND json_extract(q.quality_summary_json, '$.source') IN ('extension-local-json-stream', 'client-local-json-stream')
     AND CAST(json_extract(q.quality_summary_json, '$.pipelineVersion') AS INTEGER) = ${LOCAL_QUIZ_PIPELINE_VERSION}
     AND CAST(json_extract(q.quality_summary_json, '$.acceptedCount') AS INTEGER) = (
       SELECT COUNT(*) FROM questions stored_question WHERE stored_question.quiz_id = q.id

@@ -26,6 +26,7 @@ export type SpeechModelManifest = z.infer<typeof SpeechModelManifestSchema>;
 export type TranscriptionPhase = "preparing_audio" | "downloading_model" | "transcribing_device";
 
 export type LocalTranscriptionOptions = {
+  ownerUserId: string;
   videoId: string;
   mediaUrl: string;
   language?: string | null;

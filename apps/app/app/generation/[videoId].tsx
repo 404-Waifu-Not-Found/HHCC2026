@@ -27,7 +27,14 @@ import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  AppState,
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
@@ -48,6 +55,7 @@ import {
   groundedRecoveryCooldownMs,
   groundedRecoveryIsExhausted,
 } from "../../src/generation/automatic-recovery-policy";
+import { retryAuthoritativeTelemetryWrite } from "../../src/generation/telemetry-write";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
@@ -70,12 +78,14 @@ import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
 import { acquireTextTranscript } from "../../src/transcription/acquire-text-transcript";
 import {
+  detectLocalGenerationClient,
+  flushLocalGenerationOutbox,
   LocalGenerationRequestError,
-  openClipQuestExtensionSettings,
-  requestExtensionLocalQuiz,
-  subscribeToClipQuestExtension,
+  openLocalGenerationClientSettings,
+  requestLocalQuiz,
+  subscribeToLocalGenerationClient,
   type LocalGenerationProgress,
-} from "../../src/transcription/clipquest-extension";
+} from "../../src/generation/local-generation-client";
 import {
   breakpoints,
   layout,
@@ -96,14 +106,22 @@ function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
-    profile === "concept_first_auto_v5_8"
+    profile === "concept_first_auto_v5_8" ||
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
   );
 }
 
 function isGroundedGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "evidence_grounded_auto_v5_4" ||
-    profile === "concept_first_auto_v5_8"
+    profile === "concept_first_auto_v5_8" ||
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
   );
 }
 
@@ -126,6 +144,7 @@ export default function GenerationScreen() {
   const [runNumber, setRunNumber] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const taskKeyRef = useRef<string | undefined>(undefined);
+  const resumeInFlightRef = useRef(false);
   const [localTranscription, setLocalTranscription] = useState(false);
   const [captionWordCount, setCaptionWordCount] = useState<number>();
   const [videoDurationSeconds, setVideoDurationSeconds] = useState<number>();
@@ -161,19 +180,29 @@ export default function GenerationScreen() {
     [captionWordCount, firstQuestionType, questionCount, videoDurationSeconds],
   );
   const journeySteps = useMemo<JourneyStep[]>(
-    () => [
-      { id: "video", label: t("gettingVideo") },
-      { id: "captions", label: t("preparingAudio") },
-      { id: "model", label: t("downloadingModel") },
-      { id: "transcribing", label: t("transcribing") },
-      { id: "planning", label: t("planningQuestions") },
-      { id: "questions", label: t("creatingQuestions") },
-      { id: "opening", label: t("finalizingQuestions") },
-    ],
+    () =>
+      Platform.OS !== "web"
+        ? [
+            { id: "video", label: t("gettingVideo") },
+            { id: "captions", label: t("checkingCaptions") },
+            { id: "planning", label: t("planningQuestions") },
+            { id: "questions", label: t("creatingQuestions") },
+            { id: "opening", label: t("finalizingQuestions") },
+          ]
+        : [
+            { id: "video", label: t("gettingVideo") },
+            { id: "captions", label: t("preparingAudio") },
+            { id: "model", label: t("downloadingModel") },
+            { id: "transcribing", label: t("transcribing") },
+            { id: "planning", label: t("planningQuestions") },
+            { id: "questions", label: t("creatingQuestions") },
+            { id: "opening", label: t("finalizingQuestions") },
+          ],
     [t],
   );
   const [estimatedProgress, setEstimatedProgressState] = useState(0);
   const [journeyElapsedMs, setJourneyElapsedMs] = useState(0);
+  const [journeyActive, setJourneyActive] = useState(false);
   const estimatedProgressRef = useRef(0);
   const journeyStartedAtRef = useRef(0);
   const finishingPresentationRef = useRef(false);
@@ -194,6 +223,17 @@ export default function GenerationScreen() {
     setEstimatedProgressState(0);
     setJourneyElapsedMs(0);
     setRetryEtaPhase(undefined);
+    setJourneyActive(true);
+  }, []);
+
+  const stopJourney = useCallback(() => {
+    journeyStartedAtRef.current = 0;
+    finishingPresentationRef.current = false;
+    estimatedProgressRef.current = 0;
+    setEstimatedProgressState(0);
+    setJourneyElapsedMs(0);
+    setRetryEtaPhase(undefined);
+    setJourneyActive(false);
   }, []);
 
   useEffect(() => {
@@ -220,7 +260,6 @@ export default function GenerationScreen() {
       publish,
       resolveFirst,
     }: ProgressiveGenerationTaskContext) => {
-      beginJourney();
       if (!session?.user.id) {
         throw new Error("Sign in again before creating a quiz.");
       }
@@ -347,21 +386,55 @@ export default function GenerationScreen() {
         return;
       }
 
-      const rolloutProfile = generationRecord.generationProfile
-        ? {
-            generationProfile: generationRecord.generationProfile,
-          }
-        : await apiRequest(
-            "/api/local-ai/profile",
-            { signal },
-            QuizGenerationProfileResponseSchema,
+      // A generation without a server quiz has no immutable bank contract yet.
+      // Re-read the authenticated assignment so both native and extension
+      // clients enforce the current server-owned version requirement.
+      const rolloutProfile = await apiRequest(
+        "/api/local-ai/profile",
+        { signal },
+        QuizGenerationProfileResponseSchema,
+      );
+      if (rolloutProfile.clientRequirements) {
+        const localClient = await detectLocalGenerationClient();
+        if (!localClient.available) {
+          throw new Error("A compatible local generation client is required.");
+        }
+        const requirement =
+          localClient.kind === "android_app"
+            ? rolloutProfile.clientRequirements.androidApp
+            : localClient.kind === "ios_app"
+              ? rolloutProfile.clientRequirements.androidApp
+              : rolloutProfile.clientRequirements.chromeExtension;
+        if (
+          !localClient.version ||
+          !semanticVersionAtLeast(
+            localClient.version,
+            requirement.minimumVersion,
+          ) ||
+          !localClient.capabilities.includes(requirement.requiredCapability)
+        ) {
+          throw new Error(
+            localClient.kind === "android_app"
+              ? `ClipQuest Android ${requirement.minimumVersion} or newer is required.`
+              : localClient.kind === "ios_app"
+                ? `ClipQuest iOS ${requirement.minimumVersion} or newer is required.`
+                : `ClipQuest Local AI ${requirement.minimumVersion} or newer is required.`,
           );
+        }
+        if (!localClient.configured) {
+          throw new LocalGenerationRequestError(
+            "Add your DeepSeek API key in Local AI settings.",
+            "credential_required",
+          );
+        }
+      }
+      beginJourney();
       await persistRecord({
         state: "generating",
         generationProfile: rolloutProfile.generationProfile,
       });
       const recoverySessionId = Crypto.randomUUID();
-      const imported = await loadImportedVideo(params.videoId);
+      const imported = await loadImportedVideo(session.user.id, params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
       setVideoDurationSeconds(imported.video.durationSeconds || undefined);
       setCaptionWordCount(
@@ -391,6 +464,11 @@ export default function GenerationScreen() {
         captionSourceCategory = textTranscript.captionSourceCategory;
       }
       if (!segments.length) {
+        if (Platform.OS !== "web") {
+          throw new Error(
+            "This native beta requires a public YouTube video with usable captions.",
+          );
+        }
         setLocalTranscription(true);
         const media = await apiRequest(
           "/api/media/resolve",
@@ -402,6 +480,7 @@ export default function GenerationScreen() {
           MediaResolveResponseSchema,
         );
         const result = await transcribeLocally({
+          ownerUserId: session.user.id,
           videoId: imported.video.id,
           mediaUrl: media.mediaUrl,
           durationSeconds: imported.video.durationSeconds,
@@ -492,23 +571,29 @@ export default function GenerationScreen() {
       let lastProgressKey: string | undefined;
       const pendingCallEvents: LocalGenerationCallEvent[] = [];
       let callEventsReady = Boolean(progressiveQuizId);
-      let pendingStartedCall: LocalGenerationCallEvent | undefined;
 
       const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
         if (!progressiveQuizId || !callEventsReady) {
           pendingCallEvents.push(event);
           return;
         }
-        await apiRequest(
-          `/api/quiz-imports/${progressiveQuizId}/calls/${event.generationSessionId}/${event.callIndex}`,
-          {
-            method: "PUT",
-            headers: { "Idempotency-Key": idempotencyKey },
-            body: jsonBody(event),
-            signal,
-          },
-          ExtensionQuizGenerationCallEventResponseSchema,
+        await retryAuthoritativeTelemetryWrite(
+          () =>
+            apiRequest(
+              `/api/quiz-imports/${progressiveQuizId}/calls/${event.generationSessionId}/${event.callIndex}`,
+              {
+                method: "PUT",
+                headers: { "Idempotency-Key": idempotencyKey },
+                body: jsonBody(event),
+                signal,
+              },
+              ExtensionQuizGenerationCallEventResponseSchema,
+            ),
+          signal,
         );
+        // The Worker event is authoritative. Losing the best-effort browser
+        // cursor must not poison this queue and suppress every later call
+        // event after the question uploads have already succeeded.
         await persistRecord({
           nextCallIndex: Math.max(
             generationRecord.nextCallIndex,
@@ -525,16 +610,12 @@ export default function GenerationScreen() {
                 ),
               }
             : {}),
-        });
+        }).catch(() => undefined);
       };
 
       const schedulePendingCallFlush = () => {
         callIngestion = callIngestion.then(async () => {
           callEventsReady = true;
-          if (pendingStartedCall) {
-            await uploadCallEvent(pendingStartedCall);
-            pendingStartedCall = undefined;
-          }
           while (pendingCallEvents.length) {
             await uploadCallEvent(pendingCallEvents.shift()!);
           }
@@ -627,7 +708,12 @@ export default function GenerationScreen() {
                   ...commonRecord,
                   version: 4,
                   generationProfile: rolloutProfile.generationProfile as
-                    "evidence_grounded_auto_v5_4" | "concept_first_auto_v5_8",
+                    | "evidence_grounded_auto_v5_4"
+                    | "concept_first_auto_v5_8"
+                    | "prompt_first_auto_v5_9"
+                    | "prompt_first_auto_v5_10"
+                    | "prompt_first_auto_v5_11"
+                    | "prompt_first_auto_v5_12",
                   recoveryCycle: 0,
                 })
               : await saveGenerationRecord({
@@ -646,31 +732,15 @@ export default function GenerationScreen() {
           if (!callEventsReady) schedulePendingCallFlush();
         });
         void questionIngestion.catch(() => undefined);
+        return questionIngestion;
       };
 
       const enqueueCall = (event: LocalGenerationCallEvent) => {
-        if (
-          "lifecycleState" in event &&
-          event.lifecycleState === "started" &&
-          !progressiveQuizId
-        ) {
-          pendingStartedCall = event;
-          return;
-        }
-        const bufferedStarted =
-          "lifecycleState" in event &&
-          event.lifecycleState !== "started" &&
-          pendingStartedCall?.generationSessionId ===
-            event.generationSessionId &&
-          pendingStartedCall.callIndex === event.callIndex
-            ? pendingStartedCall
-            : undefined;
-        if (bufferedStarted) pendingStartedCall = undefined;
         callIngestion = callIngestion.then(async () => {
-          if (bufferedStarted) await uploadCallEvent(bufferedStarted);
           await uploadCallEvent(event);
         });
         void callIngestion.catch(() => undefined);
+        return callIngestion;
       };
 
       const enqueueRetrying = (detail: LocalGenerationProgress) => {
@@ -687,29 +757,39 @@ export default function GenerationScreen() {
           ) {
             throw new Error("Automatic retry metadata is incomplete.");
           }
-          const response = await apiRequest(
-            `/api/quiz-imports/${progressiveQuizId}/progress`,
-            {
-              method: "PATCH",
-              headers: { "Idempotency-Key": idempotencyKey },
-              body: jsonBody(
-                isAutomaticGenerationProfile(rolloutProfile.generationProfile)
-                  ? {
-                      state: "retrying",
-                      retryOrdinal: detail.retryOrdinal,
-                      ordinalAttempt: detail.ordinalAttempt,
-                      retryKind: detail.retryKind,
-                      retryDelayMs: detail.retryDelayMs,
-                      reasonCode: detail.reasonCode,
-                      recoverySessionId,
-                      recoveryPhase: "preparing",
-                    }
-                  : { state: "retrying" },
+          // Progress is presentation state, not the authoritative model-call
+          // ledger. A conflicting progress snapshot must never poison the
+          // consecutive call-event queue and suppress later retry telemetry.
+          const response = await retryAuthoritativeTelemetryWrite(
+            () =>
+              apiRequest(
+                `/api/quiz-imports/${progressiveQuizId}/progress`,
+                {
+                  method: "PATCH",
+                  headers: { "Idempotency-Key": idempotencyKey },
+                  body: jsonBody(
+                    isAutomaticGenerationProfile(
+                      rolloutProfile.generationProfile,
+                    )
+                      ? {
+                          state: "retrying",
+                          retryOrdinal: detail.retryOrdinal,
+                          ordinalAttempt: detail.ordinalAttempt,
+                          retryKind: detail.retryKind,
+                          retryDelayMs: detail.retryDelayMs,
+                          reasonCode: detail.reasonCode,
+                          recoverySessionId,
+                          recoveryPhase: "preparing",
+                        }
+                      : { state: "retrying" },
+                  ),
+                  signal,
+                },
+                ExtensionQuizProgressiveImportResponseSchema,
               ),
-              signal,
-            },
-            ExtensionQuizProgressiveImportResponseSchema,
-          );
+            signal,
+          ).catch(() => undefined);
+          if (!response) return;
           if (isAutomaticGenerationProfile(rolloutProfile.generationProfile)) {
             await persistRecord({
               state: "retrying",
@@ -717,12 +797,30 @@ export default function GenerationScreen() {
               ordinalAttempt: detail.ordinalAttempt,
               retryKind: detail.retryKind,
               retryDelayMs: detail.retryDelayMs,
+            }).catch(() => undefined);
+          }
+          progressiveQuizId = response.quizId;
+          latestGeneration = response.generation;
+          if (attemptId) {
+            publish({
+              quizId: response.quizId,
+              attemptId,
+              generation: response.generation,
             });
           }
-          await publishStoredState(response);
         });
         void callIngestion.catch(() => undefined);
       };
+
+      const replayed = await flushLocalGenerationOutbox(
+        generationRecord.generationId,
+        enqueueQuestion,
+        enqueueCall,
+      );
+      await Promise.all([questionIngestion, callIngestion]);
+      if (replayed.questions > 0 && progressiveQuizId && attemptId) {
+        return;
+      }
       const stopHeartbeat = startGenerationRecordHeartbeat(
         generationRecord.generationId,
       );
@@ -750,7 +848,7 @@ export default function GenerationScreen() {
       }, 10_000);
 
       try {
-        await requestExtensionLocalQuiz(
+        await requestLocalQuiz(
           context,
           signal,
           (nextStage, _progress, detail) => {
@@ -781,6 +879,10 @@ export default function GenerationScreen() {
         await clearGenerationRecord(generationRecord.generationId);
       } catch (cause) {
         await Promise.allSettled([questionIngestion, callIngestion]);
+        if (Platform.OS !== "web" && signal.aborted) {
+          await persistRecord({ state: "generating" }).catch(() => undefined);
+          throw new TranscriptionPausedError();
+        }
         const reasonCode =
           cause instanceof LocalGenerationRequestError
             ? cause.reasonCode
@@ -899,6 +1001,7 @@ export default function GenerationScreen() {
           setPaused(true);
           return;
         }
+        stopJourney();
         setError(formatGenerationError(cause, t("trustworthyError")));
         setConfigurationRequired(
           cause instanceof LocalGenerationRequestError &&
@@ -915,6 +1018,7 @@ export default function GenerationScreen() {
     params.generationId,
     sessionPending,
     setEstimatedProgress,
+    stopJourney,
     t,
     taskKey,
   ]);
@@ -922,8 +1026,8 @@ export default function GenerationScreen() {
   useEffect(() => {
     if (!configurationRequired) return;
     let restarting = false;
-    return subscribeToClipQuestExtension((extension) => {
-      if (!extension.configured || restarting) return;
+    return subscribeToLocalGenerationClient((client) => {
+      if (!client.available || !client.configured || restarting) return;
       restarting = true;
       void (async () => {
         const current = await loadGenerationRecord(params.generationId);
@@ -967,25 +1071,63 @@ export default function GenerationScreen() {
     if (taskKeyRef.current) cancelProgressiveGenerationTask(taskKeyRef.current);
     setPaused(true);
   };
-  const resumePausedGeneration = () => {
+  const resumePausedGeneration = useCallback(() => {
+    if (resumeInFlightRef.current) return;
+    resumeInFlightRef.current = true;
     void (async () => {
       if (!isUuid(params.generationId)) return;
       const current = await loadGenerationRecord(params.generationId);
-      if (!current || current.acceptedCount > 0) return;
-      await updateGenerationRecord(params.generationId, {
-        generationSessionId: Crypto.randomUUID(),
-        idempotencyKey: Crypto.randomUUID(),
-        nextCallIndex: 0,
-        state: "generating",
-      });
+      if (!current) return;
+      await updateGenerationRecord(
+        params.generationId,
+        current.quizId
+          ? { state: "generating" }
+          : {
+              generationSessionId: Crypto.randomUUID(),
+              idempotencyKey: Crypto.randomUUID(),
+              nextCallIndex: 0,
+              state: "generating",
+            },
+      );
       setPaused(false);
       setError(undefined);
       setConfigurationRequired(false);
       setRunNumber((value) => value + 1);
-    })().catch((cause) => {
-      setError(cause instanceof Error ? cause.message : t("trustworthyError"));
+    })()
+      .catch((cause) => {
+        setError(
+          cause instanceof Error ? cause.message : t("trustworthyError"),
+        );
+      })
+      .finally(() => {
+        resumeInFlightRef.current = false;
+      });
+  }, [params.generationId, t]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        if (taskKeyRef.current) {
+          cancelProgressiveGenerationTask(taskKeyRef.current);
+        }
+        setPaused(true);
+      }
     });
-  };
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== "web" &&
+      paused &&
+      !error &&
+      !configurationRequired &&
+      AppState.currentState === "active"
+    ) {
+      resumePausedGeneration();
+    }
+  }, [configurationRequired, error, paused, resumePausedGeneration]);
   const cancel = async () => {
     if (cancelling) return;
     setCancelling(true);
@@ -1019,7 +1161,7 @@ export default function GenerationScreen() {
               {t("cancel")}
             </PrimaryButton>
           </View>
-          {paused ? (
+          {paused && Platform.OS === "web" ? (
             <View style={styles.footerAction}>
               <PrimaryButton
                 disabled={cancelling}
@@ -1032,11 +1174,15 @@ export default function GenerationScreen() {
             <View style={styles.footerAction}>
               <PrimaryButton
                 disabled={cancelling}
-                onPress={openClipQuestExtensionSettings}
+                onPress={openLocalGenerationClientSettings}
               >
                 {locale === "zh-CN"
-                  ? "打开扩展设置"
-                  : "Open extension settings"}
+                  ? Platform.OS !== "web"
+                    ? "打开本地 AI 设置"
+                    : "打开扩展设置"
+                  : Platform.OS !== "web"
+                    ? "Open Local AI settings"
+                    : "Open extension settings"}
               </PrimaryButton>
             </View>
           ) : localTranscription &&
@@ -1077,13 +1223,17 @@ export default function GenerationScreen() {
             <View style={styles.progressSummary}>
               <View style={styles.progressCopy}>
                 <Text style={[styles.progressLabel, { color: theme.text }]}>
-                  {activeStep.label} · {activeIndex + 1}/{journeySteps.length}
+                  {failed
+                    ? locale === "zh-CN"
+                      ? "本地生成不可用"
+                      : "Local generation unavailable"
+                    : `${activeStep.label} · ${activeIndex + 1}/${journeySteps.length}`}
                 </Text>
                 <FeedbackMotion signal={activeIndex} kind="progress">
                   <Text
                     style={[styles.progressPercent, { color: theme.primary }]}
                   >
-                    {Math.round(estimatedProgress * 100)}%
+                    {failed ? "—" : `${Math.round(estimatedProgress * 100)}%`}
                   </Text>
                 </FeedbackMotion>
               </View>
@@ -1095,21 +1245,33 @@ export default function GenerationScreen() {
               />
               <View style={styles.detailRow}>
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
-                  {t("firstQuestionEta")}
+                  {failed
+                    ? locale === "zh-CN"
+                      ? "状态"
+                      : "Status"
+                    : t("firstQuestionEta")}
                 </Text>
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
-                  {retryEtaPhase && retrySecondsLeft !== undefined
-                    ? formatRetryFirstQuestionRemaining(
-                        retryEtaPhase,
-                        retrySecondsLeft,
-                        locale,
-                      )
-                    : estimatedSecondsLeft > 0
-                      ? formatFirstQuestionRemaining(
-                          estimatedSecondsLeft,
-                          locale,
-                        )
-                      : t("firstQuestionTakingLonger")}
+                  {failed
+                    ? locale === "zh-CN"
+                      ? "第一题不可用"
+                      : "Question 1 unavailable"
+                    : !journeyActive
+                      ? locale === "zh-CN"
+                        ? "正在检查本地生成环境"
+                        : "Checking local generation"
+                      : retryEtaPhase && retrySecondsLeft !== undefined
+                        ? formatRetryFirstQuestionRemaining(
+                            retryEtaPhase,
+                            retrySecondsLeft,
+                            locale,
+                          )
+                        : estimatedSecondsLeft > 0
+                          ? formatFirstQuestionRemaining(
+                              estimatedSecondsLeft,
+                              locale,
+                            )
+                          : t("firstQuestionTakingLonger")}
                 </Text>
               </View>
               {retryEtaPhase ? (
@@ -1133,7 +1295,11 @@ export default function GenerationScreen() {
                 <VoxelIcon name="privacy" size={27} color={theme.primary} />
               </View>
               <Text style={[styles.privacyText, { color: theme.textMuted }]}>
-                {t("privateTranscription")}
+                {t(
+                  Platform.OS !== "web"
+                    ? "privateTranscriptionAndroid"
+                    : "privateTranscription",
+                )}
               </Text>
             </View>
           </Surface>
@@ -1216,6 +1382,24 @@ function LinearJourneyBar({
 function formatGenerationError(cause: unknown, fallback: string): string {
   if (!(cause instanceof Error)) return fallback;
   return cause.message;
+}
+
+function semanticVersionAtLeast(actual: string, minimum: string): boolean {
+  const left = actual.split(".").map(Number);
+  const right = minimum.split(".").map(Number);
+  if (
+    left.length !== 3 ||
+    right.length !== 3 ||
+    [...left, ...right].some((part) => !Number.isInteger(part) || part < 0)
+  ) {
+    return false;
+  }
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] !== right[index]) {
+      return left[index]! > right[index]!;
+    }
+  }
+  return true;
 }
 
 function isUuid(value: string | undefined): value is string {

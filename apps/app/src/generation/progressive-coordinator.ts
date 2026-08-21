@@ -106,6 +106,11 @@ export function cancelProgressiveGenerationTask(key: string): void {
   tasks.get(key)?.cancel();
 }
 
+export function pauseAllProgressiveGenerationTasks(): void {
+  tasks.forEach((task) => task.cancel());
+  recoveryTasks.forEach((task) => task.cancel());
+}
+
 export function getOrStartProgressiveRecoveryTask(
   key: string,
   runner: (signal: AbortSignal) => Promise<void>,

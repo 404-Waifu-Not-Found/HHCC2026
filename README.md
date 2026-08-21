@@ -96,7 +96,7 @@ ClipQuest page ───── ordered singleton questions ─────► st
 ```
 
 > [!IMPORTANT]
-> Google or YouTube account access is not required. The web experience does require the unpacked Chrome extension and a learner-supplied DeepSeek API key. Private, deleted, geo-restricted, active-live, captionless-without-a-working-local-transcription-path, and otherwise unplayable YouTube videos fail explicitly; ClipQuest does not manufacture fallback questions.
+> Google or YouTube account access is not required. The web experience requires the unpacked Chrome extension; Android runs the same local quiz engine inside the native app. Both use a learner-supplied DeepSeek API key. The Android 0.2.0 beta accepts only public YouTube videos with usable text captions and never downloads media or invokes Whisper. Unsupported sources fail explicitly; ClipQuest does not manufacture fallback questions.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -104,15 +104,23 @@ ClipQuest page ───── ordered singleton questions ─────► st
 
 ## 🚦 Current release status
 
-As of **2026-08-13**, this source tree implements concept-first automatic-recovery progressive extension-local quiz streaming. Extension 0.8.8 and prompt v5.8 are deployed in canary mode; general rollout remains blocked until both official-site ten-video matrices pass. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc); a local commit is not evidence that production has been deployed.
+As of **2026-08-16**, this source tree adds the native Android private-beta client while preserving the current prompt-first web-generation contracts. Android 0.2.0 and Chrome extension 0.8.18 consume one shared local quiz engine. This is source and local-emulator evidence, not proof of an EAS-signed private APK or completed physical-device acceptance. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc).
 
-- Canary banks use extension `0.8.8`, result protocol `9`, capability `question-stream-v6`, pipeline `9`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.7`, and progressive import `v7`.
-- Extension `0.8.7` retains isolated protocol-8/v5.4-v5.6 and protocol-5/v5.0-v5.1 continuation paths, while the app and API continue reading protocol-6/v5.2, protocol-7/v5.3, completed pipeline-7, and existing pipeline-9 data without mixing generation metadata.
-- Backend quiz generation disabled; extension generation required.
+- Android uses package `cc.ccwu.clipquest`, version `0.2.0` / code `2`, minimum API 29, and compile/target API 36. The internal EAS profile produces an APK with Expo Updates disabled.
+- Chrome and Android share prompt construction, question planning, streamed DeepSeek parsing, structural validation, option mapping, retry policy, and serialization through `@clipquest/local-quiz-engine`.
+- Android reports `android_app` client metadata with capability `question-stream-v7`; Chrome 0.8.18 reports `chrome_extension`, while 0.8.17 remains the minimum accepted Chrome version because the generation protocol is unchanged.
+- Android stores a successfully tested DeepSeek key in user-scoped SecureStore, generates only in the foreground, checkpoints validated uploads/events, and automatically resumes the same bank from the authoritative missing ordinal.
+- Android accepts pasted and Sharesheet YouTube links, requires usable captions, performs no media-resolution or native transcription call, renders math with local KaTeX MathML, and supports opt-in review notifications.
+- The 2026-08-16 local gate passed contracts, API, app, shared-engine, extension, Playwright, TypeScript, lint, formatting, Android Metro export, web build, asset verification, Worker dry run, and API 29/API 36 emulator launches. EAS authentication/project/signing, FCM, verified App Links, physical-device acceptance, and the ten-video Android matrix remain open release blockers. See the [Android guide](./docs/ANDROID-BETA.md) and [dated QA report](./docs/QA-ANDROID-BETA-2026-08-16.md).
+
+- The current supported prompt-first contract is result protocol `10`, capability `question-stream-v7`, pipeline `9`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, progressive import `v8`, and profile `prompt_first_auto_v5_12` when that rollout is assigned.
+- The checked-in rollout configuration keeps v5.12 disabled and v5.11 enabled by default. `/api/local-ai/profile` is authoritative for each authenticated learner; an advertised supported version is not proof that a new bank received it.
+- Extension `0.8.18` and Android `0.2.0` share the current engine. Chrome `0.8.17` remains accepted, and incomplete protocol-5 through protocol-10 banks retain their original prompt, validator, profile, model, and client-integrity rules.
+- Backend quiz generation is disabled. Web generation requires the Chrome extension; Android generation runs inside the native app.
 - No Worker generation Queue binding and no generated-question fallback path.
 - Every planned question uses one sequential singleton primary call. Accepted prefixes are never regenerated, and a recovery begins at the first authoritative missing ordinal.
-- Bounded automatic repair allows at most two content retries or four transport retries per ordinal in each recovery cycle. New v5.7 and protocol-5 compatibility recovery use a 12-extra-call lifetime ceiling, at most three recovery cycles, and 15 active recovery minutes; older v5.4-v5.6 banks keep their original compatible limits. Credential and billing failures require configuration instead of blind retries; there is no learner-facing continuation control.
-- Every v5.7 question carries a locally verified source-evidence excerpt and semantic claim key. Strict excerpt selection excludes score-zero and administrative material and fails with `non_instructional_source` before DeepSeek is called when no eligible instructional evidence exists. Every learner-visible field is rejected before storage when it contains source framing, course logistics, presentation metadata, or unsupported low-value recall; only the missing singleton is repaired. New questions are never cosmetically stripped into compliance. A grammar-safe one-pass presentation guard exists only for older stored prompts and preserves possessives such as `lesson's`, `video’s`, and `lecturer's` intact.
+- The v5.9 path has no editorial repair mode and no learner continuation control. A structurally gradeable singleton is accepted immediately. Only transport/service failures and unusable wire or grading structures can trigger automatic retries: up to four transport retries or two structural retries per ordinal, bounded by the bank-wide recovery ceiling. Credential and billing failures require configuration instead of blind retries.
+- Current prompt-first generation receives one preselected answer-bearing instructional window, one exact type-specific schema, and accepted question/concept summaries. Runtime validation is limited to storage and grading integrity; editorial quality is audited in tests and release QA rather than through model retry loops. Existing banks retain their original validators and recovery semantics.
 - Prose short answers use one to three independent required ideas and three to six complete full-credit variants. The deterministic Worker grader preserves its 67% alternative threshold while normalizing pronouns, safe acronyms, and conservative signal-transfer/processing aliases; formula answers retain structural grading.
 - Question 1 opens the planned 5-, 10-, or 15-question attempt while later questions continue uploading in order.
 - Mixed multiple-choice, true/false, and short-answer plans are seeded, balanced, and bounded to avoid runs longer than two where the selection permits it.
@@ -288,28 +296,37 @@ The primary product runtime is TypeScript/React Native, the browser extension is
 
 ## 🔗 Architecture and module guide
 
-| Layer                | Technology                                                       | Responsibility                                                                                                      |
-| -------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Web/native app       | Expo 57, Expo Router, React 19, React Native 0.86                | Authentication, link import, extension detection, generation handoff, lessons, feedback, mastery, and theming       |
-| Browser extension    | Chrome Manifest V3, JavaScript                                   | YouTube captions, local streamed DeepSeek JSON, incremental validation, retries, and canonical option randomization |
-| Edge API             | Cloudflare Workers, Hono, scheduled triggers                     | Better Auth, ordered storage-only question imports, grading, availability, review scheduling, and static assets     |
-| Data and assets      | D1, KV, private R2                                               | Accounts, videos, generating/passed banks, attempts, mastery, rate limits, thumbnails, and model files              |
-| AI and transcription | DeepSeek V4 Flash, Transformers.js, WebGPU/WASM, `whisper.rn`    | Extension-local quiz generation and on-device speech recognition                                                    |
-| Shared contracts     | TypeScript, Zod                                                  | Versioned page protocol, quiz schemas, API requests, and server validation                                          |
-| Quality and delivery | Vitest, Node test runner, Playwright, ESLint, Prettier, Wrangler | Contract tests, browser journeys, static checks, builds, and deployment                                             |
-| Visual identity      | Semantic tokens, typed voxel registry, Sharp                     | Shared light/dark themes and deterministic web, extension, iOS, Android, and splash assets                          |
+| Layer                | Technology                                                       | Responsibility                                                                                                       |
+| -------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Web/native app       | Expo 57, Expo Router, React 19, React Native 0.86                | Authentication, paste/share import, Android-local generation, lessons, feedback, mastery, administration, and themes |
+| Browser extension    | Chrome Manifest V3, JavaScript                                   | Web caption access, local streamed DeepSeek generation, retries, and canonical option randomization                  |
+| Edge API             | Cloudflare Workers, Hono, scheduled triggers                     | Better Auth, ordered storage-only question imports, grading, availability, review scheduling, and static assets      |
+| Data and assets      | D1, KV, private R2                                               | Accounts, videos, generating/passed banks, attempts, mastery, rate limits, thumbnails, and model files               |
+| Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash, Expo fetch                 | Platform-neutral prompts, plans, SSE parsing, structural validation, retries, shuffling, and serialization           |
+| Transcription        | Transformers.js, WebGPU/WASM, `whisper.rn`                       | Existing web/iOS-capable transcription sources; excluded from the Android 0.2.0 caption-only APK                     |
+| Shared contracts     | TypeScript, Zod                                                  | Versioned page protocol, quiz schemas, API requests, and server validation                                           |
+| Quality and delivery | Vitest, Node test runner, Playwright, ESLint, Prettier, Wrangler | Contract tests, browser journeys, static checks, builds, and deployment                                              |
+| Visual identity      | Semantic tokens, typed voxel registry, Sharp                     | Shared light/dark themes and deterministic web, extension, iOS, Android, and splash assets                           |
 
 ### [Expo application](./apps/app/)
 
 The user-facing web and native application. Expo Router owns authentication, home, library, settings, video setup, generation, lesson, completion, and not-found routes. The web build also packages the extension zip into its public output.
 
-Best starting points: [routes](./apps/app/app/) · [components](./apps/app/src/components/) · [extension bridge](./apps/app/src/transcription/clipquest-extension.ts) · [theme tokens](./apps/app/src/theme/tokens.ts)
+Best starting points: [routes](./apps/app/app/) · [components](./apps/app/src/components/) · [local generation adapters](./apps/app/src/generation/) · [theme tokens](./apps/app/src/theme/tokens.ts)
 
 ### [Chrome extension](./apps/extension/)
 
 The local caption and quiz engine. The background service worker coordinates YouTube tabs, the ClipQuest page bridge, streamed DeepSeek calls, per-question validation, bounded automatic recovery, downloads, cancellation, and progress. Legacy continuation metadata remains readable for older banks, but the current learner flow has no continuation button. The API key never enters the page bridge.
 
 Best starting points: [local generator](./apps/extension/src/local-generator.js) · [caption text normalization](./apps/extension/src/caption-text.js) · [background worker](./apps/extension/src/background.js) · [manifest](./apps/extension/manifest.json)
+
+### [Shared local quiz engine](./packages/local-quiz-engine/)
+
+The platform-neutral local generation core consumed by Chrome and Android. Platform storage, browser tabs/ports, SecureStore, and HTTP transports remain injected adapters. The package owns no credentials and has no Worker dependency.
+
+### Android private beta
+
+Android 0.2.0 uses Expo SecureStore, Expo fetch streaming, a bounded AsyncStorage outbox that never contains secrets or captions, a native `ACTION_SEND` config plugin, locked-down local KaTeX rendering, and opt-in Expo notifications. See the [build, privacy, EAS, and device guide](./docs/ANDROID-BETA.md).
 
 ### [Cloudflare Worker API](./apps/api/)
 
@@ -338,7 +355,8 @@ ClipQuest/
 │  ├─ extension/               # Manifest V3 captions and local-AI extension
 │  └─ api/                     # Cloudflare Worker, bindings, and migrations
 ├─ packages/
-│  └─ contracts/               # Shared Zod API and quiz schemas
+│  ├─ contracts/               # Shared Zod API and quiz schemas
+│  └─ local-quiz-engine/       # Chrome/Android prompt, parser, validation, retry core
 ├─ modules/
 │  └─ local-audio-decoder/     # Native PCM decoding module
 ├─ e2e/                        # Playwright browser journeys
@@ -391,7 +409,7 @@ Then:
 5. Pin **ClipQuest Local AI**, open its popup, enter the DeepSeek key, and choose **Save & test**.
 6. Reload the ClipQuest page and choose **Check again** if the install gate is still open.
 
-The distributable archive is written to `apps/extension/dist/clipquest-captions-extension.zip` and is also served by the built website at `/clipquest-captions-extension.zip`.
+The distributable archive is written to `apps/extension/dist/clipquest-captions-extension.zip`, copied to the tracked release asset at `apps/app/public/clipquest-captions-extension.zip`, and served by the built website at `/clipquest-captions-extension.zip`. The tracked archive ensures the current unpacked-extension package is present in a fresh checkout as well as in the deployed Worker assets.
 
 ### Local Worker variables
 
@@ -501,15 +519,16 @@ After this source revision is deployed, expected health invariants include pipel
 
 ## 🛡️ Privacy and security boundary
 
-- The learner's DeepSeek key is stored only in `chrome.storage.local` and is sent only from the extension to `https://api.deepseek.com`. ClipQuest's page and Worker never receive it.
-- Caption segments and normalized plain text remain browser-side during extension-local generation. Progressive import receives only video/session settings, bounded generation metadata, and one validated question at a time.
-- Evidence-grounded automatic generation uses result protocol `8`, request IDs, extension-owned ports, exact-origin checks, payload bounds, cancellation, and timeouts. Extension `0.8.7` must advertise `question-stream-v5`; protocol-8/v5.4-v5.6 and protocol-5/v5.0-v5.1 remain extension continuation paths, while the app and API keep older completed data readable. A disabled rollout can still assign a compatibility profile to a new bank, as production did during the 2026-08-11 matrix. The API key is never part of any protocol.
+- On web, the learner's DeepSeek key is stored only in `chrome.storage.local`. On Android, it is stored under the signed-in user in Android Keystore-backed Expo SecureStore. Each client sends the key only to `https://api.deepseek.com`; ClipQuest's page and Worker never receive it.
+- Caption segments and normalized text remain inside the local Chrome/Android generation client. Progressive import receives only video/session settings, verified aggregate source metadata, bounded generation metadata, and one validated question at a time. Android's bounded, account-scoped outbox contains only validated questions and safe events—not a key, caption text, prompt, or model body. Account changes discard ambiguous legacy caption/import state instead of attaching it to a new learner.
+- Current generation uses result protocol `10`, client metadata, request IDs, exact-origin or authenticated-native boundaries, payload bounds, cancellation, and timeouts. Chrome and Android advertise `question-stream-v7`; existing banks keep their original compatibility contracts. The API key is never part of any ClipQuest protocol.
 - The Worker performs no backend quiz generation and returns no generated-looking fallback questions. Invalid, incomplete, wrong-type, or malformed extension output fails closed.
 - Multiple-choice option order is securely randomized before import, then randomized again whenever a learner view is activated. Display indexes map back to canonical indexes before submission; True/False order is unchanged.
 - D1 queries and R2/KV objects are scoped to authenticated users. Progressive imports require ownership, a UUID idempotency key, rate limits, strict pipeline metadata, and an exact next ordinal. Generating banks cannot enter Library review or complete an attempt early.
-- Pipeline-9 short answers are graded deterministically by the authenticated Worker from the bounded stored rubric, without a model call. Legacy pipeline-7 attempts may still use the separate Worker-held grader for backward compatibility; neither path receives the learner's extension key.
+- Short answers are graded deterministically by the authenticated Worker from the bounded stored rubric, without sending the learner response or transcript to a model. Answer writes and mastery updates are guarded by the active grading reservation, and automatic generation appends require a live owner lease.
 - Operations roles are stored server-side. Privileged changes require authorization and write audit records; generic Better Auth admin endpoints are blocked.
 - YouTube OAuth, watch-history imports, subscriptions, playlists, liked videos, and personalized feeds are outside the core flow and disabled by default.
+- Android 0.2.0 supports only public videos with usable text captions. Its build excludes `whisper.rn` and the local audio decoder from Android autolinking, and its source path rejects missing captions before `/api/media/resolve` or DeepSeek can run.
 - Do not commit `.env`, `.dev.vars`, API keys, credentials, private transcripts, model caches, exported quiz answers, or QA-user secrets.
 
 > [!WARNING]

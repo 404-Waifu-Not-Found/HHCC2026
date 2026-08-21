@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
   GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
+  CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
+  CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT,
   authoritativeRecoveryFailureCode,
   groundedRecoveryCooldownMs,
   groundedRecoveryIsExhausted,
@@ -42,6 +44,26 @@ describe("grounded automatic recovery policy", () => {
     ).toBe(true);
   });
 
+  it("uses the high-stability automatic-only budget for concept-first banks", () => {
+    expect(CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES).toBe(48);
+    expect(CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT).toBe(24);
+    expect(
+      groundedRecoveryIsExhausted({
+        reasonCode: "recovery_budget_exhausted",
+        automaticRetryCount: 12,
+        ordinalAttempt: 8,
+        strictBudget: true,
+      }),
+    ).toBe(false);
+    expect(
+      groundedRecoveryIsExhausted({
+        reasonCode: "recovery_budget_exhausted",
+        automaticRetryCount: 48,
+        strictBudget: true,
+      }),
+    ).toBe(true);
+  });
+
   it("preserves the newest model outcome when an incomplete bank ends", () => {
     expect(
       authoritativeRecoveryFailureCode({
@@ -56,8 +78,6 @@ describe("grounded automatic recovery policy", () => {
         latestModelFailureReason: "duplicate_question",
       }),
     ).toBe("stream_idle_timeout");
-    expect(authoritativeRecoveryFailureCode({})).toBe(
-      "local_state_conflict",
-    );
+    expect(authoritativeRecoveryFailureCode({})).toBe("local_state_conflict");
   });
 });

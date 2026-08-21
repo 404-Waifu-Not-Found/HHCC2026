@@ -30,7 +30,11 @@ function automaticGenerationContext(context) {
   return (
     (context?.generationProfile === "stable_auto_recovery_v5_3" ||
       context?.generationProfile === "evidence_grounded_auto_v5_4" ||
-      context?.generationProfile === "concept_first_auto_v5_8") &&
+      context?.generationProfile === "concept_first_auto_v5_8" ||
+      context?.generationProfile === "prompt_first_auto_v5_9" ||
+      context?.generationProfile === "prompt_first_auto_v5_10" ||
+      context?.generationProfile === "prompt_first_auto_v5_11" ||
+      context?.generationProfile === "prompt_first_auto_v5_12") &&
     typeof context.generationId === "string" &&
     typeof context.generationSessionId === "string" &&
     typeof context.recoverySessionId === "string"
@@ -584,11 +588,16 @@ chrome.runtime.onConnect.addListener((port) => {
           });
         };
         const generationContext = message.context;
+        const client = {
+          kind: "chrome_extension",
+          version: chrome.runtime.getManifest().version,
+          capability: "question-stream-v7",
+        };
         const question = async (result) => {
           const outgoing = {
             type: "question",
             requestId,
-            result,
+            result: { ...result, client },
           };
           await appendGenerationOutbox(generationContext, outgoing);
           post(outgoing);
@@ -597,7 +606,7 @@ chrome.runtime.onConnect.addListener((port) => {
           const outgoing = {
             type: "call",
             requestId,
-            event,
+            event: { ...event, client },
           };
           await appendGenerationOutbox(generationContext, outgoing);
           post(outgoing);
@@ -630,7 +639,17 @@ chrome.runtime.onConnect.addListener((port) => {
         const outgoing = {
           type: "result",
           requestId,
-          response: { ok: true, result },
+          response: {
+            ok: true,
+            result: {
+              ...result,
+              client: {
+                kind: "chrome_extension",
+                version: chrome.runtime.getManifest().version,
+                capability: "question-stream-v7",
+              },
+            },
+          },
         };
         await appendGenerationOutbox(message.context, outgoing);
         post(outgoing);

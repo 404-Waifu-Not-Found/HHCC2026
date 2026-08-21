@@ -81,8 +81,12 @@ describe("ClipQuest motion system", () => {
       ]);
 
     expect(motionSource).toContain("scaleX: value.value");
-    expect(motionSource).toContain('Platform.OS === "web"');
+    expect(motionSource).toContain("<View {...viewProps}");
     expect(motionSource).toContain("state.pressed ? pressScale : 1");
+    expect(motionSource).not.toContain(
+      "Animated.createAnimatedComponent(Pressable)",
+    );
+    expect(motionSource).toContain("<Pressable");
     expect(progressSource).toContain("MotionProgressFill");
     expect(progressSource).not.toContain('transitionProperty: "width"');
     expect(settingsSource).toContain("isReduceMotionEnabled");

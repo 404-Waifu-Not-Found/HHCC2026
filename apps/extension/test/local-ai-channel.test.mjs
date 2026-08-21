@@ -20,7 +20,10 @@ const bridge = await readFile(
   "utf8",
 );
 const generator = await readFile(
-  new URL("../src/local-generator.js", import.meta.url),
+  new URL(
+    "../../../packages/local-quiz-engine/src/local-generator.js",
+    import.meta.url,
+  ),
   "utf8",
 );
 const popup = await readFile(
@@ -130,26 +133,29 @@ test("website privileges are bound to exact ClipQuest origins", () => {
   );
   assert.equal(
     isClipQuestPageOrigin("http://localhost:8081/create/video"),
-    true,
+    false,
   );
-  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8081/"), true);
-  assert.equal(isClipQuestPageOrigin("http://localhost:19006/"), true);
-  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:19006/"), true);
+  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8081/"), false);
+  assert.equal(isClipQuestPageOrigin("http://localhost:19006/"), false);
+  assert.equal(isClipQuestPageOrigin("http://127.0.0.1:19006/"), false);
   assert.equal(isClipQuestPageOrigin("http://localhost:3000/"), false);
   assert.equal(isClipQuestPageOrigin("http://127.0.0.1:8787/"), false);
   assert.equal(
     isClipQuestPageOrigin("https://clipquest.ccwu.cc.evil.test/"),
     false,
   );
-  assert.deepEqual(
-    [...CLIPQUEST_PAGE_ORIGINS],
-    [
-      "https://clipquest.ccwu.cc",
-      "http://localhost:8081",
-      "http://127.0.0.1:8081",
-      "http://localhost:19006",
-      "http://127.0.0.1:19006",
-    ],
+  assert.deepEqual([...CLIPQUEST_PAGE_ORIGINS], ["https://clipquest.ccwu.cc"]);
+  assert.equal(
+    manifest.host_permissions.some((entry) => entry.includes("localhost")),
+    false,
+  );
+  assert.equal(
+    manifest.content_scripts.some((script) =>
+      script.matches.some(
+        (entry) => entry.includes("localhost") || entry.includes("127.0.0.1"),
+      ),
+    ),
+    false,
   );
 });
 
@@ -191,7 +197,7 @@ test("release ZIPs normalize metadata for reproducible matching artifacts", () =
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.8");
+  assert.equal(manifest.version, "0.8.18");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -206,7 +212,11 @@ test("the popup exposes only DeepSeek configuration", () => {
   assert.match(background, /captionsToPlainText/);
 });
 
-test("release 0.8.8 uses prompt v5.8 and retains grounded compatibility", () => {
+test("release 0.8.18 uses prompt-first v5.12 and the gradeability validator", () => {
+  assert.match(generator, /quiz-local-json-stream-v5\.12/);
+  assert.match(generator, /quiz-local-json-stream-v5\.11/);
+  assert.match(generator, /quiz-local-json-stream-v5\.10/);
+  assert.match(generator, /quiz-local-json-stream-v5\.9/);
   assert.match(generator, /quiz-local-json-stream-v5\.8/);
   assert.match(generator, /quiz-local-json-stream-v5\.7/);
   assert.match(generator, /quiz-local-json-stream-v5\.6/);
@@ -216,8 +226,10 @@ test("release 0.8.8 uses prompt v5.8 and retains grounded compatibility", () => 
   assert.match(generator, /quiz-local-json-stream-v5\.2/);
   assert.match(generator, /standalone canonical formula/);
   assert.match(generator, /notation variants/);
+  assert.match(generator, /validator-minimal-gradeability-v5\.3/);
   assert.match(bridge, /question-stream-v5/);
   assert.match(bridge, /question-stream-v6/);
+  assert.match(bridge, /question-stream-v7/);
 });
 
 test("retry delays honor backoff and Retry-After within a safe bound", () => {
@@ -427,7 +439,8 @@ test("choice order uses unbiased random shuffling and preserves every answer", (
     positionCounts[question.answerIndex] += 1;
   });
   assert.ok(Math.max(...positionCounts) - Math.min(...positionCounts) <= 1);
-  assert.match(generator, /crypto\.getRandomValues/);
+  assert.match(generator, /cryptoImpl\.getRandomValues/);
+  assert.match(generator, /rawInput\?\.cryptoImpl \?\? globalThis\.crypto/);
   assert.doesNotMatch(generator, /Math\.random/);
 });
 

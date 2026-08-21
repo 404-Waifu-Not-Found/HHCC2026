@@ -1,9 +1,9 @@
 import type { PropsWithChildren } from "react";
 import { useEffect } from "react";
 import {
-  Platform,
   Pressable,
   StyleSheet,
+  View,
   type PressableProps,
   type PressableStateCallbackType,
   type StyleProp,
@@ -115,22 +115,35 @@ export function MotionView({
   }
 >) {
   const { reduceMotion } = useSettings();
+
+  // A route must never depend on an animation wrapper to become visible.
+  // Reanimated can retain an interrupted entering style when reduced motion is
+  // toggled while a screen is mounted, so render the accessible state as a
+  // normal View.
+  if (reduceMotion) {
+    return (
+      <View {...viewProps} testID={testID} style={style}>
+        {children}
+      </View>
+    );
+  }
+
   return (
     <Animated.View
       {...viewProps}
       testID={testID}
       entering={
-        reduceMotion || preset === false
+        preset === false
           ? undefined
           : configure(entrance(preset), duration, delay, motion.easing.enter)
       }
       exiting={
-        reduceMotion || !exiting
+        !exiting
           ? undefined
           : configure(exit(exitPreset), motion.fast, 0, motion.easing.exit)
       }
       layout={
-        reduceMotion || !layout
+        !layout
           ? undefined
           : LinearTransition.duration(motion.standard).easing(
               easing(motion.easing.standard),
@@ -167,8 +180,6 @@ export function StaggerItem({
   );
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export function MotionPressable({
   children,
   disabled,
@@ -183,69 +194,30 @@ export function MotionPressable({
   pressDepth?: number;
 }) {
   const { reduceMotion } = useSettings();
-  const pressed = useSharedValue(0);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: pressed.value * pressDepth },
-      { scale: 1 - pressed.value * (1 - pressScale) },
-    ],
-  }));
-
-  const handlePressIn: NonNullable<PressableProps["onPressIn"]> = (event) => {
-    pressed.value = reduceMotion
-      ? 0
-      : withTiming(1, {
-          duration: motion.quick,
-          easing: easing(motion.easing.standard),
-        });
-    onPressIn?.(event);
-  };
-
-  const handlePressOut: NonNullable<PressableProps["onPressOut"]> = (event) => {
-    pressed.value = reduceMotion ? 0 : withSpring(0, motion.spring.responsive);
-    onPressOut?.(event);
-  };
-
-  // Reanimated's web wrapper currently drops Pressable callback styles. Those
-  // callbacks carry each control's hover, focus, pressed, and theme treatment,
-  // so use the native Pressable on web and reproduce the transform feedback in
-  // its resolved style. Native platforms retain the worklet-driven animation.
-  if (Platform.OS === "web") {
-    return (
-      <Pressable
-        {...props}
-        disabled={disabled}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={(state: PressableStateCallbackType) => [
-          typeof style === "function" ? style(state) : style,
-          !disabled &&
-            !reduceMotion && {
-              transform: [
-                { translateY: state.pressed ? pressDepth : 0 },
-                { scale: state.pressed ? pressScale : 1 },
-              ],
-            },
-        ]}
-      >
-        {children}
-      </Pressable>
-    );
-  }
-
+  // Reanimated wrappers can drop callback-resolved Pressable styles on some
+  // native combinations. Those callbacks carry the actual
+  // button surface, border, selected state, and focus treatment, so losing them
+  // makes controls look absent. Keep Pressable authoritative everywhere and
+  // apply lightweight transform feedback after its state resolves.
   return (
-    <AnimatedPressable
+    <Pressable
       {...props}
       disabled={disabled}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       style={(state: PressableStateCallbackType) => [
         typeof style === "function" ? style(state) : style,
-        !disabled && animatedStyle,
+        !disabled &&
+          !reduceMotion && {
+            transform: [
+              { translateY: state.pressed ? pressDepth : 0 },
+              { scale: state.pressed ? pressScale : 1 },
+            ],
+          },
       ]}
     >
       {children}
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 

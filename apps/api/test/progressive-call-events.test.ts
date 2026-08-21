@@ -330,7 +330,7 @@ function createConceptFirstDatabase(timestamp = Date.now()) {
     importVersion: "extension-progressive-import-v7",
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
-    validatorVersion: "validator-local-progressive-v4.7",
+    validatorVersion: "validator-local-progressive-v4.12",
     generationProfile: "concept_first_auto_v5_8",
     promptFingerprint: "e".repeat(64),
     sourceSelection: {
@@ -344,6 +344,30 @@ function createConceptFirstDatabase(timestamp = Date.now()) {
   db.sqlite
     .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
     .run(JSON.stringify(conceptFirst), QUIZ_ID);
+  return db;
+}
+
+function createPromptFirstDatabase(timestamp = Date.now()) {
+  const db = createAutomaticDatabase("generating", timestamp);
+  const promptFirst = {
+    ...automaticSummary("generating", timestamp),
+    importVersion: "extension-progressive-import-v8",
+    resultProtocolVersion: 10,
+    promptVersion: "quiz-local-json-stream-v5.9",
+    validatorVersion: "validator-minimal-structural-v5.0",
+    generationProfile: "prompt_first_auto_v5_9",
+    promptFingerprint: "f".repeat(64),
+    sourceSelection: {
+      sentenceCount: 10,
+      excludedSentenceCount: 1,
+      candidateWindowCount: 6,
+      selectedWindowCount: 5,
+      focusWordCount: 120,
+    },
+  };
+  db.sqlite
+    .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+    .run(JSON.stringify(promptFirst), QUIZ_ID);
   return db;
 }
 
@@ -475,6 +499,40 @@ function conceptFirstLifecycleEvent(
   const terminal = lifecycleState !== "started";
   return {
     protocolVersion: 9 as const,
+    purpose: "generation" as const,
+    lifecycleState,
+    generationSessionId: SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    callIndex: 0,
+    startIndex: 0,
+    ordinalAttempt: 1,
+    requestedCount: 1 as const,
+    acceptedCount: terminal ? (1 as const) : (0 as const),
+    classification: "primary" as const,
+    retryDelayMs: 0,
+    usageComplete: false,
+    ...(terminal ? { outcome: "complete" as const, elapsedMs: 2_000 } : {}),
+    ...overrides,
+  };
+}
+
+function promptFirstLifecycleEvent(
+  lifecycleState: "started" | "completed" | "abandoned",
+  overrides: Partial<{
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+    acceptedCount: 0 | 1;
+    classification: "primary" | "automatic_retry";
+    retryKind: "transport" | "structural";
+    outcome: LocalGenerationCallOutcome;
+    retryDelayMs: number;
+    elapsedMs: number;
+  }> = {},
+) {
+  const terminal = lifecycleState !== "started";
+  return {
+    protocolVersion: 10 as const,
     purpose: "generation" as const,
     lifecycleState,
     generationSessionId: SESSION_ID,
@@ -951,6 +1009,95 @@ describe("protocol-7 automatic recovery call events", () => {
     });
   });
 
+  it("allows four content retries for concept-first v5.8", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("completed", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "schema_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    for (let retry = 1; retry <= 4; retry += 1) {
+      expect(
+        (
+          await putCall(
+            app,
+            env,
+            conceptFirstLifecycleEvent("started", {
+              callIndex: retry + 1,
+              startIndex: 1,
+              ordinalAttempt: retry + 1,
+              acceptedCount: 0,
+              classification: "automatic_retry",
+              retryKind: "content_repair",
+            }),
+          )
+        ).status,
+      ).toBe(201);
+      expect(
+        (
+          await putCall(
+            app,
+            env,
+            conceptFirstLifecycleEvent("completed", {
+              callIndex: retry + 1,
+              startIndex: 1,
+              ordinalAttempt: retry + 1,
+              acceptedCount: 0,
+              classification: "automatic_retry",
+              retryKind: "content_repair",
+              outcome: "schema_invalid",
+            }),
+          )
+        ).status,
+      ).toBe(200);
+    }
+    const exhausted = await putCall(
+      app,
+      env,
+      conceptFirstLifecycleEvent("started", {
+        callIndex: 6,
+        startIndex: 1,
+        ordinalAttempt: 5,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+      }),
+    );
+    expect(exhausted.status).toBe(409);
+    expect(await exhausted.json()).toMatchObject({
+      error: { code: "automatic_retry_ordinal_budget_exceeded" },
+    });
+  });
+
   it("renews one recovery lease and permits takeover only after expiry", async () => {
     const db = createAutomaticDatabase("recovering");
     const { app, env } = testApp(db);
@@ -1170,6 +1317,43 @@ describe("protocol-8 evidence-grounded call events", () => {
       nextRecoveryAt: Date.parse(nextRecoveryAt),
     });
     expect(stored.lease_expires_at).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("does not release another recovery session's active lease", async () => {
+    const db = createGroundedDatabase();
+    const original = db.sqlite
+      .prepare(
+        "SELECT lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+      )
+      .get(QUIZ_ID) as { lease_expires_at: number };
+    const { app, env } = testApp(db);
+    const response = await app.request(
+      `/imports/${QUIZ_ID}/progress`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": IMPORT_KEY,
+        },
+        body: JSON.stringify({
+          state: "cooldown",
+          reasonCode: "schema_invalid",
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+          nextRecoveryAt: new Date(Date.now() + 30_000).toISOString(),
+        }),
+      },
+      env,
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      error: { code: "quiz_generation_state_conflict" },
+    });
+    const stored = db.sqlite
+      .prepare(
+        "SELECT lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+      )
+      .get(QUIZ_ID) as { lease_expires_at: number };
+    expect(stored.lease_expires_at).toBe(original.lease_expires_at);
   });
 });
 
@@ -1901,6 +2085,55 @@ describe("protocol-9 concept-first call lifecycles", () => {
         .prepare("SELECT COUNT(*) AS count FROM quiz_generation_call_events")
         .get(),
     ).toMatchObject({ count: 0 });
+  });
+});
+
+describe("protocol-10 prompt-first call lifecycles", () => {
+  it("accepts structural retries and rejects historical content-repair kinds", async () => {
+    const db = createPromptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, promptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          promptFirstLifecycleEvent("completed", {
+            acceptedCount: 0,
+            outcome: "schema_invalid",
+            retryDelayMs: 200,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          promptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            ordinalAttempt: 2,
+            acceptedCount: 0,
+            classification: "automatic_retry",
+            retryKind: "structural",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    const invalid = {
+      ...promptFirstLifecycleEvent("started", {
+        callIndex: 2,
+        ordinalAttempt: 3,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "structural",
+      }),
+      retryKind: "content_repair",
+    };
+    expect((await putCall(app, env, invalid)).status).toBe(422);
   });
 });
 

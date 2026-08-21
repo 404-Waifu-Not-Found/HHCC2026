@@ -1,0 +1,28 @@
+# ClipQuest uses Expo Continuous Native Generation. Excluding the locally
+# generated projects makes EAS run the same config plugins used by local QA.
+/android
+/ios
+
+# Local and generated state
+/.expo
+/dist
+/coverage
+/playwright-report
+/test-results
+node_modules
+*.log
+*.tsbuildinfo
+
+# Secrets and signing material are supplied by EAS, never uploaded from disk.
+.env
+.env.*
+.dev.vars
+google-services.json
+*.keystore
+*.jks
+*.p12
+
+# Local packages are build output, not source inputs.
+*.apk
+*.aab
+*.ipa

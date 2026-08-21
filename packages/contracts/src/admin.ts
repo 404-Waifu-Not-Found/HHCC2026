@@ -133,6 +133,14 @@ export type AdminGenerationState = z.infer<typeof AdminGenerationStateSchema>;
 export const AdminGenerationSchema = z
   .object({
     quizId: z.string().uuid(),
+    client: z
+      .object({
+        kind: z.enum(["chrome_extension", "android_app", "ios_app"]),
+        version: z.string().min(1).max(32),
+        capability: z.string().min(1).max(64),
+      })
+      .strict()
+      .optional(),
     state: AdminGenerationStateSchema,
     acceptedQuestions: z.number().int().min(1).max(15),
     plannedQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
@@ -272,23 +280,47 @@ export const AdminSystemResponseSchema = z.object({
       backendEnabled: z.literal(false),
       extensionEnabled: z.literal(true),
       extensionRequired: z.literal(true),
+      androidEnabled: z.literal(true).optional(),
+      androidApp: z
+        .object({
+          minimumVersion: z.literal("0.2.0"),
+          requiredCapability: z.literal("question-stream-v7"),
+          foregroundOnly: z.literal(true),
+        })
+        .strict()
+        .optional(),
+      iosEnabled: z.literal(true).optional(),
+      iosApp: z
+        .object({
+          minimumVersion: z.literal("0.2.0"),
+          requiredCapability: z.literal("question-stream-v7"),
+          foregroundOnly: z.literal(true),
+        })
+        .strict()
+        .optional(),
       model: z.string(),
       pipelineVersion: z.number().int().positive(),
       promptVersion: z.string(),
       validatorVersion: z.string(),
       rolloutMode: z.enum(["disabled", "canary", "enabled"]),
-      supportedProfile: z.literal("concept_first_auto_v5_8"),
-      supportedPromptVersion: z.literal("quiz-local-json-stream-v5.8"),
-      supportedValidatorVersion: z.literal("validator-local-progressive-v4.7"),
+      supportedProfile: z.literal("prompt_first_auto_v5_12"),
+      supportedPromptVersion: z.literal("quiz-local-json-stream-v5.12"),
+      supportedValidatorVersion: z.literal(
+        "validator-minimal-gradeability-v5.3",
+      ),
       effectiveDefaultProfile: z.enum([
         "legacy_reasoning_v5_1",
         "stable_non_thinking_v5_2",
         "stable_auto_recovery_v5_3",
         "evidence_grounded_auto_v5_4",
         "concept_first_auto_v5_8",
+        "prompt_first_auto_v5_9",
+        "prompt_first_auto_v5_10",
+        "prompt_first_auto_v5_11",
+        "prompt_first_auto_v5_12",
       ]),
-      requiredExtensionVersion: z.literal("0.8.8"),
-      requiredCapability: z.literal("question-stream-v6"),
+      requiredExtensionVersion: z.literal("0.8.17"),
+      requiredCapability: z.literal("question-stream-v7"),
       states: z.object({
         generating: z.number().int().nonnegative(),
         retrying: z.number().int().nonnegative(),

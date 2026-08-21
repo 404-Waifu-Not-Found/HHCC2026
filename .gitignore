@@ -67,6 +67,8 @@ ggml-*.bin
 *.p12
 *.mobileprovision
 *.zip
+!apps/extension/releases/clipquest-captions-extension-*.zip
+!apps/app/public/clipquest-captions-extension.zip
 *.tar
 *.tar.gz
 *.tgz

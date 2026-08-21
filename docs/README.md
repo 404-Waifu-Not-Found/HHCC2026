@@ -6,6 +6,8 @@ This index separates current operating guidance from dated design and QA evidenc
 
 - [Repository README and release status](../README.md#release-status): product architecture, current source contracts, verified production snapshot, development, verification, and privacy boundary.
 - [Production release](./PRODUCTION-RELEASE.md): migration, version upload, override smoke, promotion, rollback, and post-release generation-profile checks.
+- [Android private beta](./ANDROID-BETA.md): native architecture, SecureStore, caption-only generation, Sharesheet/App Links, EAS packaging, and device acceptance.
+- [Android 0.2.0 implementation QA — 2026-08-16](./QA-ANDROID-BETA-2026-08-16.md): local automated, APK-inspection, and emulator evidence plus the still-open EAS and physical-device gates.
 - [Operations console](./ADMIN-CONSOLE.md): roles, read-only Generation streams, safe telemetry, System metadata, and admin API surface.
 - [Production quiz-generation QA — extension 0.8.5](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md): latest official-site ten-video, 100-question learner run and current defects.
 - [Run 8 recovery and extension 0.8.6 implementation evidence](../qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-11.md): local compatibility-recovery, concept-validation, presentation, telemetry, and release-gate evidence. It is not a live rollout report.
@@ -13,6 +15,8 @@ This index separates current operating guidance from dated design and QA evidenc
 - [Extension 0.8.8 canary release evidence](../qa-results/concept-first-extension-0.8.8-canary-blocked-2026-08-13.md): exact pushed/deployed artifact identity, clean extension replacement, automated gates, and the untrusted TLS route that blocked the official-site matrix. General rollout remains blocked.
 
 ## Current verified snapshot
+
+The Android 0.2.0 source candidate now shares the local quiz engine with Chrome, builds a managed Android bundle for API 29–36, and passes local automated and emulator launch gates. It is **not yet a distributed private beta**: the EAS project, managed release signer, FCM credentials, App Links fingerprint, physical-device matrix, and ten-video Android acceptance remain unverified. See the dated Android report above.
 
 As observed on 2026-08-13, Worker `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2` from Git `297747e` serves the 0.8.8/v5.8 canary configuration. The exact extension artifact was installed and locally configured, and all automated gates passed. General enablement is **not** cleared: the live Chrome matrix was stopped when the local network route presented a certificate for `183.192.65.101` instead of `clipquest.ccwu.cc`. See the dated 0.8.8 report above.
 
@@ -27,13 +31,13 @@ Historical 2026-08-11 baseline:
 
 This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 migration ledger, the installed extension, and one newly persisted bank before treating it as current.
 
-## Current source candidate
+## Current web-generation source candidate
 
-The pushed source identifies the current canary as extension `0.8.8`, result protocol `9`, capability `question-stream-v6`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.7`, pipeline `9`, progressive import `v7`, and profile `concept_first_auto_v5_8`.
+The current supported source contract is extension `0.8.18`, result protocol `10`, capability `question-stream-v7`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, pipeline `9`, progressive import `v8`, and profile `prompt_first_auto_v5_12` when assigned. Android 0.2.0 consumes the same shared engine. The checked-in rollout keeps v5.12 disabled and v5.11 enabled, so the authenticated profile—not this supported-version list—is authoritative for a new bank.
 
-Automated regression coverage retains the 0.8.6 Run 8 recovery behavior and adds v5.7 private-evidence prompting, strict fail-closed excerpt selection, checks across every learner-visible field, distinct content-repair outcomes, bounded non-overlapping rubrics, and the observed sensory-neuron grading case with shallow-answer controls. The legacy presentation guard still preserves possessives and removes only complete anchored attribution clauses.
+Automated regression coverage retains legacy recovery and grading behavior while adding exact prompt-fingerprint/request-body checks, one-character streaming, local MC mapping, model-authored polarity, all four short-answer modes, structural-only retry classification, immutable accepted prefixes, and protocol-10 call lifecycle reconciliation.
 
-The exact candidate is pushed, deployed as a canary, and installed in Chrome. These facts do not substitute for the blocked official-origin learner matrix, so production remains canary-only until the network presents a valid ClipQuest certificate and both ten-video matrices pass.
+The newest v5.12 profile is intentionally disabled by default. A commit, push, Worker deployment, matching extension installation, profile assignment, direct benchmark, and real-client matrices must each be verified independently before public rollout. Android additionally requires EAS signing, FCM/App Links configuration, and physical-device acceptance.
 
 ## QA and calibration
 

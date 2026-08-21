@@ -16,9 +16,15 @@ import {
   LocalConceptQuizResultSchema,
   LocalConceptQuizQuestionChunkSchema,
   LocalGenerationCallEventSchema,
+  LocalGenerationClientSchema,
+  MinimalGenerationFailureCodeSchema,
+  PromptFirstQuestionSchema,
   LocalQuizContextSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
+  PushRegisterResponseSchema,
+  PushUnregisterRequestSchema,
+  PushUnregisterResponseSchema,
   identifyVideoSource,
   questionLimitForSession,
   questionTypePlanForSelection,
@@ -66,12 +72,12 @@ describe("admin contracts", () => {
           promptVersion: "quiz-local-json-stream-v5.1",
           validatorVersion: "validator-local-progressive-v4.0",
           rolloutMode: "disabled",
-          supportedProfile: "concept_first_auto_v5_8",
-          supportedPromptVersion: "quiz-local-json-stream-v5.8",
-          supportedValidatorVersion: "validator-local-progressive-v4.7",
+          supportedProfile: "prompt_first_auto_v5_12",
+          supportedPromptVersion: "quiz-local-json-stream-v5.12",
+          supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.8",
-          requiredCapability: "question-stream-v6",
+          requiredExtensionVersion: "0.8.17",
+          requiredCapability: "question-stream-v7",
           states: {
             generating: 1,
             retrying: 2,
@@ -202,6 +208,40 @@ describe("session length", () => {
 });
 
 describe("generated questions", () => {
+  it("models native local generation without weakening Chrome compatibility", () => {
+    const android = {
+      kind: "android_app",
+      version: "0.2.0",
+      capability: "question-stream-v7",
+    } as const;
+    expect(LocalGenerationClientSchema.parse(android)).toEqual(android);
+    const ios = { ...android, kind: "ios_app" as const };
+    expect(LocalGenerationClientSchema.parse(ios)).toEqual(ios);
+    expect(
+      LocalGenerationClientSchema.safeParse({
+        ...android,
+        version: "0.2",
+      }).success,
+    ).toBe(false);
+    expect(
+      QuizGenerationProfileResponseSchema.parse({
+        generationProfile: "prompt_first_auto_v5_12",
+        minimumExtensionVersion: "0.8.17",
+        requiredCapability: "question-stream-v7",
+        clientRequirements: {
+          chromeExtension: {
+            minimumVersion: "0.8.17",
+            requiredCapability: "question-stream-v7",
+          },
+          androidApp: {
+            minimumVersion: "0.2.0",
+            requiredCapability: "question-stream-v7",
+          },
+        },
+      }).clientRequirements?.androidApp.minimumVersion,
+    ).toBe("0.2.0");
+  });
+
   it("binds rollout profiles to their exact extension contracts", () => {
     expect(
       QuizGenerationProfileResponseSchema.safeParse({
@@ -780,7 +820,7 @@ describe("generated questions", () => {
       model: "deepseek-v4-flash",
       reasoningEffort: "none",
       promptVersion: "quiz-local-json-stream-v5.8",
-      validatorVersion: "validator-local-progressive-v4.7",
+      validatorVersion: "validator-local-progressive-v4.12",
       importVersion: "extension-progressive-import-v7",
       generationProfile: "concept_first_auto_v5_8",
       generationId: "11111111-1111-4111-8111-111111111111",
@@ -858,6 +898,57 @@ describe("generated questions", () => {
         elapsedMs: 900,
       }).success,
     ).toBe(true);
+  });
+
+  it("accepts protocol-10 prompt-first questions and only minimal failure telemetry", () => {
+    expect(
+      PromptFirstQuestionSchema.safeParse({
+        type: "multiple_choice",
+        concept: "atmospheric composition",
+        question: "What surrounds Earth?",
+        explanation: "A layer of gases surrounds Earth.",
+        correctAnswer: "the atmosphere",
+        distractors: ["the crust", "the mantle", "the core"],
+      }).success,
+    ).toBe(true);
+    expect(
+      MinimalGenerationFailureCodeSchema.safeParse("source_framing_invalid")
+        .success,
+    ).toBe(false);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        protocolVersion: 10,
+        purpose: "generation",
+        lifecycleState: "completed",
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        recoverySessionId: "33333333-3333-4333-8333-333333333333",
+        callIndex: 1,
+        startIndex: 0,
+        ordinalAttempt: 2,
+        requestedCount: 1,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "structural",
+        outcome: "choice_structure_invalid",
+        retryDelayMs: 200,
+        elapsedMs: 500,
+        usageComplete: false,
+      }).success,
+    ).toBe(true);
+  });
+});
+
+describe("push token lifecycle", () => {
+  it("models bounded registration and owner-requested removal responses", () => {
+    expect(PushRegisterResponseSchema.parse({ registered: true })).toEqual({
+      registered: true,
+    });
+    expect(
+      PushUnregisterRequestSchema.parse({ token: "ExponentPushToken[test]" }),
+    ).toEqual({ token: "ExponentPushToken[test]" });
+    expect(PushUnregisterResponseSchema.parse({ removed: false })).toEqual({
+      removed: false,
+    });
   });
 });
 

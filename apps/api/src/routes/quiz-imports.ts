@@ -8,6 +8,7 @@ import {
   ExtensionQuizProgressiveImportRequestSchema,
   ExtensionQuizProgressiveImportResponseSchema,
   AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
@@ -21,6 +22,7 @@ import {
   type LocalGenerationCallEventV3,
   type LocalGenerationCallEventV4,
   type LocalGenerationCallEventV5,
+  type LocalGenerationCallEventV6,
   type LegacyAutomaticRecoveryCallEvent,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
@@ -36,6 +38,7 @@ import {
   ProgressiveQuizSummarySchema,
   acceptedQuestionSummary,
   assertProgressiveChunkMetadata,
+  sharedEngineClientTransitionAllowed,
   readProgressiveGenerationSnapshot,
   retryKindMatchesGenerationOutcome,
   tryProgressiveQuizSummary,
@@ -50,12 +53,71 @@ const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
 const MAX_V5_3_AUTOMATIC_RETRIES = 12;
 const MAX_V5_4_AUTOMATIC_RETRIES = 48;
 const MAX_V5_6_AUTOMATIC_RETRIES = 12;
+const MAX_V5_8_AUTOMATIC_RETRIES = 48;
+const MAX_V5_9_AUTOMATIC_RETRIES = 30;
+const MAX_V5_10_AUTOMATIC_RETRIES = 30;
+const MAX_V5_11_AUTOMATIC_RETRIES = 30;
+const MAX_V5_12_AUTOMATIC_RETRIES = 30;
+
+function versionAtLeast(actual: string, minimum: string): boolean {
+  const left = actual.split(".").map(Number);
+  const right = minimum.split(".").map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if ((left[index] ?? 0) !== (right[index] ?? 0)) {
+      return (left[index] ?? 0) > (right[index] ?? 0);
+    }
+  }
+  return true;
+}
+
+function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
+  if (!chunk.client) return;
+  const native = chunk.client.kind !== "chrome_extension";
+  const minimum = native ? "0.2.0" : "0.8.17";
+  const clientName =
+    chunk.client.kind === "android_app"
+      ? "Android"
+      : chunk.client.kind === "ios_app"
+        ? "iOS"
+        : "Local AI";
+  if (!versionAtLeast(chunk.client.version, minimum)) {
+    throw new ApiError(
+      403,
+      "local_generation_client_outdated",
+      `ClipQuest ${clientName} ${minimum} or newer is required.`,
+    );
+  }
+}
+
+function assertGenerationEventClient(
+  summary: ProgressiveQuizSummary,
+  event: LocalGenerationCallEvent,
+): void {
+  const originalClientKind = summary.client?.kind ?? "chrome_extension";
+  const clientMatches = summary.client
+    ? JSON.stringify(summary.client) === JSON.stringify(event.client)
+    : event.client === undefined || event.client.kind === "chrome_extension";
+  if (
+    !clientMatches &&
+    !(
+      event.client?.kind !== originalClientKind &&
+      sharedEngineClientTransitionAllowed(summary, event.client)
+    )
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_generation_client_mismatch",
+      "Generation telemetry must use the quiz's original client.",
+    );
+  }
+}
 
 type AutomaticGenerationCallEvent =
   | LegacyAutomaticRecoveryCallEvent
   | LocalGenerationCallEventV3
   | LocalGenerationCallEventV4
-  | LocalGenerationCallEventV5;
+  | LocalGenerationCallEventV5
+  | LocalGenerationCallEventV6;
 
 function isAutomaticGenerationProfile(
   profile: ProgressiveQuizSummary["generationProfile"],
@@ -63,7 +125,22 @@ function isAutomaticGenerationProfile(
   return (
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
-    profile === "concept_first_auto_v5_8"
+    profile === "concept_first_auto_v5_8" ||
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
+  );
+}
+
+function isPromptFirstProfile(
+  profile: ProgressiveQuizSummary["generationProfile"] | undefined,
+): boolean {
+  return (
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
   );
 }
 
@@ -77,6 +154,9 @@ function expectedAutomaticProtocol(
     return 8;
   }
   if (profile === "concept_first_auto_v5_8") {
+    return CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
+  }
+  if (isPromptFirstProfile(profile)) {
     return LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
   }
   return null;
@@ -96,16 +176,57 @@ export function currentGroundedNewBankMetadataMatches(
     | "importVersion"
   >,
 ): boolean {
+  if (chunk.generationProfile === "prompt_first_auto_v5_12") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === LOCAL_QUIZ_PROMPT_VERSION &&
+      chunk.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
+  if (chunk.generationProfile === "prompt_first_auto_v5_11") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === "quiz-local-json-stream-v5.11" &&
+      chunk.validatorVersion === "validator-minimal-gradeability-v5.2" &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
+  if (chunk.generationProfile === "prompt_first_auto_v5_10") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === "quiz-local-json-stream-v5.10" &&
+      chunk.validatorVersion === "validator-minimal-gradeability-v5.1" &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
+  if (chunk.generationProfile === "prompt_first_auto_v5_9") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === "quiz-local-json-stream-v5.9" &&
+      chunk.validatorVersion === "validator-minimal-structural-v5.0" &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
   if (chunk.generationProfile !== "concept_first_auto_v5_8") {
     return true;
   }
   return (
     chunk.model === LOCAL_QUIZ_MODEL &&
     chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
-    chunk.promptVersion === LOCAL_QUIZ_PROMPT_VERSION &&
-    chunk.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
-    chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
-    chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    chunk.promptVersion === "quiz-local-json-stream-v5.8" &&
+    chunk.validatorVersion === "validator-local-progressive-v4.12" &&
+    chunk.protocolVersion ===
+      CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    chunk.importVersion === "extension-progressive-import-v7"
   );
 }
 
@@ -132,6 +253,7 @@ quizImportsRouter.post("/progressive", async (c) => {
     windowSeconds: 60,
   });
   const input = await parseJson(c, ExtensionQuizProgressiveImportRequestSchema);
+  assertNewGenerationClient(input.chunk);
   if (
     !generationProfileAllowsNewBank(
       c.env,
@@ -217,7 +339,13 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
       "This quiz does not support current progressive question delivery.",
     );
   }
-  assertProgressiveChunkMetadata(summary, input.chunk);
+  const clientTransitionAllowed = sharedEngineClientTransitionAllowed(
+    summary,
+    input.chunk.client,
+  );
+  assertProgressiveChunkMetadata(summary, input.chunk, {
+    allowClientTransition: clientTransitionAllowed,
+  });
   if (input.chunk.totalQuestions !== summary.plannedCount) {
     throw new ApiError(
       409,
@@ -266,6 +394,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     .toLocaleLowerCase()
     .trim();
   if (
+    !isPromptFirstProfile(summary.generationProfile) &&
     summary.acceptedQuestionSummaries.some(
       (question) =>
         promptSimilarity(question.question, normalizedPrompt) >= 0.9,
@@ -288,15 +417,30 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
   }
 
   const nextCount = input.chunk.startIndex + 1;
-  const qualityFlags = questionQualityFlags(
-    input.chunk.question,
-    summary.acceptedQuestionSummaries,
-  );
+  const qualityFlags = isPromptFirstProfile(summary.generationProfile)
+    ? []
+    : questionQualityFlags(
+        input.chunk.question,
+        summary.acceptedQuestionSummaries,
+      );
   const complete = nextCount === summary.plannedCount;
   const questionId = createId();
   const timestamp = now();
+  const liveClaim = isAutomaticGenerationProfile(summary.generationProfile)
+    ? {
+        key: importKey,
+        recoverySessionId: snapshot.claimRecoverySessionId,
+        timestamp,
+      }
+    : undefined;
   const nextSummary = ProgressiveQuizSummarySchema.parse({
     ...summary,
+    source: clientTransitionAllowed
+      ? input.chunk.client?.kind !== "chrome_extension"
+        ? "client-local-json-stream"
+        : "extension-local-json-stream"
+      : summary.source,
+    client: clientTransitionAllowed ? input.chunk.client : summary.client,
     generationState: complete ? "ready" : "generating",
     reasonCode: undefined,
     retryOrdinal: undefined,
@@ -366,12 +510,25 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
         input.chunk,
         questionId,
         qualityFlags,
+        liveClaim,
       ),
       c.env.DB.prepare(
-        "INSERT OR IGNORE INTO attempt_items (attempt_id, ordinal, question_id) SELECT id, ?, ? FROM attempts WHERE quiz_id = ?",
-      ).bind(input.chunk.startIndex, questionId, bank.id),
+        `INSERT OR IGNORE INTO attempt_items (attempt_id, ordinal, question_id)
+         SELECT attempts.id, ?, ?
+         FROM attempts
+         JOIN questions ON questions.id = ? AND questions.quiz_id = attempts.quiz_id AND questions.ordinal = ?
+         WHERE attempts.quiz_id = ?`,
+      ).bind(
+        input.chunk.startIndex,
+        questionId,
+        questionId,
+        input.chunk.startIndex,
+        bank.id,
+      ),
       c.env.DB.prepare(
-        "UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ?, concepts_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating'",
+        `UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ?, concepts_json = ?
+         WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating'
+         ${liveClaim ? "AND EXISTS (SELECT 1 FROM quiz_generation_claims claim WHERE claim.quiz_id = quiz_banks.id AND claim.claim_key = ? AND claim.lease_expires_at > ? AND (? IS NULL OR claim.recovery_session_id = ?))" : ""}`,
       ).bind(
         complete ? "passed" : "generating",
         JSON.stringify(nextSummary),
@@ -380,6 +537,14 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
         user.id,
         importKey,
         LOCAL_QUIZ_PIPELINE_VERSION,
+        ...(liveClaim
+          ? [
+              liveClaim.key,
+              liveClaim.timestamp,
+              liveClaim.recoverySessionId,
+              liveClaim.recoverySessionId,
+            ]
+          : []),
       ),
     ]);
     if (results[0]?.meta.changes !== 1 || results[2]?.meta.changes !== 1) {
@@ -457,6 +622,7 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       "This quiz does not support current progressive question delivery.",
     );
   }
+  assertGenerationEventClient(snapshot.summary, input);
   if (
     input.startIndex >= snapshot.summary.plannedCount ||
     input.startIndex + input.requestedCount > snapshot.summary.plannedCount
@@ -611,14 +777,28 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       )
       .first<{ count: number }>();
     const retryLimit = automaticEvent
-      ? legacyAutomaticRecovery ||
-        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8" ||
-        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.7" ||
-        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
+      ? legacyAutomaticRecovery
         ? MAX_V5_6_AUTOMATIC_RETRIES
-        : snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4"
-          ? MAX_V5_4_AUTOMATIC_RETRIES
-          : MAX_V5_3_AUTOMATIC_RETRIES
+        : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.12"
+          ? MAX_V5_12_AUTOMATIC_RETRIES
+          : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.11"
+            ? MAX_V5_11_AUTOMATIC_RETRIES
+            : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.10"
+              ? MAX_V5_10_AUTOMATIC_RETRIES
+              : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.9"
+                ? MAX_V5_9_AUTOMATIC_RETRIES
+                : snapshot.summary.promptVersion ===
+                    "quiz-local-json-stream-v5.8"
+                  ? MAX_V5_8_AUTOMATIC_RETRIES
+                  : snapshot.summary.promptVersion ===
+                        "quiz-local-json-stream-v5.7" ||
+                      snapshot.summary.promptVersion ===
+                        "quiz-local-json-stream-v5.6"
+                    ? MAX_V5_6_AUTOMATIC_RETRIES
+                    : snapshot.summary.generationProfile ===
+                        "evidence_grounded_auto_v5_4"
+                      ? MAX_V5_4_AUTOMATIC_RETRIES
+                      : MAX_V5_3_AUTOMATIC_RETRIES
       : 1;
     if (Number(existingRetry?.count ?? 0) >= retryLimit) {
       throw new ApiError(
@@ -630,6 +810,9 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       );
     }
     if (automaticEvent) {
+      const promptFirst = isPromptFirstProfile(
+        snapshot.summary.generationProfile,
+      );
       const grounded =
         legacyAutomaticRecovery ||
         snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4" ||
@@ -642,8 +825,17 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
         "answer_repair",
       ]).has(input.retryKind!);
       const ordinalRetries = await c.env.DB.prepare(
-        grounded
+        promptFirst
           ? `SELECT COUNT(*) AS count
+             FROM quiz_generation_call_events
+             WHERE quiz_id = ?
+               AND generation_session_id = ?
+               AND recovery_session_id = ?
+               AND start_ordinal = ?
+               AND classification = 'automatic_retry'
+               AND retry_kind = ?`
+          : grounded
+            ? `SELECT COUNT(*) AS count
              FROM quiz_generation_call_events
              WHERE quiz_id = ?
                AND generation_session_id = ?
@@ -655,27 +847,43 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
                  OR
                  (? = 0 AND retry_kind IN ('transport', 'automatic_resume'))
                )`
-          : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND start_ordinal = ? AND classification = 'automatic_retry' AND retry_kind = ?",
+            : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND start_ordinal = ? AND classification = 'automatic_retry' AND retry_kind = ?",
       )
         .bind(
-          ...(grounded
+          ...(promptFirst
             ? [
                 bank.id,
                 input.generationSessionId,
                 input.recoverySessionId,
                 input.startIndex,
-                contentRetry ? 1 : 0,
-                contentRetry ? 1 : 0,
-              ]
-            : [
-                bank.id,
-                input.generationSessionId,
-                input.startIndex,
                 input.retryKind,
-              ]),
+              ]
+            : grounded
+              ? [
+                  bank.id,
+                  input.generationSessionId,
+                  input.recoverySessionId,
+                  input.startIndex,
+                  contentRetry ? 1 : 0,
+                  contentRetry ? 1 : 0,
+                ]
+              : [
+                  bank.id,
+                  input.generationSessionId,
+                  input.startIndex,
+                  input.retryKind,
+                ]),
         )
         .first<{ count: number }>();
-      const perOrdinalLimit = contentRetry ? 2 : 4;
+      const perOrdinalLimit =
+        promptFirst && input.retryKind === "structural"
+          ? 2
+          : promptFirst ||
+              snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
+            ? 4
+            : contentRetry
+              ? 2
+              : 4;
       if (Number(ordinalRetries?.count ?? 0) >= perOrdinalLimit) {
         throw new ApiError(
           409,
@@ -770,15 +978,21 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
 quizImportsRouter.patch("/:quizId/progress", async (c) => {
   const user = c.get("user");
   const importKey = requireIdempotencyKey(c);
-  const input = await parseJson(
-    c,
-    ExtensionQuizGenerationProgressRequestSchema,
-  );
+  await enforceRateLimit(c.env.DB, {
+    namespace: "extension-progressive-progress",
+    identifier: user.id,
+    maximum: 90,
+    windowSeconds: 60,
+  });
   const bank = await progressiveBank(
     c.env.DB,
     c.req.param("quizId"),
     user.id,
     importKey,
+  );
+  const input = await parseJson(
+    c,
+    ExtensionQuizGenerationProgressRequestSchema,
   );
   const snapshot = await readProgressiveGenerationSnapshot(c.env.DB, bank.id);
   if (snapshot.qualityStatus !== "passed") {
@@ -838,8 +1052,11 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
           ? summary.stateChangedAt
           : timestamp,
     });
+    const automatic = isAutomaticGenerationProfile(summary.generationProfile);
     const updateSummary = c.env.DB.prepare(
-      "UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating' AND quality_summary_json = ?",
+      `UPDATE quiz_banks SET quality_summary_json = ?
+       WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating' AND quality_summary_json = ?
+       ${automatic ? "AND EXISTS (SELECT 1 FROM quiz_generation_claims claim WHERE claim.quiz_id = quiz_banks.id AND claim.claim_key = ? AND claim.lease_expires_at > ? AND (? IS NULL OR claim.recovery_session_id = ?))" : ""}`,
     ).bind(
       JSON.stringify(nextSummary),
       bank.id,
@@ -847,6 +1064,14 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
       importKey,
       LOCAL_QUIZ_PIPELINE_VERSION,
       snapshot.qualitySummaryJson,
+      ...(automatic
+        ? [
+            importKey,
+            timestamp,
+            input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+            input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+          ]
+        : []),
     );
     if (
       input.state === "retry_required" ||
@@ -857,10 +1082,28 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
       const results = await c.env.DB.batch([
         updateSummary,
         c.env.DB.prepare(
-          "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ? WHERE quiz_id = ? AND claim_key = ?",
-        ).bind(timestamp, timestamp, bank.id, importKey),
+          `UPDATE quiz_generation_claims
+           SET lease_expires_at = ?, updated_at = ?
+           WHERE quiz_id = ? AND claim_key = ?
+           ${automatic ? "AND lease_expires_at > ? AND (? IS NULL OR recovery_session_id = ?)" : ""}`,
+        ).bind(
+          timestamp,
+          timestamp,
+          bank.id,
+          importKey,
+          ...(automatic
+            ? [
+                timestamp,
+                input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+                input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+              ]
+            : []),
+        ),
       ]);
-      if (results[0]?.meta.changes !== 1) {
+      if (
+        results[0]?.meta.changes !== 1 ||
+        (automatic && results[1]?.meta.changes !== 1)
+      ) {
         throw new ApiError(
           409,
           "quiz_generation_state_conflict",
@@ -960,23 +1203,35 @@ async function persistProgressiveQuiz(input: {
   ) {
     assertGroundedQuestionIdentity(question, []);
   }
-  const qualityFlags = questionQualityFlags(question, []);
+  const qualityFlags = isPromptFirstProfile(chunk.generationProfile)
+    ? []
+    : questionQualityFlags(question, []);
   const summary = ProgressiveQuizSummarySchema.parse({
-    source: "extension-local-json-stream",
+    source:
+      chunk.client?.kind !== undefined &&
+      chunk.client.kind !== "chrome_extension"
+        ? "client-local-json-stream"
+        : "extension-local-json-stream",
+    client: chunk.client,
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.8"
+      (chunk.promptVersion === "quiz-local-json-stream-v5.12" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.11" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.10" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.9"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
-        : chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
-            chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
-            chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
-            chunk.promptVersion === "quiz-local-json-stream-v5.4"
-          ? "extension-progressive-import-v6"
-          : chunk.promptVersion === "quiz-local-json-stream-v5.3"
-            ? "extension-progressive-import-v5"
-            : chunk.promptVersion === "quiz-local-json-stream-v5.2"
-              ? "extension-progressive-import-v4"
-              : "extension-progressive-import-v3"),
+        : chunk.promptVersion === "quiz-local-json-stream-v5.8"
+          ? "extension-progressive-import-v7"
+          : chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
+              chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+              chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+              chunk.promptVersion === "quiz-local-json-stream-v5.4"
+            ? "extension-progressive-import-v6"
+            : chunk.promptVersion === "quiz-local-json-stream-v5.3"
+              ? "extension-progressive-import-v5"
+              : chunk.promptVersion === "quiz-local-json-stream-v5.2"
+                ? "extension-progressive-import-v4"
+                : "extension-progressive-import-v3"),
     resultProtocolVersion: chunk.protocolVersion,
     pipelineVersion: chunk.pipelineVersion,
     model: chunk.model,
@@ -1005,7 +1260,11 @@ async function persistProgressiveQuiz(input: {
       chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.8",
+      chunk.promptVersion === "quiz-local-json-stream-v5.8" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.9" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.10" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.11" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.12",
     sourceSelection: chunk.metrics.sourceSelection,
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]
@@ -1258,6 +1517,8 @@ function isAutomaticCallEvent(
     (event.protocolVersion === 5 ||
       event.protocolVersion === AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion ===
+        CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
   );
 }
@@ -1275,20 +1536,27 @@ function isLegacyAutomaticRecoveryCallEvent(
 
 function isGroundedCallEvent(
   event: LocalGenerationCallEvent,
-): event is LocalGenerationCallEventV4 | LocalGenerationCallEventV5 {
+): event is
+  | LocalGenerationCallEventV4
+  | LocalGenerationCallEventV5
+  | LocalGenerationCallEventV6 {
   return (
     "protocolVersion" in event &&
     (event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion ===
+        CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
   );
 }
 
 function isLifecycleCallEvent(
   event: LocalGenerationCallEvent,
-): event is LocalGenerationCallEventV5 {
+): event is LocalGenerationCallEventV5 | LocalGenerationCallEventV6 {
   return (
     "protocolVersion" in event &&
-    event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    (event.protocolVersion ===
+      CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION) &&
     "lifecycleState" in event
   );
 }
@@ -1347,7 +1615,7 @@ function callEventsMatch(
 
 function lifecycleIdentityMatches(
   stored: StoredCallEvent,
-  event: LocalGenerationCallEventV5,
+  event: LocalGenerationCallEventV5 | LocalGenerationCallEventV6,
 ): boolean {
   return (
     stored.generation_session_id === event.generationSessionId &&
@@ -1778,9 +2046,9 @@ async function renewGenerationClaim(
     recoverySessionId || isAutomaticGenerationProfile(profile)
       ? AUTOMATIC_GENERATION_CLAIM_LEASE_MS
       : LEGACY_GENERATION_CLAIM_LEASE_MS;
-  await db
+  const result = await db
     .prepare(
-      "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ?, heartbeat_at = COALESCE(?, heartbeat_at) WHERE quiz_id = ? AND claim_key = ? AND (? IS NULL OR recovery_session_id = ?)",
+      "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ?, heartbeat_at = COALESCE(?, heartbeat_at) WHERE quiz_id = ? AND claim_key = ? AND lease_expires_at > ? AND (? IS NULL OR recovery_session_id = ?)",
     )
     .bind(
       timestamp + leaseMs,
@@ -1788,10 +2056,18 @@ async function renewGenerationClaim(
       recoverySessionId ? timestamp : null,
       quizId,
       importKey,
+      timestamp,
       recoverySessionId ?? null,
       recoverySessionId ?? null,
     )
     .run();
+  if (isAutomaticGenerationProfile(profile) && result.meta.changes !== 1) {
+    throw new ApiError(
+      409,
+      "generation_claim_expired",
+      "This generation lease expired before it could be renewed.",
+    );
+  }
 }
 
 async function materializeGenerationTelemetry(
@@ -1957,48 +2233,69 @@ function questionInsert(
   >,
   questionId = createId(),
   qualityFlags: QuestionQualityFlag[] = [],
+  liveClaim?: {
+    key: string;
+    recoverySessionId: string | null;
+    timestamp: number;
+  },
 ): D1PreparedStatement {
   const stored = storedQuestionFields(question);
   const difficulty = structuralDifficulty(question);
-  return db
-    .prepare(
-      `INSERT INTO questions
-       (id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?)`,
-    )
-    .bind(
-      questionId,
-      quizId,
-      ordinal,
-      question.id,
-      question.type,
-      question.id,
-      question.question,
-      question.question,
-      stored.optionsJson,
-      stored.correctAnswerJson,
-      stored.rubricJson,
-      stored.explanation,
-      difficulty,
-      JSON.stringify({
-        source: "extension-local-tool",
-        blueprintSlot: question.id,
-        concept: question.concept,
-        ...(question.claimKey ? { claimKey: question.claimKey } : {}),
-        ...(question.conceptCluster
-          ? { conceptCluster: question.conceptCluster }
-          : {}),
-        questionType: question.type,
-        pipelineVersion: metadata.pipelineVersion,
-        model: metadata.model,
-        promptVersion: metadata.promptVersion,
-        validatorVersion: metadata.validatorVersion,
-        structuralDifficulty: difficulty,
-        qualityFlags,
-        schemaValidated: true,
-        transcriptStored: false,
-      }),
-    );
+  const columns = `(id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)`;
+  const placeholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?`;
+  const statement = liveClaim
+    ? `INSERT INTO questions ${columns}
+       SELECT ${placeholders}
+       WHERE EXISTS (
+         SELECT 1 FROM quiz_generation_claims claim
+         WHERE claim.quiz_id = ? AND claim.claim_key = ? AND claim.lease_expires_at > ?
+           AND (? IS NULL OR claim.recovery_session_id = ?)
+       )`
+    : `INSERT INTO questions
+       ${columns}
+       VALUES (${placeholders})`;
+  return db.prepare(statement).bind(
+    questionId,
+    quizId,
+    ordinal,
+    question.id,
+    question.type,
+    question.id,
+    question.question,
+    question.question,
+    stored.optionsJson,
+    stored.correctAnswerJson,
+    stored.rubricJson,
+    stored.explanation,
+    difficulty,
+    JSON.stringify({
+      source: "extension-local-tool",
+      blueprintSlot: question.id,
+      concept: question.concept,
+      ...(question.claimKey ? { claimKey: question.claimKey } : {}),
+      ...(question.conceptCluster
+        ? { conceptCluster: question.conceptCluster }
+        : {}),
+      questionType: question.type,
+      pipelineVersion: metadata.pipelineVersion,
+      model: metadata.model,
+      promptVersion: metadata.promptVersion,
+      validatorVersion: metadata.validatorVersion,
+      structuralDifficulty: difficulty,
+      qualityFlags,
+      schemaValidated: true,
+      transcriptStored: false,
+    }),
+    ...(liveClaim
+      ? [
+          quizId,
+          liveClaim.key,
+          liveClaim.timestamp,
+          liveClaim.recoverySessionId,
+          liveClaim.recoverySessionId,
+        ]
+      : []),
+  );
 }
 
 export function storedQuestionFields(question: LocalConceptQuizQuestion): {

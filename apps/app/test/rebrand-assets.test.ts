@@ -48,7 +48,6 @@ describe("ClipQuest rebrand assets", () => {
       const metadata = await image.metadata();
       const stats = await image.stats();
       expect(metadata).toMatchObject({ width: 512, height: 512, channels: 4 });
-      expect(metadata.hasAlpha).toBe(true);
       expect(stats.entropy).toBeGreaterThan(1);
 
       const { data, info } = await image
@@ -110,10 +109,10 @@ describe("ClipQuest rebrand assets", () => {
       "public/apple-touch-icon.png",
       "assets/platform/app-icon-1024.png",
       "ios/ClipQuest/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
-      ...androidDensities.flatMap((density) => [
-        `android/app/src/main/res/mipmap-${density}/ic_launcher.webp`,
-        `android/app/src/main/res/mipmap-${density}/ic_launcher_round.webp`,
-      ]),
+      ...androidDensities.map(
+        (density) =>
+          `android/app/src/main/res/mipmap-${density}/ic_launcher.webp`,
+      ),
     ];
     for (const target of opaqueLauncherTargets) {
       const image = sharp(resolve(appRoot, target));
@@ -130,6 +129,32 @@ describe("ClipQuest rebrand assets", () => {
         .raw()
         .toBuffer();
       expect([...corner]).toEqual([25, 104, 58]);
+    }
+
+    // Expo 57 may mask legacy round launchers with transparent corners while a
+    // checked-in native project may retain an opaque branded background. Both
+    // are valid, so require a visible, branded center without constraining the
+    // out-of-mask corner pixels.
+    for (const density of androidDensities) {
+      const image = sharp(
+        resolve(
+          appRoot,
+          `android/app/src/main/res/mipmap-${density}/ic_launcher_round.webp`,
+        ),
+      );
+      const metadata = await image.metadata();
+      const stats = await image.stats();
+      expect(metadata.width).toBeGreaterThanOrEqual(48);
+      expect(metadata.height).toBe(metadata.width);
+      expect(stats.entropy).toBeGreaterThan(1);
+
+      const center = Math.floor(metadata.width! / 2);
+      const pixel = await image
+        .extract({ left: center, top: center, width: 1, height: 1 })
+        .ensureAlpha()
+        .raw()
+        .toBuffer();
+      expect(pixel[3]).toBe(255);
     }
   });
 

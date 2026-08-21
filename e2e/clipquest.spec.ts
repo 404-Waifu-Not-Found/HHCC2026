@@ -100,10 +100,15 @@ const shortAnswerQuestion: PublicQuestion = {
 const formulaProseQuestion: PublicQuestion = {
   ...baseQuestion,
   id: "69696969-6969-4969-8969-696969696969",
-  type: "true_false",
+  type: "multiple_choice",
   prompt:
-    "For a function f defined on an interval from x = a to x = b, the average rate of change is (f(b)-f(a))/(b-a), and this value is the slope of the secant line through the points (a, f(a)) and (b, f(b)).",
-  options: undefined,
+    "When evaluating the limit as x approaches 0 of (4x cos 2x) / (5 tan 2x), how is the expression split to apply the identity that (2x)/(tan 2x) approaches 1?",
+  options: [
+    "It is split into the limit of (x)/(tan 2x) times the limit of (4 cos 2x)/5.",
+    "It is split into the limit of (4x)/(tan 2x) times the limit of (cos 2x)/5.",
+    "It is split into the limit of (2x)/(tan 2x) times the limit of (2 cos 2x)/5.",
+    "It is split into the limit of (2x)/(tan 2x) times the limit of (4 cos 2x)/5.",
+  ],
 };
 
 const captionSegments = [
@@ -213,7 +218,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.8",
+            version: outdated ? "0.7.9" : "0.8.17",
             configured: true,
             capabilities: outdated
               ? []
@@ -224,6 +229,7 @@ test.beforeEach(async ({ page }) => {
                   "question-stream-v4",
                   "question-stream-v5",
                   "question-stream-v6",
+                  "question-stream-v7",
                   "ensure-source-ready-v1",
                 ],
           },
@@ -286,7 +292,18 @@ test.beforeEach(async ({ page }) => {
               type: "short_answer",
               answer: `Reference answer ${index + 1}`,
               rubricIdeas: [`Concept ${index + 1}`],
-              acceptableAnswers: [`Equivalent answer ${index + 1}`],
+              acceptableAnswers: [],
+              ...(conceptFirst
+                ? {
+                    shortAnswerMode: "atomic_term",
+                    rubricV2: {
+                      version: 2,
+                      mode: "atomic_term",
+                      canonicalAnswer: `Reference answer ${index + 1}`,
+                      aliases: [],
+                    },
+                  }
+                : {}),
             };
           }
           return {
@@ -309,7 +326,7 @@ test.beforeEach(async ({ page }) => {
               model: "deepseek-v4-flash",
               reasoningEffort: "none",
               promptVersion: "quiz-local-json-stream-v5.8",
-              validatorVersion: "validator-local-progressive-v4.7",
+              validatorVersion: "validator-local-progressive-v4.12",
               importVersion: "extension-progressive-import-v7",
               generationProfile: "concept_first_auto_v5_8",
               generationId: event.data.context.generationId,
@@ -750,7 +767,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.8 or newer", { exact: false }),
+    page.getByText("0.8.17 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -945,7 +962,7 @@ test("legacy retry-required quizzes recover automatically from the authoritative
   scenario.progressiveTotal = 5;
   scenario.progressiveState = "retry_required";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   await seed(page, `clipquest:generation:${VIDEO_ID}`, {
     idempotencyKey: "99999999-9999-4999-8999-999999999999",
     quizLanguage: "en",
@@ -999,7 +1016,7 @@ test("a reloaded legacy quiz reclaims and recovers without learner action", asyn
   scenario.progressiveTotal = 5;
   scenario.progressiveState = "retry_required";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   await seed(page, `clipquest:generation:${VIDEO_ID}`, {
     idempotencyKey: "91919191-9191-4191-8191-919191919191",
     quizLanguage: "en",
@@ -1035,7 +1052,7 @@ test("the streaming indicator stays inside each gutter and above the quiz footer
 }) => {
   const scenario = await installMocks(page);
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   const generationId = await seedGenerationRecord(page, {
     sessionLength: "short",
     plannedCount: 5,
@@ -1118,7 +1135,7 @@ test("a cold thumbnail retries without shifting the create page", async ({
   scenario.thumbnailMode = "fail-once";
   scenario.thumbnailFailureTag = "cold";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+  await seedImportedVideo(page, {
     ...importedVideo,
     video: {
       ...importedVideo.video,
@@ -1155,7 +1172,7 @@ test("a permanent thumbnail failure keeps quiz setup usable", async ({
   scenario.thumbnailMode = "failed";
   scenario.thumbnailFailureTag = "permanent";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+  await seedImportedVideo(page, {
     ...importedVideo,
     video: {
       ...importedVideo.video,
@@ -1225,7 +1242,7 @@ test("desktop learning journey and visual states", async ({ page }) => {
   expect(homeVisuals.hasOverflow).toBe(false);
   await capture(page, "desktop-link-import");
 
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   await page.goto(`/create/${VIDEO_ID}`);
   await expect(
     page.getByRole("heading", { name: "Video ready" }),
@@ -1334,7 +1351,7 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
   await capture(page, "mobile-link-import");
 
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   const generationId = await seedGenerationRecord(page, {
     sessionLength: "medium",
     plannedCount: 10,
@@ -1439,7 +1456,7 @@ test("all generated question types keep the tactile learning layout", async ({
   await capture(page, "tablet-quiz-short-answer");
 });
 
-test("formula-containing question prose keeps the display typeface", async ({
+test("formula-containing prose keeps the display face and typesets expressions", async ({
   page,
 }) => {
   const scenario = await installMocks(page);
@@ -1462,6 +1479,16 @@ test("formula-containing question prose keeps the display typeface", async ({
       heading.evaluate((element) => getComputedStyle(element).letterSpacing),
     )
     .toBe("-0.3px");
+  await expect(heading.locator("math")).toHaveCount(3);
+  await expect(heading.locator("mfrac")).toHaveCount(2);
+  await expect(
+    heading.locator('[data-clipquest-math="(4x cos 2x) / (5 tan 2x)"]'),
+  ).toBeVisible();
+  const formattedChoice = page.getByRole("button", {
+    name: formulaProseQuestion.options?.[0],
+  });
+  await expect(formattedChoice).toBeVisible();
+  await expect(formattedChoice.locator("mfrac")).toHaveCount(2);
 });
 
 test("dark theme stays polished across learner, auth, settings, and admin shells", async ({
@@ -1956,15 +1983,15 @@ async function installMocks(page: Page): Promise<Scenario> {
           extensionRequired: true,
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
-          promptVersion: "quiz-local-json-stream-v5.8",
-          validatorVersion: "validator-local-progressive-v4.7",
+          promptVersion: "quiz-local-json-stream-v5.12",
+          validatorVersion: "validator-minimal-gradeability-v5.3",
           rolloutMode: "disabled",
-          supportedProfile: "concept_first_auto_v5_8",
-          supportedPromptVersion: "quiz-local-json-stream-v5.8",
-          supportedValidatorVersion: "validator-local-progressive-v4.7",
-          effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.8",
-          requiredCapability: "question-stream-v6",
+          supportedProfile: "prompt_first_auto_v5_12",
+          supportedPromptVersion: "quiz-local-json-stream-v5.12",
+          supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
+          effectiveDefaultProfile: "concept_first_auto_v5_8",
+          requiredExtensionVersion: "0.8.17",
+          requiredCapability: "question-stream-v7",
           states: {
             generating: 2,
             retrying: 1,
@@ -2059,7 +2086,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     if (path === "/api/local-ai/profile" && request.method() === "GET") {
       await json(route, {
         generationProfile: "concept_first_auto_v5_8",
-        minimumExtensionVersion: "0.8.8",
+        minimumExtensionVersion: "0.8.13",
         requiredCapability: "question-stream-v6",
       });
       return;
@@ -2315,6 +2342,25 @@ async function seed(page: Page, key: string, value: unknown): Promise<void> {
     ({ storageKey, storedValue }) =>
       window.localStorage.setItem(storageKey, JSON.stringify(storedValue)),
     { storageKey: key, storedValue: value },
+  );
+}
+
+async function seedImportedVideo(
+  page: Page,
+  value: typeof importedVideo,
+): Promise<void> {
+  const timestamp = Date.now();
+  const ownerUserId = sessionFixture().user.id;
+  await seed(
+    page,
+    `clipquest:creation:v3:${encodeURIComponent(ownerUserId)}:${encodeURIComponent(value.video.id)}`,
+    {
+      version: 3,
+      ownerUserId,
+      cachedAt: timestamp,
+      expiresAt: timestamp + 24 * 60 * 60 * 1_000,
+      value,
+    },
   );
 }
 
