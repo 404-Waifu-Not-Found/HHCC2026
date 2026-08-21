@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 import {
   generateQuizFromPlainText,
   randomizeMultipleChoiceOptions,
@@ -147,7 +148,7 @@ test("release builds preserve the loaded unpacked extension directory", () => {
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.4.2");
+  assert.equal(manifest.version, "0.4.3");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -181,11 +182,128 @@ test("YouTube watch pages embed a quick ClipQuest handoff", () => {
   assert.match(quickOpen, /new URL\("\/welcome"/);
   assert.match(quickOpen, /searchParams\.set\(\s*"url"/);
   assert.match(quickOpen, /chrome\.runtime\.getURL\("icons\/icon-48\.png"\)/);
+  assert.match(quickOpen, /ytd-watch-metadata #actions-inner/);
+  assert.match(quickOpen, /#menu ytd-menu-renderer/);
+  assert.match(quickOpen, /#flexible-item-buttons/);
+  assert.match(quickOpen, /insertBefore\(link, placement\.before\)/);
   assert.match(quickOpen, /yt-navigate-finish/);
+  assert.match(quickOpen, /yt-page-data-updated/);
   assert.match(quickOpen, /new MutationObserver/);
   assert.match(quickOpenCss, /prefers-reduced-motion: reduce/);
   assert.match(buildScript, /youtube-quick-open\.css/);
   assert.match(buildScript, /youtube-quick-open\.js/);
+});
+
+test("the YouTube handoff mounts between Share and flexible actions", () => {
+  class FakeElement {
+    constructor(tagName, id = "") {
+      this.tagName = tagName.toUpperCase();
+      this.id = id;
+      this.children = [];
+      this.parentElement = null;
+      this.attributes = new Map();
+      this.ownTextContent = "";
+    }
+
+    get textContent() {
+      return this.children.length
+        ? this.children.map((child) => child.textContent).join("")
+        : this.ownTextContent;
+    }
+
+    set textContent(value) {
+      this.ownTextContent = value;
+    }
+
+    get nextElementSibling() {
+      if (!this.parentElement) return null;
+      const index = this.parentElement.children.indexOf(this);
+      return this.parentElement.children[index + 1] ?? null;
+    }
+
+    append(...children) {
+      for (const child of children) {
+        child.parentElement = this;
+        this.children.push(child);
+      }
+    }
+
+    insertBefore(child, before) {
+      child.remove();
+      child.parentElement = this;
+      const index = before ? this.children.indexOf(before) : -1;
+      if (index === -1) this.children.push(child);
+      else this.children.splice(index, 0, child);
+    }
+
+    querySelector(selector) {
+      if (selector === "#menu ytd-menu-renderer") return menu;
+      if (selector === ":scope > #flexible-item-buttons") return flexible;
+      if (selector === ":scope > #button-shape") return more;
+      return null;
+    }
+
+    setAttribute(name, value) {
+      this.attributes.set(name, value);
+    }
+
+    remove() {
+      if (!this.parentElement) return;
+      const index = this.parentElement.children.indexOf(this);
+      if (index >= 0) this.parentElement.children.splice(index, 1);
+      this.parentElement = null;
+    }
+  }
+
+  const actions = new FakeElement("div", "actions-inner");
+  const menu = new FakeElement("ytd-menu-renderer");
+  const shareGroup = new FakeElement("div", "top-level-buttons-computed");
+  const flexible = new FakeElement("div", "flexible-item-buttons");
+  const more = new FakeElement("yt-button-shape", "button-shape");
+  menu.append(shareGroup, flexible, more);
+
+  const document = {
+    addEventListener() {},
+    createElement(tagName) {
+      return new FakeElement(tagName);
+    },
+    documentElement: new FakeElement("html"),
+    getElementById(id) {
+      return menu.children.find((child) => child.id === id) ?? null;
+    },
+    querySelector(selector) {
+      return selector === "ytd-watch-metadata #actions-inner" ? actions : null;
+    },
+  };
+
+  runInNewContext(quickOpen, {
+    URL,
+    chrome: {
+      runtime: {
+        getURL: (path) => `chrome-extension://clipquest/${path}`,
+      },
+    },
+    document,
+    location: {
+      href: "https://www.youtube.com/watch?v=SVb9OV0bLzI&list=playlist",
+    },
+    MutationObserver: class {
+      observe() {}
+    },
+    requestAnimationFrame: (callback) => callback(),
+    setTimeout,
+    window: { addEventListener() {} },
+  });
+
+  assert.equal(menu.children[0], shareGroup);
+  assert.equal(menu.children[1].id, "clipquest-quick-open");
+  assert.equal(menu.children[2], flexible);
+  assert.equal(menu.children[1].textContent, "Open in ClipQuest");
+  assert.match(
+    menu.children[1].href,
+    /^https:\/\/clipquest\.ccwu\.cc\/welcome\?/,
+  );
+  assert.match(menu.children[1].href, /url=https%3A%2F%2Fwww\.youtube\.com/);
 });
 
 test("choice order uses unbiased random shuffling and preserves every answer", () => {

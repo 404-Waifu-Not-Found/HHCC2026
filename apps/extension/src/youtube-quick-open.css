@@ -1,6 +1,7 @@
 #clipquest-quick-open {
   box-sizing: border-box;
-  min-height: 36px;
+  min-width: 40px;
+  min-height: 40px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -9,7 +10,7 @@
   margin-left: 8px;
   border: 2px solid #2f9859;
   border-bottom-width: 4px;
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 6px 14px 5px 9px;
   color: #102218;
   background: #54c878;
@@ -56,12 +57,11 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1280px) {
   #clipquest-quick-open {
-    width: 38px;
-    min-width: 38px;
-    padding-right: 6px;
-    padding-left: 6px;
+    width: 40px;
+    padding-right: 7px;
+    padding-left: 7px;
   }
 
   .clipquest-quick-open__label {
