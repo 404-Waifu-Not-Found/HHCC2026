@@ -348,6 +348,61 @@ export function multipleChoiceOptionMatchesQuestionKind(question, answer) {
   );
 }
 
+const COMPLETE_MC_ASSERTION_PATTERN =
+  /(?:\b(?:is|are|was|were|will|would|can|could|has|have|had|causes?|caused|leads?|led|results?|resulted|increases?|increased|decreases?|decreased|rises?|rose|falls?|fell|traps?|trapped|absorbs?|absorbed|releases?|released|produces?|produced|converts?|converted|prevents?|prevented|protects?|protected|supports?|supported|depends?|depended)\b|(?:是|会|能够|导致|增加|减少|上升|下降|吸收|释放|产生|转换|防止|保护|支持|依赖))/iu;
+
+/**
+ * Repair only the stem when the model already supplied a complete, grounded
+ * assertion but paired it with an incompatible wh-form. This is not a content
+ * rewrite: the answer, evidence, distractors, and objective remain unchanged.
+ * Bare factors, component lists, concessive fragments, and tautologies still
+ * fail closed and consume the normal targeted repair budget.
+ */
+export function repairMultipleChoiceQuestionKind(candidate, answer) {
+  const concept = String(candidate?.concept ?? "")
+    .normalize("NFC")
+    .replace(/[.!?。！？]+$/gu, "")
+    .trim();
+  const assertion = String(answer ?? "")
+    .normalize("NFC")
+    .trim();
+  if (!concept || !assertion) return null;
+  if ((semanticTokens(assertion).size ?? 0) < 4) return null;
+  if (!COMPLETE_MC_ASSERTION_PATTERN.test(assertion)) return null;
+  if (CONCESSIVE_NON_ANSWER_PATTERN.test(assertion)) return null;
+  if (conceptSimilarity(concept, assertion) >= 0.72) return null;
+  if (
+    SOURCE_REFERENCE_PATTERNS.some((pattern) => pattern.test(concept)) ||
+    LOGISTICS_PATTERNS.some((pattern) => pattern.test(concept))
+  ) {
+    return null;
+  }
+  const objective = String(candidate?.objectiveCategory ?? "").toLowerCase();
+  const lead =
+    objective === "definition"
+      ? "Which statement correctly defines"
+      : objective === "condition"
+        ? "Which statement correctly identifies the condition for"
+        : objective === "mechanism"
+          ? "Which statement correctly explains the mechanism of"
+          : objective === "method"
+            ? "Which statement correctly describes the method for"
+            : objective === "application"
+              ? "Which statement correctly applies"
+              : objective === "formula"
+                ? "Which expression correctly represents"
+                : "Which statement correctly describes";
+  const question = `${lead} ${concept}?`;
+  return questionConceptFailure({
+    ...candidate,
+    question,
+    answerText: assertion,
+    correctAnswer: assertion,
+  }) === null
+    ? question
+    : null;
+}
+
 const NUMERIC_RECALL_QUESTION_PATTERN =
   /^\s*(?:(?:what (?:percentage|percent|number|count|frequency|duration|amount|value|cost|price)|how (?:many|often|long|much))\b|(?:多少|几次|多久|百分之几|占比多少|价值多少|价格多少|成本多少))/iu;
 const NECESSARY_NUMERIC_OBJECTIVE_PATTERN =

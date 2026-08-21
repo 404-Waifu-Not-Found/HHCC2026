@@ -18,6 +18,7 @@ import {
   questionConceptFailure,
   questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
+  repairMultipleChoiceQuestionKind,
   stripQuestionSourceFraming,
 } from "../src/grounded-quality.js";
 import { formulaFingerprint } from "../src/math-expression.js";
@@ -1376,6 +1377,35 @@ test("same climate-cause objective cannot pass under condition and relationship 
       5,
     ),
     true,
+  );
+});
+
+test("a complete grounded assertion can receive a deterministic safe MC stem", () => {
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      {
+        concept: "greenhouse gas concentration trend",
+        objectiveCategory: "relationship",
+        question:
+          "What condition do industrialized nations provide for greenhouse gases?",
+      },
+      "The concentration of greenhouse gases in the atmosphere will continue to rise.",
+    ),
+    "Which statement correctly describes greenhouse gas concentration trend?",
+  );
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      { concept: "language variation", objectiveCategory: "relationship" },
+      "degrees of variation among speakers",
+    ),
+    null,
+  );
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      { concept: "ecosystem vulnerability", objectiveCategory: "mechanism" },
+      "even without catastrophic events",
+    ),
+    null,
   );
 });
 

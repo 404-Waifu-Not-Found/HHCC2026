@@ -1469,6 +1469,52 @@ test("v5.8 repairs a how-can answer that merely repeats the outcome", async (con
   );
 });
 
+test("v5.8 repairs a malformed MC stem locally when its grounded answer is a complete assertion", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1) {
+        const question = value.questions[0];
+        const assertion = task.focusExcerpt.split(/(?<=[.!?])\s+/u)[0];
+        question.concept = "reaction energy trend";
+        question.objectiveCategory = "relationship";
+        question.question =
+          "What condition do catalysts provide for reaction energy?";
+        question.answerSpan = assertion;
+        question.answerText = assertion;
+        question.explanation = assertion;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(
+    result.quiz.questions[0].question,
+    "Which statement correctly describes reaction energy trend?",
+  );
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    0,
+  );
+});
+
 test("v5.8 repairs How-does component lists before storing the singleton", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];

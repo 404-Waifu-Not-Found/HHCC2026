@@ -16,6 +16,7 @@ import {
   questionConceptFailure,
   questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
+  repairMultipleChoiceQuestionKind,
   stripQuestionSourceFraming,
 } from "./grounded-quality.js";
 import { formulaFingerprint } from "./math-expression.js";
@@ -1604,7 +1605,20 @@ function validateQuiz(quiz, input) {
           !questionTestsTaughtConcept(rawQuestion)
         ? "schema_invalid"
         : null;
-    if (input.rawConceptValidationMode && rawConceptFailure) {
+    const rawQuestionKindRepair =
+      input.conceptFirstV58Mode &&
+      rawQuestion?.type === "multiple_choice" &&
+      rawConceptFailure === "question_answer_kind_mismatch"
+        ? repairMultipleChoiceQuestionKind(
+            rawQuestion,
+            rawQuestion?.answerText ?? rawQuestion?.answerSpan,
+          )
+        : null;
+    if (
+      input.rawConceptValidationMode &&
+      rawConceptFailure &&
+      !rawQuestionKindRepair
+    ) {
       validationFailure(
         `Question ${index + 1} must directly test a taught concept without source framing or course logistics.`,
         rawConceptFailure,
@@ -1694,7 +1708,20 @@ function validateQuiz(quiz, input) {
       : input.conceptMasteryMode && !questionTestsTaughtConcept(question)
         ? "schema_invalid"
         : null;
-    if (input.conceptMasteryMode && normalizedConceptFailure) {
+    const normalizedQuestionKindRepair =
+      input.conceptFirstV58Mode &&
+      question.type === "multiple_choice" &&
+      normalizedConceptFailure === "question_answer_kind_mismatch"
+        ? repairMultipleChoiceQuestionKind(
+            question,
+            question.answerText ?? question.answerSpan,
+          )
+        : null;
+    if (
+      input.conceptMasteryMode &&
+      normalizedConceptFailure &&
+      !normalizedQuestionKindRepair
+    ) {
       validationFailure(
         `Question ${index + 1} must directly test a taught concept rather than source or course metadata.`,
         normalizedConceptFailure,
@@ -1734,11 +1761,13 @@ function validateQuiz(quiz, input) {
             "mc_evidence_span_invalid",
           );
         }
+        const storedQuestionText =
+          normalizedQuestionKindRepair ?? question.question;
         if (
           input.conceptFirstV58Mode &&
           grounded &&
           !multipleChoiceQuestionAnswerIsCoherent(
-            question.question,
+            storedQuestionText,
             correctAnswer,
             input.focusExcerpt,
           )
@@ -1793,6 +1822,7 @@ function validateQuiz(quiz, input) {
         } = question;
         return {
           ...storedQuestion,
+          question: storedQuestionText,
           ...(input.groundedMode
             ? {
                 claimKey: claimKeyForCandidate(question),
