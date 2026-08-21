@@ -161,7 +161,7 @@ videosRouter.post("/import", async (c) => {
   const preferredSegments = inspected.preferredCaptionSegments?.filter(
     (segment) => segment.text.trim().length > 0,
   );
-  const browserCaptionLookup = inspected.source === "youtube";
+  const browserCaptionLookup = Boolean(inspected.preferredCaptionSourceUrl);
   const captionsAvailable = Boolean(
     preferredSegments?.length ||
     inspected.preferredCaptionSourceUrl ||
