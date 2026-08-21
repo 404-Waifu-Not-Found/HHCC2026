@@ -303,5 +303,24 @@ describe("progressive short-answer grading", () => {
         gradeProgressiveShortAnswer({ answer, ...quotientRuleRubric }),
       ).toBe(false);
     });
+
+    it("accepts the equivalent product-of-fractions wording seen in production", () => {
+      expect(
+        gradeProgressiveShortAnswer({
+          answer:
+            "The derivative of ln x is 1/x because the general log rule gives (1/x)(1/ln(e)) and ln(e)=1.",
+          requiredIdeas: [
+            "derivative is 1/x",
+            "general log derivative 1/x * 1/ln(e)",
+            "ln(e)=1 simplifies",
+          ],
+          acceptableAlternatives: [
+            "The derivative of ln x is 1/x. Using the general form for log base e of x, it is 1/x * 1/ln(e), and since ln(e) = 1, this simplifies to 1/x.",
+            "d/dx ln(x) = 1/x because the log rule gives 1/x times 1/ln(e), and ln(e) = 1.",
+            "The derivative is 1/x; from the general rule, it is (1/x)(1/ln e) = 1/x.",
+          ],
+        }),
+      ).toBe(true);
+    });
   });
 });

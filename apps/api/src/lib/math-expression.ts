@@ -468,23 +468,8 @@ function canonicalSigned(node: MathNode): { sign: 1 | -1; key: string } {
   if (node.kind === "add") {
     return { sign: 1, key: canonicalExpression(node) };
   }
-  if (node.kind === "multiply") {
-    let sign: 1 | -1 = 1;
-    const factors = flattenFactors(node).map((factor) => {
-      const normalized = canonicalSigned(factor);
-      if (normalized.sign === -1) sign = sign === 1 ? -1 : 1;
-      return normalized.key;
-    });
-    factors.sort((left, right) => left.localeCompare(right));
-    return { sign, key: `product(${factors.join("|")})` };
-  }
-  if (node.kind === "divide") {
-    const numerator = canonicalSigned(node.numerator);
-    const denominator = canonicalSigned(node.denominator);
-    return {
-      sign: numerator.sign === denominator.sign ? 1 : -1,
-      key: `divide(${numerator.key}|${denominator.key})`,
-    };
+  if (node.kind === "multiply" || node.kind === "divide") {
+    return canonicalRationalProduct(node);
   }
   const base = canonicalSigned(node.base);
   const exponent = canonicalSigned(node.exponent);
@@ -494,8 +479,55 @@ function canonicalSigned(node: MathNode): { sign: 1 | -1; key: string } {
   };
 }
 
-function flattenFactors(node: MathNode): MathNode[] {
-  return node.kind === "multiply"
-    ? node.factors.flatMap((factor) => flattenFactors(factor))
-    : [node];
+/**
+ * Multiplication and division share one canonical numerator/denominator form.
+ * This keeps denominator placement significant while making equivalent forms
+ * such as `(1/x)(1/y)` and `1/x * 1/y` compare identically.
+ */
+function canonicalRationalProduct(node: MathNode): {
+  sign: 1 | -1;
+  key: string;
+} {
+  let sign: 1 | -1 = 1;
+  const numeratorFactors: string[] = [];
+  const denominatorFactors: string[] = [];
+
+  const collect = (value: MathNode, inverted: boolean): void => {
+    if (value.kind === "negate") {
+      sign = sign === 1 ? -1 : 1;
+      collect(value.value, inverted);
+      return;
+    }
+    if (value.kind === "multiply") {
+      for (const factor of value.factors) collect(factor, inverted);
+      return;
+    }
+    if (value.kind === "divide") {
+      collect(value.numerator, inverted);
+      collect(value.denominator, !inverted);
+      return;
+    }
+
+    const normalized = canonicalSigned(value);
+    if (normalized.sign === -1) sign = sign === 1 ? -1 : 1;
+    (inverted ? denominatorFactors : numeratorFactors).push(normalized.key);
+  };
+
+  collect(node, false);
+  const one = "atom(1)";
+  const numerator = normalizedProductKey(numeratorFactors, one);
+  const denominator = normalizedProductKey(denominatorFactors, "");
+  return {
+    sign,
+    key: denominator ? `divide(${numerator}|${denominator})` : numerator,
+  };
+}
+
+function normalizedProductKey(factors: string[], emptyValue: string): string {
+  const significant = factors.filter((factor) => factor !== "atom(1)");
+  significant.sort((left, right) => left.localeCompare(right));
+  if (significant.length === 0) return emptyValue;
+  return significant.length === 1
+    ? significant[0]!
+    : `product(${significant.join("|")})`;
 }
