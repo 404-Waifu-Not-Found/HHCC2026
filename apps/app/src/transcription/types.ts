@@ -23,7 +23,8 @@ export const SpeechModelManifestSchema = z.object({
 
 export type SpeechModelManifest = z.infer<typeof SpeechModelManifestSchema>;
 
-export type TranscriptionPhase = "preparing_audio" | "downloading_model" | "transcribing_device";
+export type TranscriptionPhase =
+  "preparing_audio" | "downloading_model" | "transcribing_device";
 
 export type LocalTranscriptionOptions = {
   ownerUserId: string;
@@ -33,7 +34,10 @@ export type LocalTranscriptionOptions = {
   durationSeconds: number;
   signal: AbortSignal;
   onPhase(phase: TranscriptionPhase): void;
-  onProgress(progress: number, detail?: { loadedBytes?: number; totalBytes?: number; cached?: boolean }): void;
+  onProgress(
+    progress: number,
+    detail?: { loadedBytes?: number; totalBytes?: number; cached?: boolean },
+  ): void;
 };
 
 export type LocalTranscriptionResult = {

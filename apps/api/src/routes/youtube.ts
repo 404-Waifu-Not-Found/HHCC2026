@@ -4,14 +4,15 @@ import {
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
-import {
-  Innertube,
-  type OAuth2Tokens,
-} from "youtubei.js/cf-worker";
+import { Innertube, type OAuth2Tokens } from "youtubei.js/cf-worker";
 import { classifyHistoryTitles } from "../lib/ai-services";
 import { decryptJson, encryptJson } from "../lib/crypto";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
+import {
+  fetchWithTimeout,
+  readBoundedResponseJson,
+} from "../lib/outbound-response";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { cacheThumbnail } from "../lib/thumbnail";
 import type { ApiBindings } from "../middleware/authenticated";
@@ -56,6 +57,8 @@ type HistoryCandidate = {
   title: string;
   thumbnailUrl: string;
 };
+
+const DEVICE_TOKEN_RESPONSE_MAX_BYTES = 64 * 1024;
 
 export const youtubeRouter = new Hono<ApiBindings>();
 
@@ -280,17 +283,26 @@ async function createYouTube(retrievePlayer: boolean): Promise<Innertube> {
 async function pollDeviceToken(
   flow: DeviceFlow,
 ): Promise<z.infer<typeof TokenResponseSchema>> {
-  const response = await fetch("https://www.youtube.com/o/oauth2/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: flow.client.client_id,
-      client_secret: flow.client.client_secret,
-      code: flow.deviceCode,
-      grant_type: "http://oauth.net/grant_type/device/1.0",
-    }),
-  });
-  const parsed = TokenResponseSchema.safeParse(await response.json());
+  const response = await fetchWithTimeout(
+    "https://www.youtube.com/o/oauth2/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: flow.client.client_id,
+        client_secret: flow.client.client_secret,
+        code: flow.deviceCode,
+        grant_type: "http://oauth.net/grant_type/device/1.0",
+      }),
+    },
+    15_000,
+  );
+  const parsed = TokenResponseSchema.safeParse(
+    await readBoundedResponseJson(
+      response,
+      DEVICE_TOKEN_RESPONSE_MAX_BYTES,
+    ).catch(() => null),
+  );
   if (!parsed.success) {
     throw new ApiError(
       503,

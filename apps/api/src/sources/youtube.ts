@@ -1,10 +1,13 @@
 import { Innertube } from "youtubei.js/cf-worker";
-import { z } from "zod";
 import {
   compactTranscriptSegments,
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import { ApiError } from "../lib/errors";
+import {
+  fetchWithTimeout,
+  readBoundedResponseText,
+} from "../lib/outbound-response";
 import type { SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
 
@@ -13,6 +16,8 @@ const YOUTUBE_CAPTION_CLIENTS = ["IOS", "ANDROID"] as const;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
 const MAX_AUDIO_BYTES = 180 * 1024 * 1024;
+const METADATA_FETCH_TIMEOUT_MS = 15_000;
+const AUDIO_FETCH_TIMEOUT_MS = 30_000;
 
 type YouTubeCaptionTrack = {
   base_url: string;
@@ -24,16 +29,16 @@ type YouTubeCaptionTrack = {
 type YouTubeInspectionData = {
   title: string;
   durationSeconds: number;
-  thumbnails: Array<{ url: string; width?: number }>;
+  thumbnails: { url: string; width?: number }[];
   tracks: YouTubeCaptionTrack[];
 };
 
 type TimedTextPayload = {
-  events?: Array<{
+  events?: {
     tStartMs?: number;
     dDurationMs?: number;
-    segs?: Array<{ utf8?: string }>;
-  }>;
+    segs?: { utf8?: string }[];
+  }[];
 };
 
 class YouTubeMetadataLoadError extends Error {
@@ -55,7 +60,7 @@ async function createYouTubeClient(
 }
 
 function getBestThumbnail(
-  thumbnails: Array<{ url: string; width?: number }>,
+  thumbnails: { url: string; width?: number }[],
 ): string {
   return (
     [...thumbnails].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ??
@@ -192,32 +197,28 @@ async function fetchYouTubeWatchPage(
   watchUrl.searchParams.set("hl", "en");
   let response: Response;
   try {
-    response = await fetch(watchUrl, {
-      headers: {
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "en-US,en;q=0.9",
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    response = await fetchWithTimeout(
+      watchUrl,
+      {
+        headers: {
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        },
+        redirect: "manual",
       },
-      redirect: "manual",
-    });
+      METADATA_FETCH_TIMEOUT_MS,
+    );
   } catch {
     throw new YouTubeMetadataLoadError("watch_fetch_failed");
   }
   if (!response.ok)
     throw new YouTubeMetadataLoadError(`watch_http_${response.status}`);
-  const declaredLength = Number.parseInt(
-    response.headers.get("content-length") ?? "",
-    10,
-  );
-  if (
-    Number.isFinite(declaredLength) &&
-    declaredLength > MAX_WATCH_PAGE_BYTES
-  ) {
-    throw new YouTubeMetadataLoadError("watch_oversize");
-  }
-  const html = await response.text();
-  if (new TextEncoder().encode(html).byteLength > MAX_WATCH_PAGE_BYTES) {
+  let html: string;
+  try {
+    html = await readBoundedResponseText(response, MAX_WATCH_PAGE_BYTES);
+  } catch {
     throw new YouTubeMetadataLoadError("watch_oversize");
   }
   const parsed = parseYouTubePlayerResponse(extractYouTubePlayerResponse(html));
@@ -234,24 +235,23 @@ async function fetchYouTubeOEmbed(
   oembedUrl.searchParams.set("format", "json");
   let response: Response;
   try {
-    response = await fetch(oembedUrl, {
-      headers: { Accept: "application/json" },
-      redirect: "manual",
-    });
+    response = await fetchWithTimeout(
+      oembedUrl,
+      {
+        headers: { Accept: "application/json" },
+        redirect: "manual",
+      },
+      METADATA_FETCH_TIMEOUT_MS,
+    );
   } catch {
     throw new YouTubeMetadataLoadError("oembed_fetch_failed");
   }
   if (!response.ok)
     throw new YouTubeMetadataLoadError(`oembed_http_${response.status}`);
-  const declaredLength = Number.parseInt(
-    response.headers.get("content-length") ?? "",
-    10,
-  );
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_OEMBED_BYTES) {
-    throw new YouTubeMetadataLoadError("oembed_oversize");
-  }
-  const body = await response.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_OEMBED_BYTES) {
+  let body: string;
+  try {
+    body = await readBoundedResponseText(response, MAX_OEMBED_BYTES);
+  } catch {
     throw new YouTubeMetadataLoadError("oembed_oversize");
   }
   let payload: unknown;
@@ -574,7 +574,11 @@ export class YouTubeAdapter implements SourceAdapter {
       });
       const range = request.headers.get("range");
       if (range) headers.set("Range", range);
-      const response = await fetch(format.url, { headers });
+      const response = await fetchWithTimeout(
+        format.url,
+        { headers },
+        AUDIO_FETCH_TIMEOUT_MS,
+      );
       if (!response.ok || !response.body)
         throw new Error(`audio_http_${response.status}`);
       const responseLength = Number(

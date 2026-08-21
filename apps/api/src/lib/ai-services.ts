@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { ApiError } from "./errors";
+import { fetchWithTimeout, readBoundedResponseJson } from "./outbound-response";
 import type { AppEnv } from "../types";
+
+const CLASSIFICATION_RESPONSE_MAX_BYTES = 256 * 1024;
 
 const HistoryClassificationSchema = z
   .object({
@@ -20,38 +23,37 @@ const HistoryClassificationSchema = z
 
 async function requestJson<T>(
   env: AppEnv,
-  messages: Array<{ role: "system" | "user"; content: string }>,
+  messages: { role: "system" | "user"; content: string }[],
   schema: z.ZodType<T>,
   maximumOutputTokens: number,
 ): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
   let response: Response;
   try {
-    response = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
-        "Content-Type": "application/json",
+    response = await fetchWithTimeout(
+      "https://api.deepseek.com/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: env.DEEPSEEK_MODEL,
+          messages,
+          thinking: { type: "disabled" },
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+          max_tokens: maximumOutputTokens,
+        }),
       },
-      body: JSON.stringify({
-        model: env.DEEPSEEK_MODEL,
-        messages,
-        thinking: { type: "disabled" },
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        max_tokens: maximumOutputTokens,
-      }),
-      signal: controller.signal,
-    });
+      60_000,
+    );
   } catch {
     throw new ApiError(
       503,
       "ai_service_unavailable",
       "The classification service is temporarily unavailable.",
     );
-  } finally {
-    clearTimeout(timeout);
   }
   if (!response.ok) {
     throw new ApiError(
@@ -71,7 +73,13 @@ async function requestJson<T>(
         )
         .min(1),
     })
-    .safeParse(await response.json());
+    .safeParse(
+      await readBoundedResponseJson(
+        response,
+        CLASSIFICATION_RESPONSE_MAX_BYTES,
+        60_000,
+      ).catch(() => null),
+    );
   if (!outer.success || outer.data.choices[0]?.finish_reason === "length") {
     throw new ApiError(
       502,
@@ -98,7 +106,7 @@ async function requestJson<T>(
 
 export async function classifyHistoryTitles(
   env: AppEnv,
-  candidates: Array<{ id: string; title: string }>,
+  candidates: { id: string; title: string }[],
 ): Promise<Map<string, string>> {
   const result = await requestJson(
     env,

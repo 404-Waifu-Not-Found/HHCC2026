@@ -17,7 +17,12 @@ export class ClientApiError extends Error {
   readonly code: string;
   readonly details?: unknown;
 
-  constructor(status: number, code: string, message: string, details?: unknown) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: unknown,
+  ) {
     super(message);
     this.name = "ClientApiError";
     this.status = status;
@@ -33,16 +38,21 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
-  const cookie = readNativeAuthCookie(Platform.OS, () => authClient.getCookie());
+  const cookie = readNativeAuthCookie(Platform.OS, () =>
+    authClient.getCookie(),
+  );
   if (cookie) headers.set("Cookie", cookie);
-  if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (options.body && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
   const response = await fetch(`${API_ORIGIN}${path}`, {
     ...options,
     credentials: "include",
     headers,
   });
   const contentType = response.headers.get("content-type") ?? "";
-  const body: unknown = contentType.includes("application/json") ? await response.json() : await response.text();
+  const body: unknown = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
   if (!response.ok) {
     const errorBody = body as ApiErrorBody;
     throw new ClientApiError(
@@ -55,7 +65,12 @@ export async function apiRequest<T>(
   if (!schema) return body as T;
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    throw new ClientApiError(502, "invalid_server_response", "ClipQuest received an unexpected server response.", parsed.error.flatten());
+    throw new ClientApiError(
+      502,
+      "invalid_server_response",
+      "ClipQuest received an unexpected server response.",
+      parsed.error.flatten(),
+    );
   }
   return parsed.data;
 }

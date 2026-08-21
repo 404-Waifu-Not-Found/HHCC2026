@@ -3956,19 +3956,6 @@ function stripPromptFirstV512PresentationClause(value) {
   return cleaned.replace(/^([a-z])/u, (letter) => letter.toUpperCase());
 }
 
-function stripPromptFirstV512TruthCommentary(value) {
-  const original = stripPromptFirstV512PresentationClause(value);
-  if (typeof original !== "string") return original;
-  const cleaned = original
-    .replace(
-      /[,;:]?\s*(?:so|therefore|thus),?\s+(?:the|this)\s+(?:statement|claim|sentence)\s+(?:is|was)\s+true\s*[.!]?$/iu,
-      "",
-    )
-    .replace(/\s+([.!?,;:])/gu, "$1")
-    .trim();
-  return cleaned || original;
-}
-
 function promptFirstV512LearnerText(value, v512Enabled, v511Enabled = false) {
   const cleaned = v512Enabled
     ? stripPromptFirstV512PresentationClause(value)

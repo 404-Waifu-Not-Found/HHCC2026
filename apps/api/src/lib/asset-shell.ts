@@ -1,3 +1,4 @@
+import type { PublicWorkerVersion } from "./worker-version";
 const staticShells = new Map<string, string>([
   ["/", "/index.html"],
   ["/_sitemap", "/_sitemap.html"],
@@ -58,4 +59,3 @@ export function preventStaleAppShell(
     headers,
   });
 }
-import type { PublicWorkerVersion } from "./worker-version";

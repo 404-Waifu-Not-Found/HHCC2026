@@ -9,7 +9,6 @@ import {
   LocalGenerationCallOutcomeSchema,
   LocalGenerationProfileSchema,
   LocalGenerationClientSchema,
-  LocalQuestionPlanSchema,
   LocalSourceSelectionMetricsSchema,
   LocalQuizProgressiveImportVersionSchema,
   LocalQuizPromptVersionSchema,

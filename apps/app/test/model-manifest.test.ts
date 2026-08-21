@@ -8,20 +8,37 @@ const validManifest = {
   web: {
     repository: "onnx-community/whisper-tiny",
     sizeBytes: 45_000_000,
-    files: [{ path: "onnx/encoder_model_quantized.onnx", sizeBytes: 10, sha256: "a".repeat(64) }],
+    files: [
+      {
+        path: "onnx/encoder_model_quantized.onnx",
+        sizeBytes: 10,
+        sha256: "a".repeat(64),
+      },
+    ],
   },
   native: {
-    file: { path: "native/ggml-tiny-q5_1.bin", sizeBytes: 32_152_673, sha256: "b".repeat(64) },
+    file: {
+      path: "native/ggml-tiny-q5_1.bin",
+      sizeBytes: 32_152_673,
+      sha256: "b".repeat(64),
+    },
   },
 };
 
 describe("speech model manifest", () => {
   it("accepts pinned model metadata with SHA-256 digests", () => {
-    expect(SpeechModelManifestSchema.parse(validManifest)).toEqual(validManifest);
+    expect(SpeechModelManifestSchema.parse(validManifest)).toEqual(
+      validManifest,
+    );
   });
 
   it("rejects a different model repository or malformed digest", () => {
-    expect(SpeechModelManifestSchema.safeParse({ ...validManifest, web: { ...validManifest.web, repository: "untrusted/model" } }).success).toBe(false);
+    expect(
+      SpeechModelManifestSchema.safeParse({
+        ...validManifest,
+        web: { ...validManifest.web, repository: "untrusted/model" },
+      }).success,
+    ).toBe(false);
     expect(
       SpeechModelManifestSchema.safeParse({
         ...validManifest,

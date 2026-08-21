@@ -30,6 +30,7 @@ import {
   loadGenerationRecordForAttempt,
   loadImportedVideo,
   clearGenerationRecord,
+  generationRecordForOwnerQuizAttempt,
   saveImportedVideo,
   saveGenerationRecord,
   startGenerationRecordHeartbeat,
@@ -117,7 +118,11 @@ async function runAutomaticRecovery(
   // immediately. Web tabs still receive independent claim identities.
   let stored =
     Platform.OS !== "web"
-      ? await matchingGenerationRecord(attemptId, status.quizId)
+      ? await matchingGenerationRecord(
+          session.user.id,
+          attemptId,
+          status.quizId,
+        )
       : null;
   const resumableNativeLease =
     Platform.OS !== "web" &&
@@ -202,7 +207,11 @@ async function runAutomaticRecovery(
   }
 
   const generationId = continuation.generationId ?? Crypto.randomUUID();
-  stored ??= await matchingGenerationRecord(attemptId, status.quizId);
+  stored ??= await matchingGenerationRecord(
+    session.user.id,
+    attemptId,
+    status.quizId,
+  );
   if (!stored && continuation.generationId) {
     const candidate = await loadGenerationRecord(continuation.generationId);
     if (
@@ -751,13 +760,17 @@ async function readStatus(attemptId: string, signal: AbortSignal) {
 }
 
 async function matchingGenerationRecord(
+  ownerUserId: string,
   attemptId: string,
   quizId: string,
 ): Promise<GenerationRecord | null> {
   const stored = await loadGenerationRecordForAttempt(attemptId);
-  return stored?.quizId === quizId && stored.attemptId === attemptId
-    ? stored
-    : null;
+  return generationRecordForOwnerQuizAttempt(
+    stored,
+    ownerUserId,
+    quizId,
+    attemptId,
+  );
 }
 
 async function acquireContinuationTranscript(

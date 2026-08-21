@@ -2476,16 +2476,6 @@ function promptFirstV511Input(
   };
 }
 
-function promptFirstV510Input(
-  questionCount = 5,
-  questionTypes = ["multiple_choice", "true_false", "short_answer"],
-) {
-  return {
-    ...conceptFirstInput(questionCount, questionTypes),
-    generationProfile: "prompt_first_auto_v5_10",
-  };
-}
-
 function promptFirstV59Input(
   questionCount = 5,
   questionTypes = ["multiple_choice", "true_false", "short_answer"],

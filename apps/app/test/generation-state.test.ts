@@ -30,6 +30,7 @@ import {
   clearGenerationRecord,
   GENERATION_RECORD_HEARTBEAT_TIMEOUT_MS,
   generationRecordForOwnerAndVideo,
+  generationRecordForOwnerQuizAttempt,
   generationRecordHasLiveHeartbeat,
   loadQuestPreferences,
   loadGenerationRecord,
@@ -125,6 +126,38 @@ describe("generation-scoped local state", () => {
     ).toBeNull();
     expect(
       generationRecordForOwnerAndVideo(null, "owner-user", VIDEO_ID),
+    ).toBeNull();
+  });
+
+  it("accepts attempt recovery state only for the current owner and quiz", () => {
+    const bound = {
+      ...record(GENERATION_ONE, SESSION_ONE, KEY_ONE),
+      attemptId: ATTEMPT_ONE,
+      quizId: QUIZ_ONE,
+    };
+    expect(
+      generationRecordForOwnerQuizAttempt(
+        bound,
+        "owner-user",
+        QUIZ_ONE,
+        ATTEMPT_ONE,
+      ),
+    ).toBe(bound);
+    expect(
+      generationRecordForOwnerQuizAttempt(
+        bound,
+        "another-owner",
+        QUIZ_ONE,
+        ATTEMPT_ONE,
+      ),
+    ).toBeNull();
+    expect(
+      generationRecordForOwnerQuizAttempt(
+        bound,
+        "owner-user",
+        QUIZ_TWO,
+        ATTEMPT_ONE,
+      ),
     ).toBeNull();
   });
 

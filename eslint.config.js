@@ -13,6 +13,14 @@ module.exports = defineConfig([
   },
   expoConfig,
   {
+    files: ["apps/extension/src/**/*.js"],
+    languageOptions: {
+      globals: {
+        chrome: "readonly",
+      },
+    },
+  },
+  {
     files: ["apps/app/**/*.{ts,tsx}", "e2e/**/*.ts", "playwright.config.ts"],
     rules: {
       "no-restricted-syntax": [

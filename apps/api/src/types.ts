@@ -1,3 +1,5 @@
+import type { AdminRole } from "@clipquest/contracts";
+
 export type AppSecrets = {
   DEEPSEEK_API_KEY: string;
   RESEND_API_KEY: string;
@@ -42,8 +44,6 @@ export type AppEnv = Omit<
     ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINT?: string;
     IOS_APP_LINKS_TEAM_ID?: string;
   };
-
-import type { AdminRole } from "@clipquest/contracts";
 
 export type AuthUser = {
   id: string;
