@@ -189,7 +189,7 @@ export async function loadCheatSheetContext(
 
 export async function uploadCheatSheet(input: {
   videoId: string;
-  quizId: string;
+  quizId: string | null;
   document: CheatSheetDocument;
   pdf: Uint8Array;
 }): Promise<{ id: string }> {

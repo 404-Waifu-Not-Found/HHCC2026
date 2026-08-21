@@ -23,6 +23,7 @@ import {
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
   CheatSheetDocumentSchema,
+  CheatSheetResponseSchema,
   PushRegisterResponseSchema,
   PushUnregisterRequestSchema,
   PushUnregisterResponseSchema,
@@ -64,6 +65,20 @@ describe("cheat-sheet quality contracts", () => {
         summary: "Regional anesthetics create a chemical barricade.",
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts caption-only artifacts without a quiz", () => {
+    expect(
+      CheatSheetResponseSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        videoId: "22222222-2222-4222-8222-222222222222",
+        quizId: null,
+        sourceRevision: "video:22222222-2222-4222-8222-222222222222",
+        status: "ready",
+        document: validCheatSheetDocument,
+        updatedAt: 1,
+      }).success,
+    ).toBe(true);
   });
 });
 

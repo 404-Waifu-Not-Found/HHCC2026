@@ -94,17 +94,15 @@ export default function LibraryScreen() {
         const document = await generateCheatSheetDocumentWithLocalAi(context);
         const pdf = await renderCheatSheetPdf(document);
         let persistenceError: unknown;
-        if (context.quizId) {
-          try {
-            await uploadCheatSheet({
-              videoId: card.videoId,
-              quizId: context.quizId,
-              document,
-              pdf,
-            });
-          } catch (cause) {
-            persistenceError = cause;
-          }
+        try {
+          await uploadCheatSheet({
+            videoId: card.videoId,
+            quizId: context.quizId,
+            document,
+            pdf,
+          });
+        } catch (cause) {
+          persistenceError = cause;
         }
         await exportCheatSheetPdf(pdf, card.title);
         if (persistenceError) {
@@ -116,7 +114,7 @@ export default function LibraryScreen() {
             `Notes downloaded, but could not be saved: ${detail}`,
           );
         }
-        if (context.quizId) await refresh();
+        await refresh();
       } catch (cause) {
         setNotesError(
           cause instanceof Error

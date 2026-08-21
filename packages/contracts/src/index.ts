@@ -2932,7 +2932,7 @@ export const CheatSheetResponseSchema = z
   .object({
     id: z.string().uuid(),
     videoId: z.string().uuid(),
-    quizId: z.string().uuid(),
+    quizId: z.string().uuid().nullable(),
     sourceRevision: z.string(),
     status: CheatSheetStatusSchema,
     document: CheatSheetDocumentSchema.nullable(),
@@ -2944,7 +2944,7 @@ export type CheatSheetResponse = z.infer<typeof CheatSheetResponseSchema>;
 export const CheatSheetUploadRequestSchema = z
   .object({
     videoId: z.string().uuid(),
-    quizId: z.string().uuid(),
+    quizId: z.string().uuid().nullable(),
     sourceRevision: z.string().min(1).max(128),
     document: CheatSheetDocumentSchema,
     pdfBase64: z.string().min(1).max(2_000_000),
