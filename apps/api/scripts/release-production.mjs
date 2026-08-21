@@ -8,6 +8,7 @@ import {
   probeWorkerAssetShells,
   retryWorkerAssetProbe,
 } from "./probe-worker-assets.mjs";
+import { pushedReferenceForHead } from "./release-git-ref.mjs";
 import { resolveWorkerPreviewUrl } from "./worker-preview-url.mjs";
 
 const apiRoot = path.resolve(
@@ -32,10 +33,12 @@ try {
     throw new Error("Release requires a clean working tree.");
   }
   const sha = git(["rev-parse", "HEAD"]).trim();
-  const pushedSha = git(["rev-parse", "@{upstream}"]).trim();
+  const branch = git(["branch", "--show-current"]).trim();
+  const pushedReference = pushedReferenceForHead(branch);
+  const pushedSha = git(["rev-parse", pushedReference]).trim();
   if (sha !== pushedSha) {
     throw new Error(
-      "Release requires the exact HEAD commit to be pushed upstream.",
+      `Release requires the exact HEAD commit to match ${pushedReference}.`,
     );
   }
   evidence.gitSha = sha;
