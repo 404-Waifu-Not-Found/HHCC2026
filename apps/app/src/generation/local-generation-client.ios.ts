@@ -133,6 +133,11 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
       {
         fetch: expoFetch as unknown as typeof globalThis.fetch,
         crypto: nativeCrypto,
+        // iOS's native fetch bridge can leave a quiet SSE response open
+        // without delivering the next question. Use the bounded JSON
+        // envelope so an AI-generated bank either completes or fails through
+        // the normal retry/error path; never synthesize fallback content.
+        disableStreaming: true,
       },
     );
     return LocalConceptQuizGenerationResultSchema.parse({

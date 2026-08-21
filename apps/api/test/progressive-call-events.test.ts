@@ -1526,6 +1526,8 @@ describe("protocol-9 concept-first call lifecycles", () => {
     ["short_enumeration_invalid", "answer_repair"],
     ["short_formula_invalid", "answer_repair"],
     ["question_answer_kind_mismatch", "answer_repair"],
+    ["answer_fragment_invalid", "answer_repair"],
+    ["unsupported_absolute_claim", "answer_repair"],
     ["local_state_conflict", "automatic_resume"],
     ["append_conflict", "automatic_resume"],
   ] as const)("maps %s to the truthful %s retry kind", (outcome, kind) => {
@@ -2089,7 +2091,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
 });
 
 describe("protocol-10 prompt-first call lifecycles", () => {
-  it("accepts structural retries and rejects historical content-repair kinds", async () => {
+  it("accepts structural retries while preserving lifecycle sequencing", async () => {
     const db = createPromptFirstDatabase();
     const { app, env } = testApp(db);
     expect(
@@ -2133,7 +2135,10 @@ describe("protocol-10 prompt-first call lifecycles", () => {
       }),
       retryKind: "content_repair",
     };
-    expect((await putCall(app, env, invalid)).status).toBe(422);
+    // Protocol 10 now carries the exact validator retry kind, including
+    // content/answer repair. This deliberately out-of-sequence event must
+    // reach the lifecycle guard instead of being rejected by the contract.
+    expect((await putCall(app, env, invalid)).status).toBe(409);
   });
 });
 

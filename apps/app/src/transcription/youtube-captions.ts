@@ -85,6 +85,44 @@ type BrowserTranscript = {
   sourceSegmentCount: number;
 };
 
+/**
+ * Caption providers sometimes return a human language name (for example
+ * "English") even though the API contract stores a BCP-47-style code. Keep
+ * that provider detail from leaking into source-metadata validation or the
+ * local generation context.
+ */
+export function normalizeTranscriptLanguage(
+  language: string | null | undefined,
+): string {
+  const value = String(language ?? "").trim();
+  if (!value) return "und";
+  const normalized = value.toLocaleLowerCase("en-US");
+  const aliases: Record<string, string> = {
+    english: "en",
+    "american english": "en-US",
+    "british english": "en-GB",
+    chinese: "zh",
+    mandarin: "zh",
+    "simplified chinese": "zh-CN",
+    "traditional chinese": "zh-TW",
+    spanish: "es",
+    french: "fr",
+    german: "de",
+    italian: "it",
+    japanese: "ja",
+    korean: "ko",
+    portuguese: "pt",
+    russian: "ru",
+    arabic: "ar",
+    hindi: "hi",
+  };
+  const alias = aliases[normalized];
+  if (alias) return alias;
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/iu.test(value)
+    ? value
+    : "und";
+}
+
 function timestampMs(first: string, second: string, third?: string): number {
   const hours = third === undefined ? 0 : Number(first);
   const minutes = Number(third === undefined ? first : second);
@@ -170,8 +208,9 @@ export function parseBrowserTranscript(
   if (actualVideoId !== expectedVideoId) {
     throw new Error("The transcript source did not match the requested video.");
   }
-  const language =
-    body.match(/^Language:\s*([A-Za-z0-9-]{2,35})(?:\s|$)/m)?.[1] ?? "und";
+  const language = normalizeTranscriptLanguage(
+    body.match(/^Language:\s*([^\s·|]+)/m)?.[1] ?? "und",
+  );
   const durationMatch = body.match(
     /(?:^|[·|])\s*Duration:\s*(\d{1,3}):([0-5]\d)(?::([0-5]\d))?/m,
   );

@@ -900,7 +900,7 @@ describe("generated questions", () => {
     ).toBe(true);
   });
 
-  it("accepts protocol-10 prompt-first questions and only minimal failure telemetry", () => {
+  it("accepts protocol-10 prompt-first questions and validator retry telemetry", () => {
     expect(
       PromptFirstQuestionSchema.safeParse({
         type: "multiple_choice",
@@ -932,6 +932,25 @@ describe("generated questions", () => {
         outcome: "choice_structure_invalid",
         retryDelayMs: 200,
         elapsedMs: 500,
+        usageComplete: false,
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        protocolVersion: 10,
+        purpose: "generation",
+        lifecycleState: "completed",
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        recoverySessionId: "33333333-3333-4333-8333-333333333333",
+        callIndex: 3,
+        startIndex: 1,
+        ordinalAttempt: 1,
+        requestedCount: 1,
+        acceptedCount: 0,
+        classification: "primary",
+        outcome: "unsupported_absolute_claim",
+        retryDelayMs: 0,
+        elapsedMs: 900,
         usageComplete: false,
       }).success,
     ).toBe(true);

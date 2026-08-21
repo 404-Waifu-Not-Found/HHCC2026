@@ -492,6 +492,8 @@ export const GenerationFailureCodeSchema = z.enum([
   "short_formula_invalid",
   "question_tautology_invalid",
   "question_answer_kind_mismatch",
+  "answer_fragment_invalid",
+  "unsupported_absolute_claim",
   "quiz_language_mismatch",
   "call_dispatch_timeout",
   "stream_idle_timeout",
@@ -1148,14 +1150,18 @@ export const LocalGenerationCallEventV6Schema = z
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]).default(0),
     classification: z.enum(["primary", "automatic_retry"]),
-    // Resumed v10 clients can carry the legacy automatic_resume label across
-    // a tab/app restart. Keep the live prompt-first contract narrow so older
-    // content/answer repair labels cannot masquerade as structural retries.
-    retryKind: z
-      .enum(["transport", "structural", "automatic_resume"])
-      .optional(),
+    // V10 emits the truthful repair class for every validator outcome. This
+    // includes transport, structural, content, answer, duplicate, and resume
+    // retries; narrowing the union makes a valid repair lifecycle abort the
+    // learner's generation while serializing telemetry.
+    retryKind: AutomaticRetryKindSchema.optional(),
+    // Protocol 10 reports the exact validator outcome so the local client
+    // can choose the matching repair attempt. Keep the full failure-code
+    // contract here; narrowing this to transport/structural codes causes a
+    // valid AI quality rejection (for example unsupported_absolute_claim)
+    // to throw while serializing telemetry and abort the quiz.
     outcome: z
-      .union([z.literal("complete"), MinimalGenerationFailureCodeSchema])
+      .union([z.literal("complete"), LocalGenerationFailureCodeSchema])
       .optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).default(0),
     elapsedMs: z.number().int().min(0).max(900_000).optional(),

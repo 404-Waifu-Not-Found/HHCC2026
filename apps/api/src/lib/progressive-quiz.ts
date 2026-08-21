@@ -744,6 +744,8 @@ const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
     "short_enumeration_invalid",
     "short_formula_invalid",
     "question_answer_kind_mismatch",
+    "answer_fragment_invalid",
+    "unsupported_absolute_claim",
   ],
   automatic_resume: ["local_state_conflict", "append_conflict"],
   structural: [

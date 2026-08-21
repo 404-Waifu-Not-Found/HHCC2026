@@ -13,6 +13,7 @@ describe("iOS native generation", () => {
     expect(client).toContain('kind: "ios_app"');
     expect(client).toContain("generateLocalQuiz(");
     expect(client).toContain("expoFetch");
+    expect(client).toContain("disableStreaming: true");
     expect(client).toContain("flushLocalGenerationOutbox");
     expect(keyStore).toContain("expo-secure-store");
     expect(keyStore).toContain("WHEN_UNLOCKED_THIS_DEVICE_ONLY");
@@ -44,5 +45,13 @@ describe("iOS native generation", () => {
   it("does not expose ordinary text fields as secure entries", () => {
     const input = source("src/components/AppTextInput.tsx");
     expect(input).toContain("secureTextEntry={props.secureTextEntry === true}");
+  });
+
+  it("aborts the background local grading request when its UI timeout fires", () => {
+    const quiz = source("app/quiz/[attemptId].tsx");
+    expect(quiz).toContain("const gradingController = new AbortController();");
+    expect(quiz).toContain("gradingController.signal");
+    expect(quiz).toContain("gradingController.abort");
+    expect(quiz).toContain("clearTimeout(gradingTimeout)");
   });
 });

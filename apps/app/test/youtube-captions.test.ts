@@ -2,12 +2,20 @@ import { describe, expect, it, vi } from "vitest";
 import {
   collapseAdjacentCaptionRepeats,
   downloadYouTubeCaptions,
+  normalizeTranscriptLanguage,
   parseBrowserTranscript,
   parseYouTubeTimedText,
   readBoundedCaptionResponseText,
 } from "../src/transcription/youtube-captions";
 
 describe("YouTube browser captions", () => {
+  it("normalizes provider language names to API-safe codes", () => {
+    expect(normalizeTranscriptLanguage("English")).toBe("en");
+    expect(normalizeTranscriptLanguage("Simplified Chinese")).toBe("zh-CN");
+    expect(normalizeTranscriptLanguage("en-US")).toBe("en-US");
+    expect(normalizeTranscriptLanguage("provider-language")).toBe("und");
+  });
+
   it("normalizes YouTube json3 transcript events", () => {
     expect(
       parseYouTubeTimedText({
@@ -66,6 +74,15 @@ describe("YouTube browser captions", () => {
         },
       ],
     });
+  });
+
+  it("normalizes a human language label in browser transcript metadata", () => {
+    expect(
+      parseBrowserTranscript(
+        "Source video: https://www.youtube.com/watch?v=TTsLhDHWopI\nLanguage: English · Duration: 0:30\n[0:00] A complete caption line for testing.",
+        "TTsLhDHWopI",
+      ).language,
+    ).toBe("en");
   });
 
   it("rejects transcript text attributed to a different video", () => {

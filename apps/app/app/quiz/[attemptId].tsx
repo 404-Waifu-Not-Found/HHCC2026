@@ -511,25 +511,24 @@ export default function QuizScreen() {
           question.type === "multiple_choice" &&
           typeof submittedAnswer === "number"
             ? (question.options?.[submittedAnswer] ?? String(submittedAnswer))
-            : question.type === "true_false"
-              ? submittedAnswer
-                ? "True"
-                : "False"
-              : String(submittedAnswer);
-        const localGradePromise = Promise.race([
-          requestLocalAnswerGrade({
+              : question.type === "true_false"
+                ? submittedAnswer
+                  ? "True"
+                  : "False"
+                : String(submittedAnswer);
+        const gradingController = new AbortController();
+        const gradingTimeout = setTimeout(() => {
+          gradingController.abort(new Error("Local grading timed out."));
+        }, 30_000);
+        const localGradePromise = requestLocalAnswerGrade(
+          {
             question: presentQuizPrompt(question.prompt),
             response: responseText,
             questionType: question.type,
             ...(question.options ? { options: question.options } : {}),
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Local grading timed out.")),
-              30_000,
-            ),
-          ),
-        ]);
+          },
+          gradingController.signal,
+        ).finally(() => clearTimeout(gradingTimeout));
         void localGradePromise
           .then((grade) => setLocalGrade(grade))
           .catch(() => undefined);

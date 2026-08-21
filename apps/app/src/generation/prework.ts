@@ -10,6 +10,7 @@ import {
   updateGenerationRecord,
 } from "../state/creation";
 import { acquireTextTranscript } from "../transcription/acquire-text-transcript";
+import { normalizeTranscriptLanguage } from "../transcription/youtube-captions";
 
 const activePrework = new Map<
   string,
@@ -68,7 +69,7 @@ export async function preGenerateImportedQuiz(
       video: {
         ...imported.video,
         durationSeconds: transcript.verifiedDurationSeconds,
-        sourceLanguage: transcript.language,
+        sourceLanguage: normalizeTranscriptLanguage(transcript.language),
       },
       captions: {
         ...imported.captions,
