@@ -1874,6 +1874,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
         state: "generation_failed",
         availableQuestions: 1,
         totalQuestions: 5,
+        retryAvailable: true,
       },
       continuation: {
         claim: { state: "available" },
@@ -2046,6 +2047,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
     );
     expect(status.status).toBe(200);
     expect(await status.json()).toMatchObject({
+      generation: { retryAvailable: false },
       continuation: { claim: { state: "not_required" } },
     });
     const claim = await app.request(

@@ -433,6 +433,7 @@ describe("generated questions", () => {
         state: "generating",
         availableQuestions: 3,
         totalQuestions: 10,
+        retryAvailable: false,
       }).success,
     ).toBe(true);
     expect(

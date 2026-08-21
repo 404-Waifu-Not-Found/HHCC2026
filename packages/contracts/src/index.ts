@@ -2405,6 +2405,10 @@ export const AttemptGenerationAvailabilitySchema = z
     nextRecoveryAt: z.string().datetime().optional(),
     recoveryPhase: GenerationRecoveryPhaseSchema.optional(),
     activeCallIndex: z.number().int().min(0).max(255).optional(),
+    // The API sets this only when a stopped generation can actually be
+    // reclaimed.  Keeping it optional preserves compatibility with import
+    // progress events produced by older local clients.
+    retryAvailable: z.boolean().optional(),
   })
   .strict()
   .superRefine((value, context) => {

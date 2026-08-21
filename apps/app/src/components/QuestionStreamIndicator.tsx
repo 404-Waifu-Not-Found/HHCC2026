@@ -26,9 +26,9 @@ export function QuestionStreamIndicator({
     generation.state === "action_required" ||
     generation.state === "generation_failed";
   const retryable =
-    generation.state === "cooldown" ||
     generation.state === "retry_required" ||
-    generation.state === "generation_failed";
+    (generation.state === "generation_failed" &&
+      generation.retryAvailable === true);
   const label = generationLabel(generation, count, locale);
   const explanation = stopped
     ? generationReasonExplanation(generation.reasonCode, locale)

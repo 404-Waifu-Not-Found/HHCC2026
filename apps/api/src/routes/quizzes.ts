@@ -1208,7 +1208,17 @@ async function attemptGenerationState(
       "The attempt and progressive quiz totals do not agree.",
     );
   }
-  return { snapshot, generation: snapshot.availability };
+  const retryAvailable =
+    snapshot.availability.state === "generation_failed"
+      ? claimForSnapshot(snapshot).state === "available"
+      : undefined;
+  return {
+    snapshot,
+    generation: AttemptGenerationAvailabilitySchema.parse({
+      ...snapshot.availability,
+      ...(retryAvailable !== undefined ? { retryAvailable } : {}),
+    }),
+  };
 }
 
 function requireProgressiveAvailability(
