@@ -1,5 +1,5 @@
 import type { ComponentProps, PropsWithChildren, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -12,6 +12,35 @@ import { useSettings } from "../providers/SettingsProvider";
 import { borders, controls, motion, radii, typography } from "../theme/tokens";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+
+let focusCameFromKeyboard = true;
+let focusModalityListenersInstalled = false;
+
+function installFocusModalityListeners() {
+  if (
+    Platform.OS !== "web" ||
+    focusModalityListenersInstalled ||
+    typeof document === "undefined"
+  ) {
+    return;
+  }
+
+  document.addEventListener(
+    "keydown",
+    () => {
+      focusCameFromKeyboard = true;
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      focusCameFromKeyboard = false;
+    },
+    true,
+  );
+  focusModalityListenersInstalled = true;
+}
 
 type Props = PropsWithChildren<{
   onPress(): void;
@@ -40,6 +69,8 @@ export function PrimaryButton({
   const { theme, reduceMotion } = useSettings();
   const [focused, setFocused] = useState(false);
   const unavailable = disabled || loading;
+
+  useEffect(installFocusModalityListeners, []);
 
   const colors =
     variant === "primary"
@@ -86,7 +117,14 @@ export function PrimaryButton({
         accessibilityState={{ disabled: unavailable, busy: loading }}
         disabled={unavailable}
         onPress={onPress}
-        onFocus={() => setFocused(true)}
+        onPressIn={() => {
+          if (Platform.OS === "web" && !focusCameFromKeyboard) {
+            setFocused(false);
+          }
+        }}
+        onFocus={() =>
+          setFocused(Platform.OS !== "web" || focusCameFromKeyboard)
+        }
         onBlur={() => setFocused(false)}
         style={({ pressed, hovered }) => [
           styles.button,
