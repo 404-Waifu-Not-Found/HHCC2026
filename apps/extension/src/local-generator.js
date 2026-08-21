@@ -406,52 +406,66 @@ function buildTrueFalseAnswerPlan(questionTypePlan) {
   });
 }
 
-function hashString(value) {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
+function secureRandomUint32() {
+  const values = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(values);
+  return values[0];
+}
+
+function randomIndex(maxExclusive, randomUint32) {
+  if (!Number.isInteger(maxExclusive) || maxExclusive < 1) {
+    throw new Error("The random choice range is invalid.");
   }
-  return hash >>> 0;
+  const uint32Range = 0x1_0000_0000;
+  const unbiasedLimit = Math.floor(uint32Range / maxExclusive) * maxExclusive;
+  let value;
+  do {
+    value = randomUint32() >>> 0;
+  } while (value >= unbiasedLimit);
+  return value % maxExclusive;
 }
 
-function nextRandom(state) {
-  let value = state || 0x9e3779b9;
-  value ^= value << 13;
-  value ^= value >>> 17;
-  value ^= value << 5;
-  return value >>> 0;
+function shuffled(values, randomUint32) {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomIndex(index + 1, randomUint32);
+    [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+  }
+  return result;
 }
 
-function balanceMultipleChoiceAnswers(quiz, seedMaterial) {
-  const seed = hashString(seedMaterial);
+function balancedAnswerPositions(count, randomUint32) {
+  const positions = [];
+  while (positions.length < count) {
+    const cycle = shuffled([0, 1, 2, 3], randomUint32);
+    positions.push(...cycle.slice(0, count - positions.length));
+  }
+  return positions;
+}
+
+export function randomizeMultipleChoiceOptions(
+  quiz,
+  randomUint32 = secureRandomUint32,
+) {
+  const multipleChoiceCount = quiz.questions.filter(
+    (question) => question.type === "multiple_choice",
+  ).length;
+  const answerPositions = balancedAnswerPositions(
+    multipleChoiceCount,
+    randomUint32,
+  );
   let multipleChoiceIndex = 0;
   return {
     ...quiz,
     questions: quiz.questions.map((question) => {
       if (question.type !== "multiple_choice") return question;
-      const targetIndex = (seed + multipleChoiceIndex) % 4;
-      let state = nextRandom(seed + multipleChoiceIndex + 1);
-      const distractors = question.choices.filter(
-        (_, index) => index !== question.answerIndex,
-      );
-      for (let index = distractors.length - 1; index > 0; index -= 1) {
-        state = nextRandom(state);
-        const swapIndex = state % (index + 1);
-        [distractors[index], distractors[swapIndex]] = [
-          distractors[swapIndex],
-          distractors[index],
-        ];
-      }
-      const choices = [];
-      let distractorIndex = 0;
-      for (let index = 0; index < 4; index += 1) {
-        choices.push(
-          index === targetIndex
-            ? question.answer
-            : distractors[distractorIndex++],
-        );
-      }
+      const targetIndex = answerPositions[multipleChoiceIndex];
+      const choices = shuffled(question.choices, randomUint32);
+      const shuffledAnswerIndex = choices.indexOf(question.answer);
+      [choices[targetIndex], choices[shuffledAnswerIndex]] = [
+        choices[shuffledAnswerIndex],
+        choices[targetIndex],
+      ];
       multipleChoiceIndex += 1;
       return { ...question, choices, answerIndex: targetIndex };
     }),
@@ -623,10 +637,7 @@ export async function generateQuizFromPlainText(
       totals.outputTokens += result.usage.outputTokens;
       totals.reasoningTokens += result.usage.reasoningTokens;
       const validated = validateQuiz(result.quiz, input);
-      const balanced = balanceMultipleChoiceAnswers(
-        validated,
-        `${input.jobId}:${input.transcriptFingerprint}`,
-      );
+      const randomized = randomizeMultipleChoiceOptions(validated);
       onProgress("finalizing_questions", 1, {
         attempt,
         maxAttempts: MAX_GENERATION_ATTEMPTS,
@@ -639,7 +650,7 @@ export async function generateQuizFromPlainText(
         reasoningEffort: "high",
         promptVersion: PROMPT_VERSION,
         validatorVersion: VALIDATOR_VERSION,
-        quiz: balanced,
+        quiz: randomized,
         metrics: {
           aiCalls: attempt,
           retryCount: attempt - 1,

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { generateQuizFromPlainText } from "../src/local-generator.js";
+import {
+  generateQuizFromPlainText,
+  randomizeMultipleChoiceOptions,
+} from "../src/local-generator.js";
 
 const background = await readFile(
   new URL("../src/background.js", import.meta.url),
@@ -106,6 +109,16 @@ function toolResponse(value) {
   );
 }
 
+function seededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return state >>> 0;
+  };
+}
+
 test("long local generation uses a heartbeat port", () => {
   assert.match(background, /chrome\.runtime\.onConnect\.addListener/);
   assert.match(bridge, /chrome\.runtime\.connect\(\{ name: LOCAL_AI_PORT \}\)/);
@@ -118,11 +131,51 @@ test("long local generation uses a heartbeat port", () => {
 
 test("the popup exposes local quiz JSON and plain-text caption download", () => {
   assert.ok(manifest.permissions.includes("downloads"));
-  assert.equal(manifest.version, "0.4.0");
+  assert.equal(manifest.version, "0.4.1");
   assert.match(popupHtml, /Generate quiz JSON/);
   assert.match(popupHtml, /Download \.txt/);
   assert.match(popup, /message\.response\.result\.quiz/);
   assert.match(background, /captionsToPlainText/);
+});
+
+test("choice order uses unbiased random shuffling and preserves every answer", () => {
+  const original = quiz(15, ["multiple_choice"]);
+  const randomized = randomizeMultipleChoiceOptions(
+    original,
+    seededRandom(0x1234abcd),
+  );
+  const rerandomized = randomizeMultipleChoiceOptions(
+    original,
+    seededRandom(0x89abcdef),
+  );
+
+  assert.notDeepEqual(
+    randomized.questions.map((question) => question.choices),
+    original.questions.map((question) => question.choices),
+  );
+  assert.notDeepEqual(
+    rerandomized.questions.map((question) => question.choices),
+    randomized.questions.map((question) => question.choices),
+  );
+  assert.deepEqual(original.questions[0].choices, [
+    "Supported answer 1",
+    "Distractor A 1",
+    "Distractor B 1",
+    "Distractor C 1",
+  ]);
+
+  const positionCounts = [0, 0, 0, 0];
+  randomized.questions.forEach((question, index) => {
+    assert.deepEqual(
+      new Set(question.choices),
+      new Set(original.questions[index].choices),
+    );
+    assert.equal(question.choices[question.answerIndex], question.answer);
+    positionCounts[question.answerIndex] += 1;
+  });
+  assert.ok(Math.max(...positionCounts) - Math.min(...positionCounts) <= 1);
+  assert.match(generator, /crypto\.getRandomValues/);
+  assert.doesNotMatch(generator, /Math\.random/);
 });
 
 test("caption extraction returns an independently observed video duration", async () => {

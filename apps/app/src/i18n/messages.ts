@@ -154,7 +154,8 @@ export const messages = {
     returnToLibrary: "Return to library",
     quizComplete: "Quest complete!",
     masteryBuilt: "You’ve built mastery for this video.",
-    laterReview: "Score 80% now and again on a later review to master it.",
+    laterReview:
+      "Score at least 80% in this session and again on a later review to master it.",
     answerRequired: "Choose or write an answer first.",
     moveUp: "Move up",
     moveDown: "Move down",
