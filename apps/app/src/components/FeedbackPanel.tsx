@@ -1,6 +1,12 @@
 import { VoxelIcon } from "./VoxelIcon";
 import type { PropsWithChildren, ReactNode } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import {
   borders,
@@ -25,8 +31,9 @@ export function FeedbackPanel({
   action?: ReactNode;
 }>) {
   const { theme } = useSettings();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const compact = width < breakpoints.tablet;
+  const compactMaxHeight = Math.round(height * 0.46);
   const isCorrect = status === "correct";
   const isIncorrect = status === "incorrect";
   const color = isCorrect
@@ -49,10 +56,19 @@ export function FeedbackPanel({
       accessibilityLiveRegion="polite"
       style={[
         styles.panel,
+        !compact && styles.panelWide,
+        compact && { maxHeight: compactMaxHeight },
         { backgroundColor: background, borderTopColor: color },
       ]}
     >
-      <View style={[styles.inner, compact && styles.innerCompact]}>
+      <ScrollView
+        style={[styles.scroll, !compact && styles.scrollWide]}
+        contentContainerStyle={[
+          styles.inner,
+          compact && styles.innerCompact,
+        ]}
+        showsVerticalScrollIndicator={compact}
+      >
         <FeedbackMotion
           signal={status}
           kind={isIncorrect ? "error" : "success"}
@@ -81,16 +97,16 @@ export function FeedbackPanel({
           ) : null}
           {children}
         </MotionView>
-        {action ? (
-          <MotionView
-            preset="from-right"
-            delay={88}
-            style={[styles.action, compact && styles.actionCompact]}
-          >
-            {action}
-          </MotionView>
-        ) : null}
-      </View>
+      </ScrollView>
+      {action ? (
+        <MotionView
+          preset="from-right"
+          delay={88}
+          style={[styles.action, compact && styles.actionCompact]}
+        >
+          {action}
+        </MotionView>
+      ) : null}
     </MotionView>
   );
 }
@@ -102,6 +118,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[5],
     paddingTop: spacing[5],
     paddingBottom: spacing[4],
+  },
+  panelWide: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  scroll: {
+    flexShrink: 1,
+  },
+  scrollWide: {
+    flex: 1,
   },
   inner: {
     width: "100%",
@@ -137,6 +163,7 @@ const styles = StyleSheet.create({
   },
   action: {
     minWidth: 180,
+    marginLeft: spacing[4],
   },
   innerCompact: {
     flexWrap: "wrap",
@@ -144,5 +171,7 @@ const styles = StyleSheet.create({
   actionCompact: {
     width: "100%",
     minWidth: 0,
+    marginLeft: 0,
+    marginTop: spacing[4],
   },
 });

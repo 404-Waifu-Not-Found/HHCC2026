@@ -100,6 +100,15 @@ describe("Android UI regressions", () => {
     expect(quiz).toContain("styles.statItemCompact");
   });
 
+  it("keeps a compact quiz feedback action visible beside long explanations", () => {
+    const feedback = source("src/components/FeedbackPanel.tsx");
+
+    expect(feedback).toContain("const compactMaxHeight = Math.round(height * 0.46)");
+    expect(feedback).toContain("<ScrollView");
+    expect(feedback).toContain("compact && { maxHeight: compactMaxHeight }");
+    expect(feedback).toContain("compact && styles.actionCompact");
+  });
+
   it("keeps the compact tab bar quiet and defaults new installs to reduced motion", () => {
     const tabs = source("app/(tabs)/_layout.tsx");
     const settings = source("src/providers/SettingsProvider.tsx");
