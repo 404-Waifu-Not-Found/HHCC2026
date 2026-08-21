@@ -49,6 +49,7 @@ describe("YouTube browser captions", () => {
       ),
     ).toEqual({
       language: "en",
+      durationSeconds: 65,
       sourceSegmentCount: 2,
       segments: [
         {
@@ -111,6 +112,7 @@ describe("YouTube browser captions", () => {
     );
 
     expect(transcript.sourceSegmentCount).toBe(lineCount);
+    expect(transcript.durationSeconds).toBeNull();
     expect(transcript.segments).toHaveLength(lineCount);
     expect(transcript.segments.at(-1)?.text).toBe(
       `full subtitle line ${lineCount}`,

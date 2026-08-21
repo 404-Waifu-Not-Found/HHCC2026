@@ -51,6 +51,7 @@ const ENGLISH_STOP_WORDS = new Set([
   "has",
   "how",
   "in",
+  "into",
   "is",
   "it",
   "of",
@@ -108,6 +109,13 @@ const TOKEN_ALIASES = new Map([
   ["improving", "reliable"],
   ["limiting", "limit"],
   ["making", "make"],
+  ["biases", "bias"],
+  ["bright", "maximum"],
+  ["brightest", "maximum"],
+  ["highest", "maximum"],
+  ["choice", "selected"],
+  ["chosen", "selected"],
+  ["correct", "selected"],
   ["quotient", "ratio"],
   ["reliability", "reliable"],
   ["uncertainty", "uncertain"],
@@ -1408,7 +1416,12 @@ export function gradeProgressiveShortAnswerDecision(input: {
   }
 
   const matchesAlternative = acceptableAlternatives.some((alternative) =>
-    tokenCoverage(answerTokens, rubricTokens(alternative), 0.67),
+    // Generated alternatives are intentionally complete sentences. A concise
+    // learner paraphrase can preserve every grading anchor while omitting
+    // setup words such as the input image or layer traversal. Requiring 2/3
+    // of the full sentence rejected observed answers that still named the
+    // output neuron, maximum activation, selected digit, and training state.
+    tokenCoverage(answerTokens, rubricTokens(alternative), 0.55),
   );
   if (matchesAlternative) {
     return { correct: true, path: "prose_alternative" };

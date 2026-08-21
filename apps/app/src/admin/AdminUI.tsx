@@ -46,9 +46,14 @@ export function AdminPage({
   action?: ReactNode;
 }>) {
   const { theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const compact = width < breakpoints.tablet;
   return (
     <Screen contentWidth="wide">
-      <MotionView preset="rise" style={styles.pageHeader}>
+      <MotionView
+        preset="rise"
+        style={[styles.pageHeader, compact && styles.pageHeaderCompact]}
+      >
         <View style={styles.pageHeading}>
           <View
             style={[
@@ -118,8 +123,12 @@ export function AdminToolbar({
 }>) {
   const copy = useAdminCopy();
   const { theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const compact = width < breakpoints.tablet;
   return (
-    <Surface style={styles.toolbar}>
+    <Surface
+      style={compact ? [styles.toolbar, styles.toolbarCompact] : styles.toolbar}
+    >
       <View style={styles.searchRow}>
         <View style={styles.searchField}>
           <AppTextInput
@@ -134,7 +143,9 @@ export function AdminToolbar({
             }
           />
         </View>
-        <View style={styles.searchAction}>
+        <View
+          style={[styles.searchAction, compact && styles.searchActionCompact]}
+        >
           <PrimaryButton compact variant="secondary" onPress={onSubmit}>
             {copy.search}
           </PrimaryButton>
@@ -619,6 +630,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing[8],
     flexWrap: "wrap",
   },
+  pageHeaderCompact: {
+    marginBottom: spacing[6],
+  },
   pageHeading: {
     flexDirection: "row",
     alignItems: "center",
@@ -661,6 +675,7 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.label,
   },
   toolbar: { marginBottom: spacing[5], gap: spacing[4] },
+  toolbarCompact: { padding: spacing[5] },
   searchRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -669,12 +684,17 @@ const styles = StyleSheet.create({
   },
   searchField: { flex: 1, minWidth: 240 },
   searchAction: { minWidth: 116 },
+  searchActionCompact: { width: "100%" },
   filters: {
     borderTopWidth: borders.hairline,
     borderTopColor: "transparent",
     paddingTop: spacing[1],
   },
-  chips: { gap: spacing[2], paddingVertical: spacing[1] },
+  chips: {
+    gap: spacing[2],
+    paddingVertical: spacing[1],
+    paddingRight: spacing[4],
+  },
   chip: {
     minHeight: 40,
     justifyContent: "center",

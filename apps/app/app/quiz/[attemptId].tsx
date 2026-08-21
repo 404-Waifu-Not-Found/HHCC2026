@@ -12,7 +12,14 @@ import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { AnswerCard, type AnswerState } from "../../src/components/AnswerCard";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { EmptyState } from "../../src/components/EmptyState";
@@ -73,6 +80,8 @@ export default function QuizScreen() {
   const { data: session, isPending: sessionPending } = useAppSession();
   const userId = session?.user.id;
   const { t, theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const compactCompletion = width < breakpoints.compact;
   const [question, setQuestion] = useState<PublicQuestion>();
   const [primer, setPrimer] = useState<string | null>(null);
   const [showPrimer, setShowPrimer] = useState(false);
@@ -305,13 +314,11 @@ export default function QuizScreen() {
       void poll();
     };
     void poll();
-    if (typeof window !== "undefined")
-      window.addEventListener("focus", onFocus);
+    if (Platform.OS === "web") window.addEventListener("focus", onFocus);
     return () => {
       active = false;
       if (timeout) clearTimeout(timeout);
-      if (typeof window !== "undefined")
-        window.removeEventListener("focus", onFocus);
+      if (Platform.OS === "web") window.removeEventListener("focus", onFocus);
     };
   }, [attemptId, t, updateGeneration]);
 
@@ -461,11 +468,16 @@ export default function QuizScreen() {
 
   if (showCompletion && score !== undefined) {
     const mastered = mastery === "mastered";
+    const showCompactCompletionStats =
+      compactCompletion && completedTotal !== undefined;
     return (
       <Screen contentWidth="lesson" centered>
         <FeedbackMotion signal={score} kind="success" style={styles.complete}>
           <MotionView preset="pop" duration={520} style={styles.celebrationArt}>
-            <LearningPrism size={176} variant="hero" />
+            <LearningPrism
+              size={showCompactCompletionStats ? 132 : 176}
+              variant="hero"
+            />
           </MotionView>
           <MotionView preset="rise" delay={88} style={styles.completeCopy}>
             <Text
@@ -478,8 +490,19 @@ export default function QuizScreen() {
               {mastered ? t("masteryBuilt") : t("laterReview")}
             </Text>
           </MotionView>
-          <View style={styles.stats}>
-            <StaggerItem index={0} style={styles.statItem}>
+          <View
+            style={[
+              styles.stats,
+              showCompactCompletionStats && styles.statsCompact,
+            ]}
+          >
+            <StaggerItem
+              index={0}
+              style={[
+                styles.statItem,
+                showCompactCompletionStats && styles.statItemCompact,
+              ]}
+            >
               <StatTile
                 value={`${Math.round(score)}%`}
                 label={t("score")}
@@ -493,7 +516,13 @@ export default function QuizScreen() {
                 }
               />
             </StaggerItem>
-            <StaggerItem index={1} style={styles.statItem}>
+            <StaggerItem
+              index={1}
+              style={[
+                styles.statItem,
+                showCompactCompletionStats && styles.statItemCompact,
+              ]}
+            >
               <StatTile
                 value={t(mastery === "mastered" ? "mastered" : "learning")}
                 label={t("mastery")}
@@ -508,7 +537,13 @@ export default function QuizScreen() {
               />
             </StaggerItem>
             {completedTotal ? (
-              <StaggerItem index={2} style={styles.statItem}>
+              <StaggerItem
+                index={2}
+                style={[
+                  styles.statItem,
+                  compactCompletion && styles.statItemCompact,
+                ]}
+              >
                 <StatTile
                   value={String(completedTotal)}
                   label={t("questions")}
@@ -1155,7 +1190,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing[3],
   },
+  statsCompact: {
+    flexDirection: "column",
+    flexWrap: "nowrap",
+  },
   statItem: { minWidth: 132, flex: 1 },
+  statItemCompact: { width: "100%", flexGrow: 0 },
   completeButton: {
     width: "100%",
     maxWidth: 440,

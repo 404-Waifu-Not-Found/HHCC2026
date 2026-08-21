@@ -1716,6 +1716,21 @@ test("admin operations console is responsive and uses real management contracts"
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/users");
   await expect(page.getByRole("heading", { name: "People" })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Generation streams" }),
+  ).toContainText("Streams");
+  const adminSearchField = await page
+    .getByPlaceholder("Search by name, email, title, or ID")
+    .boundingBox();
+  const adminSearchButton = await page
+    .getByRole("button", { name: "Search" })
+    .boundingBox();
+  expect(adminSearchField).not.toBeNull();
+  expect(adminSearchButton).not.toBeNull();
+  expect(adminSearchButton?.width ?? 0).toBeGreaterThan(290);
+  expect(adminSearchButton?.x ?? 0).toBeLessThanOrEqual(
+    (adminSearchField?.x ?? 0) + 1,
+  );
   const overflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth -

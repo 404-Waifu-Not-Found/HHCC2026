@@ -139,6 +139,10 @@ export const messages = {
       "Captions could not be verified. Paste the video again to retry.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
+    localAiSetupTitle: "Local AI setup required",
+    localAiSetupBody:
+      "Add and test your DeepSeek API key on this device before creating the quiz.",
+    openLocalAiSettings: "Open Local AI settings",
     extensionRequiredTitle: "Install the Chrome extension",
     extensionRequiredBody:
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
@@ -372,6 +376,10 @@ export const messages = {
       "此 Android 测试版需要带有可用字幕的公开 YouTube 视频。",
     sourceCaptionsFailed: "无法验证字幕，请重新粘贴视频后再试。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
+    localAiSetupTitle: "需要设置本地 AI",
+    localAiSetupBody:
+      "创建测验前，请在此设备上添加并测试你的 DeepSeek API 密钥。",
+    openLocalAiSettings: "打开本地 AI 设置",
     extensionRequiredTitle: "安装 Chrome 扩展",
     extensionRequiredBody:
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",

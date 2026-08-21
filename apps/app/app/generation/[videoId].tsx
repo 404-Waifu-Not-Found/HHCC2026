@@ -464,9 +464,9 @@ export default function GenerationScreen() {
         captionSourceCategory = textTranscript.captionSourceCategory;
       }
       if (!segments.length) {
-        if (Platform.OS !== "web") {
+        if (Platform.OS === "android") {
           throw new Error(
-            "This native beta requires a public YouTube video with usable captions.",
+            "This Android beta requires a public YouTube video with usable captions.",
           );
         }
         setLocalTranscription(true);
@@ -491,11 +491,20 @@ export default function GenerationScreen() {
         });
         language = result.language;
         segments = result.segments;
+        const inferredDurationSeconds = Math.max(
+          1,
+          Math.ceil(
+            Math.max(...segments.map((segment) => segment.endMs)) / 1_000,
+          ),
+        );
+        verifiedDurationSeconds =
+          imported.video.durationSeconds > 0
+            ? imported.video.durationSeconds
+            : inferredDurationSeconds;
         completeness = createTranscriptCompleteness(
           segments,
-          imported.video.durationSeconds,
+          verifiedDurationSeconds,
         );
-        verifiedDurationSeconds = imported.video.durationSeconds;
         captionSourceCategory = "local_transcription";
       }
       if (signal.aborted) throw new TranscriptionPausedError();

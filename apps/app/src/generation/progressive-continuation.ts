@@ -793,9 +793,9 @@ async function acquireContinuationTranscript(
     preferredLanguage,
   );
   if (textTranscript) return textTranscript;
-  if (Platform.OS !== "web") {
+  if (Platform.OS === "android") {
     throw new Error(
-      "This native beta requires a public YouTube video with usable captions.",
+      "This Android beta requires a public YouTube video with usable captions.",
     );
   }
   const media = await apiRequest(
@@ -817,14 +817,24 @@ async function acquireContinuationTranscript(
     onPhase: () => undefined,
     onProgress: () => undefined,
   });
+  const inferredDurationSeconds = Math.max(
+    1,
+    Math.ceil(
+      Math.max(...result.segments.map((segment) => segment.endMs)) / 1_000,
+    ),
+  );
+  const verifiedDurationSeconds =
+    imported.video.durationSeconds > 0
+      ? imported.video.durationSeconds
+      : inferredDurationSeconds;
   return {
     segments: result.segments,
     language: result.language,
-    verifiedDurationSeconds: imported.video.durationSeconds,
+    verifiedDurationSeconds,
     captionSourceCategory: "local_transcription",
     completeness: createTranscriptCompleteness(
       result.segments,
-      imported.video.durationSeconds,
+      verifiedDurationSeconds,
     ),
   };
 }

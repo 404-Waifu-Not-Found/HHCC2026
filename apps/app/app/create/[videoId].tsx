@@ -7,8 +7,8 @@ import {
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -47,6 +47,10 @@ import {
 import { canTranscribeInBrowser } from "../../src/transcription/limits";
 import { blurActiveWebElement } from "../../src/lib/web-focus";
 import {
+  detectLocalGenerationClient,
+  openLocalGenerationClientSettings,
+} from "../../src/generation/local-generation-client";
+import {
   FeedbackMotion,
   MotionSkeleton,
   MotionView,
@@ -71,6 +75,29 @@ export default function CreateQuestScreen() {
   const [preworkStatus, setPreworkStatus] = useState<
     "running" | "ready" | "unavailable" | "failed"
   >();
+  const [localAiConfigured, setLocalAiConfigured] = useState<
+    boolean | undefined
+  >(Platform.OS === "web" ? true : undefined);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === "web" || !session?.user.id) return;
+      let active = true;
+      setLocalAiConfigured(undefined);
+      void detectLocalGenerationClient()
+        .then((status) => {
+          if (active) {
+            setLocalAiConfigured(status.available && status.configured);
+          }
+        })
+        .catch(() => {
+          if (active) setLocalAiConfigured(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, [session?.user.id]),
+  );
 
   useEffect(() => {
     if (!videoId || !session?.user.id) return;
@@ -149,8 +176,13 @@ export default function CreateQuestScreen() {
       </Screen>
     );
   }
+  const nativeLocalFallback =
+    Platform.OS === "ios" &&
+    (preworkStatus === "unavailable" || preworkStatus === "failed");
+  const needsLocalTranscription =
+    video.requiresLocalTranscription || nativeLocalFallback;
   const tooLong =
-    video.requiresLocalTranscription && video.video.durationSeconds > 5_400;
+    needsLocalTranscription && video.video.durationSeconds > 5_400;
   const tooLongForWeb =
     video.requiresLocalTranscription &&
     Platform.OS === "web" &&
@@ -167,15 +199,21 @@ export default function CreateQuestScreen() {
   const transcriptStatus = (
     captionsPending
       ? t("sourceCaptionsPreparing")
-      : captionsUnavailable
-        ? t("sourceCaptionsUnavailable")
-        : captionsFailed
-          ? t("sourceCaptionsFailed")
-          : video.requiresLocalTranscription
-            ? t("localTranscript")
-            : t("sourceCaptions")
+      : nativeLocalFallback
+        ? t("localTranscript")
+        : captionsUnavailable
+          ? t("sourceCaptionsUnavailable")
+          : captionsFailed
+            ? t("sourceCaptionsFailed")
+            : needsLocalTranscription
+              ? t("localTranscript")
+              : t("sourceCaptions")
   ).replace(/[—–]/g, "-");
-  const captionsBlocked = captionsUnavailable || captionsFailed;
+  const captionsBlocked =
+    Platform.OS === "android" && (captionsUnavailable || captionsFailed);
+  const localAiPending =
+    Platform.OS !== "web" && localAiConfigured === undefined;
+  const localAiMissing = Platform.OS !== "web" && localAiConfigured === false;
   const proceed = async () => {
     blurActiveWebElement();
     if (!session?.user.id) {
@@ -242,11 +280,15 @@ export default function CreateQuestScreen() {
       footer={
         <View style={styles.footerInner}>
           <PrimaryButton
-            loading={captionsPending}
+            loading={captionsPending || localAiPending}
             disabled={tooLong || tooLongForWeb || captionsBlocked}
-            onPress={() => void proceed()}
+            onPress={
+              localAiMissing
+                ? openLocalGenerationClientSettings
+                : () => void proceed()
+            }
           >
-            {t("generate")}
+            {localAiMissing ? t("openLocalAiSettings") : t("generate")}
           </PrimaryButton>
         </View>
       }
@@ -293,12 +335,12 @@ export default function CreateQuestScreen() {
                     {
                       backgroundColor: captionsBlocked
                         ? theme.errorSoft
-                        : captionsPending || video.requiresLocalTranscription
+                        : captionsPending || needsLocalTranscription
                           ? theme.secondarySoft
                           : theme.successSoft,
                       borderColor: captionsBlocked
                         ? theme.error
-                        : captionsPending || video.requiresLocalTranscription
+                        : captionsPending || needsLocalTranscription
                           ? theme.secondary
                           : theme.success,
                     },
@@ -308,7 +350,7 @@ export default function CreateQuestScreen() {
                     name={
                       captionsBlocked
                         ? "error"
-                        : captionsPending || video.requiresLocalTranscription
+                        : captionsPending || needsLocalTranscription
                           ? "processing"
                           : "captions"
                     }
@@ -316,7 +358,7 @@ export default function CreateQuestScreen() {
                     color={
                       captionsBlocked
                         ? theme.error
-                        : captionsPending || video.requiresLocalTranscription
+                        : captionsPending || needsLocalTranscription
                           ? theme.secondaryPressed
                           : theme.successPressed
                     }
@@ -391,7 +433,7 @@ export default function CreateQuestScreen() {
           </Surface>
         </MotionView>
 
-        {video.requiresLocalTranscription ? (
+        {needsLocalTranscription ? (
           <MotionView preset="rise" delay={132} exiting>
             <Surface tone="tinted" style={styles.noticeSurface}>
               <View style={styles.noticeRow}>
@@ -409,6 +451,31 @@ export default function CreateQuestScreen() {
                   </Text>
                   <Text style={[styles.help, { color: theme.textMuted }]}>
                     {t("privateTranscription")}
+                  </Text>
+                </View>
+              </View>
+            </Surface>
+          </MotionView>
+        ) : null}
+
+        {localAiMissing && !captionsBlocked ? (
+          <MotionView preset="rise" delay={154} exiting>
+            <Surface tone="warning" style={styles.noticeSurface}>
+              <View style={styles.noticeRow}>
+                <View
+                  style={[
+                    styles.noticeIcon,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <VoxelIcon name="model" size={27} color={theme.warning} />
+                </View>
+                <View style={styles.noticeCopy}>
+                  <Text style={[styles.noticeTitle, { color: theme.text }]}>
+                    {t("localAiSetupTitle")}
+                  </Text>
+                  <Text style={[styles.help, { color: theme.textMuted }]}>
+                    {t("localAiSetupBody")}
                   </Text>
                 </View>
               </View>

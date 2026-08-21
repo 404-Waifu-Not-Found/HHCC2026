@@ -15,9 +15,9 @@ describe("native caption-only generation boundary", () => {
       "utf8",
     );
     const message =
-      "This native beta requires a public YouTube video with usable captions.";
+      "This Android beta requires a public YouTube video with usable captions.";
     for (const source of [creation, recovery]) {
-      const nativeGuard = source.indexOf('Platform.OS !== "web"');
+      const nativeGuard = source.indexOf('Platform.OS === "android"');
       const captionFailure = source.indexOf(message, nativeGuard);
       const mediaResolve = source.indexOf(
         '"/api/media/resolve"',
