@@ -331,11 +331,6 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     { answer: "According to the presenter, all three conditions hold." },
     { correctAnswer: "The answer stated in the video" },
     { choices: ["The lecturer's account", "A", "B", "C"] },
-    {
-      distractors: [
-        { text: "A", whyWrong: "The narrator said a different answer." },
-      ],
-    },
     { rubricIdeas: ["what the source states"] },
     { acceptableAnswers: ["As mentioned in the lecture, all conditions"] },
     { claim: { subject: "the speaker's explanation" } },
@@ -346,6 +341,19 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       "source_framing_invalid",
     );
   }
+
+  expectConceptFailure(
+    mergeConceptCandidate(directConcept, {
+      answerSpan: "According to the lesson, the supported answer",
+      distractors: [
+        {
+          text: "A different mechanism",
+          whyWrong: "The evidence states a different relationship.",
+        },
+      ],
+    }),
+    null,
+  );
 
   const logistics = [
     "What percentage of the exam covers limits?",
@@ -585,6 +593,19 @@ test("learner-visible quiz language may differ from private evidence language", 
     ],
   };
   assert.equal(questionMatchesQuizLanguage(englishCandidate, "en"), true);
+  assert.equal(
+    questionMatchesQuizLanguage(
+      {
+        ...englishCandidate,
+        distractors: englishCandidate.distractors.map((entry) => ({
+          ...entry,
+          whyWrong: "الدليل الخاص يدعم إجابة مختلفة.",
+        })),
+      },
+      "en",
+    ),
+    true,
+  );
   assert.equal(
     questionMatchesQuizLanguage(
       {

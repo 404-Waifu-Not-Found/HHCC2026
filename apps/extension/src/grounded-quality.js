@@ -232,11 +232,12 @@ export function questionTestsTaughtConcept(candidate) {
 
 function learnerVisibleCandidateText(candidate) {
   const claim = candidate?.claim;
+  // answerSpan and whyWrong are private validation aids. They are never
+  // persisted in a learner-visible question, so source-language evidence in
+  // those fields must not trigger a presentation-framing repair.
   const distractors = Array.isArray(candidate?.distractors)
-    ? candidate.distractors.flatMap((value) =>
-        value && typeof value === "object"
-          ? [value.text, value.whyWrong]
-          : [value],
+    ? candidate.distractors.map((value) =>
+        value && typeof value === "object" ? value.text : value,
       )
     : [];
   return [
@@ -245,7 +246,6 @@ function learnerVisibleCandidateText(candidate) {
     candidate?.explanation,
     candidate?.answer,
     candidate?.correctAnswer,
-    candidate?.answerSpan,
     candidate?.answerText,
     candidate?.correction,
     candidate?.supportedStatement,
@@ -375,11 +375,10 @@ const HAN_SCRIPT_PATTERN = /\p{Script=Han}/u;
  * must never mix the source language into an answer control.
  */
 export function questionMatchesQuizLanguage(candidate, quizLanguage) {
+  // Distractor rationales remain extension-local and are not rendered.
   const distractors = Array.isArray(candidate?.distractors)
-    ? candidate.distractors.flatMap((entry) =>
-        entry && typeof entry === "object"
-          ? [entry.text, entry.whyWrong]
-          : [entry],
+    ? candidate.distractors.map((entry) =>
+        entry && typeof entry === "object" ? entry.text : entry,
       )
     : [];
   const values = [

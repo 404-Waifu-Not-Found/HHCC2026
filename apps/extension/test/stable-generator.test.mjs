@@ -1016,6 +1016,44 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
   );
 });
 
+test("v5.8 does not retry source wording confined to private MC validation aids", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value) => {
+      value.questions[0].distractors[0].whyWrong =
+        "The evidence states that a different pathway carries energy.";
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    calls
+      .filter((event) => event.lifecycleState === "completed")
+      .every(
+        (event) =>
+          event.classification === "primary" && event.outcome === "complete",
+      ),
+  );
+});
+
 test("v5.8 rejects presentation statistics before storage and repairs only that ordinal", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
