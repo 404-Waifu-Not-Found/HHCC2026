@@ -50,6 +50,7 @@ const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
 const MAX_V5_3_AUTOMATIC_RETRIES = 12;
 const MAX_V5_4_AUTOMATIC_RETRIES = 48;
 const MAX_V5_6_AUTOMATIC_RETRIES = 12;
+const MAX_V5_8_AUTOMATIC_RETRIES = 48;
 
 type AutomaticGenerationCallEvent =
   | LegacyAutomaticRecoveryCallEvent
@@ -611,14 +612,17 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       )
       .first<{ count: number }>();
     const retryLimit = automaticEvent
-      ? legacyAutomaticRecovery ||
-        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8" ||
-        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.7" ||
-        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
+      ? legacyAutomaticRecovery
         ? MAX_V5_6_AUTOMATIC_RETRIES
-        : snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4"
-          ? MAX_V5_4_AUTOMATIC_RETRIES
-          : MAX_V5_3_AUTOMATIC_RETRIES
+        : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
+          ? MAX_V5_8_AUTOMATIC_RETRIES
+          : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.7" ||
+              snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
+            ? MAX_V5_6_AUTOMATIC_RETRIES
+            : snapshot.summary.generationProfile ===
+                "evidence_grounded_auto_v5_4"
+              ? MAX_V5_4_AUTOMATIC_RETRIES
+              : MAX_V5_3_AUTOMATIC_RETRIES
       : 1;
     if (Number(existingRetry?.count ?? 0) >= retryLimit) {
       throw new ApiError(
@@ -675,7 +679,12 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
               ]),
         )
         .first<{ count: number }>();
-      const perOrdinalLimit = contentRetry ? 2 : 4;
+      const perOrdinalLimit =
+        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
+          ? 4
+          : contentRetry
+            ? 2
+            : 4;
       if (Number(ordinalRetries?.count ?? 0) >= perOrdinalLimit) {
         throw new ApiError(
           409,

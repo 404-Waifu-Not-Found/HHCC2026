@@ -941,7 +941,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
 
   assert.equal(result.protocolVersion, 9);
   assert.equal(result.promptVersion, "quiz-local-json-stream-v5.8");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.11");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.12");
   assert.equal(result.importVersion, "extension-progressive-import-v7");
   assert.equal(result.generationProfile, "concept_first_auto_v5_8");
   assert.match(result.promptFingerprint, /^[a-f0-9]{64}$/u);
@@ -1163,7 +1163,7 @@ test("v5.8 rejects a pre-release continuation with a different prompt fingerprin
             startIndex: 1,
             resultProtocolVersion: 9,
             promptVersion: "quiz-local-json-stream-v5.8",
-            validatorVersion: "validator-local-progressive-v4.11",
+            validatorVersion: "validator-local-progressive-v4.12",
             promptFingerprint: "0".repeat(64),
             generationProfile: "concept_first_auto_v5_8",
             acceptedQuestions: [
@@ -1306,7 +1306,7 @@ test("v5.8 repairs a relationship answer that drops its directional qualifier", 
     startIndex: 4,
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
-    validatorVersion: "validator-local-progressive-v4.11",
+    validatorVersion: "validator-local-progressive-v4.12",
     promptFingerprint: createHash("sha256")
       .update(CONCEPT_FIRST_SYSTEM_PROMPT)
       .digest("hex"),
@@ -1402,7 +1402,7 @@ test("v5.8 rejects presentation statistics before storage and repairs only that 
         })),
     ),
   );
-  assert.equal(calls[1]?.outcome, "low_pedagogical_value");
+  assert.equal(calls[1]?.outcome, "source_framing_invalid");
   assert.equal(calls[2]?.classification, "automatic_retry");
   assert.equal(calls[2]?.retryKind, "content_repair");
   assert.doesNotMatch(result.quiz.questions[0].question, /monetary value/iu);
@@ -1847,7 +1847,7 @@ test("v5.5 validates grounded true-false and short-answer singletons", async (co
   );
 });
 
-test("v5.5 grants content repair budgets independently to each ordinal", async (context) => {
+test("v5.5 grants content retry budgets independently to each ordinal", async (context) => {
   const originalFetch = globalThis.fetch;
   const attempts = new Map();
   const calls = [];
@@ -2304,7 +2304,7 @@ test("formula token structures are serialized locally into canonical stored answ
   );
 });
 
-test("a formula question without a valid token structure uses only bounded automatic repairs", async (context) => {
+test("a formula question without a valid token structure uses only bounded automatic retries", async (context) => {
   const originalFetch = globalThis.fetch;
   let fetchCount = 0;
   const events = [];
@@ -2333,14 +2333,20 @@ test("a formula question without a valid token structure uses only bounded autom
     ),
     (error) => error?.reasonCode === "schema_invalid",
   );
-  assert.equal(fetchCount, 3);
+  assert.equal(fetchCount, 5);
   assert.deepEqual(
     events.map((event) => event.classification),
-    ["primary", "automatic_retry", "automatic_retry"],
+    [
+      "primary",
+      "automatic_retry",
+      "automatic_retry",
+      "automatic_retry",
+      "automatic_retry",
+    ],
   );
   assert.deepEqual(
     events.slice(1).map((event) => event.retryKind),
-    ["content_repair", "content_repair"],
+    ["content_repair", "content_repair", "content_repair", "content_repair"],
   );
 });
 
@@ -2386,7 +2392,7 @@ for (const failure of [
         ? "empty_content"
         : "truncated_output";
   }
-  test(`${failure.name} exhausts exactly two bounded content repairs`, async (context) => {
+  test(`${failure.name} exhausts exactly four bounded automatic retries`, async (context) => {
     const originalFetch = globalThis.fetch;
     let fetchCount = 0;
     const events = [];
@@ -2408,19 +2414,33 @@ for (const failure of [
       ),
       (error) => error?.reasonCode === failure.expected,
     );
-    assert.equal(fetchCount, 3);
-    assert.equal(events.length, 3);
+    assert.equal(fetchCount, 5);
+    assert.equal(events.length, 5);
     assert.deepEqual(
       events.map((event) => event.classification),
-      ["primary", "automatic_retry", "automatic_retry"],
+      [
+        "primary",
+        "automatic_retry",
+        "automatic_retry",
+        "automatic_retry",
+        "automatic_retry",
+      ],
     );
     assert.deepEqual(
       events.map((event) => event.outcome),
-      [failure.expected, failure.expected, failure.expected],
+      [
+        failure.expected,
+        failure.expected,
+        failure.expected,
+        failure.expected,
+        failure.expected,
+      ],
     );
     assert.equal(events[1].retryKind, failure.retryKind);
     assert.equal(events[2].retryKind, failure.retryKind);
-    assert.equal(events[2].retryDelayMs, 0);
+    assert.equal(events[3].retryKind, failure.retryKind);
+    assert.equal(events[4].retryKind, failure.retryKind);
+    assert.equal(events[4].retryDelayMs, 0);
   });
 }
 

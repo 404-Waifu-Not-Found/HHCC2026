@@ -848,6 +848,10 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     },
     {
       question:
+        "How do people become socialized according to the social process of socialization?",
+    },
+    {
+      question:
         "Which of the following is a method mentioned to reduce deforestation's environmental impact?",
     },
     { explanation: "The transcript says that all three conditions must hold." },
@@ -904,7 +908,6 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     "What institution stored the sample?",
     "What percentage of viewers use 5 GHz WiFi?",
     "How many devices used the older protocol?",
-    "What is the estimated annual monetary value of the services that ecosystems provide for humanity, according to economic calculations?",
     "How does the estimated annual monetary value of ecosystem services compare to the annual output of the global economy?",
     "What is the projected range of temperature increase by the end of the century?",
   ];
@@ -914,6 +917,14 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       "low_pedagogical_value",
     );
   }
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "What is the estimated annual monetary value of the services that ecosystems provide for humanity, according to economic calculations?",
+    },
+    "source_framing_invalid",
+  );
   expectConceptFailure(
     {
       ...directConcept,
@@ -944,6 +955,15 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       concept: "socialization",
       question: "Which process is called socialization?",
       answer: "socialization",
+    },
+    "question_tautology_invalid",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "socialization mechanism",
+      question: "How do people become socialized?",
+      answer: "by interacting with other people",
     },
     "question_tautology_invalid",
   );

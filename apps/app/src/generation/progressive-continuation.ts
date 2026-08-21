@@ -456,6 +456,8 @@ async function runAutomaticRecovery(
           latestOrdinalAttempt = detail.ordinalAttempt;
         }
         ingestion = ingestion.then(async () => {
+          // A progress snapshot may race an append. It is safe to drop after
+          // bounded retries; model-call and question writes remain fail-closed.
           const response = await retryAuthoritativeTelemetryWrite(
             () =>
               updateProgress(
@@ -465,7 +467,8 @@ async function runAutomaticRecovery(
                 signal,
               ),
             signal,
-          );
+          ).catch(() => undefined);
+          if (!response) return;
           latest = response.generation;
           publishAttemptGeneration(attemptId, status.quizId, latest);
           await updateGenerationRecord(

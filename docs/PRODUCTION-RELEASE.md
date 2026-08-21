@@ -37,9 +37,9 @@ The current [ten-video production report](../qa-results/live-production-quiz-gen
 
 This table is a dated observation, not a substitute for checking the live service before the next release.
 
-## Current 0.8.8 canary
+## Current 0.8.13 canary
 
-The current pushed candidate uses extension `0.8.8`, result protocol `9`, capability `question-stream-v6`, pipeline `9`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.7`, progressive import `v7`, and generation profile `concept_first_auto_v5_8`.
+The current candidate uses extension `0.8.13`, result protocol `9`, capability `question-stream-v6`, pipeline `9`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.12`, progressive import `v7`, and generation profile `concept_first_auto_v5_8`. It removes learner-facing Automatic repair language and uses only singleton primary requests plus bounded automatic retries. There is no manual continuation control.
 
 Its compatibility path preserves accepted legacy prefixes and uses the original bank and attempt. Previously failed ordinals are retried as singleton `automatic_retry` requests; never-attempted ordinals remain `primary`. New `manual_continuation` inserts are rejected after the exact historical replay check, but existing rows remain immutable evidence. Prompt v5.7 treats the transcript as private evidence, fails closed when no positively scored instructional excerpt exists, rejects source framing, logistics, presentation metadata, and low-value recall across every learner-visible field, and repairs only the affected singleton. The display compatibility guard removes only complete grammar-safe source-attribution clauses from old prompts. Prose short-answer rubrics are bounded to independent propositions and complete paraphrases, while the deterministic grader adds conservative alias and acronym normalization without lowering its threshold.
 

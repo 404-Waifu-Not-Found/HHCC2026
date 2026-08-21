@@ -26,17 +26,18 @@ const PROTOCOL_VERSION = 9;
 const GROUNDED_PROTOCOL_VERSION = 8;
 const PIPELINE_VERSION = 9;
 const PROMPT_VERSION = "quiz-local-json-stream-v5.8";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.11";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.12";
 const IMPORT_VERSION = "extension-progressive-import-v7";
 const GENERATION_PROFILE = "concept_first_auto_v5_8";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
 const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 4;
-const MAX_CONTENT_RETRIES_PER_ORDINAL = 2;
+const MAX_CONTENT_RETRIES_PER_ORDINAL = 4;
 const MAX_V5_3_AUTOMATIC_RETRIES = 12;
 const MAX_V5_4_AUTOMATIC_RETRIES = 48;
 const MAX_V5_6_AUTOMATIC_RETRIES = 12;
+const MAX_V5_8_AUTOMATIC_RETRIES = 48;
 const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 12;
 const MAX_ACTIVE_RECOVERY_MS = 15 * 60 * 1_000;
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
@@ -781,7 +782,7 @@ function generationMessages(input, isTransientRetry) {
     ),
   };
   const requestPurpose = isTransientRetry
-    ? "an automatic repair request for"
+    ? "an automatic retry for"
     : "the primary request for";
   const focusExcerpt =
     input.focusExcerpt ??
@@ -3415,11 +3416,13 @@ async function generateAutomaticQuiz({
   const cycleRetriesByOrdinalAndClass = new Map();
   const totalAutomaticRetryLimit = input.legacyAutomaticRecoveryMode
     ? MAX_V5_6_AUTOMATIC_RETRIES
-    : input.rawConceptValidationMode
-      ? MAX_V5_6_AUTOMATIC_RETRIES
-      : input.groundedMode
-        ? MAX_V5_4_AUTOMATIC_RETRIES
-        : MAX_V5_3_AUTOMATIC_RETRIES;
+    : input.conceptFirstV58Mode
+      ? MAX_V5_8_AUTOMATIC_RETRIES
+      : input.rawConceptValidationMode
+        ? MAX_V5_6_AUTOMATIC_RETRIES
+        : input.groundedMode
+          ? MAX_V5_4_AUTOMATIC_RETRIES
+          : MAX_V5_3_AUTOMATIC_RETRIES;
   let lastChunkAt = initialLastChunkAt;
 
   while (acceptedQuestions.length < input.questionCount) {
@@ -3475,7 +3478,7 @@ async function generateAutomaticQuiz({
         questionOffset + 1,
       ),
       acceptedQuestions: [...acceptedQuestions],
-      repairGuidance: repairGuidanceFor(
+      repairGuidance: retryGuidanceFor(
         callRetryKind,
         acceptedQuestions,
         lastFailureReason,
@@ -3861,7 +3864,7 @@ function retryBudgetClass(retryKind) {
     : "content";
 }
 
-function repairGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
+function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
   const usedConcepts = acceptedQuestions
     .map((question) => question.concept)
     .filter((value) => typeof value === "string" && value.trim())

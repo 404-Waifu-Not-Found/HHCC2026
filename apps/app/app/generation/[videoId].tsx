@@ -672,6 +672,9 @@ export default function GenerationScreen() {
           ) {
             throw new Error("Automatic retry metadata is incomplete.");
           }
+          // Progress is presentation state, not the authoritative model-call
+          // ledger. A conflicting progress snapshot must never poison the
+          // consecutive call-event queue and suppress later retry telemetry.
           const response = await retryAuthoritativeTelemetryWrite(
             () =>
               apiRequest(
@@ -700,7 +703,8 @@ export default function GenerationScreen() {
                 ExtensionQuizProgressiveImportResponseSchema,
               ),
             signal,
-          );
+          ).catch(() => undefined);
+          if (!response) return;
           if (isAutomaticGenerationProfile(rolloutProfile.generationProfile)) {
             await persistRecord({
               state: "retrying",

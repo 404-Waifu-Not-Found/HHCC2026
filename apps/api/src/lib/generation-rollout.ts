@@ -45,7 +45,7 @@ export function quizGenerationProfile(
   if (grounded) {
     return QuizGenerationProfileResponseSchema.parse({
       generationProfile: "concept_first_auto_v5_8",
-      minimumExtensionVersion: "0.8.12",
+      minimumExtensionVersion: "0.8.13",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     });
   }

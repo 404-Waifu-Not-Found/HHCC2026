@@ -213,7 +213,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.12",
+            version: outdated ? "0.7.9" : "0.8.13",
             configured: true,
             capabilities: outdated
               ? []
@@ -320,7 +320,7 @@ test.beforeEach(async ({ page }) => {
               model: "deepseek-v4-flash",
               reasoningEffort: "none",
               promptVersion: "quiz-local-json-stream-v5.8",
-              validatorVersion: "validator-local-progressive-v4.11",
+              validatorVersion: "validator-local-progressive-v4.12",
               importVersion: "extension-progressive-import-v7",
               generationProfile: "concept_first_auto_v5_8",
               generationId: event.data.context.generationId,
@@ -761,7 +761,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.12 or newer", { exact: false }),
+    page.getByText("0.8.13 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -1968,13 +1968,13 @@ async function installMocks(page: Page): Promise<Scenario> {
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
           promptVersion: "quiz-local-json-stream-v5.8",
-          validatorVersion: "validator-local-progressive-v4.11",
+          validatorVersion: "validator-local-progressive-v4.12",
           rolloutMode: "disabled",
           supportedProfile: "concept_first_auto_v5_8",
           supportedPromptVersion: "quiz-local-json-stream-v5.8",
-          supportedValidatorVersion: "validator-local-progressive-v4.11",
+          supportedValidatorVersion: "validator-local-progressive-v4.12",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.12",
+          requiredExtensionVersion: "0.8.13",
           requiredCapability: "question-stream-v6",
           states: {
             generating: 2,
@@ -2070,7 +2070,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     if (path === "/api/local-ai/profile" && request.method() === "GET") {
       await json(route, {
         generationProfile: "concept_first_auto_v5_8",
-        minimumExtensionVersion: "0.8.12",
+        minimumExtensionVersion: "0.8.13",
         requiredCapability: "question-stream-v6",
       });
       return;

@@ -94,12 +94,12 @@ function generationLabel(
           : `Retrying question ${ordinal} in ${delaySeconds} seconds · ${count} ready`;
       }
       return chinese
-        ? `正在准备自动修复第 ${ordinal} 题 · 已就绪 ${count}`
-        : `Preparing automatic repair for question ${ordinal} · ${count} ready`;
+        ? `正在准备重试第 ${ordinal} 题 · 已就绪 ${count}`
+        : `Preparing retry for question ${ordinal} · ${count} ready`;
     }
     return chinese
-      ? `正在自动修复第 ${ordinal} 题 · 已就绪 ${count}`
-      : `Automatically repairing question ${ordinal} · ${count} ready`;
+      ? `正在自动重试第 ${ordinal} 题 · 已就绪 ${count}`
+      : `Automatically retrying question ${ordinal} · ${count} ready`;
   }
   if (generation.state === "recovering") {
     if (generation.recoveryPhase === "preparing") {
@@ -122,8 +122,8 @@ function generationLabel(
   }
   if (generation.state === "cooldown") {
     return chinese
-      ? `自动修复正在冷却 · 已就绪 ${count}`
-      : `Automatic repair is cooling down · ${count} ready`;
+      ? `自动重试将在冷却后继续 · 已就绪 ${count}`
+      : `Automatic retries resume after cooldown · ${count} ready`;
   }
   if (generation.state === "action_required") {
     return chinese
@@ -168,8 +168,8 @@ function generationReasonExplanation(
     reasonCode === "automatic_retries_exhausted"
   ) {
     return chinese
-      ? "自动修复预算已用完；已接收的题目不会被计分为完整测验。"
-      : "The automatic repair budget was exhausted; the partial bank cannot be scored.";
+      ? "自动重试次数已用完；已接收的题目不会被计分为完整测验。"
+      : "Automatic retries were exhausted; the partial bank cannot be scored.";
   }
   return chinese
     ? "已接收的题目仍可作答，但测验不会以不完整状态计分。"

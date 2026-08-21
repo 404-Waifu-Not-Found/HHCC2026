@@ -29,7 +29,7 @@ This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 mi
 
 ## Current source candidate
 
-The pushed source identifies the current canary as extension `0.8.8`, result protocol `9`, capability `question-stream-v6`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.7`, pipeline `9`, progressive import `v7`, and profile `concept_first_auto_v5_8`.
+The current source candidate identifies the canary as extension `0.8.13`, result protocol `9`, capability `question-stream-v6`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.12`, pipeline `9`, progressive import `v7`, and profile `concept_first_auto_v5_8`. Current generation has no Automatic repair mode: validation failures use bounded automatic singleton retries, while credential and billing failures remain explicit configuration actions.
 
 Automated regression coverage retains the 0.8.6 Run 8 recovery behavior and adds v5.7 private-evidence prompting, strict fail-closed excerpt selection, checks across every learner-visible field, distinct content-repair outcomes, bounded non-overlapping rubrics, and the observed sensory-neuron grading case with shallow-answer controls. The legacy presentation guard still preserves possessives and removes only complete anchored attribution clauses.
 

@@ -330,7 +330,7 @@ function createConceptFirstDatabase(timestamp = Date.now()) {
     importVersion: "extension-progressive-import-v7",
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
-    validatorVersion: "validator-local-progressive-v4.11",
+    validatorVersion: "validator-local-progressive-v4.12",
     generationProfile: "concept_first_auto_v5_8",
     promptFingerprint: "e".repeat(64),
     sourceSelection: {
@@ -948,6 +948,95 @@ describe("protocol-7 automatic recovery call events", () => {
     expect(manual.status).toBe(409);
     expect(await manual.json()).toMatchObject({
       error: { code: "generation_call_protocol_mismatch" },
+    });
+  });
+
+  it("allows four content retries for concept-first v5.8", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("completed", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "schema_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    for (let retry = 1; retry <= 4; retry += 1) {
+      expect(
+        (
+          await putCall(
+            app,
+            env,
+            conceptFirstLifecycleEvent("started", {
+              callIndex: retry + 1,
+              startIndex: 1,
+              ordinalAttempt: retry + 1,
+              acceptedCount: 0,
+              classification: "automatic_retry",
+              retryKind: "content_repair",
+            }),
+          )
+        ).status,
+      ).toBe(201);
+      expect(
+        (
+          await putCall(
+            app,
+            env,
+            conceptFirstLifecycleEvent("completed", {
+              callIndex: retry + 1,
+              startIndex: 1,
+              ordinalAttempt: retry + 1,
+              acceptedCount: 0,
+              classification: "automatic_retry",
+              retryKind: "content_repair",
+              outcome: "schema_invalid",
+            }),
+          )
+        ).status,
+      ).toBe(200);
+    }
+    const exhausted = await putCall(
+      app,
+      env,
+      conceptFirstLifecycleEvent("started", {
+        callIndex: 6,
+        startIndex: 1,
+        ordinalAttempt: 5,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+      }),
+    );
+    expect(exhausted.status).toBe(409);
+    expect(await exhausted.json()).toMatchObject({
+      error: { code: "automatic_retry_ordinal_budget_exceeded" },
     });
   });
 

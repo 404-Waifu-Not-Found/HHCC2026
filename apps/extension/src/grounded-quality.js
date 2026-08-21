@@ -89,6 +89,7 @@ const SOURCE_REFERENCE_PATTERNS = [
 
 const QUESTION_DEICTIC_PATTERNS = [
   /^\s*(?:what|which|how)\b.{0,160}(?<![-\p{L}])(?:mentioned|listed|stated|discussed|shown|described|provided)\b/iu,
+  /^\s*(?:what|which|how|why)\b.{0,180}\baccording to\b/iu,
   /^(?:什么|哪|如何|为什么).{0,80}(?:提到|列出|指出|讨论|展示|描述|提供)/u,
 ];
 
@@ -310,6 +311,8 @@ const NAMED_CASE_RECALL_PATTERN =
   /^\s*(?:[Ww]hat|[Ww]hich|[Hh]ow|[Ww]hy)\b.{0,120}?\b(?!Earth\b)[A-Z][\p{L}-]+['’]s\s+(?:account|case|condition|decision|experience|illness|inability|injury|memory|symptoms?)\b/u;
 const GENERIC_DETERMINATION_QUESTION_PATTERN =
   /^\s*what\s+(?:does|do|did)\s+(.{2,140}?)\s+(?:determine|control|govern|influence|affect)\??\s*$/iu;
+const CIRCULAR_PROCESS_QUESTION_PATTERN =
+  /^\s*how\s+(?:do|does|did)\s+(.{2,140}?)\s+(?:become|get|grow|develop|turn)\s+([\p{L}-]+)\b/iu;
 const HOW_CAN_MECHANISM_ANSWER_PATTERN =
   /^(?:when|if|by|because|through|due\s+to|as\s+(?:a\s+result|\p{L}+\s+(?:declines?|falls?|rises?|increases?|decreases?)))\b|\b(?:loss|lack|reduction|removal|failure|disruption|decline|depletion|fragmentation|mutation|competition|pressure)\b.{0,120}\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|(?:当|如果|通过|因为|由于|随着|导致|使得?|削弱|降低|减少|破坏|增加)/iu;
 const HOW_OUTCOME_QUESTION_PATTERN =
@@ -370,6 +373,27 @@ function determinationAnswerMerelyRestatesSubject(question, answer) {
   return overlap === subjectRoots.size && novel <= 2;
 }
 
+function circularProcessAnswerMerelyRestatesQuestion(question, answer) {
+  const match = String(question ?? "").match(CIRCULAR_PROCESS_QUESTION_PATTERN);
+  if (!match) return false;
+  const processSubject = normalizeGroundedText(match[1]);
+  const resultingState = normalizeGroundedText(match[2]);
+  const normalizedAnswer = normalizeGroundedText(answer);
+  if (!processSubject || !resultingState || !normalizedAnswer) return false;
+  const answerTokens = new Set(normalizedAnswer.split(/\s+/u));
+  const stemTokens = new Set(
+    `${processSubject} ${resultingState}`.split(/\s+/u).filter(Boolean),
+  );
+  const novelTokens = [...answerTokens].filter(
+    (token) =>
+      token.length >= 3 &&
+      !stemTokens.has(token) &&
+      !ENGLISH_STOP_WORDS.has(token) &&
+      !new Set(["other", "people", "person", "individuals"]).has(token),
+  );
+  return novelTokens.length < 2;
+}
+
 /**
  * Require an answer to supply the outcome, relationship, or mechanism promised
  * by an explicit How-does/How-do question. Merely naming components or copying
@@ -404,7 +428,7 @@ const COMPLETE_MC_ASSERTION_PATTERN =
  * assertion but paired it with an incompatible wh-form. This is not a content
  * rewrite: the answer, evidence, distractors, and objective remain unchanged.
  * Bare factors, component lists, concessive fragments, and tautologies still
- * fail closed and consume the normal targeted repair budget.
+ * fail closed and consume the normal bounded automatic-retry budget.
  */
 export function repairMultipleChoiceQuestionKind(candidate, answer) {
   const concept = String(candidate?.concept ?? "")
@@ -579,6 +603,11 @@ export function questionConceptFailure(candidate) {
     return "question_tautology_invalid";
   }
   if (determinationAnswerMerelyRestatesSubject(question, directAnswerSource)) {
+    return "question_tautology_invalid";
+  }
+  if (
+    circularProcessAnswerMerelyRestatesQuestion(question, directAnswerSource)
+  ) {
     return "question_tautology_invalid";
   }
   if (NAMED_CASE_RECALL_PATTERN.test(question)) {

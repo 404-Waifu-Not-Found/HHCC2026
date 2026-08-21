@@ -64,7 +64,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.12 and stream v6 for new concept-first generation", () => {
+  it("requires v0.8.13 and stream v6 for new concept-first generation", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -91,7 +91,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(false);
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.12",
+        "0.8.13",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(true);
@@ -120,6 +120,7 @@ describe("extension generation profile compatibility", () => {
     );
     for (const source of files) {
       expect(source).not.toMatch(/Continue generating/i);
+      expect(source).not.toMatch(/Automatic(?:ally)? repair/i);
       expect(source).not.toMatch(/onContinue/);
       expect(source).not.toMatch(/continuingGeneration/);
     }
@@ -142,6 +143,10 @@ describe("extension generation profile compatibility", () => {
     expect(source).toContain(
       "The Worker event is authoritative. Losing the best-effort browser",
     );
+    expect(source).toContain(
+      "A conflicting progress snapshot must never poison the",
+    );
+    expect(source).toContain(").catch(() => undefined);");
     expect(source).toContain(
       "if (!attemptId) await startAttempt(response.quizId)",
     );
