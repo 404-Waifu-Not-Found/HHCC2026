@@ -1341,6 +1341,50 @@ test("v5.8 repairs the production how-can non-answer and figurative scaffolding"
   );
 });
 
+test("v5.8 repairs a how-can answer that merely repeats the outcome", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        const question = value.questions[0];
+        question.concept = "ecosystem vulnerability";
+        question.question =
+          "How can an ecosystem become vulnerable to collapse even without catastrophic events?";
+        question.answerSpan = "they're actually vulnerable to collapse";
+        question.answerText = question.answerSpan;
+        question.explanation =
+          "Loss of biodiversity weakens the resilience of the ecosystem.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(calls[1]?.outcome, "question_answer_kind_mismatch");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "answer_repair");
+  assert.notEqual(
+    result.quiz.questions[0].answer,
+    "they're actually vulnerable to collapse",
+  );
+});
+
 test("v5.8 repairs How-does component lists before storing the singleton", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];

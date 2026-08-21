@@ -183,6 +183,21 @@ test("v5.8 requires How-does choices to state an outcome or mechanism", () => {
       true,
     );
   }
+
+  assert.equal(
+    multipleChoiceOptionMatchesQuestionKind(
+      "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      "they're actually vulnerable to collapse",
+    ),
+    false,
+  );
+  assert.equal(
+    multipleChoiceOptionMatchesQuestionKind(
+      "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      "Loss of biodiversity weakens resilience and can lead to collapse.",
+    ),
+    true,
+  );
 });
 
 test("v5.8 corrects only bounded caption spelling in a grounded answer", () => {
@@ -202,6 +217,45 @@ test("v5.8 corrects only bounded caption spelling in a grounded answer", () => {
     correctAnswer: candidate.answerText,
     distractors: candidate.distractors,
   });
+
+  assert.deepEqual(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "one that many others depend on for their survival",
+      },
+      evidence,
+    ),
+    {
+      correctAnswer: candidate.answerText,
+      distractors: candidate.distractors,
+    },
+  );
+
+  assert.equal(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "one that no others depend on for their survival",
+        answerText: "one that no others depend on for their survival",
+      },
+      evidence,
+    ),
+    null,
+  );
+
+  assert.equal(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "one that many others depend on for their survival",
+        answerText: "A keystone organism",
+      },
+      evidence,
+    ),
+    null,
+    "a corrected private span must not authorize a different exact learner answer",
+  );
 });
 
 test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () => {
@@ -219,6 +273,15 @@ test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () =
       "source_framing_invalid",
     );
   }
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "What happens when a keystone species threatens the entire fabric of the reef?",
+      concept: "ecosystem interdependence",
+      explanation: "Ecosystem interdependence supports resilience.",
+    }),
+    "low_pedagogical_value",
+  );
   assert.equal(
     questionConceptFailure({
       question:

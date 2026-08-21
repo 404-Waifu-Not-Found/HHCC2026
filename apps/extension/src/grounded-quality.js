@@ -286,13 +286,16 @@ const CONCEPTUAL_QUESTION_PATTERNS = [
 const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
   /\b(?:weav(?:e|es|ing|en)|tapestr(?:y|ies)|unravel(?:s|ed|ing)?)\b/iu,
   /\b(?:cut(?:ting)?\s+(?:too\s+)?many\s+links?|every\s+link\s+(?:provides|gives|adds)\s+stability)\b/iu,
+  /\b(?:entire\s+)?fabric\s+of\s+(?:the\s+)?(?:reef|ecosystem|community|life|nature)\b/iu,
   /\bjacket\s+of\s+gases\b/iu,
-  /(?:编织|织网|织物|线头|解开整张网|气体外套)/u,
+  /(?:编织|织网|织物|线头|解开整张网|生态系统的结构|生态网络|气体外套)/u,
 ];
 
 const HOW_CAN_QUESTION_PATTERN = /^\s*how\s+(?:can|could|may|might)\b/iu;
 const CONCESSIVE_NON_ANSWER_PATTERN =
   /^\s*(?:(?:it|they|this|that)\s+(?:can|could|may|might)\s+)?even\s+(?:without|despite|when|if)\b/iu;
+const HOW_CAN_MECHANISM_ANSWER_PATTERN =
+  /^(?:when|if|by|because|through|due\s+to|as\s+(?:a\s+result|\p{L}+\s+(?:declines?|falls?|rises?|increases?|decreases?)))\b|\b(?:loss|lack|reduction|removal|failure|disruption|decline|depletion|fragmentation|mutation|competition|pressure)\b.{0,120}\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|(?:当|如果|通过|因为|由于|随着|导致|使得?|削弱|降低|减少|破坏|增加)/iu;
 const HOW_OUTCOME_QUESTION_PATTERN =
   /^\s*how\s+(?:does|do|did|can|could|will|would)\b.{0,220}\b(?:affect|contribute(?:s)?(?:\s+to)?|support|strengthen|weaken|protect|promote|improve|reduce|increase|decrease|influence|impact|help|enable|allow|cause|determine|relate|depend|secure)\b/iu;
 const OUTCOME_ANSWER_PATTERN =
@@ -310,9 +313,14 @@ const CJK_OUTCOME_ANSWER_PATTERN =
 export function multipleChoiceOptionMatchesQuestionKind(question, answer) {
   const prompt = String(question ?? "").trim();
   const choice = String(answer ?? "").trim();
-  if (!prompt || !choice || !HOW_OUTCOME_QUESTION_PATTERN.test(prompt)) {
-    return true;
+  if (!prompt || !choice) return true;
+  if (
+    HOW_CAN_QUESTION_PATTERN.test(prompt) &&
+    !HOW_CAN_MECHANISM_ANSWER_PATTERN.test(choice)
+  ) {
+    return false;
   }
+  if (!HOW_OUTCOME_QUESTION_PATTERN.test(prompt)) return true;
   if (formulaFingerprint(choice)) return true;
   return (
     OUTCOME_ANSWER_PATTERN.test(choice) ||
@@ -1129,6 +1137,35 @@ function isSafeCaptionSurfaceCorrection(source, replacement) {
   });
 }
 
+function hasUniqueSafeCaptionSurfaceMatch(candidate, source) {
+  const candidateTokens = normalizeGroundedText(candidate)
+    .split(/\s+/u)
+    .filter(Boolean);
+  const sourceTokens = normalizeGroundedText(source)
+    .split(/\s+/u)
+    .filter(Boolean);
+  if (!candidateTokens.length || sourceTokens.length < candidateTokens.length) {
+    return false;
+  }
+  let matches = 0;
+  for (
+    let index = 0;
+    index <= sourceTokens.length - candidateTokens.length;
+    index += 1
+  ) {
+    const sourceWindow = sourceTokens
+      .slice(index, index + candidateTokens.length)
+      .join(" ");
+    if (
+      isSafeCaptionSurfaceCorrection(sourceWindow, candidateTokens.join(" "))
+    ) {
+      matches += 1;
+      if (matches > 1) return false;
+    }
+  }
+  return matches === 1;
+}
+
 export function applyVerifiedMutation(supportedStatement, mutation) {
   if (
     !mutation ||
@@ -1303,33 +1340,56 @@ export function groundedMultipleChoiceCandidate(
     learnerAnswer,
     groundingSource,
   );
+  const requestedAnswerHasSafeCaptionMatch =
+    !exactRequestedAnswerSpan &&
+    hasUniqueSafeCaptionSurfaceMatch(requestedAnswerSpan, groundingSource);
+  const learnerAnswerHasSafeCaptionMatch =
+    !exactLearnerAnswerSpan &&
+    hasUniqueSafeCaptionSurfaceMatch(learnerAnswer, groundingSource);
+  const safeCaptionRepresentationsAgree =
+    (requestedAnswerHasSafeCaptionMatch &&
+      learnerAnswerHasSafeCaptionMatch &&
+      normalizeGroundedText(requestedAnswerSpan) ===
+        normalizeGroundedText(learnerAnswer)) ||
+    (Boolean(exactRequestedAnswerSpan) &&
+      learnerAnswerHasSafeCaptionMatch &&
+      isSafeCaptionSurfaceCorrection(
+        exactRequestedAnswerSpan,
+        learnerAnswer,
+      )) ||
+    (requestedAnswerHasSafeCaptionMatch &&
+      Boolean(exactLearnerAnswerSpan) &&
+      isSafeCaptionSurfaceCorrection(
+        exactLearnerAnswerSpan,
+        requestedAnswerSpan,
+      ));
   const supportCandidateDistractors = Array.isArray(candidate?.distractors)
     ? candidate.distractors.map((entry) =>
         typeof entry === "string" ? entry : String(entry?.text ?? "").trim(),
       )
     : [];
   const learnerAnswerIsUniquelyGrounded =
-    answerSupportedByEvidence(learnerAnswer, groundingSource) &&
+    (answerSupportedByEvidence(learnerAnswer, groundingSource) ||
+      learnerAnswerHasSafeCaptionMatch) &&
     supportCandidateDistractors.length === 3 &&
     supportCandidateDistractors.every(
       (distractor) =>
         distractor && !answerSupportedByEvidence(distractor, groundingSource),
     );
-  const requestedAnswerIsGrounded = answerSupportedByEvidence(
-    requestedAnswerSpan,
-    groundingSource,
-  );
-  const learnerAnswerIsGrounded = answerSupportedByEvidence(
-    learnerAnswer,
-    groundingSource,
-  );
+  const requestedAnswerIsGrounded =
+    answerSupportedByEvidence(requestedAnswerSpan, groundingSource) ||
+    requestedAnswerHasSafeCaptionMatch;
+  const learnerAnswerIsGrounded =
+    answerSupportedByEvidence(learnerAnswer, groundingSource) ||
+    learnerAnswerHasSafeCaptionMatch;
   const answerRepresentationsAgree =
-    Boolean(exactRequestedAnswerSpan || exactLearnerAnswerSpan) ||
-    learnerAnswerIsUniquelyGrounded ||
+    Boolean(exactRequestedAnswerSpan) ||
+    (Boolean(exactLearnerAnswerSpan) && !requestedAnswerIsGrounded) ||
+    safeCaptionRepresentationsAgree ||
+    (!requestedAnswerIsGrounded && learnerAnswerIsUniquelyGrounded) ||
     normalizeGroundedText(requestedAnswerSpan) ===
       normalizeGroundedText(learnerAnswer) ||
-    choicesLikelyEquivalent(requestedAnswerSpan, learnerAnswer) ||
-    (requestedAnswerIsGrounded && learnerAnswerIsGrounded);
+    choicesLikelyEquivalent(requestedAnswerSpan, learnerAnswer);
   // DeepSeek occasionally paraphrases the private answerSpan even though the
   // learner-facing answerText is copied exactly from the evidence. Preserve a
   // valid exact source-language span for translated quizzes; otherwise resolve
@@ -1339,6 +1399,8 @@ export function groundedMultipleChoiceCandidate(
   const groundedAnswer =
     exactRequestedAnswerSpan ??
     exactLearnerAnswerSpan ??
+    (learnerAnswerHasSafeCaptionMatch ? learnerAnswer : null) ??
+    (requestedAnswerHasSafeCaptionMatch ? requestedAnswerSpan : null) ??
     (learnerAnswerIsUniquelyGrounded ? learnerAnswer : null) ??
     (answerRepresentationsAgree &&
     requestedAnswerIsGrounded &&
@@ -1347,10 +1409,18 @@ export function groundedMultipleChoiceCandidate(
       : null);
   const safeLearnerSurfaceCorrection =
     quizLanguage === "en" &&
-    exactRequestedAnswerSpan &&
+    (exactRequestedAnswerSpan ||
+      requestedAnswerHasSafeCaptionMatch ||
+      learnerAnswerHasSafeCaptionMatch) &&
     learnerAnswerIsGrounded &&
     learnerAnswerIsUniquelyGrounded &&
-    isSafeCaptionSurfaceCorrection(exactRequestedAnswerSpan, learnerAnswer);
+    safeCaptionRepresentationsAgree &&
+    (learnerAnswerHasSafeCaptionMatch ||
+      (exactRequestedAnswerSpan &&
+        isSafeCaptionSurfaceCorrection(
+          exactRequestedAnswerSpan,
+          learnerAnswer,
+        )));
   if (
     !groundedAnswer ||
     !learnerAnswer ||
