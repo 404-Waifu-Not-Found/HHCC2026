@@ -21,7 +21,12 @@ export async function preGenerateImportedQuiz(
   const startedAt = Date.now();
   const controller = new AbortController();
   try {
-    const transcript = await acquireTextTranscript(imported, controller.signal);
+    const transcript = await acquireTextTranscript(
+      imported,
+      controller.signal,
+      undefined,
+      input.quizLanguage,
+    );
     if (!transcript) {
       await updateMatchingState(input.generationId, {
         preworkStatus: "unavailable",
@@ -33,7 +38,7 @@ export async function preGenerateImportedQuiz(
       video: {
         ...imported.video,
         durationSeconds: transcript.verifiedDurationSeconds,
-        sourceLanguage: imported.video.sourceLanguage ?? transcript.language,
+        sourceLanguage: transcript.language,
       },
       captions: {
         ...imported.captions,

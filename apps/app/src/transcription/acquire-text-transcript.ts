@@ -32,6 +32,7 @@ export async function acquireTextTranscript(
   imported: VideoImportResponse,
   signal: AbortSignal,
   onProgress?: (progress: number) => void,
+  preferredLanguage?: string | null,
 ): Promise<AcquiredTextTranscript | null> {
   if (imported.captions.preferredSegments?.length) {
     const completeness = imported.captions.preferredCompleteness;
@@ -71,7 +72,7 @@ export async function acquireTextTranscript(
       const startedAt = Date.now();
       const transcript = await requestExtensionYouTubeTranscript(
         imported.video.sourceVideoId,
-        imported.video.sourceLanguage,
+        preferredLanguage ?? imported.video.sourceLanguage,
         signal,
       );
       if (

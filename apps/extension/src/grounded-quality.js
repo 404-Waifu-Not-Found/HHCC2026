@@ -240,6 +240,7 @@ function learnerVisibleCandidateText(candidate) {
     candidate?.answer,
     candidate?.correctAnswer,
     candidate?.answerSpan,
+    candidate?.answerText,
     candidate?.correction,
     candidate?.supportedStatement,
     candidate?.supportedFact,
@@ -299,7 +300,10 @@ export function questionConceptFailure(candidate) {
   }
   const questionValue = normalizeGroundedText(question);
   const directAnswer = normalizeGroundedText(
-    candidate?.answerSpan ?? candidate?.correctAnswer ?? candidate?.answer,
+    candidate?.answerText ??
+      candidate?.answerSpan ??
+      candidate?.correctAnswer ??
+      candidate?.answer,
   );
   if (
     directAnswer.length >= 4 &&
@@ -314,7 +318,8 @@ export function questionConceptFailure(candidate) {
     ) &&
     /^(?:most|least|more|less|highly|slightly|very|degrees?|levels?|amounts?|variations?)\b/iu.test(
       String(
-        candidate?.answerSpan ??
+        candidate?.answerText ??
+          candidate?.answerSpan ??
           candidate?.correctAnswer ??
           candidate?.answer ??
           "",
@@ -324,6 +329,57 @@ export function questionConceptFailure(candidate) {
     return "question_answer_kind_mismatch";
   }
   return null;
+}
+
+const NON_ENGLISH_PROSE_SCRIPT_PATTERN =
+  /[\p{Script=Arabic}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}\p{Script=Hebrew}\p{Script=Devanagari}\p{Script=Thai}]/u;
+const NON_CHINESE_PROSE_SCRIPT_PATTERN =
+  /[\p{Script=Arabic}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}\p{Script=Hebrew}\p{Script=Devanagari}\p{Script=Thai}]/u;
+const HAN_SCRIPT_PATTERN = /\p{Script=Han}/u;
+
+/**
+ * Fail closed when learner-visible model output drifts away from the selected
+ * quiz language. Private evidence text is intentionally excluded: a source
+ * may be translated into the learner's language, but the rendered assessment
+ * must never mix the source language into an answer control.
+ */
+export function questionMatchesQuizLanguage(candidate, quizLanguage) {
+  const distractors = Array.isArray(candidate?.distractors)
+    ? candidate.distractors.flatMap((entry) =>
+        entry && typeof entry === "object"
+          ? [entry.text, entry.whyWrong]
+          : [entry],
+      )
+    : [];
+  const values = [
+    candidate?.question,
+    candidate?.concept,
+    candidate?.explanation,
+    candidate?.answerText,
+    candidate?.supportedFact,
+    candidate?.answer,
+    candidate?.correction,
+    ...distractors,
+    ...(Array.isArray(candidate?.aliases) ? candidate.aliases : []),
+    ...(Array.isArray(candidate?.requiredIdeas) ? candidate.requiredIdeas : []),
+    ...(Array.isArray(candidate?.requiredItems) ? candidate.requiredItems : []),
+  ].filter((value) => typeof value === "string" && value.trim());
+  const normalizedLanguage = String(quizLanguage ?? "en").toLowerCase();
+  if (normalizedLanguage === "en") {
+    return values.every(
+      (value) => !NON_ENGLISH_PROSE_SCRIPT_PATTERN.test(value),
+    );
+  }
+  if (normalizedLanguage === "zh-cn") {
+    if (values.some((value) => NON_CHINESE_PROSE_SCRIPT_PATTERN.test(value))) {
+      return false;
+    }
+    const requiredProse = [candidate?.question, candidate?.explanation].filter(
+      (value) => typeof value === "string" && value.trim(),
+    );
+    return requiredProse.every((value) => HAN_SCRIPT_PATTERN.test(value));
+  }
+  return false;
 }
 
 function sentenceExcludedFromConceptFirst(value) {
@@ -900,9 +956,13 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
     candidate?.answerSpan ?? candidate?.correctAnswer,
     evidence,
   );
+  const learnerAnswer = String(
+    candidate?.answerText ?? candidate?.correctAnswer ?? "",
+  ).trim();
   if (
     !evidenceAppearsInText(evidence, focusExcerpt) ||
     !correctAnswer ||
+    !learnerAnswer ||
     !Array.isArray(candidate?.distractors) ||
     candidate.distractors.length !== 3
   ) {
@@ -924,7 +984,7 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
     return null;
   }
   return {
-    correctAnswer,
+    correctAnswer: learnerAnswer,
     distractors: distractors.map((entry) => entry.text.trim()),
   };
 }

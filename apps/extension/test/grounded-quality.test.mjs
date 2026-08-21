@@ -12,6 +12,7 @@ import {
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
   questionConceptFailure,
+  questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
   stripQuestionSourceFraming,
 } from "../src/grounded-quality.js";
@@ -530,6 +531,57 @@ test("grounded multiple choice requires exact local evidence and reasons", () =>
       evidence,
     ),
     null,
+  );
+});
+
+test("learner-visible quiz language may differ from private evidence language", () => {
+  const arabicEvidence =
+    "تتحول بقايا الكائنات القديمة تحت الضغط إلى وقود أحفوري.";
+  const englishCandidate = {
+    question: "What are fossil fuels?",
+    concept: "fossil fuel formation",
+    explanation:
+      "Fossil fuels form from ancient organic matter under pressure.",
+    evidenceQuote: arabicEvidence,
+    answerSpan: "وقود أحفوري",
+    answerText: "carbon-based fuels formed from ancient organic matter",
+    distractors: [
+      { text: "recent plant waste", whyWrong: "It has not undergone burial." },
+      { text: "solar radiation", whyWrong: "It is energy, not buried matter." },
+      { text: "atmospheric oxygen", whyWrong: "It is not a carbon fuel." },
+    ],
+  };
+  assert.equal(questionMatchesQuizLanguage(englishCandidate, "en"), true);
+  assert.equal(
+    questionMatchesQuizLanguage(
+      {
+        ...englishCandidate,
+        answerText: "وقود أحفوري",
+      },
+      "en",
+    ),
+    false,
+  );
+  assert.equal(
+    questionMatchesQuizLanguage(
+      {
+        ...englishCandidate,
+        question: "什么是化石燃料？",
+        concept: "化石燃料形成",
+        explanation: "化石燃料由古代有机物在压力下形成。",
+        answerText: "由古代有机物形成的含碳燃料",
+        distractors: englishCandidate.distractors.map((entry, index) => ({
+          text: [`近期植物废物`, `太阳辐射`, `大气中的氧气`][index],
+          whyWrong: [
+            `它尚未经历长期埋藏。`,
+            `它是能量而不是埋藏物质。`,
+            `它不是含碳燃料。`,
+          ][index],
+        })),
+      },
+      "zh-CN",
+    ),
+    true,
   );
 });
 

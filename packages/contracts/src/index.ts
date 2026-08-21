@@ -448,6 +448,7 @@ export const GenerationFailureCodeSchema = z.enum([
   "short_formula_invalid",
   "question_tautology_invalid",
   "question_answer_kind_mismatch",
+  "quiz_language_mismatch",
   "call_dispatch_timeout",
   "stream_idle_timeout",
 ]);

@@ -193,7 +193,11 @@ async function runAutomaticRecovery(
       : () => undefined;
   let transcript;
   try {
-    transcript = await acquireContinuationTranscript(imported, signal);
+    transcript = await acquireContinuationTranscript(
+      imported,
+      signal,
+      continuation.quizLanguage,
+    );
   } catch (error) {
     stopLeaseHeartbeat();
     throw error;
@@ -633,6 +637,7 @@ async function matchingGenerationRecord(
 async function acquireContinuationTranscript(
   imported: NonNullable<Awaited<ReturnType<typeof loadImportedVideo>>>,
   signal: AbortSignal,
+  preferredLanguage: string,
 ): Promise<{
   segments: TranscriptSegment[];
   completeness: TranscriptCompleteness;
@@ -645,6 +650,7 @@ async function acquireContinuationTranscript(
     imported,
     signal,
     () => undefined,
+    preferredLanguage,
   );
   if (textTranscript) return textTranscript;
   const media = await apiRequest(

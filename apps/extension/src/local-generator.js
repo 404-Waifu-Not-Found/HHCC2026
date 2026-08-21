@@ -13,6 +13,7 @@ import {
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
   questionConceptFailure,
+  questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
   stripQuestionSourceFraming,
 } from "./grounded-quality.js";
@@ -189,10 +190,11 @@ function conceptFirstQuestionSchemaForType(type, id) {
     return {
       type: "object",
       additionalProperties: false,
-      required: [...commonRequired, "answerSpan", "distractors"],
+      required: [...commonRequired, "answerSpan", "answerText", "distractors"],
       properties: {
         ...common,
         answerSpan: { type: "string" },
+        answerText: { type: "string" },
         distractors: {
           type: "array",
           minItems: 3,
@@ -540,6 +542,8 @@ export const CONCEPT_FIRST_SYSTEM_PROMPT = `You are ClipQuest's direct assessmen
 
 Prioritize definitions and essential conditions, then relationships and causal reasoning, mechanisms and processes, formulas and methods, applications, and necessary examples. Never mention or attribute anything to a lesson, video, transcript, lecture, source, evidence, presenter, narrator, or speaker. Never test course logistics, exam weighting, grades, assignments, schedules, biographies, introductions, promotions, recording metadata, or pure recall trivia. Numbers are allowed only when required by a law, threshold, calculation, mechanism, or causal explanation.
 
+Use the selected quiz language for every learner-visible field, including the question, concept, explanation, answer text, distractors, corrections, aliases, and rubric text. Private evidenceQuote and answerSpan fields must remain exact source-language evidence and are never shown to the learner. Never leak source-language wording into a learner-visible field unless it is a standard formula, symbol, proper technical acronym, or term conventionally written that way in the selected quiz language.
+
 Silently verify before output that the question remains meaningful without the source, demonstrates knowledge rather than memory of presentation wording, has one supported answer, matches the requested answer kind, and does not duplicate an accepted objective. Explanations must explain the concept directly. Return exactly the requested JSON object, without Markdown, prose outside JSON, or hidden reasoning.`;
 
 function conceptFirstExampleQuestion(type, id) {
@@ -558,6 +562,7 @@ function conceptFirstExampleQuestion(type, id) {
     return {
       ...common,
       answerSpan: "quantity A to quantity B in one direction",
+      answerText: "quantity A changes with quantity B in one direction",
       distractors: [
         {
           text: "They are unrelated.",
@@ -620,7 +625,7 @@ function generationMessagesV58(input, isTransientRetry) {
     );
   const typeRules =
     type === "multiple_choice"
-      ? "Return one unique answerSpan copied as a contiguous phrase from evidenceQuote and exactly three misconception-based distractors. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally. Each whyWrong must identify the specific misconception without source attribution."
+      ? "Return one unique private answerSpan copied as a contiguous phrase from evidenceQuote, one semantically equivalent answerText in the selected quiz language, and exactly three misconception-based distractors in the selected quiz language. answerText and every distractor must form a coherent answer to the question. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally. Each whyWrong must identify the specific misconception without source attribution."
       : type === "true_false"
         ? "Return one direct supportedFact contained in evidenceQuote. Do not choose truth polarity, mutate the statement, or return an answer boolean; ClipQuest constructs a safe true or false item locally."
         : "Choose exactly one shortAnswerMode. Use atomic_term for a single term or name, proposition for a concise explanatory claim with 1-3 independent requiredIdeas, enumeration for 2-8 indispensable requiredItems, and formula only with canonical formulaTokens. Do not manufacture paraphrase lists; ClipQuest derives safe variants locally.";
@@ -628,7 +633,9 @@ function generationMessagesV58(input, isTransientRetry) {
     ? `\nRepair requirement for this same missing ordinal: ${input.repairGuidance}`
     : "";
   const referenceMessage = `Topic hint — never test this label: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nPrivate reference material — never mention this source:\n${input.plainText}`;
-  const taskMessage = `Create the singleton ${type} item for ${id} of ${input.totalQuestionCount}. This is ${isTransientRetry ? "an automatic retry" : "the planned primary call"}. Assigned objective category: ${objectiveCategory}.${repair}
+  const quizLanguageName =
+    input.quizLanguage === "zh-CN" ? "Simplified Chinese" : "English";
+  const taskMessage = `Create the singleton ${type} item for ${id} of ${input.totalQuestionCount}. This is ${isTransientRetry ? "an automatic retry" : "the planned primary call"}. Assigned objective category: ${objectiveCategory}. Selected quiz language: ${quizLanguageName} (${input.quizLanguage}). Every learner-visible field must be written entirely in ${quizLanguageName}.${repair}
 
 Eligible instructional evidence — every answer-bearing field must be supported here:\n${focusExcerpt}
 
@@ -848,7 +855,7 @@ export function normalizeGeneratedQuestion(
       const correctAnswer =
         cleanString(
           conceptFirstV58Mode
-            ? rawQuestion.answerSpan
+            ? rawQuestion.answerText
             : rawQuestion.correctAnswer,
         ) ?? (legacyMatches.length === 1 ? legacyMatches[0] : undefined);
       const distractors = Array.isArray(rawQuestion.distractors)
@@ -870,7 +877,9 @@ export function normalizeGeneratedQuestion(
       return {
         ...common,
         correctAnswer,
-        ...(conceptFirstV58Mode ? { answerSpan: correctAnswer } : {}),
+        ...(conceptFirstV58Mode
+          ? { answerSpan: cleanString(rawQuestion.answerSpan) }
+          : {}),
         distractors,
       };
     }
@@ -1523,6 +1532,16 @@ function validateQuiz(quiz, input) {
         `Question ${index + 1} must directly test a taught concept without source framing or course logistics.`,
         rawConceptFailure,
         repairContextForCandidate(rawQuestion, rawConceptFailure),
+      );
+    }
+    if (
+      input.conceptFirstV58Mode &&
+      !questionMatchesQuizLanguage(rawQuestion, input.quizLanguage)
+    ) {
+      validationFailure(
+        `Question ${index + 1} contains learner-visible text outside the selected quiz language.`,
+        "quiz_language_mismatch",
+        repairContextForCandidate(rawQuestion, "quiz_language_mismatch"),
       );
     }
     const question = normalizeGeneratedQuestion(rawQuestion, {
@@ -3239,9 +3258,11 @@ async function generateAutomaticQuiz({
         questionOffset,
         input.questionCount,
         input.strictConceptMode &&
-          ["source_framing_invalid", "rubric_invalid"].includes(
-            lastFailureReason,
-          )
+          [
+            "source_framing_invalid",
+            "rubric_invalid",
+            "quiz_language_mismatch",
+          ].includes(lastFailureReason)
           ? 0
           : Math.max(0, ordinalAttempt - 1),
         {
@@ -3569,6 +3590,7 @@ function automaticRetryKindForFailure(reasonCode) {
       "low_pedagogical_value",
       "rubric_invalid",
       "question_tautology_invalid",
+      "quiz_language_mismatch",
     ].includes(reasonCode)
   ) {
     return "content_repair";
@@ -3637,6 +3659,8 @@ function repairGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
       "Replace the candidate with a question that requires understanding; the answer must not merely repeat a phrase already supplied in the stem.",
     question_answer_kind_mismatch:
       "Rewrite the question and answer so the answer is the requested factor, cause, process, method, term, concept, or quantity rather than a degree or label of variation.",
+    quiz_language_mismatch:
+      "Keep the supported objective and private evidence fields, but rewrite every learner-visible field entirely in the selected quiz language. For multiple choice, translate answerText and all distractors; keep evidenceQuote and answerSpan as exact private source evidence.",
   };
   if (failureReason && targetedGuidance[failureReason]) {
     return targetedGuidance[failureReason];

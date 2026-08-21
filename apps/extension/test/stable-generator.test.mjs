@@ -310,85 +310,141 @@ function conceptFirstTaskFromRequest(request) {
     type: slot[1],
     ordinal: Number(slot[2]),
     focusExcerpt,
+    quizLanguage: /Selected quiz language: Simplified Chinese \(zh-CN\)/u.test(
+      task,
+    )
+      ? "zh-CN"
+      : "en",
   };
 }
 
-function conceptFirstResponse(request) {
+function conceptFirstResponse(request, mutate = (value) => value) {
   const task = conceptFirstTaskFromRequest(request);
-  const evidence = task.focusExcerpt.split(/(?<=[.!?])\s+/u)[0];
+  const evidence = task.focusExcerpt.split(/(?<=[.!?。！？])\s+/u)[0];
   const pathway = evidence.match(/pathway\d+/u)?.[0];
   assert.ok(pathway, "eligible evidence contains an atomic mechanism term");
   const objective =
     evidence.match(/objective[a-z]+/iu)?.[0] ??
     evidence.match(/catalyst \d+/iu)?.[0] ??
     `mechanism ${task.ordinal}`;
+  const isChinese = task.quizLanguage === "zh-CN";
   const common = {
     id: `q${task.ordinal}`,
     type: task.type,
-    concept: `${objective} energy function`,
+    concept: isChinese
+      ? `${objective} ${pathway}`
+      : `${objective} energy function`,
     objectiveCategory: "mechanism",
-    question: [
-      `Which pathway carries energy during ${objective}?`,
-      `What route performs energy transfer for ${objective}?`,
-      `Which route moves energy between states during ${objective}?`,
-      `Identify the pathway responsible for ${objective}.`,
-      `Which mechanism carries energy in the ${objective} process?`,
-    ][(task.ordinal - 1) % 5],
-    explanation: `${pathway} carries energy during ${objective}.`,
+    question: isChinese
+      ? [
+          `${objective}过程中哪条路径负责传递能量？`,
+          `${objective}如何通过特定路径完成能量传递？`,
+          `哪种机制在${objective}期间传递能量？`,
+          `请识别${objective}所使用的能量传递路径。`,
+          `${objective}过程依靠哪条路径输送能量？`,
+        ][(task.ordinal - 1) % 5]
+      : [
+          `Which pathway carries energy during ${objective}?`,
+          `What route performs energy transfer for ${objective}?`,
+          `Which route moves energy between states during ${objective}?`,
+          `Identify the pathway responsible for ${objective}.`,
+          `Which mechanism carries energy in the ${objective} process?`,
+        ][(task.ordinal - 1) % 5],
+    explanation: isChinese
+      ? `${pathway}在${objective}过程中传递能量。`
+      : `${pathway} carries energy during ${objective}.`,
     evidenceQuote: evidence,
   };
   if (task.type === "multiple_choice") {
-    return completionResponse({
-      questions: [
+    return completionResponse(
+      mutate(
         {
-          ...common,
-          answerSpan: pathway,
-          distractors: [
+          questions: [
             {
-              text: `reservoir${task.ordinal}`,
-              whyWrong: "It stores rather than transfers energy.",
-            },
-            {
-              text: `barrier${task.ordinal}`,
-              whyWrong: "It blocks the supported transfer.",
-            },
-            {
-              text: `sink${task.ordinal}`,
-              whyWrong: "It removes rather than carries energy.",
+              ...common,
+              answerSpan: pathway,
+              answerText: isChinese ? `能量传递路径${pathway}` : pathway,
+              distractors: [
+                {
+                  text: isChinese
+                    ? `能量储存库${task.ordinal}`
+                    : `reservoir${task.ordinal}`,
+                  whyWrong: isChinese
+                    ? "它储存能量，而不是传递能量。"
+                    : "It stores rather than transfers energy.",
+                },
+                {
+                  text: isChinese
+                    ? `能量屏障${task.ordinal}`
+                    : `barrier${task.ordinal}`,
+                  whyWrong: isChinese
+                    ? "它会阻碍所描述的能量传递。"
+                    : "It blocks the supported transfer.",
+                },
+                {
+                  text: isChinese
+                    ? `能量汇${task.ordinal}`
+                    : `sink${task.ordinal}`,
+                  whyWrong: isChinese
+                    ? "它移除能量，而不是输送能量。"
+                    : "It removes rather than carries energy.",
+                },
+              ],
             },
           ],
         },
-      ],
-    });
+        task,
+      ),
+    );
   }
   if (task.type === "true_false") {
-    return completionResponse({
-      questions: [
+    return completionResponse(
+      mutate(
         {
-          ...common,
-          question: `${pathway} transfers energy during the reaction.`,
-          supportedFact: evidence,
+          questions: [
+            {
+              ...common,
+              question: isChinese
+                ? `${pathway}会在反应过程中传递能量。`
+                : `${pathway} transfers energy during the reaction.`,
+              supportedFact: evidence,
+            },
+          ],
         },
-      ],
-    });
+        task,
+      ),
+    );
   }
-  return completionResponse({
-    questions: [
+  return completionResponse(
+    mutate(
       {
-        ...common,
-        question: [
-          `What term names the energy-transfer route for ${objective}?`,
-          `Which mechanism term identifies the ${objective} route?`,
-          `Name the pathway that performs ${objective}.`,
-          `What route carries energy during ${objective}?`,
-          `Identify the mechanism used for ${objective}.`,
-        ][(task.ordinal - 1) % 5],
-        shortAnswerMode: "atomic_term",
-        answer: pathway,
-        aliases: [],
+        questions: [
+          {
+            ...common,
+            question: isChinese
+              ? [
+                  `${objective}的能量传递路径叫什么？`,
+                  `哪个机制术语表示${objective}路径？`,
+                  `请写出执行${objective}的路径名称。`,
+                  `${objective}期间由哪条路径传递能量？`,
+                  `请识别${objective}使用的机制。`,
+                ][(task.ordinal - 1) % 5]
+              : [
+                  `What term names the energy-transfer route for ${objective}?`,
+                  `Which mechanism term identifies the ${objective} route?`,
+                  `Name the pathway that performs ${objective}.`,
+                  `What route carries energy during ${objective}?`,
+                  `Identify the mechanism used for ${objective}.`,
+                ][(task.ordinal - 1) % 5],
+            shortAnswerMode: "atomic_term",
+            answer: pathway,
+            aliases: [],
+          },
+        ],
       },
-    ],
-  });
+      task,
+    ),
+  );
 }
 
 function taskFromRequest(request) {
@@ -945,6 +1001,62 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
         question.shortAnswerMode === "atomic_term" &&
         question.rubricV2?.mode === "atomic_term",
     ),
+  );
+});
+
+test("v5.8 repairs learner-visible source-language leakage before storing a question", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        value.questions[0].answerText = "وقود أحفوري";
+        value.questions[0].distractors[0].text = "غازات دفيئة";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(httpCalls, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.ok(
+    result.quiz.questions.every((question) =>
+      question.type !== "multiple_choice"
+        ? true
+        : question.choices.every(
+            (choice) => !/[\p{Script=Arabic}\p{Script=Han}]/u.test(choice),
+          ),
+    ),
+  );
+  assert.ok(
+    calls.some(
+      (event) =>
+        event.lifecycleState === "completed" &&
+        event.outcome === "quiz_language_mismatch",
+    ),
+  );
+  assert.equal(
+    calls.filter(
+      (event) =>
+        event.lifecycleState === "started" &&
+        event.classification === "automatic_retry",
+    ).length,
+    1,
   );
 });
 
