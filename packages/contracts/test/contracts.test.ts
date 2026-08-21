@@ -9,6 +9,7 @@ import {
   ExtensionQuizImportRequestSchema,
   ExtensionQuizProgressiveImportRequestSchema,
   GenerationRecordV2Schema,
+  GenerationRecordV3Schema,
   LibraryCardSchema,
   LocalConceptQuizChunkSchema,
   LocalConceptQuizResultSchema,
@@ -67,7 +68,10 @@ describe("admin contracts", () => {
           states: {
             generating: 1,
             retrying: 2,
+            recovering: 0,
             retryRequired: 3,
+            actionRequired: 0,
+            generationFailed: 0,
             ready: 4,
           },
         },
@@ -554,6 +558,135 @@ describe("generated questions", () => {
         updatedAt: 1_786_300_000_000,
       }).success,
     ).toBe(true);
+  });
+
+  it("requires protocol-7 singleton telemetry and automatic recovery metadata", () => {
+    const generationId = "11111111-1111-4111-8111-111111111111";
+    const generationSessionId = "22222222-2222-4222-8222-222222222222";
+    const recoverySessionId = "33333333-3333-4333-8333-333333333333";
+    const questionPlan = {
+      seed: "b".repeat(64),
+      types: Array(5).fill("multiple_choice"),
+    } as const;
+    const chunk = {
+      protocolVersion: 7,
+      pipelineVersion: 9,
+      model: "deepseek-v4-flash",
+      reasoningEffort: "none",
+      promptVersion: "quiz-local-json-stream-v5.3",
+      validatorVersion: "validator-local-progressive-v4.2",
+      importVersion: "extension-progressive-import-v5",
+      generationProfile: "stable_auto_recovery_v5_3",
+      generationId,
+      generationSessionId,
+      recoverySessionId,
+      questionPlan,
+      title: "Trusted source title",
+      startIndex: 0,
+      totalQuestions: 5,
+      question: localQuestion("multiple_choice", 0),
+      metrics: {
+        aiCalls: 0,
+        retryCount: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: 0,
+        elapsedMs: 1,
+      },
+    } as const;
+    expect(LocalConceptQuizQuestionChunkSchema.safeParse(chunk).success).toBe(
+      true,
+    );
+    expect(
+      LocalConceptQuizQuestionChunkSchema.safeParse({
+        ...chunk,
+        recoverySessionId: undefined,
+      }).success,
+    ).toBe(false);
+
+    const primary = {
+      protocolVersion: 7,
+      generationSessionId,
+      recoverySessionId,
+      callIndex: 0,
+      startIndex: 0,
+      ordinalAttempt: 1,
+      requestedCount: 1,
+      acceptedCount: 1,
+      classification: "primary",
+      outcome: "complete",
+      retryDelayMs: 0,
+      elapsedMs: 2_000,
+      inputTokens: 100,
+      outputTokens: 20,
+      reasoningTokens: 0,
+      usageComplete: true,
+    } as const;
+    expect(LocalGenerationCallEventSchema.safeParse(primary).success).toBe(
+      true,
+    );
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        ...primary,
+        classification: "manual_continuation",
+      }).success,
+    ).toBe(false);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        ...primary,
+        callIndex: 1,
+        ordinalAttempt: 2,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        outcome: "schema_invalid",
+      }).success,
+    ).toBe(false);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        ...primary,
+        callIndex: 1,
+        ordinalAttempt: 2,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+        outcome: "schema_invalid",
+      }).success,
+    ).toBe(true);
+
+    const generationRecord = {
+      version: 3,
+      generationId,
+      generationSessionId,
+      recoverySessionId,
+      idempotencyKey: "44444444-4444-4444-8444-444444444444",
+      ownerUserId: "owner-user",
+      videoId: "55555555-5555-4555-8555-555555555555",
+      quizLanguage: "en",
+      questionTypes: ["multiple_choice"],
+      sessionLength: "short",
+      watched: true,
+      questionPlan,
+      generationProfile: "stable_auto_recovery_v5_3",
+      acceptedCount: 1,
+      plannedCount: 5,
+      state: "action_required",
+      reasonCode: "credential_required",
+      nextCallIndex: 1,
+      ordinalAttempts: { "2": 1 },
+      automaticRetryCount: 0,
+      activeRecoveryStartedAt: 1_786_300_000_000,
+      createdAt: 1_786_300_000_000,
+      updatedAt: 1_786_300_000_000,
+    } as const;
+    expect(GenerationRecordV3Schema.safeParse(generationRecord).success).toBe(
+      true,
+    );
+    expect(
+      GenerationRecordV3Schema.safeParse({
+        ...generationRecord,
+        reasonCode: undefined,
+      }).success,
+    ).toBe(false);
   });
 });
 

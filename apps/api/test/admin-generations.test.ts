@@ -155,6 +155,10 @@ function createDatabase(): SqliteD1Adapter {
       reasoning_tokens INTEGER,
       usage_complete INTEGER NOT NULL,
       created_at INTEGER NOT NULL,
+      protocol_version INTEGER,
+      retry_kind TEXT,
+      ordinal_attempt INTEGER,
+      recovery_session_id TEXT,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (
@@ -162,7 +166,9 @@ function createDatabase(): SqliteD1Adapter {
       generation_session_id TEXT NOT NULL,
       claim_key TEXT NOT NULL,
       lease_expires_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      recovery_session_id TEXT,
+      heartbeat_at INTEGER
     );
   `);
   sqlite
@@ -186,6 +192,11 @@ function createDatabase(): SqliteD1Adapter {
   sqlite
     .prepare(
       "INSERT INTO d1_migrations VALUES (17, '0017_quiz_generation_call_events.sql', '2026-08-10')",
+    )
+    .run();
+  sqlite
+    .prepare(
+      "INSERT INTO d1_migrations VALUES (18, '0018_automatic_generation_recovery.sql', '2026-08-10')",
     )
     .run();
 
@@ -215,6 +226,7 @@ function createDatabase(): SqliteD1Adapter {
   });
   const insertCall = sqlite.prepare(
     `INSERT INTO quiz_generation_call_events
+     (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const telemetryQuizId = "33333333-3333-4333-8333-333333333332";
@@ -394,10 +406,18 @@ describe("admin progressive generation visibility", () => {
       backendEnabled: false,
       extensionEnabled: true,
       extensionRequired: true,
-      states: { generating: 1, retrying: 0, retryRequired: 2, ready: 1 },
+      states: {
+        generating: 1,
+        retrying: 0,
+        recovering: 0,
+        retryRequired: 2,
+        actionRequired: 0,
+        generationFailed: 0,
+        ready: 1,
+      },
     });
     expect(body.database.migration).toBe(
-      "0017_quiz_generation_call_events.sql",
+      "0018_automatic_generation_recovery.sql",
     );
     expect(body.worker).toEqual({
       versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",

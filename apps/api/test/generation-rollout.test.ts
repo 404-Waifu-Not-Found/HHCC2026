@@ -8,10 +8,20 @@ import type { AppEnv } from "../src/types";
 function env(
   mode?: string,
   canaryUserIds = "",
-): Pick<AppEnv, "QUIZ_V5_2_ROLLOUT" | "QUIZ_V5_2_CANARY_USER_IDS"> {
+  automaticMode?: string,
+  automaticCanaryUserIds = "",
+): Pick<
+  AppEnv,
+  | "QUIZ_V5_2_ROLLOUT"
+  | "QUIZ_V5_2_CANARY_USER_IDS"
+  | "QUIZ_V5_3_ROLLOUT"
+  | "QUIZ_V5_3_CANARY_USER_IDS"
+> {
   return {
     QUIZ_V5_2_ROLLOUT: mode,
     QUIZ_V5_2_CANARY_USER_IDS: canaryUserIds,
+    QUIZ_V5_3_ROLLOUT: automaticMode,
+    QUIZ_V5_3_CANARY_USER_IDS: automaticCanaryUserIds,
   };
 }
 
@@ -37,5 +47,17 @@ describe("quiz generation rollout", () => {
     expect(
       quizGenerationProfile(env("enabled"), "any-user").generationProfile,
     ).toBe("stable_non_thinking_v5_2");
+  });
+
+  it("enables v5.3 automatic recovery only for its exact rollout", () => {
+    const canary = env("enabled", "", "canary", "learner-1");
+    expect(quizGenerationProfile(canary, "learner-1")).toEqual({
+      generationProfile: "stable_auto_recovery_v5_3",
+      minimumExtensionVersion: "0.8.3",
+      requiredCapability: "question-stream-v3",
+    });
+    expect(quizGenerationProfile(canary, "learner-2").generationProfile).toBe(
+      "stable_non_thinking_v5_2",
+    );
   });
 });

@@ -121,7 +121,10 @@ export type AdminJobsResponse = z.infer<typeof AdminJobsResponseSchema>;
 export const AdminGenerationStateSchema = z.enum([
   "generating",
   "retrying",
+  "recovering",
   "retry_required",
+  "action_required",
+  "generation_failed",
   "ready",
 ]);
 export type AdminGenerationState = z.infer<typeof AdminGenerationStateSchema>;
@@ -143,6 +146,9 @@ export const AdminGenerationSchema = z
     telemetrySource: z.enum(["authoritative_calls", "legacy_summary"]),
     primaryCalls: z.number().int().nonnegative(),
     automaticRetries: z.number().int().nonnegative(),
+    automaticRecoveries: z.number().int().nonnegative().optional(),
+    // Historical v5.2 evidence remains readable but new protocol-7 banks
+    // cannot create manual continuation events.
     manualContinuations: z.number().int().nonnegative(),
     partialCalls: z.number().int().nonnegative(),
     outcomeCounts: z.record(
@@ -273,7 +279,10 @@ export const AdminSystemResponseSchema = z.object({
       states: z.object({
         generating: z.number().int().nonnegative(),
         retrying: z.number().int().nonnegative(),
+        recovering: z.number().int().nonnegative(),
         retryRequired: z.number().int().nonnegative(),
+        actionRequired: z.number().int().nonnegative(),
+        generationFailed: z.number().int().nonnegative(),
         ready: z.number().int().nonnegative(),
       }),
     })

@@ -136,8 +136,14 @@ adminRouter.get(
         totals: {
           users,
           lessons,
-          activeJobs: generationCounts.generating + generationCounts.retrying,
-          failedJobs: generationCounts.retryRequired,
+          activeJobs:
+            generationCounts.generating +
+            generationCounts.retrying +
+            generationCounts.recovering,
+          failedJobs:
+            generationCounts.retryRequired +
+            generationCounts.actionRequired +
+            generationCounts.generationFailed,
         },
         activity: {
           newUsers7d: newUsers,
@@ -466,9 +472,15 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
   ]);
   const jobs = {
     queued: 0,
-    running: generationCounts.generating + generationCounts.retrying,
+    running:
+      generationCounts.generating +
+      generationCounts.retrying +
+      generationCounts.recovering,
     complete: generationCounts.ready,
-    failed: generationCounts.retryRequired,
+    failed:
+      generationCounts.retryRequired +
+      generationCounts.actionRequired +
+      generationCounts.generationFailed,
   };
   return c.json(
     AdminSystemResponseSchema.parse({

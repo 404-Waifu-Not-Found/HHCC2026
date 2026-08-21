@@ -231,6 +231,10 @@ function createDatabase(): {
       reasoning_tokens INTEGER,
       usage_complete INTEGER NOT NULL,
       created_at INTEGER NOT NULL,
+      protocol_version INTEGER,
+      retry_kind TEXT,
+      ordinal_attempt INTEGER,
+      recovery_session_id TEXT,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (
@@ -238,7 +242,9 @@ function createDatabase(): {
       generation_session_id TEXT NOT NULL,
       claim_key TEXT NOT NULL,
       lease_expires_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      recovery_session_id TEXT,
+      heartbeat_at INTEGER
     );
   `);
   sqlite

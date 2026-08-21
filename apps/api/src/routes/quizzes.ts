@@ -5,6 +5,7 @@ import {
   AttemptAnswerRequestSchema,
   AttemptAnswerResponseSchema,
   AttemptResumeResponseSchema,
+  GenerationClaimHeartbeatRequestSchema,
   GenerationClaimRequestSchema,
   GenerationClaimResponseSchema,
   LOCAL_QUIZ_PIPELINE_VERSION,
@@ -44,7 +45,8 @@ const QuestionTypeSchema = z.enum([
   "ordering",
   "short_answer",
 ]);
-const GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
+const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
+const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
 const QuestionRowSchema = z.object({
   id: z.string().uuid(),
   quiz_id: z.string().uuid(),
@@ -697,6 +699,13 @@ quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
               importVersion: summary.importVersion,
               generationProfile: summary.generationProfile,
               generationId: summary.generationId,
+              generationSessionId: summary.generationSessionId,
+              recoverySessionId: summary.recoverySessionId,
+              nextCallIndex: generationState.snapshot.telemetry.callCount,
+              nextOrdinalAttempt: generationState.snapshot.nextOrdinalAttempt,
+              retryKind: generationState.snapshot.nextRetryKind ?? undefined,
+              automaticRetryCount:
+                generationState.snapshot.telemetry.automaticRetries,
               ...(summary.questionPlanSeed
                 ? {
                     questionPlan: {
@@ -720,73 +729,104 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
   const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
   const generationState = await attemptGenerationState(c.env.DB, attempt);
   const summary = generationState.snapshot.summary;
+  const automatic = summary?.generationProfile === "stable_auto_recovery_v5_3";
   if (
     !summary ||
     generationState.snapshot.qualityStatus !== "generating" ||
-    generationState.generation.state !== "retry_required"
+    generationState.generation.state === "ready" ||
+    generationState.generation.state === "generation_failed" ||
+    (!automatic && generationState.generation.state !== "retry_required")
   ) {
     throw new ApiError(
       409,
       "generation_claim_not_available",
-      "This attempt is not waiting for an explicit continuation.",
+      "This attempt is not available for generation recovery.",
+    );
+  }
+  if (
+    automatic &&
+    (!input.recoverySessionId ||
+      input.generationSessionId !== summary.generationSessionId)
+  ) {
+    throw new ApiError(
+      409,
+      "generation_claim_metadata_mismatch",
+      "Automatic recovery must preserve the original generation session.",
     );
   }
 
   const timestamp = now();
   const existing = await c.env.DB.prepare(
-    "SELECT generation_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+    "SELECT generation_session_id, recovery_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
   )
     .bind(attempt.quiz_id)
     .first<{
       generation_session_id: string;
+      recovery_session_id: string | null;
       claim_key: string;
       lease_expires_at: number;
     }>();
   const replay =
     existing?.generation_session_id === input.generationSessionId &&
-    existing.claim_key === input.claimKey;
+    existing.claim_key === input.claimKey &&
+    (!automatic || existing.recovery_session_id === input.recoverySessionId);
   if (existing && Number(existing.lease_expires_at) > timestamp && !replay) {
     throw new ApiError(
       409,
       "generation_claim_leased",
-      "Another tab is already continuing this attempt.",
+      "Another tab already owns this attempt's recovery lease.",
     );
   }
 
-  const leaseExpiresAt = timestamp + GENERATION_CLAIM_LEASE_MS;
+  const leaseExpiresAt =
+    timestamp +
+    (automatic
+      ? AUTOMATIC_GENERATION_CLAIM_LEASE_MS
+      : LEGACY_GENERATION_CLAIM_LEASE_MS);
   const claimedSummary = ProgressiveQuizSummarySchema.parse({
     ...summary,
-    generationState: "retry_required",
-    reasonCode:
-      generationState.generation.reasonCode ??
-      summary.reasonCode ??
-      "local_state_conflict",
+    generationState: automatic ? "recovering" : "retry_required",
+    reasonCode: automatic
+      ? undefined
+      : (generationState.generation.reasonCode ??
+        summary.reasonCode ??
+        "local_state_conflict"),
+    recoverySessionId: input.recoverySessionId ?? summary.recoverySessionId,
+    retryOrdinal: undefined,
+    ordinalAttempt: undefined,
+    retryKind: undefined,
+    retryDelayMs: undefined,
     stateChangedAt:
-      summary.generationState === "retry_required"
+      summary.generationState === (automatic ? "recovering" : "retry_required")
         ? summary.stateChangedAt
         : timestamp,
   });
   const results = await c.env.DB.batch([
     c.env.DB.prepare(
       `INSERT INTO quiz_generation_claims
-         (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)
+         (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at, recovery_session_id, heartbeat_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(quiz_id) DO UPDATE SET
            generation_session_id = excluded.generation_session_id,
            claim_key = excluded.claim_key,
            lease_expires_at = excluded.lease_expires_at,
-           updated_at = excluded.updated_at
+           updated_at = excluded.updated_at,
+           recovery_session_id = excluded.recovery_session_id,
+           heartbeat_at = excluded.heartbeat_at
          WHERE quiz_generation_claims.lease_expires_at <= ?
-           OR (quiz_generation_claims.generation_session_id = ? AND quiz_generation_claims.claim_key = ?)`,
+           OR (quiz_generation_claims.generation_session_id = ? AND quiz_generation_claims.claim_key = ? AND COALESCE(quiz_generation_claims.recovery_session_id, '') = COALESCE(?, ''))`,
     ).bind(
       attempt.quiz_id,
       input.generationSessionId,
       input.claimKey,
       leaseExpiresAt,
       timestamp,
+      input.recoverySessionId ?? null,
+      timestamp,
       timestamp,
       input.generationSessionId,
       input.claimKey,
+      input.recoverySessionId ?? null,
     ),
     c.env.DB.prepare(
       `UPDATE quiz_banks SET import_key = ?, quality_summary_json = ?
@@ -797,6 +837,7 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
              WHERE claim.quiz_id = quiz_banks.id
                AND claim.generation_session_id = ?
                AND claim.claim_key = ?
+               AND COALESCE(claim.recovery_session_id, '') = COALESCE(?, '')
                AND claim.lease_expires_at > ?
            )`,
     ).bind(
@@ -808,6 +849,7 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       generationState.snapshot.qualitySummaryJson,
       input.generationSessionId,
       input.claimKey,
+      input.recoverySessionId ?? null,
       timestamp,
     ),
   ]);
@@ -826,6 +868,64 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       claim: {
         state: "leased",
         leaseExpiresAt: new Date(leaseExpiresAt).toISOString(),
+        recoverySessionId: input.recoverySessionId ?? null,
+      },
+    }),
+  );
+});
+
+quizzesRouter.put("/attempts/:attemptId/generation/heartbeat", async (c) => {
+  const user = c.get("user");
+  const input = await parseJson(c, GenerationClaimHeartbeatRequestSchema);
+  const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
+  const timestamp = now();
+  const leaseExpiresAt = timestamp + AUTOMATIC_GENERATION_CLAIM_LEASE_MS;
+  const renewed = await c.env.DB.prepare(
+    `UPDATE quiz_generation_claims
+       SET lease_expires_at = ?, heartbeat_at = ?, updated_at = ?
+       WHERE quiz_id = ?
+         AND generation_session_id = ?
+         AND recovery_session_id = ?
+         AND claim_key = ?
+         AND lease_expires_at > ?
+         AND EXISTS (
+           SELECT 1 FROM quiz_banks bank
+           WHERE bank.id = quiz_generation_claims.quiz_id
+             AND bank.user_id = ?
+             AND bank.pipeline_version = ?
+             AND bank.quality_status = 'generating'
+         )`,
+  )
+    .bind(
+      leaseExpiresAt,
+      timestamp,
+      timestamp,
+      attempt.quiz_id,
+      input.generationSessionId,
+      input.recoverySessionId,
+      input.claimKey,
+      timestamp,
+      user.id,
+      LOCAL_QUIZ_PIPELINE_VERSION,
+    )
+    .run();
+  if (renewed.meta.changes !== 1) {
+    throw new ApiError(
+      409,
+      "generation_recovery_lease_lost",
+      "This tab no longer owns the automatic recovery lease.",
+    );
+  }
+  const generationState = await attemptGenerationState(c.env.DB, attempt);
+  return c.json(
+    GenerationClaimResponseSchema.parse({
+      attemptId: attempt.id,
+      quizId: attempt.quiz_id,
+      generation: generationState.generation,
+      claim: {
+        state: "leased",
+        leaseExpiresAt: new Date(leaseExpiresAt).toISOString(),
+        recoverySessionId: input.recoverySessionId,
       },
     }),
   );
@@ -869,7 +969,13 @@ function readyGeneration(total: number): AttemptGenerationAvailability {
 }
 
 function claimForSnapshot(snapshot: ProgressiveGenerationSnapshot) {
-  if (snapshot.availability?.state !== "retry_required") {
+  const automatic =
+    snapshot.summary?.generationProfile === "stable_auto_recovery_v5_3";
+  if (
+    snapshot.availability?.state === "ready" ||
+    snapshot.availability?.state === "generation_failed" ||
+    (!automatic && snapshot.availability?.state !== "retry_required")
+  ) {
     return { state: "not_required" as const, leaseExpiresAt: null };
   }
   const activeLease =
@@ -880,6 +986,7 @@ function claimForSnapshot(snapshot: ProgressiveGenerationSnapshot) {
     leaseExpiresAt: activeLease
       ? new Date(snapshot.claimLeaseExpiresAt!).toISOString()
       : null,
+    recoverySessionId: activeLease ? snapshot.claimRecoverySessionId : null,
   };
 }
 

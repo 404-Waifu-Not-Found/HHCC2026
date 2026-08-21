@@ -10,11 +10,15 @@ export type AppEnv = Omit<
   | "ENABLE_YOUTUBE_DEMO_HISTORY"
   | "QUIZ_V5_2_ROLLOUT"
   | "QUIZ_V5_2_CANARY_USER_IDS"
+  | "QUIZ_V5_3_ROLLOUT"
+  | "QUIZ_V5_3_CANARY_USER_IDS"
 > &
   AppSecrets & {
     ENABLE_YOUTUBE_DEMO_HISTORY: string;
     QUIZ_V5_2_ROLLOUT?: string;
     QUIZ_V5_2_CANARY_USER_IDS?: string;
+    QUIZ_V5_3_ROLLOUT?: string;
+    QUIZ_V5_3_CANARY_USER_IDS?: string;
   };
 
 import type { AdminRole } from "@clipquest/contracts";

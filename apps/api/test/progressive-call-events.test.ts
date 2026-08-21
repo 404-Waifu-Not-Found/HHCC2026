@@ -18,6 +18,8 @@ const SECOND_SESSION_ID = "77777777-7777-4777-8777-777777777777";
 const IMPORT_KEY = "88888888-8888-4888-8888-888888888888";
 const CLAIM_KEY = "99999999-9999-4999-8999-999999999999";
 const SECOND_CLAIM_KEY = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const RECOVERY_SESSION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const SECOND_RECOVERY_SESSION_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 type BatchResult = { success: true; meta: { changes: number } };
 
@@ -127,6 +129,33 @@ function summary(
   };
 }
 
+function automaticSummary(
+  state:
+    | "generating"
+    | "retrying"
+    | "recovering"
+    | "action_required"
+    | "generation_failed" = "generating",
+  timestamp = Date.now(),
+) {
+  return {
+    ...summary("generating", timestamp),
+    importVersion: "extension-progressive-import-v5",
+    resultProtocolVersion: 7,
+    promptVersion: "quiz-local-json-stream-v5.3",
+    validatorVersion: "validator-local-progressive-v4.2",
+    generationProfile: "stable_auto_recovery_v5_3",
+    generationSessionId: SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    generationState: state,
+    ...(state === "action_required"
+      ? { reasonCode: "credential_required" }
+      : state === "generation_failed"
+        ? { reasonCode: "recovery_budget_exhausted" }
+        : {}),
+  };
+}
+
 function createDatabase(
   state: "generating" | "retrying" | "retry_required" = "generating",
   timestamp = Date.now(),
@@ -197,6 +226,10 @@ function createDatabase(
       reasoning_tokens INTEGER,
       usage_complete INTEGER NOT NULL,
       created_at INTEGER NOT NULL,
+      protocol_version INTEGER,
+      retry_kind TEXT,
+      ordinal_attempt INTEGER,
+      recovery_session_id TEXT,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (
@@ -204,7 +237,9 @@ function createDatabase(
       generation_session_id TEXT NOT NULL,
       claim_key TEXT NOT NULL UNIQUE,
       lease_expires_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      recovery_session_id TEXT,
+      heartbeat_at INTEGER
     );
   `);
   sqlite
@@ -228,6 +263,37 @@ function createDatabase(
     )
     .run(ATTEMPT_ID, USER_ID, QUIZ_ID, timestamp, timestamp);
   return new SqliteD1Adapter(sqlite);
+}
+
+function createAutomaticDatabase(
+  state:
+    | "generating"
+    | "retrying"
+    | "recovering"
+    | "action_required"
+    | "generation_failed" = "generating",
+  timestamp = Date.now(),
+) {
+  const db = createDatabase("generating", timestamp);
+  db.sqlite
+    .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+    .run(JSON.stringify(automaticSummary(state, timestamp)), QUIZ_ID);
+  db.sqlite
+    .prepare(
+      `INSERT INTO quiz_generation_claims
+       (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at, recovery_session_id, heartbeat_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      QUIZ_ID,
+      SESSION_ID,
+      IMPORT_KEY,
+      timestamp + 30_000,
+      timestamp,
+      RECOVERY_SESSION_ID,
+      timestamp,
+    );
+  return db;
 }
 
 function testApp(db: SqliteD1Adapter, userId = USER_ID) {
@@ -283,10 +349,56 @@ function callEvent(
   };
 }
 
-function putCall(
+function automaticCallEvent(
+  overrides: Partial<{
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+    acceptedCount: 0 | 1;
+    classification: "primary" | "automatic_retry";
+    retryKind:
+      | "transport"
+      | "empty_content"
+      | "truncated_output"
+      | "content_repair"
+      | "duplicate_repair"
+      | "answer_repair"
+      | "automatic_resume";
+    outcome:
+      | "complete"
+      | "transient_http"
+      | "network_interrupted"
+      | "schema_invalid"
+      | "empty_content";
+    retryDelayMs: number;
+    recoverySessionId: string;
+  }> = {},
+) {
+  return {
+    protocolVersion: 7 as const,
+    generationSessionId: SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    callIndex: 0,
+    startIndex: 0,
+    ordinalAttempt: 1,
+    requestedCount: 1 as const,
+    acceptedCount: 1 as 0 | 1,
+    classification: "primary" as const,
+    outcome: "complete" as const,
+    retryDelayMs: 0,
+    elapsedMs: 2_000,
+    inputTokens: 100,
+    outputTokens: 20,
+    reasoningTokens: 0,
+    usageComplete: true,
+    ...overrides,
+  };
+}
+
+function putCall<T extends { generationSessionId: string; callIndex: number }>(
   app: Hono<ApiBindings>,
   env: ApiBindings["Bindings"],
-  event: ReturnType<typeof callEvent>,
+  event: T,
   importKey = IMPORT_KEY,
 ) {
   return app.request(
@@ -302,6 +414,196 @@ function putCall(
     env,
   );
 }
+
+describe("protocol-7 automatic recovery call events", () => {
+  it("accepts exactly two content repairs and rejects manual classifications", async () => {
+    const db = createAutomaticDatabase();
+    const { app, env } = testApp(db);
+    expect((await putCall(app, env, automaticCallEvent())).status).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          automaticCallEvent({
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "schema_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          automaticCallEvent({
+            callIndex: 2,
+            startIndex: 1,
+            ordinalAttempt: 2,
+            acceptedCount: 0,
+            classification: "automatic_retry",
+            retryKind: "content_repair",
+            outcome: "schema_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          automaticCallEvent({
+            callIndex: 3,
+            startIndex: 1,
+            ordinalAttempt: 3,
+            acceptedCount: 0,
+            classification: "automatic_retry",
+            retryKind: "content_repair",
+            outcome: "schema_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    const exhausted = await putCall(
+      app,
+      env,
+      automaticCallEvent({
+        callIndex: 4,
+        startIndex: 1,
+        ordinalAttempt: 4,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+        outcome: "schema_invalid",
+      }),
+    );
+    expect(exhausted.status).toBe(409);
+    expect(await exhausted.json()).toMatchObject({
+      error: { code: "automatic_retry_ordinal_budget_exceeded" },
+    });
+
+    const manual = await putCall(
+      app,
+      env,
+      callEvent({
+        generationSessionId: SESSION_ID,
+        callIndex: 4,
+        startIndex: 1,
+        acceptedCount: 0,
+        classification: "manual_continuation",
+        outcome: "schema_invalid",
+      }),
+    );
+    expect(manual.status).toBe(409);
+    expect(await manual.json()).toMatchObject({
+      error: { code: "generation_call_protocol_mismatch" },
+    });
+  });
+
+  it("renews one recovery lease and permits takeover only after expiry", async () => {
+    const db = createAutomaticDatabase("recovering");
+    const { app, env } = testApp(db);
+    const heartbeat = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/heartbeat`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: IMPORT_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(heartbeat.status).toBe(200);
+    const renewed = db.sqlite
+      .prepare(
+        "SELECT lease_expires_at, heartbeat_at FROM quiz_generation_claims WHERE quiz_id = ?",
+      )
+      .get(QUIZ_ID) as { lease_expires_at: number; heartbeat_at: number };
+    expect(renewed.lease_expires_at).toBeGreaterThan(Date.now() + 25_000);
+    expect(renewed.heartbeat_at).toBeGreaterThan(0);
+
+    const claim = () =>
+      app.request(
+        `/attempts/${ATTEMPT_ID}/generation/claim`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            claimKey: CLAIM_KEY,
+            generationSessionId: SESSION_ID,
+            recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+          }),
+        },
+        env,
+      );
+    expect((await claim()).status).toBe(409);
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+    expect((await claim()).status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT claim_key, recovery_session_id FROM quiz_generation_claims WHERE quiz_id = ?",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({
+      claim_key: CLAIM_KEY,
+      recovery_session_id: SECOND_RECOVERY_SESSION_ID,
+    });
+    const stored = db.sqlite
+      .prepare(
+        "SELECT import_key, quality_summary_json FROM quiz_banks WHERE id = ?",
+      )
+      .get(QUIZ_ID) as { import_key: string; quality_summary_json: string };
+    expect(stored.import_key).toBe(CLAIM_KEY);
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      generationState: "recovering",
+      recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+    });
+  });
+
+  it("lets a validated configuration automatically reclaim action-required state", async () => {
+    const timestamp = Date.now() - 60_000;
+    const db = createAutomaticDatabase("action_required", timestamp);
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+    const { app, env } = testApp(db);
+    const response = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(response.status).toBe(200);
+    const stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      generationState: "recovering",
+    });
+    expect(JSON.parse(stored.quality_summary_json).reasonCode).toBeUndefined();
+  });
+});
 
 describe("authoritative progressive call events", () => {
   it("records exact events idempotently and rejects conflicting replays", async () => {
@@ -403,7 +705,9 @@ describe("authoritative progressive call events", () => {
     const timestamp = Date.now() - 10_000;
     const db = createDatabase("retrying", timestamp);
     db.sqlite
-      .prepare("INSERT INTO quiz_generation_claims VALUES (?, ?, ?, ?, ?)")
+      .prepare(
+        "INSERT INTO quiz_generation_claims (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      )
       .run(QUIZ_ID, SESSION_ID, IMPORT_KEY, Date.now() + 900_000, timestamp);
     const { app, env } = testApp(db);
     const response = await app.request(

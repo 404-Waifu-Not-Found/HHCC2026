@@ -100,6 +100,8 @@ export const ProgressiveQuizSummarySchema = z
     validatorVersion: LocalQuizValidatorVersionSchema,
     generationProfile: LocalGenerationProfileSchema.optional(),
     generationId: z.string().uuid().optional(),
+    generationSessionId: z.string().uuid().optional(),
+    recoverySessionId: z.string().uuid().optional(),
     questionPlanSeed: z
       .string()
       .regex(/^[a-f0-9]{64}$/)
@@ -107,10 +109,27 @@ export const ProgressiveQuizSummarySchema = z
     generationState: z.enum([
       "generating",
       "retrying",
+      "recovering",
       "retry_required",
+      "action_required",
+      "generation_failed",
       "ready",
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
+    retryOrdinal: z.number().int().min(1).max(15).optional(),
+    ordinalAttempt: z.number().int().min(1).max(12).optional(),
+    retryKind: z
+      .enum([
+        "transport",
+        "empty_content",
+        "truncated_output",
+        "content_repair",
+        "duplicate_repair",
+        "answer_repair",
+        "automatic_resume",
+      ])
+      .optional(),
+    retryDelayMs: z.number().int().min(0).max(300_000).optional(),
     requestedQuestionTypes: QuizQuestionTypesSchema,
     plannedQuestionTypes: z
       .array(z.enum(["multiple_choice", "true_false", "short_answer"]))
@@ -198,11 +217,59 @@ export const ProgressiveQuizSummarySchema = z
         message: "Only a complete progressive quiz may be ready.",
       });
     }
-    if (value.reasonCode && value.generationState !== "retry_required") {
+    if (
+      value.reasonCode &&
+      value.generationState !== "retry_required" &&
+      value.generationState !== "action_required" &&
+      value.generationState !== "generation_failed"
+    ) {
       context.addIssue({
         code: "custom",
         path: ["reasonCode"],
         message: "Only an action-required summary may include a reason code.",
+      });
+    }
+    const automaticProfile =
+      value.generationProfile === "stable_auto_recovery_v5_3";
+    if (
+      automaticProfile &&
+      (value.generationState === "action_required" ||
+        value.generationState === "generation_failed") &&
+      !value.reasonCode
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["reasonCode"],
+        message:
+          "Terminal automatic-generation states require a bounded reason code.",
+      });
+    }
+    const hasRetryMetadata =
+      value.retryOrdinal !== undefined ||
+      value.ordinalAttempt !== undefined ||
+      value.retryKind !== undefined ||
+      value.retryDelayMs !== undefined;
+    if (
+      value.generationState === "retrying" &&
+      automaticProfile &&
+      (!value.retryOrdinal || !value.ordinalAttempt || !value.retryKind)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message: "Automatic retry summaries require ordinal metadata.",
+      });
+    }
+    if (
+      automaticProfile &&
+      value.generationState !== "retrying" &&
+      hasRetryMetadata
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message:
+          "Only retrying automatic summaries may include retry metadata.",
       });
     }
     if (value.plannedQuestionTypes.length !== value.plannedCount) {
@@ -212,21 +279,33 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
+    const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
-    const metadataMatches = stable
-      ? value.resultProtocolVersion === 6 &&
-        value.importVersion === "extension-progressive-import-v4" &&
+    const metadataMatches = automatic
+      ? value.resultProtocolVersion === 7 &&
+        value.importVersion === "extension-progressive-import-v5" &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.1" &&
-        value.generationProfile === "stable_non_thinking_v5_2" &&
+        value.validatorVersion === "validator-local-progressive-v4.2" &&
+        value.generationProfile === "stable_auto_recovery_v5_3" &&
         Boolean(value.generationId) &&
+        Boolean(value.generationSessionId) &&
+        Boolean(value.recoverySessionId) &&
         Boolean(value.questionPlanSeed) &&
         value.telemetryAvailable
-      : value.resultProtocolVersion === 5 &&
-        value.importVersion === "extension-progressive-import-v3" &&
-        value.reasoningEffort === "high" &&
-        value.validatorVersion === "validator-local-progressive-v4.0" &&
-        value.generationProfile === "legacy_reasoning_v5_1";
+      : stable
+        ? value.resultProtocolVersion === 6 &&
+          value.importVersion === "extension-progressive-import-v4" &&
+          value.reasoningEffort === "none" &&
+          value.validatorVersion === "validator-local-progressive-v4.1" &&
+          value.generationProfile === "stable_non_thinking_v5_2" &&
+          Boolean(value.generationId) &&
+          Boolean(value.questionPlanSeed) &&
+          value.telemetryAvailable
+        : value.resultProtocolVersion === 5 &&
+          value.importVersion === "extension-progressive-import-v3" &&
+          value.reasoningEffort === "high" &&
+          value.validatorVersion === "validator-local-progressive-v4.0" &&
+          value.generationProfile === "legacy_reasoning_v5_1";
     if (!metadataMatches) {
       context.addIssue({
         code: "custom",
@@ -269,6 +348,8 @@ export function assertProgressiveChunkMetadata(
         | "importVersion"
         | "generationProfile"
         | "generationId"
+        | "generationSessionId"
+        | "recoverySessionId"
         | "questionPlan"
       >
     >,
@@ -286,6 +367,8 @@ export function assertProgressiveChunkMetadata(
     (chunk.generationProfile ?? "legacy_reasoning_v5_1") !==
       summary.generationProfile ||
     chunk.generationId !== summary.generationId ||
+    chunk.generationSessionId !== summary.generationSessionId ||
+    chunk.recoverySessionId !== summary.recoverySessionId ||
     JSON.stringify(
       chunk.questionPlan?.types ?? summary.plannedQuestionTypes,
     ) !== JSON.stringify(summary.plannedQuestionTypes) ||
@@ -308,6 +391,7 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
   call_count: z.coerce.number().int().nonnegative().default(0),
   primary_calls: z.coerce.number().int().nonnegative().default(0),
   automatic_retries: z.coerce.number().int().nonnegative().default(0),
+  automatic_recoveries: z.coerce.number().int().nonnegative().default(0),
   manual_continuations: z.coerce.number().int().nonnegative().default(0),
   partial_calls: z.coerce.number().int().nonnegative().default(0),
   complete_usage_calls: z.coerce.number().int().nonnegative().default(0),
@@ -329,9 +413,30 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
     .positive()
     .nullable()
     .default(null),
+  claim_recovery_session_id: z.string().uuid().nullable().default(null),
+  claim_heartbeat_at: z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .default(null),
+  next_ordinal_attempt: z.coerce.number().int().min(1).max(12).default(1),
+  next_retry_kind: z
+    .enum([
+      "transport",
+      "empty_content",
+      "truncated_output",
+      "content_repair",
+      "duplicate_repair",
+      "answer_repair",
+      "automatic_resume",
+    ])
+    .nullable()
+    .default(null),
 });
 
 export const PROGRESSIVE_GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
+export const AUTOMATIC_GENERATION_STALE_AFTER_MS = 45 * 1_000;
 
 export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
   SELECT
@@ -356,6 +461,15 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       SELECT COUNT(*) FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id AND event.classification = 'automatic_retry'
     ) AS automatic_retries
+    ,(
+      SELECT CASE
+        WHEN COUNT(DISTINCT event.recovery_session_id) > 0
+          THEN COUNT(DISTINCT event.recovery_session_id) - 1
+        ELSE 0
+      END
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id AND event.recovery_session_id IS NOT NULL
+    ) AS automatic_recoveries
     ,(
       SELECT COUNT(*) FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id AND event.classification = 'manual_continuation'
@@ -416,6 +530,45 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       SELECT claim.lease_expires_at FROM quiz_generation_claims claim
       WHERE claim.quiz_id = qb.id
     ) AS claim_lease_expires_at
+    ,(
+      SELECT claim.recovery_session_id FROM quiz_generation_claims claim
+      WHERE claim.quiz_id = qb.id
+    ) AS claim_recovery_session_id
+    ,(
+      SELECT claim.heartbeat_at FROM quiz_generation_claims claim
+      WHERE claim.quiz_id = qb.id
+    ) AS claim_heartbeat_at
+    ,MIN(COALESCE((
+      SELECT MAX(event.ordinal_attempt) + 1
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.protocol_version = 7
+        AND event.start_ordinal = (
+          SELECT COUNT(*) FROM questions stored_question
+          WHERE stored_question.quiz_id = qb.id
+        )
+    ), 1), 12) AS next_ordinal_attempt
+    ,(
+      SELECT CASE
+        WHEN event.outcome_code IN ('transient_http', 'network_interrupted', 'timeout') THEN 'transport'
+        WHEN event.outcome_code = 'empty_content' THEN 'empty_content'
+        WHEN event.outcome_code IN ('truncated_json', 'finish_length') THEN 'truncated_output'
+        WHEN event.outcome_code = 'duplicate_question' THEN 'duplicate_repair'
+        WHEN event.outcome_code = 'answer_mapping_invalid' THEN 'answer_repair'
+        WHEN event.outcome_code IN ('schema_invalid', 'type_or_order_mismatch') THEN 'content_repair'
+        WHEN event.outcome_code IN ('local_state_conflict', 'append_conflict') THEN 'automatic_resume'
+        ELSE NULL
+      END
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.protocol_version = 7
+        AND event.start_ordinal = (
+          SELECT COUNT(*) FROM questions stored_question
+          WHERE stored_question.quiz_id = qb.id
+        )
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS next_retry_kind
   FROM quiz_banks qb
   WHERE qb.id = ?
   LIMIT 1`;
@@ -435,6 +588,7 @@ export type ProgressiveGenerationSnapshot = {
     callCount: number;
     primaryCalls: number;
     automaticRetries: number;
+    automaticRecoveries: number;
     manualContinuations: number;
     partialCalls: number;
     completeUsageCalls: number;
@@ -447,6 +601,18 @@ export type ProgressiveGenerationSnapshot = {
     lastAttemptAt: number | null;
   };
   claimLeaseExpiresAt: number | null;
+  claimRecoverySessionId: string | null;
+  claimHeartbeatAt: number | null;
+  nextOrdinalAttempt: number;
+  nextRetryKind:
+    | "transport"
+    | "empty_content"
+    | "truncated_output"
+    | "content_repair"
+    | "duplicate_repair"
+    | "answer_repair"
+    | "automatic_resume"
+    | null;
 };
 
 /**
@@ -474,6 +640,7 @@ export async function readProgressiveGenerationSnapshot(
     callCount: row.data.call_count,
     primaryCalls: row.data.primary_calls,
     automaticRetries: row.data.automatic_retries,
+    automaticRecoveries: row.data.automatic_recoveries,
     manualContinuations: row.data.manual_continuations,
     partialCalls: row.data.partial_calls,
     completeUsageCalls: row.data.complete_usage_calls,
@@ -497,6 +664,10 @@ export async function readProgressiveGenerationSnapshot(
       stalled: false,
       telemetry,
       claimLeaseExpiresAt: row.data.claim_lease_expires_at,
+      claimRecoverySessionId: row.data.claim_recovery_session_id,
+      claimHeartbeatAt: row.data.claim_heartbeat_at,
+      nextOrdinalAttempt: row.data.next_ordinal_attempt,
+      nextRetryKind: row.data.next_retry_kind,
     };
   }
 
@@ -505,16 +676,21 @@ export async function readProgressiveGenerationSnapshot(
     row.data.quality_status,
     row.data.authoritative_count,
   );
+  const automatic = summary.generationProfile === "stable_auto_recovery_v5_3";
   const stalled =
     (availability.state === "generating" ||
-      availability.state === "retrying") &&
+      availability.state === "retrying" ||
+      availability.state === "recovering") &&
     Date.now() -
       Math.max(
         summary.lastQuestionAt,
         summary.stateChangedAt,
         telemetry.lastAttemptAt ?? 0,
       ) >
-      PROGRESSIVE_GENERATION_STALE_AFTER_MS;
+      (automatic
+        ? AUTOMATIC_GENERATION_STALE_AFTER_MS
+        : PROGRESSIVE_GENERATION_STALE_AFTER_MS) &&
+    (!automatic || (row.data.claim_lease_expires_at ?? 0) <= Date.now());
 
   return {
     quizId: row.data.quiz_id,
@@ -526,13 +702,17 @@ export async function readProgressiveGenerationSnapshot(
     availability: stalled
       ? AttemptGenerationAvailabilitySchema.parse({
           ...availability,
-          state: "retry_required",
-          reasonCode: "generation_stalled",
+          state: automatic ? "recovering" : "retry_required",
+          ...(automatic ? {} : { reasonCode: "generation_stalled" }),
         })
       : availability,
     stalled,
     telemetry,
     claimLeaseExpiresAt: row.data.claim_lease_expires_at,
+    claimRecoverySessionId: row.data.claim_recovery_session_id,
+    claimHeartbeatAt: row.data.claim_heartbeat_at,
+    nextOrdinalAttempt: row.data.next_ordinal_attempt,
+    nextRetryKind: row.data.next_retry_kind,
   };
 }
 
@@ -612,6 +792,19 @@ export function generationAvailability(
     availableQuestions: authoritativeCount,
     totalQuestions: summary.plannedCount,
     ...(!ready && summary.reasonCode ? { reasonCode: summary.reasonCode } : {}),
+    ...(!ready && summary.retryOrdinal
+      ? { retryOrdinal: summary.retryOrdinal }
+      : {}),
+    ...(!ready && summary.ordinalAttempt
+      ? { ordinalAttempt: summary.ordinalAttempt }
+      : {}),
+    ...(!ready && summary.retryKind ? { retryKind: summary.retryKind } : {}),
+    ...(!ready && summary.retryDelayMs !== undefined
+      ? { retryDelayMs: summary.retryDelayMs }
+      : {}),
+    ...(!ready && summary.recoverySessionId
+      ? { recoverySessionId: summary.recoverySessionId }
+      : {}),
   });
 }
 

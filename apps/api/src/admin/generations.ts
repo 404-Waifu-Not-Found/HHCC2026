@@ -14,7 +14,10 @@ import {
 export type AdminGenerationCounts = {
   generating: number;
   retrying: number;
+  recovering: number;
   retryRequired: number;
+  actionRequired: number;
+  generationFailed: number;
   ready: number;
 };
 
@@ -42,7 +45,10 @@ type CountRow = { count: number };
 const GenerationCountsRowSchema = z.object({
   generating: z.coerce.number().int().nonnegative(),
   retrying: z.coerce.number().int().nonnegative(),
+  recovering: z.coerce.number().int().nonnegative(),
   retry_required: z.coerce.number().int().nonnegative(),
+  action_required: z.coerce.number().int().nonnegative(),
+  generation_failed: z.coerce.number().int().nonnegative(),
   ready: z.coerce.number().int().nonnegative(),
 });
 
@@ -57,6 +63,8 @@ const RecentGenerationFailureRowSchema = z.object({
 
 const STATE_EXPRESSION =
   "json_extract(q.quality_summary_json, '$.generationState')";
+const PROFILE_EXPRESSION =
+  "COALESCE(json_extract(q.quality_summary_json, '$.generationProfile'), 'legacy_reasoning_v5_1')";
 const LAST_PROGRESS_EXPRESSION = `MAX(
   COALESCE(CAST(json_extract(q.quality_summary_json, '$.lastQuestionAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
   COALESCE(CAST(json_extract(q.quality_summary_json, '$.stateChangedAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
@@ -154,6 +162,7 @@ export function adminGenerationFromSnapshot(
       ? telemetry.primaryCalls
       : Math.max(0, snapshot.summary.aiCalls - snapshot.summary.retryCount),
     automaticRetries,
+    automaticRecoveries: authoritative ? telemetry.automaticRecoveries : 0,
     manualContinuations: authoritative ? telemetry.manualContinuations : 0,
     partialCalls: authoritative ? telemetry.partialCalls : 0,
     outcomeCounts: authoritative ? telemetry.outcomeCounts : {},
@@ -211,19 +220,25 @@ export async function readAdminGenerationCounts(
       `SELECT
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'generating' AND ${LAST_PROGRESS_EXPRESSION} >= ? THEN 1 ELSE 0 END) AS generating,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'retrying' AND ${LAST_PROGRESS_EXPRESSION} >= ? THEN 1 ELSE 0 END) AS retrying,
-        SUM(CASE WHEN ${STATE_EXPRESSION} = 'retry_required' OR (${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS retry_required,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'recovering' OR (${PROFILE_EXPRESSION} = 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS recovering,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'retry_required' OR (${PROFILE_EXPRESSION} != 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS retry_required,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'action_required' THEN 1 ELSE 0 END) AS action_required,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'generation_failed' THEN 1 ELSE 0 END) AS generation_failed,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'ready' THEN 1 ELSE 0 END) AS ready
        FROM quiz_banks q
        JOIN videos v ON v.id = q.video_id
        WHERE ${validProgressiveGenerationWhere()}`,
     )
-    .bind(stalledBefore, stalledBefore, stalledBefore)
+    .bind(stalledBefore, stalledBefore, stalledBefore, stalledBefore)
     .first();
   const parsed = GenerationCountsRowSchema.safeParse(
     row ?? {
       generating: 0,
       retrying: 0,
+      recovering: 0,
       retry_required: 0,
+      action_required: 0,
+      generation_failed: 0,
       ready: 0,
     },
   );
@@ -237,7 +252,10 @@ export async function readAdminGenerationCounts(
   return {
     generating: parsed.data.generating,
     retrying: parsed.data.retrying,
+    recovering: parsed.data.recovering,
     retryRequired: parsed.data.retry_required,
+    actionRequired: parsed.data.action_required,
+    generationFailed: parsed.data.generation_failed,
     ready: parsed.data.ready,
   };
 }
@@ -261,8 +279,8 @@ export async function readRecentGenerationFailures(
        JOIN user u ON u.id = q.user_id
        WHERE ${validProgressiveGenerationWhere()}
          AND (
-           ${STATE_EXPRESSION} = 'retry_required'
-           OR (${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?)
+           ${STATE_EXPRESSION} IN ('retry_required', 'action_required', 'generation_failed')
+           OR (${PROFILE_EXPRESSION} != 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?)
          )
        ORDER BY ${LAST_PROGRESS_EXPRESSION} DESC
        LIMIT ?`,
@@ -282,7 +300,7 @@ export async function readRecentGenerationFailures(
       ownerEmail: row.owner_email,
       errorCode:
         safeReasonCode(row.reason_code) ??
-        (stalled ? "generation_stalled" : "retry_required"),
+        (stalled ? "generation_stalled" : row.generation_state),
       errorMessage: null,
       updatedAt: toIso(row.last_progress_at),
     };
@@ -320,7 +338,12 @@ function generationFilterClause(
   }
   if (filters.state === "retry_required") {
     where.push(
-      `(${STATE_EXPRESSION} = 'retry_required' OR (${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
+      `(${STATE_EXPRESSION} = 'retry_required' OR (${PROFILE_EXPRESSION} != 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
+    );
+    values.push(stalledBefore);
+  } else if (filters.state === "recovering") {
+    where.push(
+      `(${STATE_EXPRESSION} = 'recovering' OR (${PROFILE_EXPRESSION} = 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
     );
     values.push(stalledBefore);
   } else if (filters.state === "generating" || filters.state === "retrying") {
@@ -328,6 +351,12 @@ function generationFilterClause(
     values.push(filters.state, stalledBefore);
   } else if (filters.state === "ready") {
     where.push(`${STATE_EXPRESSION} = 'ready'`);
+  } else if (
+    filters.state === "action_required" ||
+    filters.state === "generation_failed"
+  ) {
+    where.push(`${STATE_EXPRESSION} = ?`);
+    values.push(filters.state);
   }
   if (filters.stalled === true) {
     where.push(
@@ -354,7 +383,7 @@ function validProgressiveGenerationWhere(): string {
     )
     AND (
       (${STATE_EXPRESSION} = 'ready' AND q.quality_status = 'passed')
-      OR (${STATE_EXPRESSION} IN ('generating', 'retrying', 'retry_required') AND q.quality_status = 'generating')
+      OR (${STATE_EXPRESSION} IN ('generating', 'retrying', 'recovering', 'retry_required', 'action_required', 'generation_failed') AND q.quality_status = 'generating')
     )`;
 }
 
