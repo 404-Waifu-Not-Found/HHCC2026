@@ -9,6 +9,7 @@ import {
   GenerationClaimRequestSchema,
   GenerationClaimResponseSchema,
   LOCAL_QUIZ_PIPELINE_VERSION,
+  LocalShortAnswerRubricV2Schema,
   MasteryStateSchema,
   PublicQuestionSchema,
   QuizStartRequestSchema,
@@ -30,8 +31,9 @@ import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
   ProgressiveQuizSummarySchema,
-  gradeProgressiveShortAnswer,
+  gradeProgressiveShortAnswerDecision,
   readProgressiveGenerationSnapshot,
+  type ProgressiveShortAnswerGradingPath,
   type ProgressiveGenerationSnapshot,
 } from "../lib/progressive-quiz";
 import { enforceRateLimit } from "../lib/rate-limit";
@@ -54,7 +56,8 @@ const LEGACY_AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
 function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
-    profile === "evidence_grounded_auto_v5_4"
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
   );
 }
 
@@ -156,6 +159,7 @@ const MasteryRowSchema = z.object({
 const RubricSchema = z.object({
   requiredIdeas: z.array(z.string()).min(1),
   acceptableAlternatives: z.array(z.string()),
+  v2: LocalShortAnswerRubricV2Schema.optional(),
 });
 
 const QUIZ_STARTS_PER_MINUTE = 8;
@@ -495,6 +499,18 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   let reservationCommitted = false;
   try {
     const grade = await gradeAnswer(c.env, attempt, question, input.answer);
+    if (grade.gradingPath) {
+      console.info(
+        JSON.stringify({
+          scope: "quiz_grading",
+          event: "short_answer.graded",
+          quizId: attempt.quiz_id,
+          attemptId: attempt.id,
+          questionId: question.id,
+          gradingPath: grade.gradingPath,
+        }),
+      );
+    }
     // Freeze one coherent generation snapshot before any answer write. A
     // concurrent append may become visible on the next poll, but can never turn
     // this committed answer into a generation-state error response.
@@ -1373,7 +1389,11 @@ async function gradeAnswer(
   attempt: AttemptRow,
   question: QuestionRow,
   answer: z.infer<typeof AnswerValueSchema>,
-): Promise<{ correct: boolean; feedback: string }> {
+): Promise<{
+  correct: boolean;
+  feedback: string;
+  gradingPath?: ProgressiveShortAnswerGradingPath;
+}> {
   if (question.type === "short_answer") {
     if (typeof answer !== "string") {
       throw new ApiError(
@@ -1388,13 +1408,16 @@ async function gradeAnswer(
       "short-answer rubric",
     );
     if (attempt.quiz_pipeline_version === LOCAL_QUIZ_PIPELINE_VERSION) {
+      const decision = gradeProgressiveShortAnswerDecision({
+        answer,
+        requiredIdeas: rubric.requiredIdeas,
+        acceptableAlternatives: rubric.acceptableAlternatives,
+        rubricV2: rubric.v2,
+      });
       return {
-        correct: gradeProgressiveShortAnswer({
-          answer,
-          requiredIdeas: rubric.requiredIdeas,
-          acceptableAlternatives: rubric.acceptableAlternatives,
-        }),
+        correct: decision.correct,
         feedback: question.explanation,
+        gradingPath: decision.path,
       };
     }
     const evidenceIds = new Set(parseQuestionEvidence(question));

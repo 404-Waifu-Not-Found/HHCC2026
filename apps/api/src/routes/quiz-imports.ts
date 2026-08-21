@@ -8,6 +8,7 @@ import {
   ExtensionQuizProgressiveImportRequestSchema,
   ExtensionQuizProgressiveImportResponseSchema,
   AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
   LOCAL_QUIZ_PROMPT_VERSION,
@@ -19,6 +20,7 @@ import {
   type LocalGenerationCallEvent,
   type LocalGenerationCallEventV3,
   type LocalGenerationCallEventV4,
+  type LocalGenerationCallEventV5,
   type LegacyAutomaticRecoveryCallEvent,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
@@ -51,14 +53,16 @@ const MAX_V5_6_AUTOMATIC_RETRIES = 12;
 type AutomaticGenerationCallEvent =
   | LegacyAutomaticRecoveryCallEvent
   | LocalGenerationCallEventV3
-  | LocalGenerationCallEventV4;
+  | LocalGenerationCallEventV4
+  | LocalGenerationCallEventV5;
 
 function isAutomaticGenerationProfile(
   profile: ProgressiveQuizSummary["generationProfile"],
 ): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
-    profile === "evidence_grounded_auto_v5_4"
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
   );
 }
 
@@ -69,6 +73,9 @@ function expectedAutomaticProtocol(
     return AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
   }
   if (profile === "evidence_grounded_auto_v5_4") {
+    return 8;
+  }
+  if (profile === "concept_first_auto_v5_8") {
     return LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
   }
   return null;
@@ -88,7 +95,7 @@ export function currentGroundedNewBankMetadataMatches(
     | "importVersion"
   >,
 ): boolean {
-  if (chunk.generationProfile !== "evidence_grounded_auto_v5_4") {
+  if (chunk.generationProfile !== "concept_first_auto_v5_8") {
     return true;
   }
   return (
@@ -269,7 +276,10 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
       "The streamed question duplicates an accepted prompt.",
     );
   }
-  if (summary.generationProfile === "evidence_grounded_auto_v5_4") {
+  if (
+    summary.generationProfile === "evidence_grounded_auto_v5_4" ||
+    summary.generationProfile === "concept_first_auto_v5_8"
+  ) {
     assertGroundedQuestionIdentity(
       input.chunk.question,
       summary.acceptedQuestionSummaries,
@@ -293,6 +303,8 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     retryKind: undefined,
     retryDelayMs: undefined,
     nextRecoveryAt: undefined,
+    recoveryPhase: complete ? "complete" : undefined,
+    activeCallIndex: undefined,
     generatedQuestionTypes: [
       ...summary.generatedQuestionTypes,
       input.chunk.question.type,
@@ -480,6 +492,73 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     input.callIndex,
   );
   if (replay) {
+    if (
+      isLifecycleCallEvent(input) &&
+      (replay.lifecycle_state ?? "completed") === "started" &&
+      input.lifecycleState !== "started"
+    ) {
+      if (!lifecycleIdentityMatches(replay, input)) {
+        throw new ApiError(
+          409,
+          "generation_call_conflict",
+          "That generation call lifecycle has different immutable metadata.",
+        );
+      }
+      const completedAt = now();
+      const finalized = await c.env.DB.prepare(
+        `UPDATE quiz_generation_call_events
+         SET accepted_count = ?, outcome_code = ?, retry_delay_ms = ?, elapsed_ms = ?, input_tokens = ?, output_tokens = ?, reasoning_tokens = ?, usage_complete = ?, lifecycle_state = ?, completed_at = ?, last_stream_activity_at = ?
+         WHERE quiz_id = ? AND generation_session_id = ? AND call_index = ? AND lifecycle_state = 'started'`,
+      )
+        .bind(
+          input.acceptedCount,
+          input.outcome,
+          input.retryDelayMs,
+          input.elapsedMs,
+          input.inputTokens ?? null,
+          input.outputTokens ?? null,
+          input.reasoningTokens ?? null,
+          input.usageComplete ? 1 : 0,
+          input.lifecycleState,
+          completedAt,
+          input.lastStreamActivityElapsedMs === undefined
+            ? null
+            : Number(replay.dispatched_at ?? completedAt) +
+                input.lastStreamActivityElapsedMs,
+          bank.id,
+          input.generationSessionId,
+          input.callIndex,
+        )
+        .run();
+      if (finalized.meta.changes !== 1) {
+        throw new ApiError(
+          409,
+          "generation_call_conflict",
+          "That generation call lifecycle changed before finalization.",
+        );
+      }
+      await renewGenerationClaim(
+        c.env.DB,
+        bank.id,
+        importKey,
+        completedAt,
+        snapshot.summary.generationProfile,
+        input.recoverySessionId,
+      );
+      await materializeGenerationTelemetry(
+        c.env.DB,
+        bank.id,
+        user.id,
+        importKey,
+        input,
+      );
+      return c.json(
+        ExtensionQuizGenerationCallEventResponseSchema.parse({
+          quizId: bank.id,
+          recorded: true,
+        }),
+      );
+    }
     if (!callEventsMatch(replay, input)) {
       throw new ApiError(
         409,
@@ -487,12 +566,26 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
         "That generation call was already recorded with different data.",
       );
     }
-    await materializeGenerationTelemetry(c.env.DB, bank.id, user.id, importKey);
+    await materializeGenerationTelemetry(
+      c.env.DB,
+      bank.id,
+      user.id,
+      importKey,
+      input,
+    );
     return c.json(
       ExtensionQuizGenerationCallEventResponseSchema.parse({
         quizId: bank.id,
         recorded: true,
       }),
+    );
+  }
+
+  if (isLifecycleCallEvent(input) && input.lifecycleState !== "started") {
+    throw new ApiError(
+      409,
+      "generation_call_lifecycle_missing",
+      "A terminal call event requires its recorded dispatch lifecycle.",
     );
   }
 
@@ -518,6 +611,7 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       .first<{ count: number }>();
     const retryLimit = automaticEvent
       ? legacyAutomaticRecovery ||
+        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8" ||
         snapshot.summary.promptVersion === "quiz-local-json-stream-v5.7" ||
         snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
         ? MAX_V5_6_AUTOMATIC_RETRIES
@@ -537,7 +631,8 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     if (automaticEvent) {
       const grounded =
         legacyAutomaticRecovery ||
-        snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4";
+        snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4" ||
+        snapshot.summary.generationProfile === "concept_first_auto_v5_8";
       const contentRetry = new Set([
         "empty_content",
         "truncated_output",
@@ -601,8 +696,8 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
   const timestamp = now();
   const result = await c.env.DB.prepare(
     `INSERT INTO quiz_generation_call_events
-     (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at, protocol_version, retry_kind, ordinal_attempt, recovery_session_id, purpose)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at, protocol_version, retry_kind, ordinal_attempt, recovery_session_id, purpose, lifecycle_state, dispatched_at, completed_at, last_stream_activity_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       bank.id,
@@ -612,9 +707,11 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       input.requestedCount,
       input.acceptedCount,
       input.classification,
-      input.outcome,
+      isLifecycleCallEvent(input) && input.lifecycleState === "started"
+        ? "call_started"
+        : input.outcome,
       input.retryDelayMs,
-      input.elapsedMs,
+      input.elapsedMs ?? 0,
       input.inputTokens ?? null,
       input.outputTokens ?? null,
       input.reasoningTokens ?? null,
@@ -625,6 +722,17 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       automaticEvent ? input.ordinalAttempt : null,
       automaticEvent ? input.recoverySessionId : null,
       isGroundedCallEvent(input) ? input.purpose : null,
+      isLifecycleCallEvent(input) ? input.lifecycleState : "completed",
+      timestamp,
+      isLifecycleCallEvent(input) && input.lifecycleState === "started"
+        ? null
+        : timestamp,
+      isLifecycleCallEvent(input) &&
+        input.lastStreamActivityElapsedMs !== undefined
+        ? timestamp + input.lastStreamActivityElapsedMs
+        : isLifecycleCallEvent(input) && input.lifecycleState === "started"
+          ? timestamp
+          : null,
     )
     .run();
   if (result.meta.changes !== 1) {
@@ -642,7 +750,13 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     snapshot.summary.generationProfile,
     isAutomaticCallEvent(input) ? input.recoverySessionId : undefined,
   );
-  await materializeGenerationTelemetry(c.env.DB, bank.id, user.id, importKey);
+  await materializeGenerationTelemetry(
+    c.env.DB,
+    bank.id,
+    user.id,
+    importKey,
+    input,
+  );
   return c.json(
     ExtensionQuizGenerationCallEventResponseSchema.parse({
       quizId: bank.id,
@@ -713,6 +827,8 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
         input.state === "cooldown" && input.nextRecoveryAt
           ? Date.parse(input.nextRecoveryAt)
           : undefined,
+      recoveryPhase: input.recoveryPhase,
+      activeCallIndex: input.activeCallIndex,
       recoverySessionId: isAutomaticGenerationProfile(summary.generationProfile)
         ? (input.recoverySessionId ?? summary.recoverySessionId)
         : summary.recoverySessionId,
@@ -837,7 +953,10 @@ async function persistProgressiveQuiz(input: {
   const timestamp = now();
   const chunk = input.input.chunk;
   const question = chunk.question;
-  if (chunk.generationProfile === "evidence_grounded_auto_v5_4") {
+  if (
+    chunk.generationProfile === "evidence_grounded_auto_v5_4" ||
+    chunk.generationProfile === "concept_first_auto_v5_8"
+  ) {
     assertGroundedQuestionIdentity(question, []);
   }
   const qualityFlags = questionQualityFlags(question, []);
@@ -845,16 +964,18 @@ async function persistProgressiveQuiz(input: {
     source: "extension-local-json-stream",
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.4"
+      (chunk.promptVersion === "quiz-local-json-stream-v5.8"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
-        : chunk.promptVersion === "quiz-local-json-stream-v5.3"
-          ? "extension-progressive-import-v5"
-          : chunk.promptVersion === "quiz-local-json-stream-v5.2"
-            ? "extension-progressive-import-v4"
-            : "extension-progressive-import-v3"),
+        : chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
+            chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+            chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+            chunk.promptVersion === "quiz-local-json-stream-v5.4"
+          ? "extension-progressive-import-v6"
+          : chunk.promptVersion === "quiz-local-json-stream-v5.3"
+            ? "extension-progressive-import-v5"
+            : chunk.promptVersion === "quiz-local-json-stream-v5.2"
+              ? "extension-progressive-import-v4"
+              : "extension-progressive-import-v3"),
     resultProtocolVersion: chunk.protocolVersion,
     pipelineVersion: chunk.pipelineVersion,
     model: chunk.model,
@@ -866,6 +987,7 @@ async function persistProgressiveQuiz(input: {
     generationSessionId: chunk.generationSessionId,
     recoverySessionId: chunk.recoverySessionId,
     questionPlanSeed: chunk.questionPlan?.seed,
+    promptFingerprint: chunk.promptFingerprint,
     generationState: "generating",
     requestedQuestionTypes: input.input.questionTypes,
     plannedQuestionTypes: chunk.questionPlan?.types,
@@ -881,7 +1003,9 @@ async function persistProgressiveQuiz(input: {
       chunk.promptVersion === "quiz-local-json-stream-v5.4" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.7",
+      chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.8",
+    sourceSelection: chunk.metrics.sourceSelection,
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]
       : [],
@@ -1107,7 +1231,7 @@ type StoredCallEvent = {
   requested_count: number;
   accepted_count: number;
   classification: LocalGenerationCallEvent["classification"];
-  outcome_code: LocalGenerationCallEvent["outcome"];
+  outcome_code: string;
   retry_delay_ms: number;
   elapsed_ms: number;
   input_tokens: number | null;
@@ -1119,6 +1243,10 @@ type StoredCallEvent = {
   ordinal_attempt: number | null;
   recovery_session_id: string | null;
   purpose: string | null;
+  lifecycle_state: "started" | "completed" | "abandoned" | null;
+  dispatched_at: number | null;
+  completed_at: number | null;
+  last_stream_activity_at: number | null;
 };
 
 function isAutomaticCallEvent(
@@ -1128,6 +1256,7 @@ function isAutomaticCallEvent(
     "protocolVersion" in event &&
     (event.protocolVersion === 5 ||
       event.protocolVersion === AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
   );
 }
@@ -1145,10 +1274,21 @@ function isLegacyAutomaticRecoveryCallEvent(
 
 function isGroundedCallEvent(
   event: LocalGenerationCallEvent,
-): event is LocalGenerationCallEventV4 {
+): event is LocalGenerationCallEventV4 | LocalGenerationCallEventV5 {
   return (
     "protocolVersion" in event &&
-    event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION
+    (event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
+  );
+}
+
+function isLifecycleCallEvent(
+  event: LocalGenerationCallEvent,
+): event is LocalGenerationCallEventV5 {
+  return (
+    "protocolVersion" in event &&
+    event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    "lifecycleState" in event
   );
 }
 
@@ -1160,7 +1300,7 @@ async function storedCallEvent(
 ): Promise<StoredCallEvent | null> {
   return db
     .prepare(
-      `SELECT generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, protocol_version, retry_kind, ordinal_attempt, recovery_session_id, purpose
+      `SELECT generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, protocol_version, retry_kind, ordinal_attempt, recovery_session_id, purpose, lifecycle_state, dispatched_at, completed_at, last_stream_activity_at
        FROM quiz_generation_call_events
        WHERE quiz_id = ? AND generation_session_id = ? AND call_index = ?`,
     )
@@ -1179,9 +1319,12 @@ function callEventsMatch(
     Number(stored.requested_count) === event.requestedCount &&
     Number(stored.accepted_count) === event.acceptedCount &&
     stored.classification === event.classification &&
-    stored.outcome_code === event.outcome &&
+    stored.outcome_code ===
+      (isLifecycleCallEvent(event) && event.lifecycleState === "started"
+        ? "call_started"
+        : event.outcome) &&
     Number(stored.retry_delay_ms) === event.retryDelayMs &&
-    Number(stored.elapsed_ms) === event.elapsedMs &&
+    Number(stored.elapsed_ms) === (event.elapsedMs ?? 0) &&
     nullableNumber(stored.input_tokens) === (event.inputTokens ?? null) &&
     nullableNumber(stored.output_tokens) === (event.outputTokens ?? null) &&
     nullableNumber(stored.reasoning_tokens) ===
@@ -1195,7 +1338,27 @@ function callEventsMatch(
       (isAutomaticCallEvent(event) ? event.ordinalAttempt : null) &&
     stored.recovery_session_id ===
       (isAutomaticCallEvent(event) ? event.recoverySessionId : null) &&
-    stored.purpose === (isGroundedCallEvent(event) ? event.purpose : null)
+    stored.purpose === (isGroundedCallEvent(event) ? event.purpose : null) &&
+    (stored.lifecycle_state ?? "completed") ===
+      (isLifecycleCallEvent(event) ? event.lifecycleState : "completed")
+  );
+}
+
+function lifecycleIdentityMatches(
+  stored: StoredCallEvent,
+  event: LocalGenerationCallEventV5,
+): boolean {
+  return (
+    stored.generation_session_id === event.generationSessionId &&
+    Number(stored.call_index) === event.callIndex &&
+    Number(stored.start_ordinal) === event.startIndex &&
+    Number(stored.requested_count) === event.requestedCount &&
+    stored.classification === event.classification &&
+    Number(stored.protocol_version) === event.protocolVersion &&
+    stored.retry_kind === (event.retryKind ?? null) &&
+    nullableNumber(stored.ordinal_attempt) === event.ordinalAttempt &&
+    stored.recovery_session_id === event.recoverySessionId &&
+    stored.purpose === event.purpose
   );
 }
 
@@ -1316,6 +1479,7 @@ async function assertGenerationCallSequence(
       "timeout",
     ]);
     if (
+      !previous.outcome_code ||
       !retryableOutcomes.has(previous.outcome_code) ||
       Number(previous.retry_delay_ms) <= 0 ||
       event.requestedCount !== 1
@@ -1586,6 +1750,7 @@ async function assertAutomaticGenerationCallSequence(
     previous.outcome_code === "complete" ||
     event.startIndex !== Number(previous.start_ordinal) ||
     event.ordinalAttempt !== expectedAttempt ||
+    !previous.outcome_code ||
     !retryKindMatchesOutcome(event.retryKind, previous.outcome_code)
   ) {
     throw new ApiError(
@@ -1649,6 +1814,7 @@ async function materializeGenerationTelemetry(
   quizId: string,
   userId: string,
   importKey: string,
+  callEvent?: LocalGenerationCallEvent,
 ): Promise<void> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const snapshot = await readProgressiveGenerationSnapshot(db, quizId);
@@ -1663,6 +1829,16 @@ async function materializeGenerationTelemetry(
       outputTokens: snapshot.telemetry.outputTokens,
       reasoningTokens: snapshot.telemetry.reasoningTokens,
       elapsedMs: Math.max(1, snapshot.telemetry.elapsedMs),
+      ...(callEvent && isLifecycleCallEvent(callEvent)
+        ? callEvent.lifecycleState === "started"
+          ? {
+              recoveryPhase: "dispatched" as const,
+              activeCallIndex: callEvent.callIndex,
+            }
+          : summary.activeCallIndex === callEvent.callIndex
+            ? { recoveryPhase: undefined, activeCallIndex: undefined }
+            : {}
+        : {}),
     });
     const serialized = JSON.stringify(nextSummary);
     if (serialized === snapshot.qualitySummaryJson) return;
@@ -1869,6 +2045,7 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
     rubricJson: JSON.stringify({
       requiredIdeas: question.rubricIdeas,
       acceptableAlternatives: [question.answer, ...question.acceptableAnswers],
+      ...(question.rubricV2 ? { v2: question.rubricV2 } : {}),
     }),
     explanation: question.explanation,
   };

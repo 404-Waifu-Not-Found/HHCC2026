@@ -231,6 +231,10 @@ function createDatabase(
       ordinal_attempt INTEGER,
       recovery_session_id TEXT,
       purpose TEXT,
+      lifecycle_state TEXT NOT NULL DEFAULT 'completed',
+      dispatched_at INTEGER,
+      completed_at INTEGER,
+      last_stream_activity_at INTEGER,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (
@@ -310,6 +314,30 @@ function createGroundedDatabase(timestamp = Date.now()) {
   db.sqlite
     .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
     .run(JSON.stringify(grounded), QUIZ_ID);
+  return db;
+}
+
+function createConceptFirstDatabase(timestamp = Date.now()) {
+  const db = createAutomaticDatabase("generating", timestamp);
+  const conceptFirst = {
+    ...automaticSummary("generating", timestamp),
+    importVersion: "extension-progressive-import-v7",
+    resultProtocolVersion: 9,
+    promptVersion: "quiz-local-json-stream-v5.8",
+    validatorVersion: "validator-local-progressive-v4.7",
+    generationProfile: "concept_first_auto_v5_8",
+    promptFingerprint: "e".repeat(64),
+    sourceSelection: {
+      sentenceCount: 10,
+      excludedSentenceCount: 1,
+      candidateWindowCount: 6,
+      selectedWindowCount: 5,
+      focusWordCount: 120,
+    },
+  };
+  db.sqlite
+    .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+    .run(JSON.stringify(conceptFirst), QUIZ_ID);
   return db;
 }
 
@@ -419,6 +447,52 @@ function groundedCallEvent(
     ...automaticCallEvent(overrides),
     protocolVersion: 8 as const,
     purpose: "generation" as const,
+  };
+}
+
+function conceptFirstLifecycleEvent(
+  lifecycleState: "started" | "completed" | "abandoned",
+  overrides: Partial<{
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+    acceptedCount: 0 | 1;
+    classification: "primary" | "automatic_retry";
+    retryKind:
+      | "transport"
+      | "empty_content"
+      | "truncated_output"
+      | "content_repair"
+      | "duplicate_repair"
+      | "answer_repair"
+      | "automatic_resume";
+    outcome:
+      | "complete"
+      | "transient_http"
+      | "network_interrupted"
+      | "schema_invalid"
+      | "empty_content";
+    retryDelayMs: number;
+    elapsedMs: number;
+  }> = {},
+) {
+  const terminal = lifecycleState !== "started";
+  return {
+    protocolVersion: 9 as const,
+    purpose: "generation" as const,
+    lifecycleState,
+    generationSessionId: SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    callIndex: 0,
+    startIndex: 0,
+    ordinalAttempt: 1,
+    requestedCount: 1 as const,
+    acceptedCount: terminal ? (1 as const) : (0 as const),
+    classification: "primary" as const,
+    retryDelayMs: 0,
+    usageComplete: false,
+    ...(terminal ? { outcome: "complete" as const, elapsedMs: 2_000 } : {}),
+    ...overrides,
   };
 }
 
@@ -1237,6 +1311,99 @@ describe("authoritative progressive call events", () => {
     expect(stored.generationState).toBe("retry_required");
     expect(stored.stateChangedAt).toBeGreaterThan(timestamp);
     expect(row.lease_expires_at).toBeLessThanOrEqual(Date.now());
+  });
+});
+
+describe("protocol-9 concept-first call lifecycles", () => {
+  it("records one dispatched request and finalizes the same row exactly once", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    const started = conceptFirstLifecycleEvent("started");
+    const completed = conceptFirstLifecycleEvent("completed");
+
+    expect((await putCall(app, env, started)).status).toBe(201);
+    expect((await putCall(app, env, started)).status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT COUNT(*) AS count, lifecycle_state, outcome_code FROM quiz_generation_call_events",
+        )
+        .get(),
+    ).toMatchObject({
+      count: 1,
+      lifecycle_state: "started",
+      outcome_code: "call_started",
+    });
+    let stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      aiCalls: 1,
+      recoveryPhase: "dispatched",
+      activeCallIndex: 0,
+    });
+
+    expect((await putCall(app, env, completed)).status).toBe(200);
+    expect((await putCall(app, env, completed)).status).toBe(200);
+    const row = db.sqlite
+      .prepare(
+        `SELECT COUNT(*) AS count, lifecycle_state, outcome_code, accepted_count,
+                dispatched_at, completed_at, protocol_version
+         FROM quiz_generation_call_events`,
+      )
+      .get() as Record<string, unknown>;
+    expect(row).toMatchObject({
+      count: 1,
+      lifecycle_state: "completed",
+      outcome_code: "complete",
+      accepted_count: 1,
+      protocol_version: 9,
+    });
+    expect(Number(row.completed_at)).toBeGreaterThanOrEqual(
+      Number(row.dispatched_at),
+    );
+    stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    const summary = JSON.parse(stored.quality_summary_json) as Record<
+      string,
+      unknown
+    >;
+    expect(summary).toMatchObject({ aiCalls: 1, retryCount: 0 });
+    expect(summary).not.toHaveProperty("activeCallIndex");
+    expect(summary).not.toHaveProperty("recoveryPhase");
+
+    const conflict = await putCall(app, env, {
+      ...completed,
+      outcome: "schema_invalid" as const,
+      acceptedCount: 0 as const,
+    });
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toMatchObject({
+      error: { code: "generation_call_conflict" },
+    });
+  });
+
+  it("rejects a terminal lifecycle that was never dispatched", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    const response = await putCall(
+      app,
+      env,
+      conceptFirstLifecycleEvent("abandoned", {
+        acceptedCount: 0,
+        outcome: "network_interrupted",
+      }),
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      error: { code: "generation_call_lifecycle_missing" },
+    });
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM quiz_generation_call_events")
+        .get(),
+    ).toMatchObject({ count: 0 });
   });
 });
 

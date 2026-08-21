@@ -5,6 +5,7 @@ import {
   GenerationClaimResponseSchema,
   MediaResolveResponseSchema,
   VideoImportResponseSchema,
+  VerifiedVideoMetadataResponseSchema,
   createTranscriptCompleteness,
   type AutomaticRetryKind,
   type GenerationFailureCode,
@@ -16,6 +17,7 @@ import {
 } from "@clipquest/contracts";
 import * as Crypto from "expo-crypto";
 import { apiRequest, ClientApiError, jsonBody } from "../lib/api";
+import { countCaptionWords } from "./eta";
 import {
   authClient,
   type AppSession as AuthAppSession,
@@ -51,7 +53,8 @@ const RECOVERY_HEARTBEAT_MS = 10_000;
 function automaticProfile(profile: string | undefined): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
-    profile === "evidence_grounded_auto_v5_4"
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
   );
 }
 
@@ -76,7 +79,8 @@ async function runAutomaticRecovery(
   const legacyAutomaticRecovery = continuation.resultProtocolVersion === 5;
   const automatic = profileAutomatic || legacyAutomaticRecovery;
   const grounded =
-    continuation.generationProfile === "evidence_grounded_auto_v5_4";
+    continuation.generationProfile === "evidence_grounded_auto_v5_4" ||
+    continuation.generationProfile === "concept_first_auto_v5_8";
   if (
     status.generation.state === "cooldown" &&
     status.generation.nextRecoveryAt &&
@@ -121,6 +125,15 @@ async function runAutomaticRecovery(
   } catch (error) {
     if (isLeaseConflict(error)) return;
     throw error;
+  }
+
+  if (automatic && recoverySessionId) {
+    const preparing = await updateProgress(status.quizId, claimKey, {
+      state: "recovering",
+      recoverySessionId,
+      recoveryPhase: "preparing",
+    });
+    publishAttemptGeneration(attemptId, status.quizId, preparing.generation);
   }
 
   let imported = await loadImportedVideo(continuation.videoId);
@@ -185,6 +198,22 @@ async function runAutomaticRecovery(
     stopLeaseHeartbeat();
     throw error;
   }
+  const captionWordCount = countCaptionWords(transcript.segments);
+  await apiRequest(
+    `/api/videos/${encodeURIComponent(imported.video.id)}/source-metadata`,
+    {
+      method: "PATCH",
+      body: jsonBody({
+        durationSeconds: transcript.verifiedDurationSeconds,
+        sourceLanguage: transcript.language || "und",
+        captionSourceCategory: transcript.captionSourceCategory,
+        captionSegmentCount: transcript.segments.length,
+        captionWordCount,
+      }),
+      signal,
+    },
+    VerifiedVideoMetadataResponseSchema,
+  );
 
   const timestamp = Date.now();
   try {
@@ -223,7 +252,8 @@ async function runAutomaticRecovery(
         ? await saveGenerationRecord({
             ...commonRecord,
             version: 4,
-            generationProfile: "evidence_grounded_auto_v5_4",
+            generationProfile: continuation.generationProfile as
+              "evidence_grounded_auto_v5_4" | "concept_first_auto_v5_8",
             recoveryCycle:
               stored?.version === 4
                 ? Math.min(24, stored.recoveryCycle + 1)
@@ -267,6 +297,7 @@ async function runAutomaticRecovery(
     ...status.generation,
     state: automatic ? "recovering" : "retrying",
     ...(recoverySessionId ? { recoverySessionId } : {}),
+    ...(automatic ? { recoveryPhase: "preparing" as const } : {}),
   });
 
   const context: LocalQuizContext = {
@@ -300,6 +331,7 @@ async function runAutomaticRecovery(
       retryOrdinals: continuation.retryOrdinals,
       previousOutcome: continuation.previousOutcome,
       acceptedQuestions: continuation.acceptedQuestions,
+      promptFingerprint: continuation.promptFingerprint,
     },
   };
 
@@ -327,9 +359,23 @@ async function runAutomaticRecovery(
         },
         ExtensionQuizGenerationCallEventResponseSchema,
       );
-      if (event.classification === "automatic_retry") {
+      if ("lifecycleState" in event) {
+        latest = {
+          ...latest,
+          recoveryPhase:
+            event.lifecycleState === "started" ? "dispatched" : undefined,
+          activeCallIndex:
+            event.lifecycleState === "started" ? event.callIndex : undefined,
+        };
+        publishAttemptGeneration(attemptId, status.quizId, latest);
+      }
+      if (
+        event.classification === "automatic_retry" &&
+        (!("lifecycleState" in event) || event.lifecycleState === "started")
+      ) {
         automaticRetryCount = Math.min(
-          continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
             continuation.promptVersion === "quiz-local-json-stream-v5.6" ||
             legacyAutomaticRecovery
             ? 12
@@ -461,6 +507,7 @@ async function runAutomaticRecovery(
         automaticRetryCount,
         ordinalAttempt: latestOrdinalAttempt,
         strictBudget:
+          continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.6",
       });
@@ -526,6 +573,8 @@ function progressPayload(
           ordinalAttempt: detail.ordinalAttempt,
           retryKind: detail.retryKind,
           retryDelayMs: detail.retryDelayMs,
+          reasonCode: detail.reasonCode,
+          recoveryPhase: "preparing" as const,
         }
       : {}),
   };
@@ -588,6 +637,9 @@ async function acquireContinuationTranscript(
   segments: TranscriptSegment[];
   completeness: TranscriptCompleteness;
   language: string;
+  verifiedDurationSeconds: number;
+  captionSourceCategory:
+    "manual" | "automatic" | "local_transcription" | "unknown";
 }> {
   const textTranscript = await acquireTextTranscript(
     imported,
@@ -616,6 +668,8 @@ async function acquireContinuationTranscript(
   return {
     segments: result.segments,
     language: result.language,
+    verifiedDurationSeconds: imported.video.durationSeconds,
+    captionSourceCategory: "local_transcription",
     completeness: createTranscriptCompleteness(
       result.segments,
       imported.video.durationSeconds,
@@ -641,6 +695,15 @@ function updateProgress(
     retryDelayMs?: number;
     recoverySessionId?: string;
     nextRecoveryAt?: string;
+    recoveryPhase?:
+      | "preparing"
+      | "dispatched"
+      | "streaming"
+      | "repairing"
+      | "cooldown"
+      | "complete"
+      | "failed";
+    activeCallIndex?: number;
   },
   signal?: AbortSignal,
 ) {
