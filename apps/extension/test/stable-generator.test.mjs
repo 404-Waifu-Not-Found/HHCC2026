@@ -86,6 +86,37 @@ test("v5.12 evidence allocation avoids an already used narrative window", () => 
   );
 });
 
+test("v5.12 automatic refill rotates away from the previous round's opening evidence", () => {
+  const base = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Claim zero explains alpha.",
+      "Claim one explains beta.",
+      "Claim two explains gamma.",
+      "Claim three explains delta.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Claim zero explains alpha.",
+      "Claim one explains beta.",
+      "Claim two explains gamma.",
+      "Claim three explains delta.",
+    ],
+  };
+  assert.equal(promptFirstV512EvidenceIndex(base, 1, [], new Set()), 1);
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      {
+        ...base,
+        continuation: { nextOrdinalAttempt: 4 },
+      },
+      1,
+      [],
+      new Set(),
+    ),
+    0,
+  );
+});
+
 test("v5.12 evidence allocation prefers a used distinct family over an unused repeated family", () => {
   const input = {
     totalQuestionCount: 5,

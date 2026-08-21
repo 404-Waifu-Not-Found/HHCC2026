@@ -220,22 +220,17 @@ describe("extension generation profile compatibility", () => {
       ),
       "utf8",
     );
-    expect(recovery).toContain("terminalAutomaticRecoveryAttempts");
-    expect(recovery).toContain("persistedRecoveryExhausted");
-    expect(recovery).toContain("reportedRecoveryExhausted");
     expect(recovery).toContain("runAutomaticRecoveryUntilSettled");
     expect(recovery).toContain("AUTOMATIC_RECOVERY_LOOP_MAX_PASSES");
     expect(recovery).toContain("waitForAutomaticRecovery");
-    expect(recovery).toContain(
-      "terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force",
-    );
     expect(recovery).toContain('status.generation.state === "cooldown"');
     expect(recovery).toContain(
       'status.continuation?.claim.state === "available"',
     );
-    expect(recovery).toContain(
-      "(persistedRecoveryExhausted && !options.force)",
-    );
+    expect(recovery).toContain("automaticRecoveryDisposition(reasonCode)");
+    expect(recovery).toContain("recoveryRoundRetryCount");
+    expect(recovery).toContain("AUTOMATIC_REFILL_MAX_TRACKED_CYCLES");
+    expect(recovery).not.toContain("terminalAutomaticRecoveryAttempts");
     expect(recovery).toContain("isLeaseConflict(error) && !options.force");
     expect(recovery).toContain("options.force");
     expect(quiz).not.toContain("onRetry={");
@@ -243,6 +238,7 @@ describe("extension generation profile compatibility", () => {
     expect(quiz).toContain("current.retryAvailable === next.retryAvailable");
     expect(indicator).not.toContain("onRetry");
     expect(indicator).not.toContain("retryAction");
+    expect(indicator).not.toMatch(/start a new quiz/i);
     expect(indicator).toContain("Automatically recovering");
     expect(indicator).toContain(
       "ClipQuest will keep generating the remaining questions automatically.",
@@ -348,8 +344,9 @@ describe("extension generation profile compatibility", () => {
       "utf8",
     );
     expect(source).toContain('"source_unavailable"');
+    expect(source).toContain("automaticRecoveryDisposition(reasonCode)");
     expect(source).toContain(
-      'reasonCode === "source_unavailable"\n          ? "generation_failed"',
+      'const state = automatic && !terminal ? "cooldown" : "generation_failed"',
     );
     expect(source).toContain("CAPTIONS_REQUIRED_MESSAGE");
     expect(source).not.toContain('"/api/media/resolve"');

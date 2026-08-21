@@ -50,8 +50,8 @@ import {
   type ProgressiveGenerationTaskContext,
 } from "../../src/generation/progressive-coordinator";
 import {
+  automaticRecoveryDisposition,
   groundedRecoveryCooldownMs,
-  groundedRecoveryIsExhausted,
 } from "../../src/generation/automatic-recovery-policy";
 import { retryAuthoritativeTelemetryWrite } from "../../src/generation/telemetry-write";
 import { apiRequest, jsonBody } from "../../src/lib/api";
@@ -908,22 +908,8 @@ export default function GenerationScreen() {
         const automatic = isAutomaticGenerationProfile(
           rolloutProfile.generationProfile,
         );
-        const grounded = isGroundedGenerationProfile(
-          rolloutProfile.generationProfile,
-        );
-        const groundedExhausted =
-          grounded &&
-          groundedRecoveryIsExhausted({
-            reasonCode,
-            record: generationRecord,
-          });
         const terminalState = automatic
-          ? reasonCode === "credential_required" ||
-            reasonCode === "billing_required"
-            ? "action_required"
-            : grounded && !groundedExhausted
-              ? "cooldown"
-              : "generation_failed"
+          ? automaticRecoveryDisposition(reasonCode)
           : "retry_required";
         const nextRecoveryAt =
           terminalState === "cooldown"

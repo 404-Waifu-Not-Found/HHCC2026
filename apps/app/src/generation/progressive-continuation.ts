@@ -49,24 +49,17 @@ import {
   publishAttemptGeneration,
 } from "./progressive-coordinator";
 import {
+  AUTOMATIC_REFILL_MAX_TRACKED_CYCLES,
+  AUTOMATIC_REFILL_MAX_TRACKED_ORDINAL_ATTEMPT,
+  automaticRecoveryDisposition,
   authoritativeRecoveryFailureCode,
   CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
-  CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT,
   GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
-  GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
-  GROUNDED_GENERATION_MAX_RECOVERY_CYCLES,
   groundedRecoveryCooldownMs,
-  groundedRecoveryIsExhausted,
 } from "./automatic-recovery-policy";
 import { retryAuthoritativeTelemetryWrite } from "./telemetry-write";
 
 const RECOVERY_HEARTBEAT_MS = 10_000;
-// A recovery can fail before the extension emits a call event (for example a
-// port disconnect while the worker is waking). The server cannot derive that
-// attempt from call telemetry, so keep a tab-local terminal latch as well as
-// the persisted recovery-cycle budget. Without this latch the quiz poller can
-// immediately reclaim the same incomplete bank forever.
-const terminalAutomaticRecoveryAttempts = new Set<string>();
 
 function automaticProfile(profile: string | undefined): boolean {
   return (
@@ -96,18 +89,8 @@ async function runAutomaticRecoveryUntilSettled(
   signal: AbortSignal,
   options: { allowActionRequired?: boolean; force?: boolean },
 ): Promise<void> {
-  // A terminal failure is latched locally when recovery has already failed
-  // closed. Do not spin a new background pass against a stale API snapshot;
-  // the next authoritative poll will either expose the terminal state or a
-  // newly configured recovery path will explicitly opt in with `force`.
-  if (terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force) {
-    return;
-  }
   for (let pass = 0; pass < AUTOMATIC_RECOVERY_LOOP_MAX_PASSES; pass += 1) {
     if (signal.aborted) return;
-    if (terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force) {
-      return;
-    }
     await runAutomaticRecoveryOnce(attemptId, signal, options);
     if (signal.aborted) return;
 
@@ -131,8 +114,8 @@ async function runAutomaticRecoveryUntilSettled(
       status.generation.state === "generation_failed" &&
       status.continuation?.claim.state === "available"
     ) {
-      // The server still owns a bounded recovery budget. Reclaim it in this
-      // same background task instead of waiting for a learner to press Retry.
+      // Reclaim the missing suffix in this same background task instead of
+      // waiting for a learner action.
       continue;
     }
 
@@ -176,8 +159,6 @@ async function runAutomaticRecoveryOnce(
   signal: AbortSignal,
   options: { allowActionRequired?: boolean; force?: boolean } = {},
 ): Promise<void> {
-  if (terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force)
-    return;
   const status = await readStatus(attemptId, signal);
   if (status.generation.state === "ready" || !status.continuation) {
     return;
@@ -193,18 +174,6 @@ async function runAutomaticRecoveryOnce(
     continuation.generationProfile === "prompt_first_auto_v5_10" ||
     continuation.generationProfile === "prompt_first_auto_v5_11" ||
     continuation.generationProfile === "prompt_first_auto_v5_12";
-  const storedBeforeClaim = await loadGenerationRecordForAttempt(attemptId);
-  const persistedRecoveryExhausted =
-    storedBeforeClaim?.version === 4 &&
-    storedBeforeClaim.recoveryCycle >= GROUNDED_GENERATION_MAX_RECOVERY_CYCLES;
-  const reportedRecoveryExhausted =
-    (continuation.automaticRecoveryCount ?? 0) >=
-      GROUNDED_GENERATION_MAX_RECOVERY_CYCLES ||
-    (continuation.retryBudgetUsedCount ?? 0) >=
-      GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES;
-  const maxOrdinalAttempt = grounded
-    ? GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT
-    : CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT;
   if (
     status.generation.state === "cooldown" &&
     status.generation.nextRecoveryAt &&
@@ -216,12 +185,7 @@ async function runAutomaticRecoveryOnce(
     (status.generation.state === "action_required" &&
       !options.allowActionRequired) ||
     (status.generation.state === "generation_failed" &&
-      (status.continuation.claim.state !== "available" ||
-        // An explicit learner retry may clear a stale tab-local recovery
-        // cycle. The API claim and telemetry budget remain authoritative, so
-        // this cannot create unbounded server-side retries.
-        (persistedRecoveryExhausted && !options.force) ||
-        reportedRecoveryExhausted))
+      status.continuation.claim.state !== "available")
   ) {
     return;
   }
@@ -243,7 +207,10 @@ async function runAutomaticRecoveryOnce(
     Platform.OS !== "web" &&
     stored &&
     (stored.version === 3 || stored.version === 4) &&
-    stored.generationSessionId === continuation.generationSessionId
+    stored.generationSessionId === continuation.generationSessionId &&
+    (stored.state === "generating" ||
+      stored.state === "retrying" ||
+      stored.state === "recovering")
       ? stored
       : undefined;
   const claimKey = resumableNativeLease
@@ -260,6 +227,9 @@ async function runAutomaticRecoveryOnce(
       ? resumableNativeLease.recoverySessionId
       : Crypto.randomUUID()
     : undefined;
+  const recoveryRoundRetryCount = resumableNativeLease
+    ? resumableNativeLease.automaticRetryCount
+    : 0;
 
   let claim;
   try {
@@ -415,7 +385,7 @@ async function runAutomaticRecoveryOnce(
           [String(status.generation.availableQuestions + 1)]:
             continuation.nextOrdinalAttempt ?? 1,
         },
-        automaticRetryCount: continuation.automaticRetryCount ?? 0,
+        automaticRetryCount: recoveryRoundRetryCount,
         activeRecoveryStartedAt: timestamp,
         createdAt: stored?.createdAt ?? timestamp,
         updatedAt: timestamp,
@@ -434,7 +404,7 @@ async function runAutomaticRecoveryOnce(
             recoveryCycle:
               stored?.version === 4
                 ? Math.min(
-                    GROUNDED_GENERATION_MAX_RECOVERY_CYCLES,
+                    AUTOMATIC_REFILL_MAX_TRACKED_CYCLES,
                     stored.recoveryCycle + 1,
                   )
                 : 1,
@@ -507,15 +477,22 @@ async function runAutomaticRecoveryOnce(
       nextCallIndex: automatic ? continuation.nextCallIndex : 0,
       nextOrdinalAttempt: continuation.activeCall
         ? Math.min(
-            maxOrdinalAttempt,
+            AUTOMATIC_REFILL_MAX_TRACKED_ORDINAL_ATTEMPT,
             continuation.activeCall.ordinalAttempt + 1,
           )
         : continuation.nextOrdinalAttempt,
       retryKind: continuation.activeCall
         ? "automatic_resume"
         : continuation.retryKind,
-      automaticRetryCount: continuation.automaticRetryCount,
-      retryBudgetUsedCount: continuation.retryBudgetUsedCount,
+      // Retry limits are per automatic refill round. Authoritative telemetry
+      // remains cumulative on the server, while a fresh recoverySessionId gets
+      // a fresh small hot-retry allowance.
+      automaticRetryCount: automatic
+        ? recoveryRoundRetryCount
+        : continuation.automaticRetryCount,
+      retryBudgetUsedCount: automatic
+        ? recoveryRoundRetryCount
+        : continuation.retryBudgetUsedCount,
       retryOrdinals: continuation.activeCall
         ? [
             ...new Set([
@@ -539,10 +516,9 @@ async function runAutomaticRecoveryOnce(
   let automaticRetryCount =
     stored?.version === 3 || stored?.version === 4
       ? stored.automaticRetryCount
-      : (continuation.automaticRetryCount ?? 0);
-  let retryBudgetUsedCount =
-    continuation.retryBudgetUsedCount ?? automaticRetryCount;
-  let latestOrdinalAttempt = continuation.nextOrdinalAttempt ?? 1;
+      : automatic
+        ? recoveryRoundRetryCount
+        : (continuation.automaticRetryCount ?? 0);
   let latestModelFailureReason: GenerationFailureCode | undefined;
   let recoveryStep:
     | "flush_outbox"
@@ -593,12 +569,6 @@ async function runAutomaticRecoveryOnce(
           ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
           : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
         automaticRetryCount + 1,
-      );
-      retryBudgetUsedCount = Math.min(
-        grounded
-          ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
-          : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
-        retryBudgetUsedCount + 1,
       );
     }
     // The Worker event is authoritative. A stale or missing browser cache
@@ -709,8 +679,12 @@ async function runAutomaticRecoveryOnce(
         nextCallIndex: refreshed.continuation.nextCallIndex,
         nextOrdinalAttempt: refreshed.continuation.nextOrdinalAttempt,
         retryKind: refreshed.continuation.retryKind,
-        automaticRetryCount: refreshed.continuation.automaticRetryCount,
-        retryBudgetUsedCount: refreshed.continuation.retryBudgetUsedCount,
+        automaticRetryCount: automatic
+          ? automaticRetryCount
+          : refreshed.continuation.automaticRetryCount,
+        retryBudgetUsedCount: automatic
+          ? automaticRetryCount
+          : refreshed.continuation.retryBudgetUsedCount,
         retryOrdinals: refreshed.continuation.retryOrdinals,
         previousOutcome: refreshed.continuation.previousOutcome,
       };
@@ -730,9 +704,6 @@ async function runAutomaticRecoveryOnce(
           return;
         }
         lastProgressState = nextState;
-        if (detail.ordinalAttempt) {
-          latestOrdinalAttempt = detail.ordinalAttempt;
-        }
         callIngestion = callIngestion.then(async () => {
           // A progress snapshot may race an append. It is safe to drop after
           // bounded retries; model-call and question writes remain fail-closed.
@@ -814,34 +785,9 @@ async function runAutomaticRecoveryOnce(
           "Automatic recovery ended before the bank was complete.",
       latestModelFailureReason,
     });
-    const groundedExhausted =
-      grounded &&
-      groundedRecoveryIsExhausted({
-        reasonCode,
-        record: stored,
-        automaticRetryCount,
-        ordinalAttempt: latestOrdinalAttempt,
-        strictBudget:
-          continuation.promptVersion === "quiz-local-json-stream-v5.12" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.11" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.10" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.6",
-      });
-    const compatibilityExhausted =
-      legacyAutomaticRecovery &&
-      (retryBudgetUsedCount >= CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES ||
-        (continuation.automaticRecoveryCount ?? 0) + 1 >= 3);
-    const state =
-      reasonCode === "credential_required" || reasonCode === "billing_required"
-        ? "action_required"
-        : reasonCode === "source_unavailable"
-          ? "generation_failed"
-          : automatic && !groundedExhausted && !compatibilityExhausted
-            ? "cooldown"
-            : "generation_failed";
+    const state = automatic
+      ? automaticRecoveryDisposition(reasonCode)
+      : "generation_failed";
     const nextRecoveryAt =
       state === "cooldown"
         ? Date.now() +
@@ -873,9 +819,6 @@ async function runAutomaticRecoveryOnce(
     if (failed) {
       latest = failed.generation;
       publishAttemptGeneration(attemptId, status.quizId, latest);
-    }
-    if (state === "generation_failed" && automatic) {
-      terminalAutomaticRecoveryAttempts.add(attemptId);
     }
   } finally {
     stopLeaseHeartbeat();

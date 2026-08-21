@@ -53,9 +53,6 @@ const QuestionTypeSchema = z.enum([
 // delayed browser heartbeat.
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 5 * 60 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
-const AUTOMATIC_RECOVERY_RETRY_LIMIT = 3;
-const AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
-const AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
 
 function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
@@ -85,24 +82,9 @@ function recoverableFailureReason(reasonCode: string | undefined): boolean {
     "credential_missing",
     "billing_required",
     "source_unavailable",
-    "recovery_budget_exhausted",
+    "non_instructional_source",
     "cost_limit_reached",
   ]).has(reasonCode ?? "");
-}
-
-function hasAutomaticRecoveryBudget(
-  snapshot: ProgressiveGenerationSnapshot,
-): boolean {
-  const retryBudgetUsed =
-    snapshot.telemetry.automaticRetries +
-    (snapshot.summary?.resultProtocolVersion === 5
-      ? snapshot.telemetry.manualContinuations
-      : 0);
-  return (
-    retryBudgetUsed < AUTOMATIC_RECOVERY_RETRY_LIMIT &&
-    snapshot.telemetry.automaticRecoveries < AUTOMATIC_RECOVERY_CYCLE_LIMIT &&
-    snapshot.telemetry.elapsedMs < AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS
-  );
 }
 
 function recoverableStoppedGeneration(
@@ -113,8 +95,7 @@ function recoverableStoppedGeneration(
     snapshot.availability?.state === "generation_failed" &&
     recoverableFailureReason(
       snapshot.availability.reasonCode ?? snapshot.summary?.reasonCode,
-    ) &&
-    hasAutomaticRecoveryBudget(snapshot),
+    ),
   );
 }
 const QuestionRowSchema = z.object({

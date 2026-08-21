@@ -797,13 +797,13 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
 
   if (input.classification === "automatic_retry") {
     const existingRetry = await c.env.DB.prepare(
-      legacyAutomaticRecovery
-        ? "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND classification IN ('automatic_retry', 'manual_continuation')"
+      automaticEvent
+        ? "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND recovery_session_id = ? AND classification = 'automatic_retry'"
         : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND classification = 'automatic_retry'",
     )
       .bind(
-        ...(legacyAutomaticRecovery
-          ? [bank.id]
+        ...(automaticEvent
+          ? [bank.id, input.generationSessionId, input.recoverySessionId]
           : [bank.id, input.generationSessionId]),
       )
       .first<{ count: number }>();
@@ -2044,7 +2044,10 @@ async function assertAutomaticGenerationCallSequence(
     return;
   }
 
-  const expectedAttempt = Number(previous.ordinal_attempt ?? 1) + 1;
+  const expectedAttempt = Math.min(
+    24,
+    Number(previous.ordinal_attempt ?? 1) + 1,
+  );
   if (
     previous.outcome_code === "complete" ||
     event.startIndex !== Number(previous.start_ordinal) ||

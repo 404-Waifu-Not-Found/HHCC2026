@@ -2551,6 +2551,15 @@ export function promptFirstV512EvidenceIndex(
   const usedWindows = [...usedIndices]
     .map((index) => windows[index])
     .filter(Boolean);
+  // A new automatic refill round should not reopen on the exact same evidence
+  // that exhausted the previous round. The authoritative ordinal attempt is
+  // preserved across rounds, so use it to rotate the preferred candidate
+  // while retaining all of the quality and duplicate-family checks below.
+  const refillRotation = Math.max(
+    0,
+    Number(input.continuation?.nextOrdinalAttempt ?? 1) - 1,
+  );
+  const preferredIndex = (questionOffset + refillRotation) % count;
   return Array.from({ length: candidateCount }, (_, index) => index)
     .map((index) => {
       const candidateFamilies = promptFirstV512TopicFamilies(
@@ -2585,7 +2594,7 @@ export function promptFirstV512EvidenceIndex(
             )
           : 0,
         used: usedIndices.has(index),
-        rotationDistance: (index - (questionOffset % count) + count) % count,
+        rotationDistance: (index - preferredIndex + count) % count,
       };
     })
     .sort(
@@ -8355,7 +8364,7 @@ async function generateAutomaticQuiz({
     lastFailureReason = callFailure.reasonCode;
     lastRepairContext = callFailure.repairContext;
     retryKind = nextRetryKind;
-    ordinalAttempt += 1;
+    ordinalAttempt = Math.min(24, ordinalAttempt + 1);
     onProgress(
       "creating_questions",
       0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,

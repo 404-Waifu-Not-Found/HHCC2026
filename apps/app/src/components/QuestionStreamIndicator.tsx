@@ -20,11 +20,12 @@ export function QuestionStreamIndicator({
   const { locale, theme } = useSettings();
   if (generation.state === "ready") return null;
   const count = `${generation.availableQuestions}/${generation.totalQuestions}`;
-  const stopped =
+  const needsAttention =
     generation.state === "action_required" ||
-    generation.state === "generation_failed";
+    (generation.state === "generation_failed" &&
+      generation.retryAvailable !== true);
   const label = generationLabel(generation, count, locale);
-  const explanation = stopped
+  const explanation = needsAttention
     ? generationReasonExplanation(
         generation.reasonCode,
         generation.retryAvailable,
@@ -41,14 +42,14 @@ export function QuestionStreamIndicator({
         styles.pill,
         {
           backgroundColor: theme.surfaceRaised,
-          borderColor: stopped ? theme.warning : theme.borderStrong,
+          borderColor: needsAttention ? theme.warning : theme.borderStrong,
           boxShadow:
             theme.mode === "dark" ? shadows.darkFloating : shadows.floating,
         },
       ]}
     >
       <View style={styles.statusRow}>
-        {stopped ? (
+        {needsAttention ? (
           <VoxelIcon name="warning" size={18} color={theme.warning} />
         ) : (
           <ActivityIndicator size="small" color={theme.primary} />
@@ -148,8 +149,8 @@ function generationLabel(
         : `Automatically recovering · ${count} ready`;
     }
     return chinese
-      ? `生成无法完成 · 已就绪 ${count}`
-      : `Generation could not complete · ${count} ready`;
+      ? `字幕无法补全本次测验 · 已就绪 ${count}`
+      : `Captions could not complete this quiz · ${count} ready`;
   }
   if (generation.state === "retry_required") {
     return chinese
@@ -165,11 +166,6 @@ function generationReasonExplanation(
   locale: "en" | "zh-CN",
 ): string {
   const chinese = locale === "zh-CN";
-  if (retryAvailable === false) {
-    return chinese
-      ? "本次 AI 生成已停止；请重新开始测验以请求新的题库。"
-      : "This AI generation has stopped; start a new quiz to request a fresh question bank.";
-  }
   if (retryAvailable === true) {
     return chinese
       ? "ClipQuest 将在后台自动生成剩余题目。"
@@ -190,14 +186,15 @@ function generationReasonExplanation(
       ? "YouTube 来源或文字记录已不可用。"
       : "The YouTube source or transcript is no longer available.";
   }
-  if (
-    reasonCode === "recovery_budget_exhausted" ||
-    reasonCode === "automatic_retries_exhausted"
-  ) {
+  if (reasonCode === "non_instructional_source") {
     return chinese
-      ? "自动重试次数已用完；已接收的题目不会被计分为完整测验。"
-      : "Automatic retries were exhausted; the partial bank cannot be scored.";
+      ? "字幕中没有足够的可测学习内容。"
+      : "The captions do not contain enough testable learning material.";
   }
+  if (retryAvailable === false)
+    return chinese
+      ? "ClipQuest 无法从现有字幕生成其余题目；不完整的测验不会计分。"
+      : "ClipQuest cannot generate the remaining questions from these captions; the incomplete quiz will not be scored.";
   return chinese
     ? "已接收的题目仍可作答，但测验不会以不完整状态计分。"
     : "Ready questions remain usable, but this incomplete quiz cannot be scored.";

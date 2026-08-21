@@ -478,6 +478,7 @@ function groundedCallEvent(
 function conceptFirstLifecycleEvent(
   lifecycleState: "started" | "completed" | "abandoned",
   overrides: Partial<{
+    recoverySessionId: string;
     callIndex: number;
     startIndex: number;
     ordinalAttempt: number;
@@ -2021,7 +2022,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
     });
   });
 
-  it("keeps terminal protocol-9 failures unclaimable", async () => {
+  it("reclaims a protocol-9 bank after one bounded retry round is exhausted", async () => {
     const db = createConceptFirstDatabase();
     const bank = db.sqlite
       .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
@@ -2050,8 +2051,8 @@ describe("protocol-9 concept-first call lifecycles", () => {
     );
     expect(status.status).toBe(200);
     expect(await status.json()).toMatchObject({
-      generation: { retryAvailable: false },
-      continuation: { claim: { state: "not_required" } },
+      generation: { retryAvailable: true },
+      continuation: { claim: { state: "available" } },
     });
     const claim = await app.request(
       `/attempts/${ATTEMPT_ID}/generation/claim`,
@@ -2066,9 +2067,151 @@ describe("protocol-9 concept-first call lifecycles", () => {
       },
       env,
     );
-    expect(claim.status).toBe(409);
+    expect(claim.status).toBe(200);
     expect(await claim.json()).toMatchObject({
-      error: { code: "generation_claim_not_available" },
+      claim: {
+        state: "leased",
+        recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+      },
+    });
+  });
+
+  it("grants a fresh bounded retry budget to the next automatic refill round", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    for (const event of [
+      conceptFirstLifecycleEvent("started"),
+      conceptFirstLifecycleEvent("completed"),
+      conceptFirstLifecycleEvent("started", {
+        callIndex: 1,
+        startIndex: 1,
+        acceptedCount: 0,
+      }),
+      conceptFirstLifecycleEvent("completed", {
+        callIndex: 1,
+        startIndex: 1,
+        acceptedCount: 0,
+        outcome: "schema_invalid",
+      }),
+      conceptFirstLifecycleEvent("started", {
+        callIndex: 2,
+        startIndex: 1,
+        ordinalAttempt: 2,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+      }),
+      conceptFirstLifecycleEvent("completed", {
+        callIndex: 2,
+        startIndex: 1,
+        ordinalAttempt: 2,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+        outcome: "schema_invalid",
+      }),
+      conceptFirstLifecycleEvent("started", {
+        callIndex: 3,
+        startIndex: 1,
+        ordinalAttempt: 3,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+      }),
+      conceptFirstLifecycleEvent("completed", {
+        callIndex: 3,
+        startIndex: 1,
+        ordinalAttempt: 3,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+        outcome: "schema_invalid",
+      }),
+    ]) {
+      expect((await putCall(app, env, event)).status).toBeLessThan(300);
+    }
+
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "recovery_budget_exhausted",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+
+    const nextRound = await putCall(
+      app,
+      env,
+      conceptFirstLifecycleEvent("started", {
+        recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        callIndex: 4,
+        startIndex: 1,
+        ordinalAttempt: 4,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+      }),
+      CLAIM_KEY,
+    );
+    expect(nextRound.status).toBe(201);
+  });
+
+  it("keeps a genuinely unavailable caption source unclaimable", async () => {
+    const db = createConceptFirstDatabase();
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "source_unavailable",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+    const { app, env } = testApp(db);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      generation: { retryAvailable: false },
+      continuation: { claim: { state: "not_required" } },
     });
   });
 

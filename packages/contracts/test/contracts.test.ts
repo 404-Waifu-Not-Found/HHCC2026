@@ -459,6 +459,23 @@ describe("generated questions", () => {
         reasonCode: "generation_stalled",
       }).success,
     ).toBe(false);
+    const lateRefill = {
+      state: "retrying",
+      availableQuestions: 8,
+      totalQuestions: 10,
+      retryOrdinal: 9,
+      ordinalAttempt: 24,
+      retryKind: "content_repair",
+    } as const;
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse(lateRefill).success,
+    ).toBe(true);
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse({
+        ...lateRefill,
+        ordinalAttempt: 25,
+      }).success,
+    ).toBe(false);
   });
 
   it("accepts only first-missing continuation metadata with the global type plan", () => {
