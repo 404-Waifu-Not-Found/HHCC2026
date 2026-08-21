@@ -71,7 +71,7 @@ app.get("/health", (c) =>
   }),
 );
 
-app.on(["GET", "POST"], "/api/auth/*", (c) => createAuth(c.env, c.executionCtx).handler(c.req.raw));
+app.on(["GET", "POST"], "/api/auth/*", (c) => createAuth(c.env).handler(c.req.raw));
 
 // R2 remains private; this opaque-ID endpoint is deliberately public so native image views
 // do not need to expose the Better Auth session cookie in an image URL.

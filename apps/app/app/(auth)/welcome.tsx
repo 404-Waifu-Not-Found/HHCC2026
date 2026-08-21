@@ -8,7 +8,7 @@ import { typography } from "../../src/theme/tokens";
 export default function WelcomeScreen() {
   const { t, theme } = useSettings();
   return (
-    <AuthShell title={t("tagline")} subtitle="Turn the videos you already watch into a focused, evidence-based learning quest.">
+    <AuthShell title={t("tagline")} subtitle={t("welcomeSubtitle")}>
       <Link href="/(auth)/sign-up" asChild>
         <PrimaryButton onPress={() => undefined}>{t("signUp")}</PrimaryButton>
       </Link>
@@ -43,4 +43,3 @@ const styles = StyleSheet.create({
   languages: { flexDirection: "row", justifyContent: "center", gap: 22, marginTop: 4 },
   language: { minHeight: 44, paddingVertical: 12, fontFamily: typography.bodyBold, fontSize: 14 },
 });
-

@@ -4,14 +4,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
 import { authSchema } from "./db/auth-schema";
+import { hasConfirmedMinimumAge } from "./lib/age";
 import { sendEmail } from "./lib/email";
 import type { AppEnv } from "./types";
 
-type WaitUntilContext = {
-  waitUntil(promise: Promise<unknown>): void;
-};
-
-export function createAuth(env: AppEnv, executionCtx: WaitUntilContext) {
+export function createAuth(env: AppEnv) {
   const database = drizzle(env.DB, { schema: authSchema });
 
   return betterAuth({
@@ -31,6 +28,21 @@ export function createAuth(env: AppEnv, executionCtx: WaitUntilContext) {
           input: true,
         },
       },
+      deleteUser: {
+        enabled: true,
+        beforeDelete: async (authUser) => deletePrivateUserObjects(env, authUser.id),
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (nextUser) => hasConfirmedMinimumAge(nextUser),
+        },
+      },
+    },
+    rateLimit: {
+      enabled: true,
+      storage: "database",
     },
     emailAndPassword: {
       enabled: true,
@@ -39,33 +51,29 @@ export function createAuth(env: AppEnv, executionCtx: WaitUntilContext) {
       maxPasswordLength: 128,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user: authUser, url }) => {
-        executionCtx.waitUntil(
-          sendEmail(env, {
-            to: authUser.email,
-            subject: "Reset your ClipQuest password",
-            heading: "Reset your password",
-            message: "Use this link to choose a new ClipQuest password. The link expires soon.",
-            actionLabel: "Reset password",
-            actionUrl: url,
-          }),
-        );
+        await sendEmail(env, {
+          to: authUser.email,
+          subject: "Reset your ClipQuest password",
+          heading: "Reset your password",
+          message: "Use this link to choose a new ClipQuest password. The link expires soon.",
+          actionLabel: "Reset password",
+          actionUrl: url,
+        });
       },
     },
     emailVerification: {
       sendOnSignUp: true,
       sendOnSignIn: true,
-      autoSignInAfterVerification: true,
+      autoSignInAfterVerification: false,
       sendVerificationEmail: async ({ user: authUser, url }) => {
-        executionCtx.waitUntil(
-          sendEmail(env, {
-            to: authUser.email,
-            subject: "Verify your ClipQuest email",
-            heading: "One tap to start learning",
-            message: "Verify your email to finish creating your ClipQuest account.",
-            actionLabel: "Verify email",
-            actionUrl: url,
-          }),
-        );
+        await sendEmail(env, {
+          to: authUser.email,
+          subject: "Verify your ClipQuest email",
+          heading: "One tap to start learning",
+          message: "Verify your email to finish creating your ClipQuest account.",
+          actionLabel: "Verify email",
+          actionUrl: url,
+        });
       },
     },
     plugins: [
@@ -78,6 +86,25 @@ export function createAuth(env: AppEnv, executionCtx: WaitUntilContext) {
       }),
     ],
   });
+}
+
+async function deletePrivateUserObjects(env: AppEnv, userId: string): Promise<void> {
+  const thumbnails = await env.DB.prepare(
+    "SELECT thumbnail_key FROM videos WHERE owner_id = ? AND thumbnail_key IS NOT NULL",
+  )
+    .bind(userId)
+    .all<{ thumbnail_key: string }>();
+  const keys = thumbnails.results.map((row) => row.thumbnail_key);
+  let cursor: string | undefined;
+  do {
+    const page = await env.PRIVATE_BUCKET.list({ prefix: `transcripts/${userId}/`, cursor });
+    keys.push(...page.objects.map((object) => object.key));
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+
+  for (let index = 0; index < keys.length; index += 1_000) {
+    await env.PRIVATE_BUCKET.delete(keys.slice(index, index + 1_000));
+  }
 }
 
 export type ClipQuestAuth = ReturnType<typeof createAuth>;

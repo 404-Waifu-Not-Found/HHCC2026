@@ -8,7 +8,7 @@ type Props = PropsWithChildren<{
   onPress(): void;
   disabled?: boolean;
   loading?: boolean;
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
   accessibilityLabel?: string;
 }> &
   Pick<ComponentProps<typeof Pressable>, "testID">;
@@ -28,7 +28,13 @@ export function PrimaryButton({
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const backgroundColor =
-    variant === "primary" ? theme.primary : variant === "secondary" ? theme.secondary : "transparent";
+    variant === "primary"
+      ? theme.primary
+      : variant === "secondary"
+        ? theme.secondary
+        : variant === "danger"
+          ? theme.error
+          : "transparent";
   return (
     <AnimatedPressable
       testID={testID}
@@ -71,4 +77,3 @@ const styles = StyleSheet.create({
   label: { fontFamily: typography.bodyBold, fontSize: 16 },
   disabled: { opacity: 0.5 },
 });
-

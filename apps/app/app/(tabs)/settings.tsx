@@ -12,6 +12,7 @@ import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { AppTextInput } from "../../src/components/AppTextInput";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
@@ -39,6 +40,8 @@ export default function SettingsScreen() {
   const [youtubeAvailable, setYoutubeAvailable] = useState(true);
   const [youtubeConnected, setYoutubeConnected] = useState(false);
   const [flow, setFlow] = useState<YouTubeFlow>();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
 
   useEffect(() => { void getLocalModelStatus().then(setModel).catch(() => undefined); }, []);
 
@@ -124,9 +127,31 @@ export default function SettingsScreen() {
   };
 
   const signOut = async () => {
-    setBusy("signout");
-    await authClient.signOut();
-    router.replace("/(auth)/welcome");
+    if (busy) return;
+    setBusy("signout"); setError(undefined);
+    try {
+      const result = await authClient.signOut();
+      if (result.error) throw new Error(result.error.message ?? "Could not sign out.");
+      router.replace("/(auth)/welcome");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not sign out.");
+    } finally {
+      setBusy(undefined);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (deletePassword.length < 8 || busy) return;
+    setBusy("delete"); setError(undefined);
+    try {
+      const result = await authClient.deleteUser({ password: deletePassword });
+      if (result.error) throw new Error(result.error.message ?? t("deleteAccountFailed"));
+      router.replace("/(auth)/welcome");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("deleteAccountFailed"));
+    } finally {
+      setBusy(undefined);
+    }
   };
 
   return (
@@ -139,6 +164,27 @@ export default function SettingsScreen() {
         <Text style={[styles.accountName, { color: theme.text }]}>{session?.user.name}</Text>
         <Text style={[styles.accountEmail, { color: theme.textMuted }]}>{session?.user.email}</Text>
         <PrimaryButton variant="ghost" loading={busy === "signout"} onPress={() => void signOut()}>{t("signOut")}</PrimaryButton>
+        {confirmingDelete ? (
+          <View style={[styles.deletePanel, { borderColor: theme.error }]}>
+            <Text style={[styles.warning, { color: theme.error }]}>{t("deleteAccountBody")}</Text>
+            <AppTextInput
+              label={t("password")}
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+              autoComplete="current-password"
+              editable={busy !== "delete"}
+              returnKeyType="done"
+              onSubmitEditing={() => void deleteAccount()}
+            />
+            <View style={styles.deleteActions}>
+              <View style={styles.deleteAction}><PrimaryButton variant="ghost" disabled={busy === "delete"} onPress={() => { setConfirmingDelete(false); setDeletePassword(""); }}>{t("cancel")}</PrimaryButton></View>
+              <View style={styles.deleteAction}><PrimaryButton variant="danger" loading={busy === "delete"} disabled={deletePassword.length < 8} onPress={() => void deleteAccount()}>{t("confirmDeleteAccount")}</PrimaryButton></View>
+            </View>
+          </View>
+        ) : (
+          <PrimaryButton variant="ghost" disabled={Boolean(busy)} onPress={() => setConfirmingDelete(true)}>{t("deleteAccount")}</PrimaryButton>
+        )}
       </SettingsSection>
 
       <SettingsSection title={t("appearance")} icon="palette-outline">
@@ -226,4 +272,7 @@ const styles = StyleSheet.create({
   codeCard: { borderWidth: 2, borderRadius: radii.medium, padding: 14, gap: 11 },
   codeRow: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   code: { fontFamily: typography.display, fontSize: 30, letterSpacing: 4 },
+  deletePanel: { borderWidth: 2, borderRadius: radii.medium, padding: 14, gap: 12 },
+  deleteActions: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  deleteAction: { flexGrow: 1, flexBasis: 180 },
 });

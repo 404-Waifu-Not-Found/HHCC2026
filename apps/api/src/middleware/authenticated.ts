@@ -13,7 +13,7 @@ export type ApiBindings = {
 };
 
 export const authenticated: MiddlewareHandler<ApiBindings> = async (c, next) => {
-  const auth = createAuth(c.env, c.executionCtx);
+  const auth = createAuth(c.env);
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!session) {
     throw new ApiError(401, "authentication_required", "Please sign in to continue.");
@@ -29,4 +29,3 @@ export const authenticated: MiddlewareHandler<ApiBindings> = async (c, next) => 
   });
   await next();
 };
-
