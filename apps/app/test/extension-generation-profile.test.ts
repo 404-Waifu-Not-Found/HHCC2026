@@ -23,16 +23,16 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.30 and stream v2 for the single-call v5.2 profile", () => {
+  it("requires v0.8.31 and stream v2 for the progressive v5.2 profile", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.29",
+        "0.8.30",
         MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(false);
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.30",
+        "0.8.31",
         MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(true);
@@ -71,7 +71,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.30 and stream v7 for the current extension", () => {
+  it("requires v0.8.31 and stream v7 for the current extension", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -128,7 +128,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(false);
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.30",
+        "0.8.31",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(true);
@@ -252,7 +252,7 @@ describe("extension generation profile compatibility", () => {
     );
   });
 
-  it("keeps ready-bank admission independent from call telemetry", () => {
+  it("admits question one independently from suffix generation and call telemetry", () => {
     const source = readFileSync(
       resolve(
         dirname(fileURLToPath(import.meta.url)),
@@ -273,11 +273,12 @@ describe("extension generation profile compatibility", () => {
       "A conflicting progress snapshot must never poison the",
     );
     expect(source).toContain(").catch(() => undefined);");
-    expect(source).toContain(
+    expect(source).not.toContain(
       'rolloutProfile.generationProfile !== "stable_non_thinking_v5_2"',
     );
-    expect(source).toContain('response.generation.state === "ready"');
-    expect(source).toContain("await startAttempt(response.quizId);");
+    expect(source).toContain(
+      "if (!attemptId) await startAttempt(response.quizId);",
+    );
     const admissionBlock = source.slice(
       source.indexOf("lastProgressKey = undefined"),
       source.indexOf("void questionIngestion.catch"),
@@ -288,6 +289,24 @@ describe("extension generation profile compatibility", () => {
     expect(source).toContain("The local engine must not wait for diagnostics");
     expect(source).toContain("await questionIngestion;");
     expect(source).toContain('scope: "generation_call_telemetry"');
+  });
+
+  it("keeps polling for streamed questions through transient resume failures", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../app/quiz/[attemptId].tsx",
+      ),
+      "utf8",
+    );
+    const pollingStart = source.indexOf("if (!waitingForQuestions) return;");
+    const pollingEffect = source.slice(
+      pollingStart,
+      source.indexOf("subscribeToAttemptGeneration", pollingStart),
+    );
+    expect(pollingEffect).toContain("Math.min(5_000");
+    expect(pollingEffect).not.toContain("setWaitingForQuestions(false)");
+    expect(pollingEffect).not.toContain("setError(");
   });
 
   it("keeps recovery question ingestion independent from call telemetry", () => {

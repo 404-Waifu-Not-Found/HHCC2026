@@ -45,7 +45,7 @@ This table is a dated observation, not a substitute for checking the live servic
 
 ## Current web and native source candidate
 
-The assigned new-bank contract uses extension `0.8.30`, result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, progressive import `v4`, and generation profile `stable_non_thinking_v5_2`. Android and iOS 0.2.0 consume the same local engine and report native client metadata; web reports `chrome_extension`.
+The assigned new-bank contract uses extension `0.8.31`, result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, progressive import `v4`, and generation profile `stable_non_thinking_v5_2`. Android and iOS 0.2.0 consume the same local engine and report native client metadata; web reports `chrome_extension`.
 
 The checked-in rollout enables v5.2 and disables v5.3, v5.4, and v5.9-v5.12. `/health` reports supported metadata and the effective default separately; `/api/local-ai/profile` is authoritative for a learner. A fresh bank makes one non-thinking DeepSeek request for the exact 5/10/15 count, buffers and validates the complete JSON response, uploads only after validation, and opens the attempt only when the bank is ready. It performs no generation retry and creates no fallback content. Existing completed banks preserve their original prompt, validator, telemetry, and client-integrity metadata.
 
@@ -174,17 +174,17 @@ Do not distribute a locally debug-signed Gradle artifact. See [Android private b
 
 ## Generation rollout gate
 
-Do not treat extension installation, a successful local test, or `/health` alone as proof that single-call generation works for real learners. Before declaring the v5.2 assignment accepted:
+Do not treat extension installation, a successful local test, or `/health` alone as proof that progressive generation works for real learners. Before declaring the v5.2 assignment accepted:
 
-1. Deploy one immutable pushed Worker/app candidate, install its matching extension-0.8.30 ZIP, and record the exact Worker version, Git SHA, and extension checksum.
-2. Verify that authenticated `/api/local-ai/profile` assigns `stable_non_thinking_v5_2` with extension minimum 0.8.30.
+1. Deploy one immutable pushed Worker/app candidate, install its matching extension-0.8.31 ZIP, and record the exact Worker version, Git SHA, and extension checksum.
+2. Verify that authenticated `/api/local-ai/profile` assigns `stable_non_thinking_v5_2` with extension minimum 0.8.31.
 3. Run complete 5/10/15 banks across every question-type combination, English/CJK, short/long captions, formulas, and manual/automatic caption tracks.
-4. Require exactly one DeepSeek HTTP request and one complete call event per successful bank, zero generation retries, the full requested count before navigation, and no shortened completion or fallback content.
+4. Require question 1 to validate, persist, and navigate before suffix generation completes. Verify ordered requested/accepted call accounting, accepted-prefix preservation through an injected later-question failure, automatic missing-ordinal repair, full-length completion, and no fallback content.
 5. Run the immutable artifact across ten different real YouTube videos and answer every planned learner question on the original bank; do not replace a failed bank and count the replacement as success.
 6. Audit question grounding, true/false polarity, answer-to-prompt consistency, duplicate objectives, fragmentary answers, unsupported absolute wording, and soft short-answer grading.
 7. Confirm the page bridge, native API traffic, and Worker requests contain no API key, captions, transcript, generation instructions, or raw DeepSeek response.
 
-If a gate fails, disable `QUIZ_V5_2_ROLLOUT` or replace the candidate; do not silently re-enable a multi-call profile or add generated fallback questions. Retain privacy-safe call-event evidence for diagnosis.
+If a gate fails, disable `QUIZ_V5_2_ROLLOUT` or replace the candidate; do not add generated fallback questions or expose a learner-facing continuation action. Retain privacy-safe call-event evidence for diagnosis.
 
 ## Reporting rules
 

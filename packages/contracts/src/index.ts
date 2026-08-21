@@ -625,6 +625,7 @@ export const QuizGenerationProfileResponseSchema = z
       "0.8.17",
       "0.8.26",
       "0.8.30",
+      "0.8.31",
     ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -676,7 +677,7 @@ export const QuizGenerationProfileResponseSchema = z
                   : value.generationProfile === "stable_auto_recovery_v5_3"
                     ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
                     : value.generationProfile === "stable_non_thinking_v5_2"
-                      ? ["0.8.30", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                      ? ["0.8.31", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
                       : ["0.8.0", LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY];
     if (
       value.minimumExtensionVersion !== expected[0] ||
@@ -765,8 +766,8 @@ export const LegacyLocalGenerationCallEventSchema = z
     generationSessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(127),
     startIndex: z.number().int().min(0).max(14),
-    requestedCount: z.number().int().min(1).max(15),
-    acceptedCount: z.number().int().min(0).max(15),
+    requestedCount: z.number().int().min(1).max(3),
+    acceptedCount: z.number().int().min(0).max(3),
     classification: LocalGenerationCallClassificationSchema,
     outcome: LocalGenerationCallOutcomeSchema,
     retryDelayMs: z.number().int().min(0).max(300_000).default(0),

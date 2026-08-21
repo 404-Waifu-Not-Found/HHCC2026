@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   countCaptionWords,
-  estimatedCompleteBankDurationMs,
   estimatedFirstQuestionDurationMs,
   firstQuestionEtaBreakdown,
   firstQuestionRetryRemainingMs,
@@ -123,22 +122,7 @@ describe("first-question ETA", () => {
   });
 });
 
-describe("complete-bank journey", () => {
-  it("uses a duration fixed entirely by the pre-generation quiz plan", () => {
-    expect(
-      estimatedCompleteBankDurationMs({
-        questionCount: 10,
-        questionTypes: ["multiple_choice", "true_false"],
-      }),
-    ).toBe(45_000);
-    expect(
-      estimatedCompleteBankDurationMs({
-        questionCount: 10,
-        questionTypes: ["multiple_choice", "short_answer"],
-      }),
-    ).toBe(53_000);
-  });
-
+describe("linear first-question journey", () => {
   it("moves equal distances over equal time intervals without stage jumps", () => {
     const samples = [0, 10_000, 20_000, 30_000].map((elapsedMs) =>
       linearJourneyProgress(elapsedMs, 40_000, 0.96),

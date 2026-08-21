@@ -109,7 +109,7 @@ describe("admin contracts", () => {
           supportedPromptVersion: "quiz-local-json-stream-v5.12",
           supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.30",
+          requiredExtensionVersion: "0.8.31",
           requiredCapability: "question-stream-v7",
           states: {
             generating: 1,
@@ -279,7 +279,7 @@ describe("generated questions", () => {
     expect(
       QuizGenerationProfileResponseSchema.safeParse({
         generationProfile: "stable_non_thinking_v5_2",
-        minimumExtensionVersion: "0.8.30",
+        minimumExtensionVersion: "0.8.31",
         requiredCapability: "question-stream-v2",
       }).success,
     ).toBe(true);

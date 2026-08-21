@@ -39,7 +39,6 @@ import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
 import {
   countCaptionWords,
-  estimatedCompleteBankDurationMs,
   estimatedFirstQuestionDurationMs,
   firstQuestionRetryRemainingMs,
   linearJourneyProgress,
@@ -161,8 +160,14 @@ export default function GenerationScreen() {
     [params.generationId, runNumber],
   );
   const journeyDurationMs = useMemo(
-    () => estimatedCompleteBankDurationMs({ questionCount, questionTypes }),
-    [questionCount, questionTypes],
+    () =>
+      estimatedFirstQuestionDurationMs({
+        questionCount,
+        firstQuestionType,
+        prefixCacheState: "unknown",
+        recentLatencyBucket: "unknown",
+      }),
+    [firstQuestionType, questionCount],
   );
   const journeySteps = useMemo<JourneyStep[]>(
     () => [
@@ -712,13 +717,7 @@ export default function GenerationScreen() {
             await persistRecord({ questionPlan: chunk.questionPlan });
           }
           lastProgressKey = undefined;
-          if (
-            !attemptId &&
-            (rolloutProfile.generationProfile !== "stable_non_thinking_v5_2" ||
-              response.generation.state === "ready")
-          ) {
-            await startAttempt(response.quizId);
-          }
+          if (!attemptId) await startAttempt(response.quizId);
           if (!callEventsReady) schedulePendingCallFlush();
         });
         void questionIngestion.catch(() => undefined);
@@ -1221,8 +1220,8 @@ export default function GenerationScreen() {
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
                   {failed
                     ? locale === "zh-CN"
-                      ? "测验不可用"
-                      : "Quiz unavailable"
+                      ? "第一题不可用"
+                      : "Question 1 unavailable"
                     : !journeyActive
                       ? locale === "zh-CN"
                         ? "正在检查本地生成环境"
@@ -1397,13 +1396,13 @@ function formatFirstQuestionRemaining(
   if (seconds < 60) {
     const roundedSeconds = Math.max(5, Math.ceil(seconds / 5) * 5);
     return locale === "zh-CN"
-      ? `完整测验预计约 ${roundedSeconds} 秒后就绪`
-      : `Full quiz ready in about ${roundedSeconds} sec`;
+      ? `第一题预计约 ${roundedSeconds} 秒后出现`
+      : `Question 1 in about ${roundedSeconds} sec`;
   }
   const minutes = Math.ceil(seconds / 60);
   return locale === "zh-CN"
-    ? `完整测验预计约 ${minutes} 分钟后就绪`
-    : `Full quiz ready in about ${minutes} min`;
+    ? `第一题预计约 ${minutes} 分钟后出现`
+    : `Question 1 in about ${minutes} min`;
 }
 
 function formatRetryFirstQuestionRemaining(

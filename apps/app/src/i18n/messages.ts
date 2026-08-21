@@ -90,7 +90,7 @@ export const messages = {
     estimatedProgress: "Estimated progress",
     firstQuestionEta: "Ready-to-start ETA",
     firstQuestionTakingLonger:
-      "The complete quiz is taking longer than usual — still generating",
+      "Question 1 is taking longer than usual — still generating",
     takingLonger: "Still working carefully — almost there",
     retry: "Retry",
     true: "True",
@@ -141,7 +141,7 @@ export const messages = {
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
     extensionUpdateTitle: "Update ClipQuest",
     extensionUpdateBody:
-      "This version cannot use complete-bank quiz generation yet. Install ClipQuest 0.8.30 or newer to continue.",
+      "This version cannot use progressive quiz generation yet. Install ClipQuest 0.8.31 or newer to continue.",
     extensionStepDownload: "Download and unzip the extension package.",
     extensionStepOpen: "Open chrome://extensions and turn on Developer mode.",
     extensionStepLoad:
@@ -317,7 +317,7 @@ export const messages = {
     finalizingQuestions: "正在打开测验",
     estimatedProgress: "预计进度",
     firstQuestionEta: "开始答题倒计时",
-    firstQuestionTakingLonger: "完整测验比平时稍慢，仍在生成中",
+    firstQuestionTakingLonger: "第一题比平时稍慢，仍在生成中",
     takingLonger: "正在认真处理，很快就好",
     retry: "重试",
     true: "正确",
@@ -365,7 +365,7 @@ export const messages = {
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
     extensionUpdateTitle: "更新 ClipQuest",
     extensionUpdateBody:
-      "当前版本尚不支持完整题库生成。请安装 ClipQuest 0.8.30 或更高版本后继续。",
+      "当前版本尚不支持渐进式测验生成。请安装 ClipQuest 0.8.31 或更高版本后继续。",
     extensionStepDownload: "下载并解压扩展安装包。",
     extensionStepOpen: "打开 chrome://extensions，并启用开发者模式。",
     extensionStepLoad:

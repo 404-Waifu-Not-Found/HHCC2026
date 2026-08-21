@@ -104,11 +104,11 @@ ClipQuest page ───── ordered singleton questions ─────► st
 
 ## 🚦 Current release status
 
-As of **2026-08-20**, native app 0.2.0 and Chrome extension 0.8.30 use one caption-only local quiz engine. New banks are assigned the non-thinking `stable_non_thinking_v5_2` profile: one DeepSeek request must return the complete 5-, 10-, or 15-question JSON bank, the entire bank is validated before upload, and the quiz does not open until every question is stored. A signed arm64 iOS Release build has compiled, installed, launched, and remained running on a connected iPhone 15 Pro under Personal Team provisioning. This is not EAS/TestFlight distribution evidence or a completed funded-key real-video device matrix. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc).
+As of **2026-08-20**, native app 0.2.0 and Chrome extension 0.8.31 use one caption-only local quiz engine. New banks are assigned the non-thinking `stable_non_thinking_v5_2` profile: question 1 is requested and validated first, the attempt opens as soon as that question is stored, and the remaining questions continue in adaptive background batches. A rejected later question preserves the accepted prefix and triggers bounded AI repair for the first missing ordinal; it never creates a learner-facing retry action. A signed arm64 iOS Release build has compiled, installed, launched, and remained running on a connected iPhone 15 Pro under Personal Team provisioning. This is not EAS/TestFlight distribution evidence or a completed funded-key real-video device matrix. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc).
 
 - Android uses package `cc.ccwu.clipquest`, version `0.2.0` / code `2`, minimum API 29, and compile/target API 36. The internal EAS profile produces an APK with Expo Updates disabled.
-- Chrome, iOS, and Android share prompt construction, question planning, DeepSeek JSON parsing, whole-bank validation, option mapping, and serialization through `@clipquest/local-quiz-engine`.
-- Android and iOS report native client metadata; Chrome 0.8.30 reports `chrome_extension`. Older extensions are rejected for new single-call banks.
+- Chrome, iOS, and Android share prompt construction, question planning, incremental DeepSeek JSON parsing, per-question validation, option mapping, and serialization through `@clipquest/local-quiz-engine`.
+- Android and iOS report native client metadata; Chrome 0.8.31 reports `chrome_extension`. Older extensions are rejected for new progressive banks.
 - Native clients store a successfully tested DeepSeek key in user-scoped SecureStore/Keychain and generate only in the foreground. No platform downloads video audio or runs a speech model.
 - iOS uses the same account-scoped native generation boundary and Keychain-backed SecureStore path. The 2026-08-18 physical-device build verified a signed 57 MB arm64 Release artifact, embedded Hermes bundle, Personal Team provisioning, and installation on iOS 27.0 beta; launch, push notifications, a funded-key generation run, VoiceOver, and the 5/10/15 device matrix remain open.
 - Android accepts pasted and Sharesheet YouTube links, requires usable captions, performs no media-resolution or native transcription call, renders math with local KaTeX MathML, and supports opt-in review notifications.
@@ -116,13 +116,13 @@ As of **2026-08-20**, native app 0.2.0 and Chrome extension 0.8.30 use one capti
 
 - The assigned new-bank contract is result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, progressive import `v4`, and profile `stable_non_thinking_v5_2`.
 - The checked-in rollout enables v5.2 and disables v5.3, v5.4, and v5.9-v5.12. `/api/local-ai/profile` remains authoritative for each authenticated learner.
-- Extension `0.8.30` and native app `0.2.0` share the current engine. Existing completed banks retain their original prompt, validator, profile, model, and client-integrity metadata.
+- Extension `0.8.31` and native app `0.2.0` share the current engine. Existing completed banks retain their original prompt, validator, profile, model, and client-integrity metadata.
 - Backend quiz generation is disabled. Web generation requires the Chrome extension; Android generation runs inside the native app.
 - No Worker generation Queue binding and no generated-question fallback path.
-- One non-thinking DeepSeek request must return every planned question. A transport, truncation, schema, ordering, answer-mapping, or duplicate-prompt failure stops that bank after the first call; there is no model retry and no generated-looking fallback.
-- The complete response is buffered and validated locally before question 1 is published. Validated questions are then imported in order through the existing private storage boundary.
+- The first non-thinking DeepSeek request contains only question 1. Later calls request up to three consecutive questions, or at most two when a short answer is present, while the learner answers the accepted prefix.
+- Every completed question object is validated and imported in order. A transport, truncation, schema, ordering, answer-mapping, or duplicate-prompt failure preserves the accepted prefix and automatically regenerates only the first missing ordinal with bounded repair guidance. No generated-looking fallback is allowed.
 - Prose short answers use one to three independent required ideas and three to six complete full-credit variants. The deterministic Worker grader preserves its 67% alternative threshold while normalizing pronouns, safe acronyms, and conservative signal-transfer/processing aliases; formula answers retain structural grading.
-- The attempt opens only after the authoritative state is `ready`, so all 5, 10, or 15 questions are present before the learner sees question 1.
+- The attempt opens after question 1 is stored. If the learner catches the generation frontier, the quiz waits and polls automatically while the existing recovery coordinator continues the missing suffix; there is no manual continuation control.
 - Mixed multiple-choice, true/false, and short-answer plans are seeded, balanced, and bounded to avoid runs longer than two where the selection permits it.
 - D1 stores the validated learner-visible questions plus privacy-safe call events and short recovery-claim leases. Call telemetry and claims never store generation instructions, captions, raw model output, credentials, or DeepSeek errors.
 - Multiple-choice options are securely shuffled before import and shuffled again for each activated learner view; True/False remains True then False.
@@ -198,17 +198,17 @@ The YouTube URL field is the primary action on desktop, tablet, and mobile. The 
 
 For YouTube, the extension or native client reads public caption data, keeps the complete ordered segment set, removes timestamps, joins rolling auto-caption fragments, and produces clean plain text. The toolbar popup is intentionally limited to DeepSeek key configuration; caption acquisition and quiz generation begin from ClipQuest. If complete usable captions are unavailable, generation stops before DeepSeek is called. ClipQuest does not download, decode, or transcribe video audio.
 
-### 4. Generate and validate one complete bank locally
+### 4. Generate question 1, then continue locally
 
-The client sends the complete caption text directly to DeepSeek V4 Flash with thinking disabled, temperature `0.2`, JSON-object response mode, and the exact seeded type plan for every question. Extension 0.8.30 and both native clients make one request for the whole bank. They buffer the response, require the exact 5/10/15 count and order, validate every type-specific answer mapping and duplicate prompt, and only then expose question objects to the upload queue. Any transport or validation failure ends the generation after that one call; there is no automatic model retry or fallback content.
+The client sends the complete caption text directly to DeepSeek V4 Flash with thinking disabled, temperature `0.2`, JSON-object response mode, and a seeded type plan. Extension 0.8.31 and both native clients request question 1 alone, validate it, and expose it to the upload queue immediately. Later calls request small consecutive batches in the background. Each completed object is validated independently, so a bad q9 cannot erase q1–q8. The engine automatically asks DeepSeek to replace the first missing ordinal with the exact validation reason and bounded backoff; it never substitutes fallback content.
 
 ### 5. Import, answer, and save
 
 The page sends each validated question—not the transcript, raw DeepSeek response, or learner's key—to the authenticated import endpoints. The first stored question creates a pipeline-9 generating bank, ordered appends reconcile the remaining items, and skipped or conflicting ordinals fail closed. Existing passed banks remain readable, while incomplete banks stay out of Library selection and review mode.
 
-### 6. Open only when the bank is ready
+### 6. Open on question 1 and recover invisibly
 
-The generation screen uses one fixed-duration, time-linear progress clock; caption metadata and internal stages cannot reset it or change its speed. The learner enters the quiz route only after the server reports the entire bank ready, so there is no missing-question wait between items. Credential or billing failures expose local-AI configuration, while model or schema failures stop the bank without a second DeepSeek call.
+The generation screen uses one fixed-duration, time-linear clock for time to question 1; caption metadata and internal stages cannot reset it or change its speed. The learner enters the quiz route as soon as question 1 is authoritative. Model and schema failures are repaired in the background, and transient attempt-resume failures keep polling with bounded backoff. Invalid credentials or billing still expose local-AI configuration because the model cannot repair account access.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -298,7 +298,7 @@ The primary product runtime is TypeScript/React Native, the browser extension is
 | Browser extension    | Chrome Manifest V3, JavaScript                                   | Web caption access, local streamed DeepSeek generation, retries, and canonical option randomization                  |
 | Edge API             | Cloudflare Workers, Hono, scheduled triggers                     | Better Auth, ordered storage-only question imports, grading, availability, review scheduling, and static assets      |
 | Data and assets      | D1, KV, private R2                                               | Accounts, videos, generating/passed banks, attempts, mastery, rate limits, thumbnails, avatars, and private PDFs     |
-| Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash, Expo fetch                 | Platform-neutral complete-bank prompts, JSON validation, shuffling, and serialization                                |
+| Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash, Expo fetch                 | Platform-neutral progressive prompts, per-question validation, automatic repair, shuffling, and serialization        |
 | Caption acquisition  | YouTube public caption tracks                                    | Caption-only source text; missing or incomplete captions fail before generation                                      |
 | Shared contracts     | TypeScript, Zod                                                  | Versioned page protocol, quiz schemas, API requests, and server validation                                           |
 | Quality and delivery | Vitest, Node test runner, Playwright, ESLint, Prettier, Wrangler | Contract tests, browser journeys, static checks, builds, and deployment                                              |
@@ -312,7 +312,7 @@ Best starting points: [routes](./apps/app/app/) · [components](./apps/app/src/c
 
 ### [Chrome extension](./apps/extension/)
 
-The local caption and quiz engine. The background service worker coordinates YouTube tabs, the ClipQuest page bridge, one complete-bank DeepSeek call, whole-bank validation, downloads, cancellation, and progress. Legacy continuation metadata remains readable for older banks, but the current learner flow has no continuation button. The API key never enters the page bridge.
+The local caption and quiz engine. The background service worker coordinates YouTube tabs, the ClipQuest page bridge, question-first DeepSeek calls, incremental validation, bounded AI repair, downloads, cancellation, and progress. Legacy continuation metadata remains readable for older banks, but the current learner flow has no continuation button. The API key never enters the page bridge.
 
 Best starting points: [local generator](./apps/extension/src/local-generator.js) · [caption text normalization](./apps/extension/src/caption-text.js) · [background worker](./apps/extension/src/background.js) · [manifest](./apps/extension/manifest.json)
 

@@ -141,12 +141,12 @@ test("rejects a delimiter-free oversized SSE frame", async () => {
   assert.equal(fetchCalls, 1);
 });
 
-function stableFullBankInput(fetchImpl) {
+function stableProgressiveInput(fetchImpl, overrides = {}) {
   return {
     title: "Photosynthesis",
     quizLanguage: "en",
     questionCount: 5,
-    questionTypes: ["true_false"],
+    questionTypes: ["multiple_choice"],
     jobId: "22222222-2222-4222-8222-222222222222",
     generationId: "33333333-3333-4333-8333-333333333333",
     generationSessionId: "44444444-4444-4444-8444-444444444444",
@@ -159,41 +159,45 @@ function stableFullBankInput(fetchImpl) {
       ),
     disableStreaming: true,
     fetchImpl,
+    ...overrides,
   };
 }
 
-function completeStableBankResponse() {
-  const facts = [
-    [
-      "Photosynthesis converts light energy into chemical energy.",
-      "It stores captured light energy as chemical energy.",
-    ],
-    [
-      "Chlorophyll absorbs light during photosynthesis.",
-      "Chlorophyll is the light-absorbing pigment in this process.",
-    ],
-    [
-      "Carbon dioxide is used to produce glucose.",
-      "Carbon dioxide contributes material used to make glucose.",
-    ],
-    [
-      "Plant cells perform photosynthesis in chloroplasts.",
-      "Chloroplasts are the organelles where this process occurs.",
-    ],
-    [
-      "Oxygen is released as a product of photosynthesis.",
-      "The process produces and releases oxygen.",
-    ],
+function stableMultipleChoiceQuestion(index, overrides = {}) {
+  const prompts = [
+    "What kind of energy does photosynthesis store in glucose?",
+    "Which pigment absorbs light during photosynthesis?",
+    "Which gas supplies carbon used to produce glucose?",
+    "In which organelle does photosynthesis occur in plant cells?",
+    "Which gas is released as a product of photosynthesis?",
   ];
-  const questions = facts.map(([question, correction], index) => ({
-    id: `q${index + 1}`,
-    type: "true_false",
+  const answers = [
+    "Chemical energy",
+    "Chlorophyll",
+    "Carbon dioxide",
+    "Chloroplast",
+    "Oxygen",
+  ];
+  const answer = answers[index - 1];
+  return {
+    id: `q${index}`,
+    type: "multiple_choice",
     concept: `photosynthesis concept ${index + 1}`,
-    question,
-    explanation: correction,
-    answer: true,
-    correction,
-  }));
+    question: prompts[index - 1],
+    explanation: `${answer} is the supported answer to this photosynthesis question.`,
+    choices: [
+      answer,
+      `Distractor A ${index}`,
+      `Distractor B ${index}`,
+      `Distractor C ${index}`,
+    ],
+    answerIndex: 0,
+    answer,
+    ...overrides,
+  };
+}
+
+function stableResponse(questions) {
   return JSON.stringify({
     choices: [
       {
@@ -209,16 +213,47 @@ function completeStableBankResponse() {
   });
 }
 
-test("stable v5.2 requests, validates, and publishes a complete bank in one call", async () => {
+test("stable v5.2 publishes question one before generating the suffix and automatically repairs one bad ordinal", async () => {
   let fetchCalls = 0;
-  let requestBody;
+  const requestBodies = [];
   const chunks = [];
   const calls = [];
   const result = await shared.generateQuizFromPlainText(
-    stableFullBankInput(async (_url, init) => {
+    stableProgressiveInput(async (_url, init) => {
       fetchCalls += 1;
-      requestBody = JSON.parse(init.body);
-      return new Response(completeStableBankResponse(), {
+      const requestBody = JSON.parse(init.body);
+      requestBodies.push(requestBody);
+      if (fetchCalls === 1) {
+        assert.deepEqual(
+          chunks.map((chunk) => chunk.startIndex),
+          [],
+        );
+      } else if (fetchCalls === 2) {
+        assert.deepEqual(
+          chunks.map((chunk) => chunk.startIndex),
+          [0],
+        );
+      } else if (fetchCalls === 3) {
+        assert.deepEqual(
+          chunks.map((chunk) => chunk.startIndex),
+          [0, 1, 2],
+        );
+      }
+      const questions =
+        fetchCalls === 1
+          ? [stableMultipleChoiceQuestion(1)]
+          : fetchCalls === 2
+            ? [
+                stableMultipleChoiceQuestion(2),
+                stableMultipleChoiceQuestion(3),
+                stableMultipleChoiceQuestion(4, {
+                  choices: ["Chloroplast", "Nucleus", "Nucleus", "Ribosome"],
+                }),
+              ]
+            : fetchCalls === 3
+              ? [stableMultipleChoiceQuestion(4)]
+              : [stableMultipleChoiceQuestion(5)];
+      return new Response(stableResponse(questions), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -230,43 +265,69 @@ test("stable v5.2 requests, validates, and publishes a complete bank in one call
     async (call) => calls.push(call),
   );
 
-  assert.equal(fetchCalls, 1);
-  assert.equal(requestBody.thinking.type, "disabled");
-  assert.match(requestBody.messages.at(-1).content, /Create exactly 5/);
+  assert.equal(fetchCalls, 4);
+  assert.equal(requestBodies[0].thinking.type, "disabled");
+  assert.match(requestBodies[0].messages.at(-1).content, /Create exactly 1/);
+  assert.match(requestBodies[1].messages.at(-1).content, /Create exactly 3/);
+  assert.match(requestBodies[2].messages.at(-1).content, /automatic retry/);
+  assert.match(requestBodies[2].messages.at(-1).content, /four unique choices/);
+  assert.match(requestBodies[3].messages.at(-1).content, /Create exactly 1/);
   assert.equal(result.quiz.questions.length, 5);
   assert.deepEqual(
     chunks.map((chunk) => chunk.startIndex),
     [0, 1, 2, 3, 4],
   );
-  assert.deepEqual(calls, [
-    {
-      generationSessionId: "44444444-4444-4444-8444-444444444444",
-      callIndex: 0,
-      startIndex: 0,
-      requestedCount: 5,
-      acceptedCount: 5,
-      classification: "primary",
-      outcome: "complete",
-      retryDelayMs: 0,
-      elapsedMs: calls[0].elapsedMs,
-      inputTokens: 900,
-      outputTokens: 600,
-      reasoningTokens: 0,
-      usageComplete: true,
-    },
-  ]);
-  assert.equal(result.metrics.aiCalls, 1);
-  assert.equal(result.metrics.retryCount, 0);
+  assert.deepEqual(
+    calls.map((call) => ({
+      startIndex: call.startIndex,
+      requestedCount: call.requestedCount,
+      acceptedCount: call.acceptedCount,
+      classification: call.classification,
+      outcome: call.outcome,
+    })),
+    [
+      {
+        startIndex: 0,
+        requestedCount: 1,
+        acceptedCount: 1,
+        classification: "primary",
+        outcome: "complete",
+      },
+      {
+        startIndex: 1,
+        requestedCount: 3,
+        acceptedCount: 2,
+        classification: "primary",
+        outcome: "answer_mapping_invalid",
+      },
+      {
+        startIndex: 3,
+        requestedCount: 1,
+        acceptedCount: 1,
+        classification: "automatic_retry",
+        outcome: "complete",
+      },
+      {
+        startIndex: 4,
+        requestedCount: 1,
+        acceptedCount: 1,
+        classification: "primary",
+        outcome: "complete",
+      },
+    ],
+  );
+  assert.equal(result.metrics.aiCalls, 4);
+  assert.equal(result.metrics.retryCount, 1);
 });
 
-test("stable v5.2 never retries a failed full-bank call", async () => {
+test("stable v5.2 does not retry an invalid credential", async () => {
   let fetchCalls = 0;
   const calls = [];
   await assert.rejects(
     shared.generateQuizFromPlainText(
-      stableFullBankInput(async () => {
+      stableProgressiveInput(async () => {
         fetchCalls += 1;
-        return new Response('{"error":"busy"}', { status: 503 });
+        return new Response('{"error":"unauthorized"}', { status: 401 });
       }),
       "private-test-key",
       () => undefined,
@@ -274,12 +335,74 @@ test("stable v5.2 never retries a failed full-bank call", async () => {
       () => undefined,
       async (call) => calls.push(call),
     ),
-    /temporarily unavailable/,
+    /rejected the configured API key/,
   );
   assert.equal(fetchCalls, 1);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].requestedCount, 5);
+  assert.equal(calls[0].requestedCount, 1);
   assert.equal(calls[0].acceptedCount, 0);
   assert.equal(calls[0].retryDelayMs, 0);
-  assert.equal(calls[0].outcome, "transient_http");
+  assert.equal(calls[0].outcome, "credential_required");
+});
+
+test("stable v5.2 resumes an accepted prefix without learner intervention", async () => {
+  let fetchCalls = 0;
+  const chunks = [];
+  const calls = [];
+  const seed = "d".repeat(64);
+  const result = await shared.generateQuizFromPlainText(
+    stableProgressiveInput(
+      async () => {
+        fetchCalls += 1;
+        const questions =
+          fetchCalls === 1
+            ? [
+                stableMultipleChoiceQuestion(2),
+                stableMultipleChoiceQuestion(3),
+                stableMultipleChoiceQuestion(4),
+              ]
+            : [stableMultipleChoiceQuestion(5)];
+        return new Response(stableResponse(questions), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+      {
+        continuation: {
+          startIndex: 1,
+          resultProtocolVersion: 6,
+          promptVersion: "quiz-local-json-stream-v5.2",
+          validatorVersion: "validator-local-progressive-v4.1",
+          generationProfile: "stable_non_thinking_v5_2",
+          questionPlan: {
+            seed,
+            types: shared.buildQuestionTypePlanFromSeed(
+              ["multiple_choice"],
+              5,
+              seed,
+            ),
+          },
+          nextCallIndex: 4,
+          acceptedQuestions: [stableMultipleChoiceQuestion(1)],
+        },
+      },
+    ),
+    "private-test-key",
+    () => undefined,
+    undefined,
+    async (chunk) => chunks.push(chunk),
+    async (call) => calls.push(call),
+  );
+
+  assert.equal(fetchCalls, 2);
+  assert.equal(result.generatedStartIndex, 1);
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.question.id),
+    ["q2", "q3", "q4", "q5"],
+  );
+  assert.deepEqual(
+    calls.map((call) => call.callIndex),
+    [4, 5],
+  );
+  assert.ok(calls.every((call) => call.classification === "primary"));
 });

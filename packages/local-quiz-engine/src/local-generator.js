@@ -69,6 +69,9 @@ export const LOCAL_GENERATION_RETRY_POLICY = Object.freeze({
   maxActiveRecoveryMs: MAX_ACTIVE_RECOVERY_MS,
   streamIdleTimeoutMs: STREAM_IDLE_TIMEOUT_MS,
 });
+const STABLE_V52_MAX_AUTOMATIC_RETRIES_PER_ORDINAL = 2;
+const STABLE_V52_MAX_GENERATION_ATTEMPTS =
+  STABLE_V52_MAX_AUTOMATIC_RETRIES_PER_ORDINAL + 1;
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
@@ -3861,19 +3864,18 @@ function generationMessages(input, isTransientRetry) {
   const requestPurpose = isTransientRetry
     ? "an automatic retry for"
     : "the primary request for";
-  const focusExcerpt = input.singleCallFullBankMode
-    ? input.plainText
-    : (input.focusExcerpt ??
-      focusExcerptForOrdinal(
-        input.plainText,
-        input.questionOffset,
-        input.totalQuestionCount,
-        0,
-        {
-          strict: input.strictConceptMode === true,
-          topicHint: input.title,
-        },
-      ));
+  const focusExcerpt =
+    input.focusExcerpt ??
+    focusExcerptForOrdinal(
+      input.plainText,
+      input.questionOffset,
+      input.totalQuestionCount,
+      0,
+      {
+        strict: input.strictConceptMode === true,
+        topicHint: input.title,
+      },
+    );
   const groundedInstructions = input.groundedMode
     ? `Every question must include sourceEvidence copied exactly from the primary source focus and a structured claim describing that evidence. Never cite material outside the primary focus. For multiple choice, correctAnswer must be an exact phrase contained in sourceEvidence. Each distractor must contain text and a specific whyWrong explanation; equivalent wording, algebraic identities, and another defensible answer are forbidden. For true/false, never return an answer boolean. Copy sourceEvidence into supportedStatement. For mode=supported, question must equal supportedStatement and mutation must be null. For mode=mutated, change exactly one occurrence using mutation.sourceValue and mutation.replacementValue; question must equal the locally reproducible mutation. Prefer the requested polarity, but use supported mode whenever a safe mutation is unavailable.`
     : "";
@@ -3891,11 +3893,9 @@ function generationMessages(input, isTransientRetry) {
   const qualityExamples = input.strictConceptMode
     ? `Quality examples (content guidance only): BAD: "According to the lesson, what conditions define continuity?" GOOD: "What conditions must hold for a function to be continuous at a point?" BAD: "Where did Mendeleev apply to university?" GOOD: "How does periodic position relate to recurring chemical properties?" BAD: "What percentage of the exam covers limits?" GOOD: "How do limits determine whether a function is continuous?"`
     : "";
-  const referenceMessage = input.singleCallFullBankMode
-    ? `Lesson title: ${input.title}\nQuiz language: ${input.quizLanguage}`
-    : input.strictConceptMode
-      ? `Topic hint — never test this label: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nPrivate reference material — never mention this source:\n${input.plainText}`
-      : `Lesson title: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nComplete plain-text lesson transcript:\n${input.plainText}`;
+  const referenceMessage = input.strictConceptMode
+    ? `Topic hint — never test this label: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nPrivate reference material — never mention this source:\n${input.plainText}`
+    : `Lesson title: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nComplete plain-text lesson transcript:\n${input.plainText}`;
   const focusLabel = input.strictConceptMode
     ? "Eligible instructional evidence; only this excerpt may ground the learner-facing content"
     : "Primary source focus for this slot; use only instructional claims copied from this excerpt";
@@ -7268,12 +7268,6 @@ export async function generateQuizFromPlainText(
     );
   }
   const legacyAutomaticRecoveryMode = legacyMode && continuationStartIndex > 0;
-  if (stableV52Mode && continuationStartIndex > 0) {
-    throw new GenerationFailure(
-      "This incomplete stable-v5.2 bank requires a compatibility upgrade before it can recover.",
-      "local_state_conflict",
-    );
-  }
   const automaticMode =
     legacyAutomaticRecoveryMode || (!legacyMode && !stableV52Mode);
   const groundedMode = !legacyMode && automaticMode && !automaticV53Mode;
@@ -7426,8 +7420,12 @@ export async function generateQuizFromPlainText(
     );
     multipleChoiceIndex += 1;
   });
-  let automaticRetryUsed = false;
   let retryNextMissing = false;
+  let nextMissingRetryKind;
+  let nextMissingFailureReason;
+  let nextMissingFailureMessage;
+  let nextMissingRepairContext;
+  const stableRetriesByOrdinal = new Map();
   let callIndex = Number.isInteger(rawInput?.callIndexStart)
     ? rawInput.callIndexStart
     : Number.isInteger(input.continuation?.nextCallIndex)
@@ -7631,152 +7629,46 @@ export async function generateQuizFromPlainText(
     });
   }
 
-  if (stableV52Mode) {
-    const fullBankInput = {
-      ...input,
-      legacyMode: false,
-      singleCallFullBankMode: true,
-      questionCount: input.questionCount,
-      totalQuestionCount: input.questionCount,
-      questionOffset: 0,
-      questionTypePlan: [...input.questionTypePlan],
-      trueFalseAnswerPlan: [...input.trueFalseAnswerPlan],
-      acceptedQuestions: [],
-    };
-    const callStartedAt = Date.now();
-    let result;
-    let failure;
-    onProgress("creating_questions", 0.2, {
-      attempt: 1,
-      maxAttempts: 1,
-      status: "generating",
-    });
-    totals.aiCalls = 1;
-    try {
-      result = await callDeepSeekJson(
-        fullBankInput,
-        apiKey,
-        signal,
-        false,
-        () => undefined,
-      );
-      result.quiz = validateQuiz(result.quiz, fullBankInput);
-    } catch (error) {
-      failure =
-        error instanceof GenerationFailure
-          ? error
-          : new GenerationFailure(
-              error instanceof Error
-                ? error.message
-                : "The generated quiz was invalid.",
-              "schema_invalid",
-            );
-    }
-
-    if (failure) {
-      await onCall({
-        generationSessionId: input.generationSessionId,
-        callIndex,
-        startIndex: 0,
-        requestedCount: input.questionCount,
-        acceptedCount: 0,
-        classification: "primary",
-        outcome: failure.reasonCode,
-        retryDelayMs: 0,
-        elapsedMs: Math.max(0, Date.now() - callStartedAt),
-        usageComplete: false,
-      });
-      throw failure;
-    }
-
-    totals.inputTokens = result.usage.inputTokens;
-    totals.outputTokens = result.usage.outputTokens;
-    totals.reasoningTokens = result.usage.reasoningTokens;
-    for (let index = 0; index < result.quiz.questions.length; index += 1) {
-      const question = randomizeQuestionAtPosition(
-        result.quiz.questions[index],
-        answerPositionByQuestion.get(index),
-      );
-      acceptedQuestions.push(question);
-      await onChunk({
-        ...metadata,
-        title: quizTitle,
-        startIndex: index,
-        totalQuestions: input.questionCount,
-        question,
-        metrics: {
-          aiCalls: index === 0 ? 1 : 0,
-          retryCount: 0,
-          inputTokens:
-            index === 0 && result.usage.usageComplete
-              ? result.usage.inputTokens
-              : 0,
-          outputTokens:
-            index === 0 && result.usage.usageComplete
-              ? result.usage.outputTokens
-              : 0,
-          reasoningTokens:
-            index === 0 && result.usage.usageComplete
-              ? result.usage.reasoningTokens
-              : 0,
-          elapsedMs: index === 0 ? Math.max(1, Date.now() - callStartedAt) : 1,
-        },
-      });
-      const complete = index + 1 === input.questionCount;
-      onProgress(
-        complete ? "finalizing_questions" : "creating_questions",
-        complete ? 1 : 0.2 + ((index + 1) / input.questionCount) * 0.72,
-        {
-          attempt: 1,
-          maxAttempts: 1,
-          status: complete ? "complete" : "generating",
-        },
-      );
-    }
-    await onCall({
-      generationSessionId: input.generationSessionId,
-      callIndex,
-      startIndex: 0,
-      requestedCount: input.questionCount,
-      acceptedCount: input.questionCount,
-      classification: "primary",
-      outcome: "complete",
-      retryDelayMs: 0,
-      elapsedMs: Math.max(0, Date.now() - callStartedAt),
-      ...(result.usage.usageComplete
-        ? {
-            inputTokens: result.usage.inputTokens,
-            outputTokens: result.usage.outputTokens,
-            reasoningTokens: result.usage.reasoningTokens,
-          }
-        : {}),
-      usageComplete: result.usage.usageComplete,
-    });
-    return {
-      ...metadata,
-      quiz: { title: quizTitle, questions: acceptedQuestions },
-      metrics: {
-        ...totals,
-        elapsedMs: Math.max(1, Date.now() - startedAt),
-      },
-    };
-  }
-
   while (acceptedQuestions.length < input.questionCount) {
     const questionOffset = acceptedQuestions.length;
     const acceptedBeforeCall = acceptedQuestions.length;
-    const chunkQuestionCount = retryNextMissing
+    const automaticRetry = retryNextMissing;
+    const retryKindForCall = automaticRetry ? nextMissingRetryKind : undefined;
+    const retryReasonForCall = automaticRetry
+      ? nextMissingFailureReason
+      : undefined;
+    const retryMessageForCall = automaticRetry
+      ? nextMissingFailureMessage
+      : undefined;
+    const retryContextForCall = automaticRetry
+      ? nextMissingRepairContext
+      : undefined;
+    const chunkQuestionCount = automaticRetry
       ? 1
       : adaptiveChunkQuestionCount(
           input.questionTypePlan,
           questionOffset,
           input.questionCount,
         );
-    const classification = retryNextMissing ? "automatic_retry" : "primary";
+    const classification = automaticRetry ? "automatic_retry" : "primary";
     if (classification === "automatic_retry") {
       totals.retryCount += 1;
       retryNextMissing = false;
+      nextMissingRetryKind = undefined;
+      nextMissingFailureReason = undefined;
+      nextMissingFailureMessage = undefined;
+      nextMissingRepairContext = undefined;
     }
+    const baseRepairGuidance = retryKindForCall
+      ? retryGuidanceFor(
+          retryKindForCall,
+          acceptedQuestions,
+          retryReasonForCall,
+        )
+      : undefined;
+    const exactRepairGuidance = retryMessageForCall
+      ? `${baseRepairGuidance ?? "Return a corrected replacement."} The previous candidate was rejected because: ${String(retryMessageForCall).slice(0, 360)}`
+      : baseRepairGuidance;
     const chunkInput = {
       ...input,
       legacyMode,
@@ -7792,12 +7684,20 @@ export async function generateQuizFromPlainText(
         questionOffset + chunkQuestionCount,
       ),
       acceptedQuestions: [...acceptedQuestions],
+      repairGuidance: exactRepairGuidance,
+      repairContext: retryContextForCall,
     };
-    const callAttempt = classification === "automatic_retry" ? 2 : 1;
+    const callAttempt =
+      classification === "automatic_retry"
+        ? (stableRetriesByOrdinal.get(questionOffset) ?? 0) + 1
+        : 1;
     const chunkProgress = questionOffset / input.questionCount;
+    const maxAttempts = stableV52Mode
+      ? STABLE_V52_MAX_GENERATION_ATTEMPTS
+      : LEGACY_MAX_GENERATION_ATTEMPTS;
     onProgress("creating_questions", 0.2 + chunkProgress * 0.72, {
       attempt: callAttempt,
-      maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
+      maxAttempts,
       status: classification === "automatic_retry" ? "retrying" : "generating",
     });
     const callStartedAt = Date.now();
@@ -7873,7 +7773,7 @@ export async function generateQuizFromPlainText(
           : 0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
         {
           attempt: callAttempt,
-          maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
+          maxAttempts,
           status: complete ? "complete" : "generating",
         },
       );
@@ -7892,7 +7792,7 @@ export async function generateQuizFromPlainText(
               "type_or_order_mismatch",
             );
           }
-          publishQuestion(question, relativeIndex, title);
+          return publishQuestion(question, relativeIndex, title);
         },
       );
       validateQuiz(result.quiz, chunkInput);
@@ -7927,12 +7827,41 @@ export async function generateQuizFromPlainText(
         // missing suffix, so continuing with the next primary chunk is safer
         // and cheaper than spending the transport retry budget.
         callFailure = undefined;
-      } else if (callFailure.transient && !automaticRetryUsed) {
-        automaticRetryUsed = true;
-        retryDelayMs = boundedRetryDelayMilliseconds(
-          1,
-          callFailure.retryAfterMs,
+      } else {
+        const missingOrdinal = acceptedQuestions.length;
+        const retryKind = automaticRetryKindForFailure(
+          callFailure.reasonCode,
+          false,
         );
+        const retriesUsed = stableRetriesByOrdinal.get(missingOrdinal) ?? 0;
+        if (
+          retryKind &&
+          retriesUsed < STABLE_V52_MAX_AUTOMATIC_RETRIES_PER_ORDINAL
+        ) {
+          stableRetriesByOrdinal.set(missingOrdinal, retriesUsed + 1);
+          retryNextMissing = true;
+          nextMissingRetryKind = retryKind;
+          nextMissingFailureReason = callFailure.reasonCode;
+          nextMissingFailureMessage = callFailure.message;
+          nextMissingRepairContext = callFailure.repairContext;
+          retryDelayMs =
+            retryKind === "transport"
+              ? boundedRetryDelayMilliseconds(
+                  retriesUsed + 1,
+                  callFailure.retryAfterMs,
+                  () => input.secureRandom() / 0x1_0000_0000,
+                )
+              : Math.max(
+                  150,
+                  Math.round(
+                    boundedRetryDelayMilliseconds(
+                      retriesUsed + 1,
+                      0,
+                      () => input.secureRandom() / 0x1_0000_0000,
+                    ) / 3,
+                  ),
+                );
+        }
       }
     }
 
@@ -7958,14 +7887,15 @@ export async function generateQuizFromPlainText(
     callIndex += 1;
 
     if (!callFailure) continue;
-    if (callFailure.transient && retryDelayMs > 0) {
-      retryNextMissing = true;
+    if (retryNextMissing && retryDelayMs > 0) {
+      const retryAttempt =
+        (stableRetriesByOrdinal.get(acceptedQuestions.length) ?? 0) + 1;
       onProgress(
         "creating_questions",
         0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
         {
-          attempt: 2,
-          maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
+          attempt: retryAttempt,
+          maxAttempts,
           status: "retrying",
           retryDelayMs,
           reasonCode: callFailure.reasonCode,

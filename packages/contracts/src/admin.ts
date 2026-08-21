@@ -319,7 +319,7 @@ export const AdminSystemResponseSchema = z.object({
         "prompt_first_auto_v5_11",
         "prompt_first_auto_v5_12",
       ]),
-      requiredExtensionVersion: z.literal("0.8.30"),
+      requiredExtensionVersion: z.literal("0.8.31"),
       requiredCapability: z.literal("question-stream-v7"),
       states: z.object({
         generating: z.number().int().nonnegative(),

@@ -37,9 +37,9 @@ This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 mi
 
 ## Current web and native generation candidate
 
-Extension `0.8.30` and native app `0.2.0` share the caption-only local engine. The checked-in rollout assigns `stable_non_thinking_v5_2`: result protocol `6`, capability `question-stream-v2`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, pipeline `9`, and progressive import `v4`. One non-thinking DeepSeek request must return the complete bank; the client validates every question before upload, opens only when the bank is ready, and performs no model retry or fallback generation.
+Extension `0.8.31` and native app `0.2.0` share the caption-only local engine. The checked-in rollout assigns `stable_non_thinking_v5_2`: result protocol `6`, capability `question-stream-v2`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, pipeline `9`, and progressive import `v4`. The first non-thinking DeepSeek call requests only question 1; the client validates and imports it before opening the attempt, then generates the remaining questions in small background batches. A rejected later object preserves the accepted prefix and triggers bounded AI repair of the first missing ordinal. There is no learner retry control or fallback generation.
 
-Automated coverage proves one request on success and failure, exact requested/accepted call accounting, fixed-speed progress mapping, whole-bank admission, mixed question types, option mapping, True/False answers, short-answer rubrics, and an explicit completion-screen PDF download action.
+Automated coverage proves question-1-first admission, exact requested/accepted call accounting, fixed-speed first-question progress, accepted-prefix preservation, later-ordinal repair, mixed question types, option mapping, True/False answers, short-answer rubrics, and an explicit completion-screen PDF download action.
 
 A commit, push, Worker deployment, matching extension installation, authenticated profile check, direct benchmark, and real-client matrices remain distinct evidence. Android additionally requires EAS signing, FCM/App Links configuration, and physical-device acceptance.
 

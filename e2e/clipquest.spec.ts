@@ -218,7 +218,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.8.29" : "0.8.30",
+            version: outdated ? "0.8.30" : "0.8.31",
             configured: true,
             capabilities: outdated
               ? []
@@ -767,7 +767,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.30 or newer", { exact: false }),
+    page.getByText("0.8.31 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -2061,7 +2061,7 @@ async function installMocks(page: Page): Promise<Scenario> {
           supportedPromptVersion: "quiz-local-json-stream-v5.12",
           supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
           effectiveDefaultProfile: "stable_non_thinking_v5_2",
-          requiredExtensionVersion: "0.8.30",
+          requiredExtensionVersion: "0.8.31",
           requiredCapability: "question-stream-v7",
           states: {
             generating: 2,

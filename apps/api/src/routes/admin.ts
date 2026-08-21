@@ -534,7 +534,7 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
         supportedPromptVersion: LOCAL_QUIZ_PROMPT_VERSION,
         supportedValidatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
         effectiveDefaultProfile: effectiveDefaultProfile.generationProfile,
-        requiredExtensionVersion: "0.8.30",
+        requiredExtensionVersion: "0.8.31",
         requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         states: generationCounts,
       },

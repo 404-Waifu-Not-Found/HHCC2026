@@ -389,27 +389,25 @@ export default function QuizScreen() {
     let failures = 0;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
+      let delayMs = 900;
       try {
         await resume();
         failures = 0;
-      } catch (cause) {
+      } catch {
         failures += 1;
-        if (failures >= 3 && active) {
-          setWaitingForQuestions(false);
-          setError(
-            cause instanceof Error ? cause.message : t("quizResumeFailed"),
-          );
-          return;
-        }
+        // A temporary resume failure must not turn progressive generation into
+        // a learner-facing retry task. Keep polling with bounded backoff while
+        // the generation-status loop separately owns AI suffix recovery.
+        delayMs = Math.min(5_000, 900 * 2 ** Math.min(failures, 3));
       }
-      if (active) timeout = setTimeout(() => void poll(), 900);
+      if (active) timeout = setTimeout(() => void poll(), delayMs);
     };
     timeout = setTimeout(() => void poll(), 500);
     return () => {
       active = false;
       if (timeout) clearTimeout(timeout);
     };
-  }, [resume, t, waitingForQuestions]);
+  }, [resume, waitingForQuestions]);
 
   useEffect(
     () =>
