@@ -74,4 +74,14 @@ describe("Android UI regressions", () => {
     expect(quiz).toContain("styles.statsCompact");
     expect(quiz).toContain("styles.statItemCompact");
   });
+
+  it("keeps the compact tab bar quiet and defaults new installs to reduced motion", () => {
+    const tabs = source("app/(tabs)/_layout.tsx");
+    const settings = source("src/providers/SettingsProvider.tsx");
+
+    expect(tabs).toContain("borderTopWidth: 0");
+    expect(tabs).toContain("borderRadius: radii.medium");
+    expect(settings).toContain("useState(true)");
+    expect(settings).toContain('typeof parsed.reduceMotion === "boolean"');
+  });
 });

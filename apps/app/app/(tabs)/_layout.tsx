@@ -242,7 +242,9 @@ const styles = StyleSheet.create({
   bottomBar: {
     width: "100%",
     minHeight: controls.navigationHeight,
-    borderTopWidth: borders.hairline,
+    // The tab bar already has a strong surface change from the content. A
+    // full-width rule here reads like an accidental extra toolbar on phones.
+    borderTopWidth: 0,
     paddingTop: spacing[1],
     paddingHorizontal: spacing[2],
   },
@@ -285,6 +287,8 @@ const styles = StyleSheet.create({
     gap: 0,
     paddingHorizontal: spacing[1],
     paddingVertical: 3,
+    borderWidth: 0,
+    borderRadius: radii.medium,
   },
   itemLabel: {
     minWidth: 0,

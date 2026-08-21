@@ -44,7 +44,7 @@ export function SettingsProvider({ children }: PropsWithChildren) {
     Localization.getLocales()[0]?.languageCode === "zh" ? "zh-CN" : "en",
   );
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
-  const [reduceMotion, setReduceMotionState] = useState(false);
+  const [reduceMotion, setReduceMotionState] = useState(true);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -58,7 +58,14 @@ export function SettingsProvider({ children }: PropsWithChildren) {
       const parsed = parseStoredSettings(stored);
       if (parsed.locale) setLocaleState(parsed.locale);
       if (parsed.themeMode) setThemeModeState(parsed.themeMode);
-      if (parsed.reduceMotion || systemReduceMotion) setReduceMotionState(true);
+      // Reduced motion is the calm, predictable default for a new install.
+      // An explicit stored choice still wins so existing learners retain the
+      // preference they selected in Settings.
+      if (typeof parsed.reduceMotion === "boolean") {
+        setReduceMotionState(parsed.reduceMotion);
+      } else if (systemReduceMotion) {
+        setReduceMotionState(true);
+      }
 
       const reveal = () => {
         if (!cancelled) setReady(true);

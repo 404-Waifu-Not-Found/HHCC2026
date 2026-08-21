@@ -571,12 +571,12 @@ function CardSection({
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 92,
+    minHeight: 0,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing[4],
-    marginBottom: spacing[4],
+    marginBottom: spacing[3],
   },
   headerCopy: {
     minWidth: 0,
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   },
   importSurfaceCompact: {
     padding: spacing[4],
-    gap: spacing[4],
+    gap: spacing[3],
   },
   platforms: {
     flexDirection: "row",
@@ -664,8 +664,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   sections: {
-    marginTop: spacing[8],
-    gap: spacing[8],
+    marginTop: spacing[6],
+    gap: spacing[6],
   },
   cardRow: {
     paddingVertical: spacing[2],
