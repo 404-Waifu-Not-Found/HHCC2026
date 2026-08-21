@@ -125,6 +125,35 @@ export async function pollWorkerAssetShells({
   return results;
 }
 
+export async function retryWorkerAssetProbe(
+  options,
+  {
+    attempts = 21,
+    delayMs = 3_000,
+    probe = probeWorkerAssetShells,
+    sleep = (milliseconds) =>
+      new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  } = {},
+) {
+  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 60) {
+    throw new Error("Probe attempts must be an integer from 1 through 60.");
+  }
+  if (!Number.isFinite(delayMs) || delayMs < 0 || delayMs > 10_000) {
+    throw new Error("Probe delay must be between 0 and 10000 milliseconds.");
+  }
+
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await probe(options);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await sleep(delayMs);
+    }
+  }
+  throw lastError;
+}
+
 function requestHeaders(versionId) {
   const headers = new Headers({
     Accept: "text/html,application/json;q=0.9,*/*;q=0.8",

@@ -4,11 +4,16 @@ import test from "node:test";
 import {
   probeWorkerAssetShells,
   productionShellPaths,
+  retryWorkerAssetProbe,
 } from "./probe-worker-assets.mjs";
 
 test("probes every shell and its version-pinned entry bundle", async () => {
   const versionId = "873e0843-ab3b-4a2a-9d0d-4581dcceb810";
   const server = createServer((request, response) => {
+    assert.equal(
+      request.headers["cloudflare-workers-version-overrides"],
+      `clipquest="${versionId}"`,
+    );
     const url = new URL(request.url ?? "/", "http://localhost");
     if (url.pathname === "/health") {
       response.setHeader("Content-Type", "application/json");
@@ -54,4 +59,31 @@ test("probes every shell and its version-pinned entry bundle", async () => {
       server.close((error) => (error ? reject(error) : resolve())),
     );
   }
+});
+
+test("waits through bounded version-override propagation", async () => {
+  let probeCalls = 0;
+  let sleeps = 0;
+  const result = await retryWorkerAssetProbe(
+    { versionId: "new-version" },
+    {
+      attempts: 8,
+      delayMs: 3_000,
+      probe: async () => {
+        probeCalls += 1;
+        if (probeCalls < 7) throw new Error("version not propagated");
+        return { workerVersion: { versionId: "new-version" } };
+      },
+      sleep: async (milliseconds) => {
+        assert.equal(milliseconds, 3_000);
+        sleeps += 1;
+      },
+    },
+  );
+
+  assert.deepEqual(result, {
+    workerVersion: { versionId: "new-version" },
+  });
+  assert.equal(probeCalls, 7);
+  assert.equal(sleeps, 6);
 });

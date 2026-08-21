@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   pollWorkerAssetShells,
   probeWorkerAssetShells,
+  retryWorkerAssetProbe,
 } from "./probe-worker-assets.mjs";
 import { resolveWorkerPreviewUrl } from "./worker-preview-url.mjs";
 
@@ -135,7 +136,7 @@ try {
   deploymentChanged = true;
   evidence.steps.push({ name: "zero_percent_stage", ok: true });
 
-  const overrideProbe = await retryProbe({
+  const overrideProbe = await retryWorkerAssetProbe({
     origin: productionOrigin,
     versionId: newVersion,
     requireAffinity: true,
@@ -195,6 +196,8 @@ try {
           "--yes",
         ],
         apiRoot,
+        false,
+        true,
       );
       evidence.rollback = { ok: true, versionId: previousVersion };
     } catch (rollbackError) {
@@ -212,20 +215,6 @@ try {
   throw error;
 }
 
-async function retryProbe(options) {
-  let lastError;
-  for (let attempt = 1; attempt <= 6; attempt += 1) {
-    try {
-      return await probeWorkerAssetShells(options);
-    } catch (error) {
-      lastError = error;
-      if (attempt < 6)
-        await new Promise((resolve) => setTimeout(resolve, 2_000));
-    }
-  }
-  throw lastError;
-}
-
 function git(argumentsList) {
   return run("git", argumentsList, workspaceRoot, true);
 }
@@ -239,12 +228,22 @@ function wranglerJson(argumentsList) {
   return JSON.parse(output.slice(firstObject));
 }
 
-function run(command, argumentsList, cwd, capture = false) {
+function run(
+  command,
+  argumentsList,
+  cwd,
+  capture = false,
+  nonInteractive = false,
+) {
   const result = spawnSync(command, argumentsList, {
     cwd,
     encoding: "utf8",
-    env: process.env,
-    stdio: capture ? "pipe" : "inherit",
+    env: nonInteractive ? { ...process.env, CI: "true" } : process.env,
+    stdio: capture
+      ? "pipe"
+      : nonInteractive
+        ? ["ignore", "inherit", "inherit"]
+        : "inherit",
   });
   if (capture) {
     if (result.stdout) process.stdout.write(result.stdout);
