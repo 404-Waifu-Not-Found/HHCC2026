@@ -30,6 +30,11 @@ export async function preGenerateImportedQuiz(
     }
     await saveImportedVideo({
       ...imported,
+      video: {
+        ...imported.video,
+        durationSeconds: transcript.verifiedDurationSeconds,
+        sourceLanguage: imported.video.sourceLanguage ?? transcript.language,
+      },
       captions: {
         ...imported.captions,
         available: true,
@@ -37,6 +42,10 @@ export async function preGenerateImportedQuiz(
         preferredCompleteness: transcript.completeness,
       },
       transcriptionMode: "captions",
+      capture: {
+        ...imported.capture,
+        expectedDurationSeconds: transcript.verifiedDurationSeconds,
+      },
       requiresLocalTranscription: false,
     });
     await updateMatchingState(imported.video.id, input.idempotencyKey, {

@@ -82,6 +82,30 @@
     return globalThis.ytInitialPlayerResponse ?? null;
   }
 
+  function observedDurationSeconds(response) {
+    const player = document.getElementById("movie_player");
+    const video = document.querySelector("video");
+    let playerDuration;
+    try {
+      playerDuration = player?.getDuration?.();
+    } catch {
+      playerDuration = undefined;
+    }
+    const candidates = [
+      response?.videoDetails?.lengthSeconds,
+      response?.microformat?.playerMicroformatRenderer?.lengthSeconds,
+      playerDuration,
+      video?.duration,
+    ];
+    for (const candidate of candidates) {
+      const duration = Number(candidate);
+      if (Number.isFinite(duration) && duration > 0) {
+        return Math.ceil(duration);
+      }
+    }
+    return null;
+  }
+
   function safeTracks(response) {
     const tracks =
       response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
@@ -176,7 +200,11 @@
         `YouTube alternate captions failed (${captionResponse.status}).`,
       );
     }
-    return { body, tracks };
+    return {
+      body,
+      tracks,
+      durationSeconds: observedDurationSeconds(playerResponse),
+    };
   }
 
   function activatePlayerCaptions(response) {
@@ -407,6 +435,11 @@
         new CustomEvent(RESPONSE_EVENT, {
           detail: {
             requestId,
+            durationSeconds:
+              observedDurationSeconds(response) ??
+              (alternateResult.status === "fulfilled"
+                ? alternateResult.value.durationSeconds
+                : null),
             tracks:
               alternateResult.status === "fulfilled"
                 ? alternateResult.value.tracks

@@ -88,11 +88,26 @@ test("long local generation uses a heartbeat port", () => {
 
 test("the popup exposes local quiz JSON and plain-text caption download", () => {
   assert.ok(manifest.permissions.includes("downloads"));
-  assert.equal(manifest.version, "0.3.1");
+  assert.equal(manifest.version, "0.3.2");
   assert.match(popupHtml, /Generate quiz JSON/);
   assert.match(popupHtml, /Download \.txt/);
   assert.match(popup, /message\.response\.result\.quiz/);
   assert.match(background, /captionsToPlainText/);
+});
+
+test("caption extraction returns an independently observed video duration", async () => {
+  const pageBridge = await readFile(
+    new URL("../src/youtube-page.js", import.meta.url),
+    "utf8",
+  );
+  const contentScript = await readFile(
+    new URL("../src/youtube-content.js", import.meta.url),
+    "utf8",
+  );
+  assert.match(pageBridge, /response\?\.videoDetails\?\.lengthSeconds/);
+  assert.match(pageBridge, /player\?\.getDuration\?\.\(\)/);
+  assert.match(contentScript, /trustworthy video duration/);
+  assert.match(contentScript, /durationSeconds/);
 });
 
 test("one thinking-mode request exposes only the submit_quiz tool", async (context) => {

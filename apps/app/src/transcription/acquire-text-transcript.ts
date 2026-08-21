@@ -17,6 +17,7 @@ import {
 export type AcquiredTextTranscript = {
   segments: TranscriptSegment[];
   language: string;
+  verifiedDurationSeconds: number;
   completeness: TranscriptCompleteness;
   acquisition:
     | "server_captions"
@@ -47,6 +48,7 @@ export async function acquireTextTranscript(
     return {
       segments: imported.captions.preferredSegments,
       language: imported.video.sourceLanguage ?? "und",
+      verifiedDurationSeconds: imported.video.durationSeconds,
       acquisition: "server_captions",
       completeness,
     };
@@ -62,14 +64,19 @@ export async function acquireTextTranscript(
         imported.video.sourceLanguage,
         signal,
       );
-      const lastCaptionEndMs = transcript.segments.reduce(
-        (latest, segment) => Math.max(latest, segment.endMs),
-        0,
-      );
+      if (
+        imported.video.durationSeconds > 0 &&
+        Math.abs(imported.video.durationSeconds - transcript.durationSeconds) >
+          Math.max(5, imported.video.durationSeconds * 0.02)
+      ) {
+        throw new Error(
+          "The extension duration did not match the imported YouTube video.",
+        );
+      }
       const verifiedDurationSeconds =
         imported.video.durationSeconds > 0
           ? imported.video.durationSeconds
-          : Math.ceil(lastCaptionEndMs / 1_000);
+          : transcript.durationSeconds;
       const completeness = createTranscriptCompleteness(
         transcript.segments,
         verifiedDurationSeconds,
@@ -92,6 +99,7 @@ export async function acquireTextTranscript(
       return {
         segments: transcript.segments,
         language: transcript.language,
+        verifiedDurationSeconds,
         acquisition: "youtube_browser_extension",
         completeness,
       };
@@ -109,6 +117,7 @@ export async function acquireTextTranscript(
   }
 
   if (imported.captions.browserSourceAvailable) {
+    if (imported.video.durationSeconds < 1) return null;
     try {
       onProgress?.(0.15);
       const startedAt = Date.now();
@@ -139,6 +148,7 @@ export async function acquireTextTranscript(
         return {
           segments: document.segments,
           language: source.language,
+          verifiedDurationSeconds: imported.video.durationSeconds,
           acquisition: "youtube_signed_captions",
           completeness,
         };
@@ -157,6 +167,7 @@ export async function acquireTextTranscript(
   }
 
   if (imported.captions.browserLookupAvailable) {
+    if (imported.video.durationSeconds < 1) return null;
     try {
       onProgress?.(0.4);
       const startedAt = Date.now();
@@ -184,6 +195,7 @@ export async function acquireTextTranscript(
       return {
         segments: transcript.segments,
         language: transcript.language,
+        verifiedDurationSeconds: imported.video.durationSeconds,
         acquisition: "youtube_text_provider",
         completeness,
       };
