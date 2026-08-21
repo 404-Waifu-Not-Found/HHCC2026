@@ -1,0 +1,31 @@
+{
+  "name": "clipquest",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "modules/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @clipquest/app",
+    "dev:api": "npm run dev -w @clipquest/api",
+    "dev:web": "npm run web -w @clipquest/app",
+    "build": "npm run build -w @clipquest/contracts && npm run build -w @clipquest/app && npm run build -w @clipquest/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "cf:types": "npm run cf:types -w @clipquest/api",
+    "cf:dry-run": "npm run deploy:dry -w @clipquest/api",
+    "cf:deploy": "npm run deploy -w @clipquest/api",
+    "db:migrate:local": "npm run db:migrate:local -w @clipquest/api",
+    "db:migrate:remote": "npm run db:migrate:remote -w @clipquest/api"
+  },
+  "engines": {
+    "node": ">=22.13.0",
+    "npm": ">=10"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
+
