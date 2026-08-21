@@ -32,6 +32,10 @@ type Scenario = {
   requestedPaths: string[];
   quizImportBodies: unknown[];
   quizImportKeys: (string | null)[];
+  answerBodies: unknown[];
+  progressiveAvailable: number;
+  progressiveTotal: 5 | 10 | 15;
+  progressiveState: "generating" | "retrying" | "retry_required" | "ready";
   question: PublicQuestion;
 };
 
@@ -157,90 +161,152 @@ test.beforeEach(async ({ page }) => {
         return;
       }
       if (event.data.type === "ping") {
+        const outdated =
+          window.sessionStorage.getItem("clipquest:e2e-extension-outdated") ===
+          "1";
         window.postMessage(
           {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: "e2e",
+            version: outdated ? "0.7.9" : "0.8.0",
             configured: true,
+            capabilities: outdated ? [] : ["question-stream-v1"],
           },
           window.location.origin,
         );
       }
       if (event.data.type === "generate") {
         const questionCount = event.data.context?.questionCount ?? 10;
-        window.postMessage(
-          {
-            channel: "clipquest:captions:v1",
-            source: "clipquest-extension",
-            type: "generation-result",
-            requestId: event.data.requestId,
-            response: {
-              ok: true,
+        const generatedStartIndex =
+          event.data.context?.continuation?.startIndex ?? 0;
+        let trueFalseIndex = 0;
+        const questions = Array.from({ length: questionCount }, (_, index) => {
+          const common = {
+            id: `q${index + 1}`,
+            concept: `Concept ${index + 1}`,
+            question: `How does concept ${index + 1} apply?`,
+            explanation: `Concept ${index + 1} supports this answer.`,
+          };
+          if (index % 3 === 1) {
+            const answer = trueFalseIndex % 2 === 0;
+            trueFalseIndex += 1;
+            return {
+              ...common,
+              type: "true_false",
+              answer,
+              correction: `Concept ${index + 1} is corrected here.`,
+            };
+          }
+          if (index % 3 === 2) {
+            return {
+              ...common,
+              type: "short_answer",
+              answer: `Reference answer ${index + 1}`,
+              rubricIdeas: [`Concept ${index + 1}`],
+              acceptableAnswers: [`Equivalent answer ${index + 1}`],
+            };
+          }
+          return {
+            ...common,
+            type: "multiple_choice",
+            choices: [
+              `Correct ${index + 1}`,
+              `Distractor A ${index + 1}`,
+              `Distractor B ${index + 1}`,
+              `Distractor C ${index + 1}`,
+            ],
+            answerIndex: 0,
+            answer: `Correct ${index + 1}`,
+          };
+        });
+        const postQuestion = (
+          question: (typeof questions)[number],
+          index: number,
+        ) =>
+          window.postMessage(
+            {
+              channel: "clipquest:captions:v1",
+              source: "clipquest-extension",
+              type: "generation-question",
+              requestId: event.data.requestId,
               result: {
-                protocolVersion: 3,
-                pipelineVersion: 7,
+                protocolVersion: 5,
+                pipelineVersion: 9,
                 model: "deepseek-v4-flash",
                 reasoningEffort: "high",
-                promptVersion: "quiz-local-tool-v2.0",
-                validatorVersion: "validator-local-tool-v2.0",
-                quiz: {
-                  title: "Local concept quiz",
-                  questions: Array.from(
-                    { length: questionCount },
-                    (_, index) => {
-                      const common = {
-                        id: `q${index + 1}`,
-                        concept: `Concept ${index + 1}`,
-                        question: `How does concept ${index + 1} apply?`,
-                        explanation: `Concept ${index + 1} supports this answer.`,
-                      };
-                      if (index % 3 === 1) {
-                        return {
-                          ...common,
-                          type: "true_false",
-                          answer: index % 2 === 0,
-                          correction: `Concept ${index + 1} is corrected here.`,
-                        };
-                      }
-                      if (index % 3 === 2) {
-                        return {
-                          ...common,
-                          type: "short_answer",
-                          answer: `Reference answer ${index + 1}`,
-                          rubricIdeas: [`Concept ${index + 1}`],
-                          acceptableAnswers: [`Equivalent answer ${index + 1}`],
-                        };
-                      }
-                      return {
-                        ...common,
-                        type: "multiple_choice",
-                        choices: [
-                          `Correct ${index + 1}`,
-                          `Distractor A ${index + 1}`,
-                          `Distractor B ${index + 1}`,
-                          `Distractor C ${index + 1}`,
-                        ],
-                        answerIndex: 0,
-                        answer: `Correct ${index + 1}`,
-                      };
-                    },
-                  ),
-                },
+                promptVersion: "quiz-local-json-stream-v5.0",
+                validatorVersion: "validator-local-progressive-v4.0",
+                title: "Local concept quiz",
+                startIndex: index,
+                totalQuestions: questionCount,
+                question,
                 metrics: {
-                  aiCalls: 1,
+                  aiCalls: index === 0 ? 1 : 0,
                   retryCount: 0,
-                  inputTokens: 100,
-                  outputTokens: 200,
-                  reasoningTokens: 50,
-                  elapsedMs: 1000,
+                  inputTokens: 0,
+                  outputTokens: 0,
+                  reasoningTokens: 0,
+                  elapsedMs: 10,
                 },
               },
             },
-          },
-          window.location.origin,
+            window.location.origin,
+          );
+        postQuestion(questions[generatedStartIndex], generatedStartIndex);
+        const completionDelay = Number(
+          window.sessionStorage.getItem(
+            "clipquest:e2e-generation-completion-delay-ms",
+          ) ?? "1200",
         );
+        window.setTimeout(() => {
+          window.sessionStorage.setItem(
+            "clipquest:e2e-second-question-sent",
+            "1",
+          );
+          questions
+            .slice(generatedStartIndex + 1)
+            .forEach((question, index) =>
+              postQuestion(question, generatedStartIndex + index + 1),
+            );
+          window.postMessage(
+            {
+              channel: "clipquest:captions:v1",
+              source: "clipquest-extension",
+              type: "generation-result",
+              requestId: event.data.requestId,
+              response: {
+                ok: true,
+                result: {
+                  protocolVersion: 5,
+                  pipelineVersion: 9,
+                  model: "deepseek-v4-flash",
+                  reasoningEffort: "high",
+                  promptVersion: "quiz-local-json-stream-v5.0",
+                  validatorVersion: "validator-local-progressive-v4.0",
+                  ...(generatedStartIndex > 0
+                    ? {
+                        title: "Local concept quiz",
+                        generatedStartIndex,
+                        totalQuestions: questionCount,
+                      }
+                    : {
+                        quiz: { title: "Local concept quiz", questions },
+                      }),
+                  metrics: {
+                    aiCalls: 1,
+                    retryCount: 0,
+                    inputTokens: 100,
+                    outputTokens: 200,
+                    reasoningTokens: 50,
+                    elapsedMs: 1000,
+                  },
+                },
+              },
+            },
+            window.location.origin,
+          );
+        }, completionDelay);
       }
       if (event.data.type === "extract") {
         window.postMessage(
@@ -476,6 +542,32 @@ test("requires the local caption extension and reconnects automatically", async 
   ).toBeVisible();
 });
 
+test("an older extension is gated until question streaming is available", async ({
+  page,
+}) => {
+  await installMocks(page);
+  await page.goto("/");
+  await page.evaluate(() =>
+    window.sessionStorage.setItem("clipquest:e2e-extension-outdated", "1"),
+  );
+  await page.reload();
+
+  await expect(
+    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("0.8.0 or newer", { exact: false }),
+  ).toBeVisible();
+
+  await page.evaluate(() =>
+    window.sessionStorage.removeItem("clipquest:e2e-extension-outdated"),
+  );
+  await page.getByTestId("check-caption-extension").click();
+  await expect(
+    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+  ).toBeHidden();
+});
+
 test("imports the extension quiz, opens the learner flow, and accepts an answer", async ({
   page,
 }) => {
@@ -493,8 +585,16 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      window.sessionStorage.getItem("clipquest:e2e-second-question-sent"),
+    ),
+  ).toBeNull();
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "1/5 questions ready",
+  );
   expect(scenario.requestedPaths).toContain("/api/videos/import");
-  expect(scenario.requestedPaths).toContain("/api/quiz-imports");
+  expect(scenario.requestedPaths).toContain("/api/quiz-imports/progressive");
   expect(scenario.requestedPaths).toContain(`/api/quizzes/${QUIZ_ID}/start`);
   expect(scenario.quizImportKeys).toHaveLength(1);
   expect(scenario.quizImportKeys[0]).toMatch(
@@ -503,6 +603,10 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
   expect(JSON.stringify(scenario.quizImportBodies)).not.toContain("segments");
   expect(JSON.stringify(scenario.quizImportBodies)).not.toContain("transcript");
 
+  await expect(page.getByTestId("question-stream-indicator")).toBeHidden({
+    timeout: 5_000,
+  });
+
   await page.getByRole("button", { name: baseQuestion.options[0] }).click();
   await page.getByRole("button", { name: "Check answer" }).click();
   await expect(
@@ -510,6 +614,258 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
       "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice.",
     ),
   ).toBeVisible();
+  expect(scenario.answerBodies).toHaveLength(1);
+  expect(scenario.answerBodies[0]).toMatchObject({
+    questionId: QUESTION_ID,
+    answer: 0,
+  });
+});
+
+test("multiple-choice views reshuffle only on activation and submit canonical indexes", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const cryptoObject = window.crypto;
+    const original = cryptoObject.getRandomValues.bind(cryptoObject);
+    Object.defineProperty(cryptoObject, "getRandomValues", {
+      configurable: true,
+      value: <T extends ArrayBufferView | null>(array: T): T => {
+        const current = Number(
+          window.sessionStorage.getItem("clipquest:e2e-random-draws") ?? "0",
+        );
+        window.sessionStorage.setItem(
+          "clipquest:e2e-random-draws",
+          String(current + 1),
+        );
+        return original(array);
+      },
+    });
+  });
+  const scenario = await installMocks(page);
+  scenario.answerCorrect = false;
+  await page.goto("/");
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: baseQuestion.prompt }),
+  ).toBeVisible();
+
+  const initialOrder = await displayedChoiceOrder(page, baseQuestion.options);
+  const initialDraws = await randomDrawCount(page);
+  await page.getByRole("button", { name: baseQuestion.options[1] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(
+    page.getByText("Almost—try this concept another way."),
+  ).toBeVisible();
+  expect(await displayedChoiceOrder(page, baseQuestion.options)).toEqual(
+    initialOrder,
+  );
+  expect(await randomDrawCount(page)).toBe(initialDraws);
+  expect(scenario.answerBodies[0]).toMatchObject({ answer: 1 });
+
+  scenario.answerCorrect = true;
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: `Try again: ${baseQuestion.prompt}`,
+    }),
+  ).toBeVisible();
+  expect(await randomDrawCount(page)).toBeGreaterThan(initialDraws);
+  expect(await displayedChoiceOrder(page, baseQuestion.options)).toHaveLength(
+    4,
+  );
+
+  await page.getByRole("button", { name: baseQuestion.options[0] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(page.getByText("Nice! That’s right.")).toBeVisible();
+  expect(scenario.answerBodies[1]).toMatchObject({ answer: 0 });
+});
+
+test("a fast learner waits without partial completion and resumes when question two arrives", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 1;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "generating";
+  await page.goto("/");
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: baseQuestion.prompt }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: baseQuestion.options[0] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(page.getByText("Nice! That’s right.")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Preparing your next question" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Quest complete!" }),
+  ).toHaveCount(0);
+
+  scenario.progressiveAvailable = 2;
+  scenario.question = nextQuestion;
+  await expect(
+    page.getByRole("heading", { name: nextQuestion.prompt }),
+  ).toBeVisible({ timeout: 4_000 });
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "2/5 questions ready",
+  );
+});
+
+test("retry-required quizzes continue locally from the authoritative missing suffix", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 3;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "retry_required";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
+    idempotencyKey: "99999999-9999-4999-8999-999999999999",
+    quizLanguage: "en",
+    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+    sessionLength: "short",
+    watched: true,
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 3,
+    plannedCount: 5,
+  });
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "Generation paused · 3/5 ready",
+  );
+  await page.getByRole("button", { name: "Continue generating" }).click();
+  await expect
+    .poll(
+      () =>
+        scenario.requestedPaths.filter(
+          (path) => path === `/api/quiz-imports/${QUIZ_ID}/progress`,
+        ).length,
+    )
+    .toBeGreaterThan(0);
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "/5",
+  );
+  await expect(page.getByTestId("question-stream-indicator")).toBeHidden({
+    timeout: 5_000,
+  });
+  expect(scenario.progressiveAvailable).toBe(5);
+  const appendedIndexes = scenario.quizImportBodies
+    .map((body) =>
+      typeof body === "object" && body
+        ? (body as { chunk?: { startIndex?: number } }).chunk?.startIndex
+        : undefined,
+    )
+    .filter((index): index is number => typeof index === "number");
+  expect(appendedIndexes).toEqual([3, 4]);
+});
+
+test("a reloaded quiz automatically recovers from the first server-missing question", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 1;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "generating";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
+    idempotencyKey: "91919191-9191-4191-8191-919191919191",
+    quizLanguage: "en",
+    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+    sessionLength: "short",
+    watched: true,
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 1,
+    plannedCount: 5,
+  });
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+
+  await expect(page.getByTestId("question-stream-indicator")).toBeVisible();
+  await expect(page.getByTestId("question-stream-indicator")).toBeHidden({
+    timeout: 5_000,
+  });
+  const appendedIndexes = scenario.quizImportBodies
+    .map((body) =>
+      typeof body === "object" && body
+        ? (body as { chunk?: { startIndex?: number } }).chunk?.startIndex
+        : undefined,
+    )
+    .filter((index): index is number => typeof index === "number");
+  expect(appendedIndexes).toEqual([1, 2, 3, 4]);
+});
+
+test("the streaming indicator stays inside each gutter and above the quiz footer", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await page.evaluate(() =>
+    window.sessionStorage.setItem(
+      "clipquest:e2e-generation-completion-delay-ms",
+      "30000",
+    ),
+  );
+  await page.goto(
+    `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=short`,
+  );
+  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expect(page.getByTestId("question-stream-indicator")).toBeVisible();
+
+  for (const viewport of [
+    { width: 1440, height: 1024, gutter: 32 },
+    { width: 768, height: 1024, gutter: 24 },
+    { width: 390, height: 844, gutter: 20 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const indicator = await page
+      .getByTestId("question-stream-indicator")
+      .boundingBox();
+    const check = await page
+      .getByRole("button", { name: "Check answer" })
+      .boundingBox();
+    expect(indicator).not.toBeNull();
+    expect(check).not.toBeNull();
+    expect(
+      viewport.width - (indicator?.x ?? 0) - (indicator?.width ?? 0),
+    ).toBeCloseTo(viewport.gutter, 0);
+    expect((indicator?.y ?? 0) + (indicator?.height ?? 0)).toBeLessThan(
+      check?.y ?? 0,
+    );
+    for (const option of baseQuestion.options) {
+      const answer = await page
+        .getByRole("button", { name: option })
+        .boundingBox();
+      expect(boxesOverlap(indicator, answer)).toBe(false);
+    }
+  }
+
+  scenario.question = shortAnswerQuestion;
+  await seedAttempt(page, ATTEMPT_ID, shortAnswerQuestion);
+  await page.reload();
+  const shortAnswer = page.getByLabel("Short answer");
+  await expect(shortAnswer).toBeVisible();
+  await shortAnswer.focus();
+  const focusedIndicator = await page
+    .getByTestId("question-stream-indicator")
+    .boundingBox();
+  const focusedFooter = await page
+    .getByRole("button", { name: "Check answer" })
+    .boundingBox();
+  expect(boxesOverlap(focusedIndicator, focusedFooter)).toBe(false);
+
+  expect(scenario.progressiveState).toBe("generating");
 });
 
 test("YouTube quick open lands on Home and starts one import automatically", async ({
@@ -803,12 +1159,24 @@ test("all generated question types keep the tactile learning layout", async ({
   await capture(page, "tablet-quiz-true-false");
 
   scenario.question = shortAnswerQuestion;
+  scenario.progressiveAvailable = 2;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "generating";
   await seedAttempt(page, ATTEMPT_ID, shortAnswerQuestion);
   await page.goto(`/quiz/${ATTEMPT_ID}`);
   await expect(
     page.getByRole("heading", { name: shortAnswerQuestion.prompt }),
   ).toBeVisible();
-  await expect(page.getByLabel("Short answer")).toBeVisible();
+  const shortAnswer = page.getByLabel("Short answer");
+  await expect(shortAnswer).toBeVisible();
+  await shortAnswer.focus();
+  await expect(page.getByTestId("question-stream-indicator")).toBeVisible();
+  expect(
+    boxesOverlap(
+      await page.getByTestId("question-stream-indicator").boundingBox(),
+      await page.getByRole("button", { name: "Check answer" }).boundingBox(),
+    ),
+  ).toBe(false);
   await capture(page, "tablet-quiz-short-answer");
 });
 
@@ -1006,6 +1374,10 @@ async function installMocks(page: Page): Promise<Scenario> {
     requestedPaths: [],
     quizImportBodies: [],
     quizImportKeys: [],
+    answerBodies: [],
+    progressiveAvailable: 5,
+    progressiveTotal: 5,
+    progressiveState: "ready",
     question: baseQuestion,
   };
 
@@ -1033,6 +1405,15 @@ async function installMocks(page: Page): Promise<Scenario> {
       contentType: "image/svg+xml",
       body: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#4856D8"/><stop offset="1" stop-color="#43BCEB"/></linearGradient></defs><rect width="800" height="450" rx="28" fill="url(#g)"/><circle cx="630" cy="100" r="82" fill="#B8F244" opacity=".9"/><path d="M322 118v214l184-107z" fill="#fff" opacity=".94"/><text x="54" y="390" fill="#fff" font-size="36" font-family="Arial" font-weight="700">LEARNING SCIENCE</text></svg>`,
     });
+  });
+
+  const generation = () => ({
+    state: scenario.progressiveState,
+    availableQuestions: scenario.progressiveAvailable,
+    totalQuestions: scenario.progressiveTotal,
+    ...(scenario.progressiveState === "retry_required"
+      ? { reasonCode: "automatic_retries_exhausted" }
+      : {}),
   });
 
   await page.route("**/api/**", async (route) => {
@@ -1290,12 +1671,54 @@ async function installMocks(page: Page): Promise<Scenario> {
       });
       return;
     }
-    if (path === "/api/quiz-imports" && request.method() === "POST") {
+    if (
+      path === "/api/quiz-imports/progressive" &&
+      request.method() === "POST"
+    ) {
       scenario.quizImportBodies.push(request.postDataJSON());
       scenario.quizImportKeys.push(
         request.headers()["idempotency-key"] ?? null,
       );
-      await json(route, { quizId: QUIZ_ID }, 201);
+      const body = request.postDataJSON() as {
+        chunk?: { totalQuestions?: 5 | 10 | 15 };
+      };
+      scenario.progressiveAvailable = 1;
+      scenario.progressiveTotal = body.chunk?.totalQuestions ?? 5;
+      scenario.progressiveState = "generating";
+      await json(route, { quizId: QUIZ_ID, generation: generation() }, 201);
+      return;
+    }
+    if (
+      path === `/api/quiz-imports/${QUIZ_ID}/questions` &&
+      request.method() === "PUT"
+    ) {
+      scenario.quizImportBodies.push(request.postDataJSON());
+      scenario.quizImportKeys.push(
+        request.headers()["idempotency-key"] ?? null,
+      );
+      const body = request.postDataJSON() as {
+        chunk?: { startIndex?: number };
+      };
+      scenario.progressiveAvailable = Math.max(
+        scenario.progressiveAvailable,
+        (body.chunk?.startIndex ?? 0) + 1,
+      );
+      scenario.progressiveState =
+        scenario.progressiveAvailable === scenario.progressiveTotal
+          ? "ready"
+          : "generating";
+      await json(route, { quizId: QUIZ_ID, generation: generation() });
+      return;
+    }
+    if (
+      path === `/api/quiz-imports/${QUIZ_ID}/progress` &&
+      request.method() === "PATCH"
+    ) {
+      const body = request.postDataJSON() as {
+        state?: "retrying" | "retry_required";
+      };
+      scenario.progressiveState = body.state ?? "retry_required";
+      await json(route, { quizId: QUIZ_ID, generation: generation() });
       return;
     }
     if (
@@ -1304,9 +1727,57 @@ async function installMocks(page: Page): Promise<Scenario> {
     ) {
       await json(
         route,
-        { attemptId: ATTEMPT_ID, primer: null, question: scenario.question },
+        {
+          attemptId: ATTEMPT_ID,
+          primer: null,
+          question: {
+            ...scenario.question,
+            total: scenario.progressiveTotal,
+          },
+          generation: generation(),
+        },
         201,
       );
+      return;
+    }
+    if (
+      path.endsWith("/generation") &&
+      path.includes("/api/attempts/") &&
+      request.method() === "GET"
+    ) {
+      await json(route, {
+        attemptId: ATTEMPT_ID,
+        quizId: QUIZ_ID,
+        generation: generation(),
+        ...(scenario.progressiveState !== "ready"
+          ? {
+              continuation: {
+                videoId: VIDEO_ID,
+                quizLanguage: "en",
+                sessionLength:
+                  scenario.progressiveTotal === 5
+                    ? "short"
+                    : scenario.progressiveTotal === 10
+                      ? "medium"
+                      : "long",
+                questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+                watched: true,
+                startIndex: scenario.progressiveAvailable,
+                acceptedQuestions: Array.from(
+                  { length: scenario.progressiveAvailable },
+                  (_, index) => ({
+                    id: `q${index + 1}`,
+                    type: DEFAULT_QUIZ_QUESTION_TYPES[
+                      index % DEFAULT_QUIZ_QUESTION_TYPES.length
+                    ],
+                    concept: `Concept ${index + 1}`,
+                    question: `How does concept ${index + 1} apply?`,
+                  }),
+                ),
+              },
+            }
+          : {}),
+      });
       return;
     }
     if (path.endsWith("/resume") && path.includes("/api/attempts/")) {
@@ -1318,20 +1789,38 @@ async function installMocks(page: Page): Promise<Scenario> {
         completed,
         score: completed ? 88 : null,
         mastery: completed ? "mastered" : null,
+        generation: completed
+          ? {
+              state: "ready",
+              availableQuestions: scenario.progressiveTotal,
+              totalQuestions: scenario.progressiveTotal,
+            }
+          : generation(),
       });
       return;
     }
     if (path.endsWith("/answer") && path.includes("/api/attempts/")) {
+      scenario.answerBodies.push(request.postDataJSON());
       await json(route, {
         correct: scenario.answerCorrect,
         explanation: scenario.answerCorrect
           ? "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice."
           : "The key is effortful reconstruction: recalling the idea strengthens access to it later.",
         evidenceSegmentIds: ["segment-1"],
-        nextQuestion,
+        nextQuestion: !scenario.answerCorrect
+          ? {
+              ...scenario.question,
+              prompt: `Try again: ${scenario.question.prompt}`,
+              isRetry: true,
+            }
+          : scenario.progressiveState !== "ready" &&
+              scenario.question.position >= scenario.progressiveAvailable
+            ? null
+            : nextQuestion,
         completed: false,
         score: null,
         mastery: null,
+        generation: generation(),
       });
       return;
     }
@@ -1367,6 +1856,44 @@ async function seedAttempt(
     question,
     primerSeen: true,
   });
+}
+
+async function displayedChoiceOrder(
+  page: Page,
+  options: readonly string[],
+): Promise<string[]> {
+  const choices = await Promise.all(
+    options.map(async (option) => ({
+      option,
+      box: await page.getByRole("button", { name: option }).boundingBox(),
+    })),
+  );
+  return choices
+    .sort(
+      (left, right) =>
+        (left.box?.y ?? 0) - (right.box?.y ?? 0) ||
+        (left.box?.x ?? 0) - (right.box?.x ?? 0),
+    )
+    .map(({ option }) => option);
+}
+
+async function randomDrawCount(page: Page): Promise<number> {
+  return page.evaluate(() =>
+    Number(window.sessionStorage.getItem("clipquest:e2e-random-draws") ?? "0"),
+  );
+}
+
+function boxesOverlap(
+  left: { x: number; y: number; width: number; height: number } | null,
+  right: { x: number; y: number; width: number; height: number } | null,
+): boolean {
+  if (!left || !right) return false;
+  return !(
+    left.x + left.width <= right.x ||
+    right.x + right.width <= left.x ||
+    left.y + left.height <= right.y ||
+    right.y + right.height <= left.y
+  );
 }
 
 async function capture(page: Page, name: string): Promise<void> {

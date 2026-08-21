@@ -1,22 +1,44 @@
 import { captionsToPlainText } from "./caption-text.js";
 
 const MODEL = "deepseek-v4-flash";
-const TOOL_NAME = "submit_quiz";
-const PROTOCOL_VERSION = 3;
-const PIPELINE_VERSION = 7;
-const PROMPT_VERSION = "quiz-local-tool-v2.0";
-const VALIDATOR_VERSION = "validator-local-tool-v2.0";
+const PROTOCOL_VERSION = 5;
+const PIPELINE_VERSION = 9;
+const PROMPT_VERSION = "quiz-local-json-stream-v5.0";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.0";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const GENERATION_OUTPUT_TOKENS = 48_000;
-const MAX_GENERATION_ATTEMPTS = 3;
+const MAX_NO_PROGRESS_RETRIES = 3;
+const MAX_GENERATION_ATTEMPTS = MAX_NO_PROGRESS_RETRIES + 1;
+const QUESTION_CHUNK_SIZE = 5;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
   "true_false",
   "short_answer",
 ];
 
-class TerminalGenerationError extends Error {}
+class TerminalGenerationError extends Error {
+  constructor(message, reasonCode = "action_required") {
+    super(message);
+    this.reasonCode = reasonCode;
+  }
+}
+class RetryableGenerationError extends Error {
+  constructor(message, retryAfterMs = 0) {
+    super(message);
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+function retryAfterMilliseconds(value, now = Date.now()) {
+  if (!value) return 0;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.ceil(seconds * 1_000);
+  }
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - now) : 0;
+}
 
 function strictJson(text, operation) {
   try {
@@ -45,11 +67,11 @@ function normalize(value) {
     .trim();
 }
 
-function quizTool(questionCount) {
+function quizResponseSchema(questionCount, questionOffset = 0) {
   const commonProperties = {
     id: {
       type: "string",
-      description: "Sequential id: q1, q2, q3, and so on.",
+      description: `Sequential global id from q${questionOffset + 1} through q${questionOffset + questionCount}.`,
     },
     concept: {
       type: "string",
@@ -66,126 +88,118 @@ function quizTool(questionCount) {
     },
   };
   return {
-    type: "function",
-    function: {
-      name: TOOL_NAME,
-      description:
-        "Return the complete concept quiz in one JSON function call. Do not omit any question.",
-      parameters: {
-        type: "object",
-        additionalProperties: false,
-        required: ["title", "questions"],
-        properties: {
-          title: {
-            type: "string",
-            description: "A concise title for this specific quiz.",
-          },
-          questions: {
-            type: "array",
-            minItems: questionCount,
-            maxItems: questionCount,
-            description: `Exactly ${questionCount} questions returned together.`,
-            items: {
-              oneOf: [
-                {
-                  type: "object",
-                  additionalProperties: false,
-                  required: [
-                    "id",
-                    "type",
-                    "concept",
-                    "question",
-                    "choices",
-                    "answerIndex",
-                    "answer",
-                    "explanation",
-                  ],
-                  properties: {
-                    ...commonProperties,
-                    type: { type: "string", enum: ["multiple_choice"] },
-                    choices: {
-                      type: "array",
-                      minItems: 4,
-                      maxItems: 4,
-                      items: { type: "string" },
-                      description:
-                        "Exactly four plausible and meaningfully different choices.",
-                    },
-                    answerIndex: {
-                      type: "integer",
-                      minimum: 0,
-                      maximum: 3,
-                    },
-                    answer: {
-                      type: "string",
-                      description:
-                        "The exact text of choices[answerIndex], copied without changes.",
-                    },
-                  },
-                },
-                {
-                  type: "object",
-                  additionalProperties: false,
-                  required: [
-                    "id",
-                    "type",
-                    "concept",
-                    "question",
-                    "answer",
-                    "correction",
-                    "explanation",
-                  ],
-                  properties: {
-                    ...commonProperties,
-                    type: { type: "string", enum: ["true_false"] },
-                    answer: { type: "boolean" },
-                    correction: {
-                      type: "string",
-                      description:
-                        "For a false statement, give the corrected statement. For a true statement, explain that it is accurate as written.",
-                    },
-                  },
-                },
-                {
-                  type: "object",
-                  additionalProperties: false,
-                  required: [
-                    "id",
-                    "type",
-                    "concept",
-                    "question",
-                    "answer",
-                    "rubricIdeas",
-                    "acceptableAnswers",
-                    "explanation",
-                  ],
-                  properties: {
-                    ...commonProperties,
-                    type: { type: "string", enum: ["short_answer"] },
-                    answer: {
-                      type: "string",
-                      description: "A complete reference answer.",
-                    },
-                    rubricIdeas: {
-                      type: "array",
-                      minItems: 1,
-                      maxItems: 6,
-                      items: { type: "string" },
-                      description:
-                        "Every evidence-supported idea required for a correct answer.",
-                    },
-                    acceptableAnswers: {
-                      type: "array",
-                      maxItems: 8,
-                      items: { type: "string" },
-                      description:
-                        "Equivalent complete answers or phrasings that must be accepted.",
-                    },
-                  },
-                },
+    type: "object",
+    additionalProperties: false,
+    required: ["title", "questions"],
+    properties: {
+      title: {
+        type: "string",
+        description: "A concise title for this specific quiz.",
+      },
+      questions: {
+        type: "array",
+        minItems: questionCount,
+        maxItems: questionCount,
+        description: `Exactly ${questionCount} questions returned together.`,
+        items: {
+          oneOf: [
+            {
+              type: "object",
+              additionalProperties: false,
+              required: [
+                "id",
+                "type",
+                "concept",
+                "question",
+                "choices",
+                "answerIndex",
+                "answer",
+                "explanation",
               ],
+              properties: {
+                ...commonProperties,
+                type: { type: "string", enum: ["multiple_choice"] },
+                choices: {
+                  type: "array",
+                  minItems: 4,
+                  maxItems: 4,
+                  items: { type: "string" },
+                  description:
+                    "Exactly four plausible and meaningfully different choices.",
+                },
+                answerIndex: {
+                  type: "integer",
+                  minimum: 0,
+                  maximum: 3,
+                },
+                answer: {
+                  type: "string",
+                  description:
+                    "The exact text of choices[answerIndex], copied without changes.",
+                },
+              },
             },
-          },
+            {
+              type: "object",
+              additionalProperties: false,
+              required: [
+                "id",
+                "type",
+                "concept",
+                "question",
+                "answer",
+                "correction",
+                "explanation",
+              ],
+              properties: {
+                ...commonProperties,
+                type: { type: "string", enum: ["true_false"] },
+                answer: { type: "boolean" },
+                correction: {
+                  type: "string",
+                  description:
+                    "For a false statement, give the corrected statement. For a true statement, explain that it is accurate as written.",
+                },
+              },
+            },
+            {
+              type: "object",
+              additionalProperties: false,
+              required: [
+                "id",
+                "type",
+                "concept",
+                "question",
+                "answer",
+                "rubricIdeas",
+                "acceptableAnswers",
+                "explanation",
+              ],
+              properties: {
+                ...commonProperties,
+                type: { type: "string", enum: ["short_answer"] },
+                answer: {
+                  type: "string",
+                  description: "A complete reference answer.",
+                },
+                rubricIdeas: {
+                  type: "array",
+                  minItems: 1,
+                  maxItems: 6,
+                  items: { type: "string" },
+                  description:
+                    "Every evidence-supported idea required for a correct answer.",
+                },
+                acceptableAnswers: {
+                  type: "array",
+                  maxItems: 8,
+                  items: { type: "string" },
+                  description:
+                    "Equivalent complete answers or phrasings that must be accepted.",
+                },
+              },
+            },
+          ],
         },
       },
     },
@@ -193,6 +207,10 @@ function quizTool(questionCount) {
 }
 
 function generationMessages(input, previousFailure) {
+  const responseSchema = quizResponseSchema(
+    input.questionCount,
+    input.questionOffset,
+  );
   const example = {
     title: "Motion Concept Quiz",
     questions: [
@@ -235,15 +253,25 @@ function generationMessages(input, previousFailure) {
     ],
   };
   const typePlan = input.questionTypePlan
-    .map((type, index) => `q${index + 1}: ${type}`)
+    .map((type, index) => `q${input.questionOffset + index + 1}: ${type}`)
     .join("\n");
   const truthPlan = input.trueFalseAnswerPlan
     .flatMap((answer, index) =>
-      typeof answer === "boolean" ? [`q${index + 1}: ${answer}`] : [],
+      typeof answer === "boolean"
+        ? [`q${input.questionOffset + index + 1}: ${answer}`]
+        : [],
     )
     .join("\n");
+  const acceptedQuestions = input.acceptedQuestions?.length
+    ? `\nThese earlier questions are already accepted. Do not repeat their concepts or prompts:\n${input.acceptedQuestions
+        .map(
+          (question) =>
+            `${question.id}: ${question.concept} — ${question.question}`,
+        )
+        .join("\n")}\n`
+    : "";
   const retryInstruction = previousFailure
-    ? `\nThe previous complete response was rejected for this exact reason: ${previousFailure}\nGenerate the entire bank again from scratch and do not repeat that defect.`
+    ? `\nThe previous stream stopped at the first unresolved position for this exact reason: ${previousFailure}\nGenerate this entire remaining requested group from scratch and do not repeat that defect.`
     : "";
   return [
     {
@@ -252,14 +280,14 @@ function generationMessages(input, previousFailure) {
 
 Use only concepts explicitly taught in the supplied plain text. Do not add outside facts, infer missing visual information, or invent claims. Ignore greetings, promotions, sponsor messages, jokes, repeated filler, and transcription noise.
 
-Create exactly ${input.questionCount} questions about the most important concepts taught across the complete lesson. Generate every question in this single response. Each question must be self-contained, specific, and useful for learning. Favor conceptual understanding, application, and analysis over simple word-for-word recall. Avoid generic stems such as "What does the video explain?" and never mention timestamps or caption segments.
+Create exactly ${input.questionCount} questions for positions q${input.questionOffset + 1} through q${input.questionOffset + input.questionCount} of a ${input.totalQuestionCount}-question quiz. Generate this entire chunk in one response. Serialize the title before the questions array, and finish each question object before beginning the next one so validated questions can be delivered while the JSON response content is still streaming. Each question must be self-contained, specific, and useful for learning. Favor conceptual understanding, application, and analysis over simple word-for-word recall. Avoid generic stems such as "What does the video explain?" and never mention timestamps or caption segments.${acceptedQuestions}
 
 The type of every slot is server-assigned and mandatory:
 ${typePlan}
 ${truthPlan ? `\nThe answer polarity of every true/false slot is also mandatory:\n${truthPlan}\n` : ""}
 For multiple choice, provide exactly four unique choices, exactly one supported answer, and three plausible but lesson-contradicted distractors. For true/false, write a complete declarative statement and include a correction or confirmation. For short answer, provide a complete reference answer, all required rubric ideas, and equivalent acceptable answers. Do not include fields belonging to another question type.${retryInstruction}
 
-You must call the ${TOOL_NAME} tool exactly once. Put the complete quiz in that tool call. The answer field must exactly equal choices[answerIndex]. Do not return prose, Markdown, or a partial quiz. Example tool arguments: ${JSON.stringify(example)}`,
+Return exactly one JSON object as the complete assistant response content. Begin immediately with the object, serialize each question in order, and do not wrap it in Markdown or prose. Use the exact global IDs q${input.questionOffset + 1} through q${input.questionOffset + input.questionCount}. The answer field must exactly equal choices[answerIndex]. Do not omit any requested question. The required response schema is: ${JSON.stringify(responseSchema)}. Example field structure: ${JSON.stringify(example)}`,
     },
     {
       role: "user",
@@ -272,6 +300,9 @@ function validateQuiz(quiz, input) {
   if (!quiz || typeof quiz !== "object" || Array.isArray(quiz)) {
     throw new Error("DeepSeek returned an invalid quiz object.");
   }
+  if (Object.keys(quiz).some((key) => key !== "title" && key !== "questions")) {
+    throw new Error("DeepSeek returned an unexpected quiz field.");
+  }
   if (!nonEmptyString(quiz.title, 300)) {
     throw new Error("DeepSeek returned an invalid quiz title.");
   }
@@ -283,8 +314,10 @@ function validateQuiz(quiz, input) {
       `DeepSeek returned ${Array.isArray(quiz.questions) ? quiz.questions.length : 0} questions instead of ${input.questionCount}.`,
     );
   }
-  const ids = new Set();
-  const prompts = new Set();
+  const ids = new Set(input.acceptedQuestions?.map((question) => question.id));
+  const prompts = new Set(
+    input.acceptedQuestions?.map((question) => normalize(question.question)),
+  );
   for (let index = 0; index < quiz.questions.length; index += 1) {
     const question = quiz.questions[index];
     if (!question || typeof question !== "object" || Array.isArray(question)) {
@@ -323,7 +356,10 @@ function validateQuiz(quiz, input) {
         `Question ${index + 1} contains an empty or invalid field.`,
       );
     }
-    if (question.id !== `q${index + 1}` || ids.has(question.id)) {
+    if (
+      question.id !== `q${input.questionOffset + index + 1}` ||
+      ids.has(question.id)
+    ) {
       throw new Error(`Question ${index + 1} has an invalid or duplicate id.`);
     }
     ids.add(question.id);
@@ -472,11 +508,251 @@ export function randomizeMultipleChoiceOptions(
   };
 }
 
-async function callDeepSeekTool(
+function randomizeQuestionAtPosition(
+  question,
+  targetAnswerIndex,
+  randomUint32 = secureRandomUint32,
+) {
+  if (question.type !== "multiple_choice") return question;
+  const choices = shuffled(question.choices, randomUint32);
+  const shuffledAnswerIndex = choices.indexOf(question.answer);
+  [choices[targetAnswerIndex], choices[shuffledAnswerIndex]] = [
+    choices[shuffledAnswerIndex],
+    choices[targetAnswerIndex],
+  ];
+  return { ...question, choices, answerIndex: targetAnswerIndex };
+}
+
+function usageMetrics(usage) {
+  return {
+    inputTokens: Number.isInteger(usage?.prompt_tokens)
+      ? usage.prompt_tokens
+      : 0,
+    outputTokens: Number.isInteger(usage?.completion_tokens)
+      ? usage.completion_tokens
+      : 0,
+    reasoningTokens: Number.isInteger(usage?.reasoning_tokens)
+      ? usage.reasoning_tokens
+      : Number.isInteger(usage?.completion_tokens_details?.reasoning_tokens)
+        ? usage.completion_tokens_details.reasoning_tokens
+        : 0,
+  };
+}
+
+function parseCompletedQuizObjects(responseText) {
+  const title = completedRootStringProperty(responseText, "title");
+  const questionsStart = rootArrayPropertyStart(responseText, "questions");
+  if (questionsStart < 0) return { title, questions: [] };
+  const questions = [];
+  let objectStart = -1;
+  let objectDepth = 0;
+  let insideString = false;
+  let escaped = false;
+  for (let index = questionsStart; index < responseText.length; index += 1) {
+    const character = responseText[index];
+    if (insideString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') insideString = false;
+      continue;
+    }
+    if (character === '"') {
+      insideString = true;
+      continue;
+    }
+    if (character === "{") {
+      if (objectDepth === 0) objectStart = index;
+      objectDepth += 1;
+      continue;
+    }
+    if (character !== "}" || objectDepth === 0) continue;
+    objectDepth -= 1;
+    if (objectDepth !== 0 || objectStart < 0) continue;
+    questions.push(
+      strictJson(
+        responseText.slice(objectStart, index + 1),
+        "DeepSeek streamed question",
+      ),
+    );
+    objectStart = -1;
+  }
+  return { title, questions };
+}
+
+function completedRootStringProperty(responseText, propertyName) {
+  const valueStart = rootPropertyValueStart(responseText, propertyName);
+  if (valueStart < 0 || responseText[valueStart] !== '"') return undefined;
+  let escaped = false;
+  for (let index = valueStart + 1; index < responseText.length; index += 1) {
+    const character = responseText[index];
+    if (escaped) escaped = false;
+    else if (character === "\\") escaped = true;
+    else if (character === '"') {
+      try {
+        return JSON.parse(responseText.slice(valueStart, index + 1));
+      } catch {
+        return undefined;
+      }
+    }
+  }
+  return undefined;
+}
+
+function rootArrayPropertyStart(responseText, propertyName) {
+  const valueStart = rootPropertyValueStart(responseText, propertyName);
+  return valueStart >= 0 && responseText[valueStart] === "["
+    ? valueStart + 1
+    : -1;
+}
+
+function rootPropertyValueStart(responseText, propertyName) {
+  let objectDepth = 0;
+  let arrayDepth = 0;
+  let insideString = false;
+  let escaped = false;
+  let stringStart = -1;
+  for (let index = 0; index < responseText.length; index += 1) {
+    const character = responseText[index];
+    if (insideString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') {
+        insideString = false;
+        if (objectDepth === 1 && arrayDepth === 0 && stringStart >= 0) {
+          let property;
+          try {
+            property = JSON.parse(responseText.slice(stringStart, index + 1));
+          } catch {
+            property = undefined;
+          }
+          let cursor = index + 1;
+          while (/\s/.test(responseText[cursor] ?? "")) cursor += 1;
+          if (property === propertyName && responseText[cursor] === ":") {
+            cursor += 1;
+            while (/\s/.test(responseText[cursor] ?? "")) cursor += 1;
+            return cursor < responseText.length ? cursor : -1;
+          }
+        }
+      }
+      continue;
+    }
+    if (character === '"') {
+      insideString = true;
+      stringStart = index;
+    } else if (character === "{") objectDepth += 1;
+    else if (character === "}") objectDepth = Math.max(0, objectDepth - 1);
+    else if (character === "[") arrayDepth += 1;
+    else if (character === "]") arrayDepth = Math.max(0, arrayDepth - 1);
+  }
+  return -1;
+}
+
+function parseCompletedJsonResponse(outer) {
+  const choice = outer?.choices?.[0];
+  if (!choice) throw new Error("DeepSeek returned no completion choice.");
+  if (choice.finish_reason === "length") {
+    throw new Error(
+      "DeepSeek truncated the JSON response. No quiz was created.",
+    );
+  }
+  if (
+    choice.finish_reason !== "stop" ||
+    typeof choice.message?.content !== "string"
+  ) {
+    throw new Error("DeepSeek did not return the required JSON response.");
+  }
+  return {
+    quiz: strictJson(choice.message.content, "DeepSeek JSON response"),
+    usage: usageMetrics(outer.usage),
+  };
+}
+
+async function parseDeepSeekEventStream(response, onQuestion, fallbackTitle) {
+  if (!response.body) {
+    throw new Error("DeepSeek returned an empty streaming response.");
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let eventBuffer = "";
+  let responseContent = "";
+  let emittedQuestions = 0;
+  let finishReason = null;
+  let usage = {};
+
+  const emitCompletedQuestions = async () => {
+    const parsed = parseCompletedQuizObjects(responseContent);
+    const availableTitle = nonEmptyString(parsed.title, 300)
+      ? parsed.title
+      : fallbackTitle;
+    if (!nonEmptyString(availableTitle, 300)) return;
+    while (emittedQuestions < parsed.questions.length) {
+      await onQuestion(
+        parsed.questions[emittedQuestions],
+        emittedQuestions,
+        availableTitle,
+      );
+      emittedQuestions += 1;
+    }
+  };
+
+  const processEvent = async (frame) => {
+    const data = frame
+      .split("\n")
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).replace(/^ /, ""))
+      .join("\n");
+    if (!data || data === "[DONE]") return;
+    const event = strictJson(data, "DeepSeek stream");
+    if (event.usage) usage = event.usage;
+    const choice = event?.choices?.[0];
+    if (!choice) return;
+    if (choice.finish_reason) finishReason = choice.finish_reason;
+    if (typeof choice.delta?.content === "string") {
+      responseContent += choice.delta.content;
+    }
+    await emitCompletedQuestions();
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      eventBuffer += decoder.decode(value, { stream: !done });
+      eventBuffer = eventBuffer.replace(/\r\n/g, "\n");
+      let boundary = eventBuffer.indexOf("\n\n");
+      while (boundary >= 0) {
+        const frame = eventBuffer.slice(0, boundary);
+        eventBuffer = eventBuffer.slice(boundary + 2);
+        await processEvent(frame);
+        boundary = eventBuffer.indexOf("\n\n");
+      }
+      if (done) break;
+    }
+  } catch (error) {
+    await reader.cancel(error).catch(() => undefined);
+    throw error;
+  }
+  if (eventBuffer.trim()) await processEvent(eventBuffer);
+  await emitCompletedQuestions();
+  if (finishReason === "length") {
+    throw new Error(
+      "DeepSeek truncated the JSON response. No quiz was created.",
+    );
+  }
+  if (finishReason !== "stop") {
+    throw new Error("DeepSeek did not finish the required JSON response.");
+  }
+  return {
+    quiz: strictJson(responseContent, "DeepSeek JSON response"),
+    usage: usageMetrics(usage),
+  };
+}
+
+async function callDeepSeekJson(
   input,
   apiKey,
   externalSignal,
   previousFailure,
+  onQuestion,
 ) {
   const controller = new AbortController();
   const abortFromCaller = () =>
@@ -486,9 +762,8 @@ async function callDeepSeekTool(
   externalSignal?.addEventListener("abort", abortFromCaller, { once: true });
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const startedAt = Date.now();
-  let response;
   try {
-    response = await fetch("https://api.deepseek.com/chat/completions", {
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -499,82 +774,84 @@ async function callDeepSeekTool(
         messages: generationMessages(input, previousFailure),
         thinking: { type: "enabled" },
         reasoning_effort: "high",
-        tools: [quizTool(input.questionCount)],
+        response_format: { type: "json_object" },
         max_tokens: GENERATION_OUTPUT_TOKENS,
+        stream: true,
+        stream_options: { include_usage: true },
       }),
       signal: controller.signal,
     });
+    if (!response.ok) {
+      let message = `DeepSeek rejected the request (${response.status}).`;
+      try {
+        const body = await response.json();
+        if (typeof body?.error?.message === "string") {
+          message = body.error.message;
+        }
+      } catch {
+        // The HTTP status remains the authoritative error.
+      }
+      if (
+        response.status === 408 ||
+        response.status === 429 ||
+        response.status >= 500
+      ) {
+        throw new RetryableGenerationError(
+          message,
+          retryAfterMilliseconds(response.headers.get("retry-after")),
+        );
+      }
+      const reasonCode =
+        response.status === 401
+          ? "credential_invalid"
+          : response.status === 402
+            ? "billing_required"
+            : response.status === 403
+              ? "permission_denied"
+              : "request_rejected";
+      throw new TerminalGenerationError(message, reasonCode);
+    }
+    const contentType = response.headers.get("content-type") ?? "";
+    const result = contentType.includes("text/event-stream")
+      ? await parseDeepSeekEventStream(response, onQuestion, input.title)
+      : parseCompletedJsonResponse(
+          strictJson(await response.text(), "DeepSeek"),
+        );
+    if (!contentType.includes("text/event-stream")) {
+      for (let index = 0; index < result.quiz.questions.length; index += 1) {
+        await onQuestion(
+          result.quiz.questions[index],
+          index,
+          result.quiz.title,
+        );
+      }
+    }
+    return {
+      ...result,
+      usage: {
+        ...result.usage,
+        elapsedMs: Math.max(1, Date.now() - startedAt),
+      },
+    };
   } catch (error) {
     if (controller.signal.aborted) {
       if (externalSignal?.aborted) {
-        throw new TerminalGenerationError("Local generation was cancelled.");
+        throw new TerminalGenerationError(
+          "Local generation was cancelled.",
+          "generation_cancelled",
+        );
       }
-      throw new TerminalGenerationError(
+      throw new RetryableGenerationError(
         "DeepSeek took longer than 15 minutes. Retry the local generation.",
       );
     }
-    throw new Error(
-      error instanceof Error ? error.message : "DeepSeek could not be reached.",
-    );
+    throw error instanceof Error
+      ? error
+      : new Error("DeepSeek could not be reached.");
   } finally {
     clearTimeout(timeout);
     externalSignal?.removeEventListener("abort", abortFromCaller);
   }
-  if (!response.ok) {
-    let message = `DeepSeek rejected the request (${response.status}).`;
-    try {
-      const body = await response.json();
-      if (typeof body?.error?.message === "string")
-        message = body.error.message;
-    } catch {
-      // The HTTP status remains the authoritative error.
-    }
-    if (
-      response.status === 408 ||
-      response.status === 429 ||
-      response.status >= 500
-    ) {
-      throw new Error(message);
-    }
-    throw new TerminalGenerationError(message);
-  }
-  const outer = strictJson(await response.text(), "DeepSeek");
-  const choice = outer?.choices?.[0];
-  if (!choice) throw new Error("DeepSeek returned no completion choice.");
-  if (choice.finish_reason === "length") {
-    throw new Error("DeepSeek truncated the tool call. No quiz was created.");
-  }
-  const toolCalls = choice.message?.tool_calls;
-  if (
-    choice.finish_reason !== "tool_calls" ||
-    !Array.isArray(toolCalls) ||
-    toolCalls.length !== 1 ||
-    toolCalls[0]?.type !== "function" ||
-    toolCalls[0]?.function?.name !== TOOL_NAME ||
-    typeof toolCalls[0]?.function?.arguments !== "string"
-  ) {
-    throw new Error(
-      `DeepSeek did not call the required ${TOOL_NAME} tool exactly once.`,
-    );
-  }
-  const usage = outer.usage ?? {};
-  return {
-    quiz: strictJson(toolCalls[0].function.arguments, TOOL_NAME),
-    usage: {
-      inputTokens: Number.isInteger(usage.prompt_tokens)
-        ? usage.prompt_tokens
-        : 0,
-      outputTokens: Number.isInteger(usage.completion_tokens)
-        ? usage.completion_tokens
-        : 0,
-      reasoningTokens: Number.isInteger(usage.reasoning_tokens)
-        ? usage.reasoning_tokens
-        : Number.isInteger(usage.completion_tokens_details?.reasoning_tokens)
-          ? usage.completion_tokens_details.reasoning_tokens
-          : 0,
-      elapsedMs: Math.max(1, Date.now() - startedAt),
-    },
-  };
 }
 
 export async function generateQuizFromPlainText(
@@ -582,6 +859,7 @@ export async function generateQuizFromPlainText(
   apiKey,
   onProgress = () => {},
   signal,
+  onChunk = () => {},
 ) {
   const input = {
     title: String(rawInput?.title ?? "Untitled lesson").trim(),
@@ -595,6 +873,7 @@ export async function generateQuizFromPlainText(
     plainText: String(rawInput?.plainText ?? "")
       .replace(/\s+/g, " ")
       .trim(),
+    continuation: rawInput?.continuation,
   };
   if (!input.title) throw new Error("The lesson title is missing.");
   if (![5, 10, 15].includes(input.questionCount)) {
@@ -613,69 +892,256 @@ export async function generateQuizFromPlainText(
     input.questionCount,
   );
   input.trueFalseAnswerPlan = buildTrueFalseAnswerPlan(input.questionTypePlan);
+  const continuationStartIndex = Number(input.continuation?.startIndex ?? 0);
+  const continuationQuestions = Array.isArray(
+    input.continuation?.acceptedQuestions,
+  )
+    ? input.continuation.acceptedQuestions.map((question) => ({ ...question }))
+    : [];
+  if (
+    continuationStartIndex < 0 ||
+    continuationStartIndex >= input.questionCount ||
+    continuationQuestions.length !== continuationStartIndex ||
+    continuationQuestions.some(
+      (question, index) =>
+        question?.id !== `q${index + 1}` ||
+        question?.type !== input.questionTypePlan[index] ||
+        !nonEmptyString(question?.concept, 200) ||
+        !nonEmptyString(question?.question, 700),
+    )
+  ) {
+    throw new Error("The progressive continuation state is invalid.");
+  }
   const startedAt = Date.now();
   const totals = {
+    aiCalls: 0,
+    retryCount: 0,
     inputTokens: 0,
     outputTokens: 0,
     reasoningTokens: 0,
   };
+  const acceptedQuestions = continuationQuestions;
+  let quizTitle = continuationStartIndex ? input.title : undefined;
+  const multipleChoicePositions = balancedAnswerPositions(
+    input.questionTypePlan.filter((type) => type === "multiple_choice").length,
+    secureRandomUint32,
+  );
+  const answerPositionByQuestion = new Map();
+  let multipleChoiceIndex = 0;
+  input.questionTypePlan.forEach((type, index) => {
+    if (type !== "multiple_choice") return;
+    answerPositionByQuestion.set(
+      index,
+      multipleChoicePositions[multipleChoiceIndex],
+    );
+    multipleChoiceIndex += 1;
+  });
   let previousFailure;
-  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    onProgress("creating_questions", 0.2 + attempt * 0.18, {
-      attempt,
+  let consecutiveFailures = 0;
+  let unreportedAiCalls = 0;
+  let unreportedRetries = 0;
+  let lastChunkAt = Date.now();
+
+  while (acceptedQuestions.length < input.questionCount) {
+    const questionOffset = acceptedQuestions.length;
+    const acceptedBeforeCall = acceptedQuestions.length;
+    const chunkQuestionCount = Math.min(
+      QUESTION_CHUNK_SIZE,
+      input.questionCount - questionOffset,
+    );
+    const chunkInput = {
+      ...input,
+      questionCount: chunkQuestionCount,
+      totalQuestionCount: input.questionCount,
+      questionOffset,
+      questionTypePlan: input.questionTypePlan.slice(
+        questionOffset,
+        questionOffset + chunkQuestionCount,
+      ),
+      trueFalseAnswerPlan: input.trueFalseAnswerPlan.slice(
+        questionOffset,
+        questionOffset + chunkQuestionCount,
+      ),
+      acceptedQuestions: [...acceptedQuestions],
+    };
+    const callAttempt = consecutiveFailures + 1;
+    const chunkProgress = questionOffset / input.questionCount;
+    onProgress("creating_questions", 0.2 + chunkProgress * 0.72, {
+      attempt: callAttempt,
       maxAttempts: MAX_GENERATION_ATTEMPTS,
-      status: attempt === 1 ? "generating" : "retrying",
+      status: previousFailure ? "retrying" : "generating",
     });
-    try {
-      const result = await callDeepSeekTool(
-        input,
-        apiKey,
-        signal,
-        previousFailure,
+    totals.aiCalls += 1;
+    unreportedAiCalls += 1;
+    let pendingFinalQuestion;
+
+    const publishQuestion = (rawQuestion, relativeIndex, title, usage = {}) => {
+      const globalIndex = questionOffset + relativeIndex;
+      if (globalIndex !== acceptedQuestions.length) {
+        throw new Error("DeepSeek streamed questions out of order.");
+      }
+      const singleInput = {
+        ...input,
+        questionCount: 1,
+        totalQuestionCount: input.questionCount,
+        questionOffset: globalIndex,
+        questionTypePlan: input.questionTypePlan.slice(
+          globalIndex,
+          globalIndex + 1,
+        ),
+        trueFalseAnswerPlan: input.trueFalseAnswerPlan.slice(
+          globalIndex,
+          globalIndex + 1,
+        ),
+        acceptedQuestions: [...acceptedQuestions],
+      };
+      const validated = validateQuiz(
+        { title, questions: [rawQuestion] },
+        singleInput,
       );
-      totals.inputTokens += result.usage.inputTokens;
-      totals.outputTokens += result.usage.outputTokens;
-      totals.reasoningTokens += result.usage.reasoningTokens;
-      const validated = validateQuiz(result.quiz, input);
-      const randomized = randomizeMultipleChoiceOptions(validated);
-      onProgress("finalizing_questions", 1, {
-        attempt,
-        maxAttempts: MAX_GENERATION_ATTEMPTS,
-        status: "complete",
-      });
-      return {
+      const question = randomizeQuestionAtPosition(
+        validated.questions[0],
+        answerPositionByQuestion.get(globalIndex),
+      );
+      quizTitle ??= validated.title;
+      acceptedQuestions.push(question);
+      const now = Date.now();
+      onChunk({
         protocolVersion: PROTOCOL_VERSION,
         pipelineVersion: PIPELINE_VERSION,
         model: MODEL,
         reasoningEffort: "high",
         promptVersion: PROMPT_VERSION,
         validatorVersion: VALIDATOR_VERSION,
-        quiz: randomized,
+        title: quizTitle,
+        startIndex: globalIndex,
+        totalQuestions: input.questionCount,
+        question,
         metrics: {
-          aiCalls: attempt,
-          retryCount: attempt - 1,
-          ...totals,
-          elapsedMs: Math.max(1, Date.now() - startedAt),
+          aiCalls: unreportedAiCalls,
+          retryCount: unreportedRetries,
+          inputTokens: usage.inputTokens ?? 0,
+          outputTokens: usage.outputTokens ?? 0,
+          reasoningTokens: usage.reasoningTokens ?? 0,
+          elapsedMs: Math.max(1, now - lastChunkAt),
         },
-      };
-    } catch (error) {
-      if (
-        error instanceof TerminalGenerationError ||
-        attempt === MAX_GENERATION_ATTEMPTS
-      ) {
-        throw error;
-      }
-      previousFailure =
-        error instanceof Error ? error.message : "The quiz output was invalid.";
-      onProgress("creating_questions", 0.2 + attempt * 0.18, {
-        attempt,
-        maxAttempts: MAX_GENERATION_ATTEMPTS,
-        status: "retrying",
       });
-      await waitForRetry(750 * 2 ** (attempt - 1), signal);
+      unreportedAiCalls = 0;
+      unreportedRetries = 0;
+      lastChunkAt = now;
+      const complete = acceptedQuestions.length === input.questionCount;
+      onProgress(
+        complete ? "finalizing_questions" : "creating_questions",
+        complete
+          ? 1
+          : 0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
+        {
+          attempt: callAttempt,
+          maxAttempts: MAX_GENERATION_ATTEMPTS,
+          status: complete ? "complete" : "generating",
+        },
+      );
+    };
+
+    try {
+      const result = await callDeepSeekJson(
+        chunkInput,
+        apiKey,
+        signal,
+        previousFailure,
+        (question, relativeIndex, title) => {
+          if (relativeIndex >= chunkQuestionCount) {
+            throw new Error("DeepSeek streamed too many questions.");
+          }
+          if (relativeIndex === chunkQuestionCount - 1) {
+            pendingFinalQuestion = { question, relativeIndex, title };
+            return;
+          }
+          publishQuestion(question, relativeIndex, title);
+        },
+      );
+      validateQuiz(result.quiz, chunkInput);
+      if (!pendingFinalQuestion) {
+        throw new Error(
+          "DeepSeek did not stream the final requested question.",
+        );
+      }
+      totals.inputTokens += result.usage.inputTokens;
+      totals.outputTokens += result.usage.outputTokens;
+      totals.reasoningTokens += result.usage.reasoningTokens;
+      publishQuestion(
+        pendingFinalQuestion.question,
+        pendingFinalQuestion.relativeIndex,
+        pendingFinalQuestion.title,
+        result.usage,
+      );
+      previousFailure = undefined;
+      consecutiveFailures = 0;
+    } catch (error) {
+      if (error instanceof TerminalGenerationError) throw error;
+      totals.retryCount += 1;
+      unreportedRetries += 1;
+      previousFailure =
+        error instanceof Error
+          ? error.message
+          : "The streamed quiz output was invalid.";
+      consecutiveFailures =
+        acceptedQuestions.length > acceptedBeforeCall
+          ? 0
+          : consecutiveFailures + 1;
+      if (consecutiveFailures > MAX_NO_PROGRESS_RETRIES) throw error;
+      onProgress(
+        "creating_questions",
+        0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
+        {
+          attempt: consecutiveFailures + 1,
+          maxAttempts: MAX_GENERATION_ATTEMPTS,
+          status: "retrying",
+        },
+      );
+      const exponentialDelay = 750 * 2 ** Math.max(0, consecutiveFailures - 1);
+      const retryAfterDelay =
+        error instanceof RetryableGenerationError ? error.retryAfterMs : 0;
+      await waitForRetry(Math.max(exponentialDelay, retryAfterDelay), signal);
     }
   }
-  throw new Error("Local quiz generation exhausted every attempt.");
+
+  const metrics = {
+    ...totals,
+    elapsedMs: Math.max(1, Date.now() - startedAt),
+  };
+  if (continuationStartIndex > 0) {
+    return {
+      protocolVersion: PROTOCOL_VERSION,
+      pipelineVersion: PIPELINE_VERSION,
+      model: MODEL,
+      reasoningEffort: "high",
+      promptVersion: PROMPT_VERSION,
+      validatorVersion: VALIDATOR_VERSION,
+      title: quizTitle,
+      generatedStartIndex: continuationStartIndex,
+      totalQuestions: input.questionCount,
+      metrics,
+    };
+  }
+  const completeQuiz = validateQuiz(
+    { title: quizTitle, questions: acceptedQuestions },
+    {
+      ...input,
+      questionOffset: 0,
+      acceptedQuestions: [],
+    },
+  );
+  return {
+    protocolVersion: PROTOCOL_VERSION,
+    pipelineVersion: PIPELINE_VERSION,
+    model: MODEL,
+    reasoningEffort: "high",
+    promptVersion: PROMPT_VERSION,
+    validatorVersion: VALIDATOR_VERSION,
+    quiz: completeQuiz,
+    metrics,
+  };
 }
 
 async function waitForRetry(milliseconds, signal) {
@@ -698,6 +1164,7 @@ export async function generateLocalQuiz(
   apiKey,
   onProgress = () => {},
   signal,
+  onChunk = () => {},
 ) {
   const plainText = captionsToPlainText(context?.segments);
   return generateQuizFromPlainText(
@@ -709,10 +1176,12 @@ export async function generateLocalQuiz(
       jobId: context?.jobId,
       transcriptFingerprint: context?.transcriptFingerprint,
       plainText,
+      continuation: context?.continuation,
     },
     apiKey,
     onProgress,
     signal,
+    onChunk,
   );
 }
 

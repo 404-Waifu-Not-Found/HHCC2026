@@ -1,13 +1,16 @@
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
-  ExtensionQuizImportResponseSchema,
+  ExtensionQuizProgressiveImportResponseSchema,
   MediaResolveResponseSchema,
   QuizStartResponseSchema,
   QuizQuestionTypesSchema,
   createTranscriptCompleteness,
   questionLimitForSession,
   type AppLanguage,
+  type AttemptGenerationAvailability,
+  type ExtensionQuizProgressiveImportResponse,
   type GenerationStage,
+  type LocalConceptQuizQuestionChunk,
   type LocalQuizContext,
   type QuizQuestionType,
   type SessionLength,
@@ -24,6 +27,11 @@ import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
 import { estimatedGenerationDurationMs } from "../../src/generation/eta";
+import {
+  cancelProgressiveGenerationTask,
+  getOrStartProgressiveGenerationTask,
+  type ProgressiveGenerationTaskContext,
+} from "../../src/generation/progressive-coordinator";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import {
@@ -42,7 +50,10 @@ import { saveAttemptStart } from "../../src/state/attempt";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
 import { acquireTextTranscript } from "../../src/transcription/acquire-text-transcript";
-import { requestExtensionLocalQuiz } from "../../src/transcription/clipquest-extension";
+import {
+  LocalGenerationRequestError,
+  requestExtensionLocalQuiz,
+} from "../../src/transcription/clipquest-extension";
 import {
   breakpoints,
   layout,
@@ -58,9 +69,6 @@ type JourneyStep = {
 
 const JOURNEY_TICK_MS = 100;
 const LINEAR_PROGRESS_LIMIT = 0.99;
-const FINAL_SWEEP_MS = 500;
-const FINAL_SWEEP_TICK_MS = 25;
-const FINAL_SWEEP_ANIMATION_MS = FINAL_SWEEP_MS - FINAL_SWEEP_TICK_MS;
 
 export default function GenerationScreen() {
   const params = useLocalSearchParams<{
@@ -70,14 +78,14 @@ export default function GenerationScreen() {
     sessionLength: SessionLength;
     questionTypes?: string;
   }>();
-  const { locale, reduceMotion, t, theme } = useSettings();
+  const { locale, t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const [stage, setStage] = useState<GenerationStage>("getting_video");
   const [error, setError] = useState<string>();
   const [paused, setPaused] = useState(false);
   const [runNumber, setRunNumber] = useState(0);
   const [cancelling, setCancelling] = useState(false);
-  const controllerRef = useRef<AbortController | null>(null);
+  const taskKeyRef = useRef<string | undefined>(undefined);
   const [localTranscription, setLocalTranscription] = useState(false);
   const questionTypes = useMemo<QuizQuestionType[]>(() => {
     const parsed = QuizQuestionTypesSchema.safeParse(
@@ -87,6 +95,25 @@ export default function GenerationScreen() {
   }, [params.questionTypes]);
   const questionCount = questionLimitForSession(params.sessionLength) as
     5 | 10 | 15;
+  const taskKey = useMemo(
+    () =>
+      [
+        params.videoId,
+        params.quizLanguage,
+        params.sessionLength,
+        params.watched,
+        questionTypes.join(","),
+        runNumber,
+      ].join(":"),
+    [
+      params.quizLanguage,
+      params.sessionLength,
+      params.videoId,
+      params.watched,
+      questionTypes,
+      runNumber,
+    ],
+  );
   const journeyDurationMs = estimatedGenerationDurationMs(questionCount);
   const journeySteps = useMemo<JourneyStep[]>(
     () => [
@@ -138,54 +165,38 @@ export default function GenerationScreen() {
     return () => clearInterval(timer);
   }, [error, journeyDurationMs, paused, setEstimatedProgress]);
 
-  const finishJourneyPresentation = useCallback(
-    async (signal: AbortSignal) => {
-      finishingPresentationRef.current = true;
-      const initialProgress = estimatedProgressRef.current;
-      if (reduceMotion) {
-        setEstimatedProgress(1);
-        return;
-      }
-      const sweepStartedAt = Date.now();
-      while (Date.now() - sweepStartedAt < FINAL_SWEEP_ANIMATION_MS) {
-        const sweepProgress = Math.min(
-          1,
-          (Date.now() - sweepStartedAt) / FINAL_SWEEP_ANIMATION_MS,
-        );
-        setEstimatedProgress(
-          initialProgress + (1 - initialProgress) * sweepProgress,
-        );
-        await abortableDelay(FINAL_SWEEP_TICK_MS, signal);
-      }
-      setEstimatedProgress(1);
-      await abortableDelay(FINAL_SWEEP_TICK_MS, signal);
-    },
-    [reduceMotion, setEstimatedProgress],
-  );
-
   const execute = useCallback(
-    async (signal: AbortSignal) => {
+    async ({
+      signal,
+      publish,
+      resolveFirst,
+    }: ProgressiveGenerationTaskContext) => {
       beginJourney();
+      const updateStage = (nextStage: GenerationStage) => {
+        setStage(nextStage);
+        publish({ stage: nextStage });
+      };
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
       const storedGeneration = await loadGenerationState(params.videoId);
       const idempotencyKey = isUuid(storedGeneration?.idempotencyKey)
         ? storedGeneration.idempotencyKey
         : Crypto.randomUUID();
-      if (storedGeneration?.idempotencyKey !== idempotencyKey) {
-        await saveGenerationState(params.videoId, {
-          ...storedGeneration,
-          idempotencyKey,
-          quizLanguage: params.quizLanguage,
-          questionTypes,
-        });
-      }
+      await saveGenerationState(params.videoId, {
+        ...storedGeneration,
+        idempotencyKey,
+        quizLanguage: params.quizLanguage,
+        questionTypes,
+        sessionLength: params.sessionLength,
+        watched: params.watched === "true",
+        plannedCount: questionCount,
+      });
       setLocalTranscription(imported.transcriptionMode === "device_media");
-      setStage("getting_video");
+      updateStage("getting_video");
       let segments: TranscriptSegment[] = [];
       let completeness: TranscriptCompleteness | null = null;
       let language = imported.video.sourceLanguage ?? "und";
-      setStage("preparing_audio");
+      updateStage("preparing_audio");
       const textTranscript = await acquireTextTranscript(
         imported,
         signal,
@@ -214,7 +225,7 @@ export default function GenerationScreen() {
           language: imported.video.sourceLanguage,
           signal,
           onPhase: (phase) => {
-            setStage(phase);
+            updateStage(phase);
           },
           onProgress: () => undefined,
         });
@@ -231,7 +242,7 @@ export default function GenerationScreen() {
           "ClipQuest could not verify a complete transcript for this video.",
         );
       }
-      setStage("creating_questions");
+      updateStage("creating_questions");
       const context: LocalQuizContext = {
         protocolVersion: 1,
         jobId: idempotencyKey,
@@ -244,54 +255,165 @@ export default function GenerationScreen() {
         transcriptLanguage: language,
         segments,
       };
-      const result = await requestExtensionLocalQuiz(
-        context,
-        signal,
-        (nextStage) => {
-          setStage(nextStage);
-        },
-      );
-      setStage("finalizing_questions");
-      const importedQuiz = await apiRequest(
-        "/api/quiz-imports",
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": idempotencyKey },
-          body: jsonBody({
-            videoId: imported.video.id,
-            quizLanguage: params.quizLanguage,
-            sessionLength: params.sessionLength,
-            questionTypes,
-            watched: params.watched === "true",
-            quiz: result,
-          }),
+      let progressiveQuizId = storedGeneration?.quizId;
+      let attemptId = storedGeneration?.attemptId;
+      let ingestion = Promise.resolve();
+      let lastProgressState: "retrying" | undefined;
+      let latestGeneration: AttemptGenerationAvailability | undefined;
+
+      const persistState = async () => {
+        const current = await loadGenerationState(params.videoId);
+        await saveGenerationState(params.videoId, {
+          ...current,
+          idempotencyKey,
+          quizLanguage: params.quizLanguage,
+          questionTypes,
+          sessionLength: params.sessionLength,
+          watched: params.watched === "true",
+          quizId: progressiveQuizId,
+          attemptId,
+          acceptedCount: latestGeneration?.availableQuestions,
+          plannedCount: questionCount,
+        });
+      };
+
+      const startAttempt = async (quizId: string) => {
+        const start = await apiRequest(
+          `/api/quizzes/${quizId}/start`,
+          {
+            method: "POST",
+            headers: { "Idempotency-Key": idempotencyKey },
+            body: jsonBody({
+              mode: "learn",
+              sessionLength: params.sessionLength,
+              questionTypes,
+              watched: params.watched === "true",
+            }),
+            signal,
+          },
+          QuizStartResponseSchema,
+        );
+        attemptId = start.attemptId;
+        latestGeneration = start.generation;
+        await saveAttemptStart(start);
+        await persistState();
+        publish({
+          quizId,
+          attemptId: start.attemptId,
+          generation: start.generation,
+        });
+        resolveFirst(start);
+      };
+
+      const publishStoredState = async (
+        response: ExtensionQuizProgressiveImportResponse,
+      ) => {
+        progressiveQuizId = response.quizId;
+        latestGeneration = response.generation;
+        await persistState();
+        if (attemptId) {
+          publish({
+            quizId: response.quizId,
+            attemptId,
+            generation: response.generation,
+          });
+        }
+      };
+
+      const enqueueQuestion = (chunk: LocalConceptQuizQuestionChunk) => {
+        ingestion = ingestion.then(async () => {
+          const response = progressiveQuizId
+            ? await apiRequest(
+                `/api/quiz-imports/${progressiveQuizId}/questions`,
+                {
+                  method: "PUT",
+                  headers: { "Idempotency-Key": idempotencyKey },
+                  body: jsonBody({ chunk }),
+                  signal,
+                },
+                ExtensionQuizProgressiveImportResponseSchema,
+              )
+            : await apiRequest(
+                "/api/quiz-imports/progressive",
+                {
+                  method: "POST",
+                  headers: { "Idempotency-Key": idempotencyKey },
+                  body: jsonBody({
+                    videoId: imported.video.id,
+                    quizLanguage: params.quizLanguage,
+                    sessionLength: params.sessionLength,
+                    questionTypes,
+                    watched: params.watched === "true",
+                    chunk,
+                  }),
+                  signal,
+                },
+                ExtensionQuizProgressiveImportResponseSchema,
+              );
+          await publishStoredState(response);
+          lastProgressState = undefined;
+          if (!attemptId) await startAttempt(response.quizId);
+        });
+        void ingestion.catch(() => undefined);
+      };
+
+      const enqueueRetrying = () => {
+        if (lastProgressState === "retrying") return;
+        lastProgressState = "retrying";
+        ingestion = ingestion.then(async () => {
+          if (!progressiveQuizId) return;
+          const response = await apiRequest(
+            `/api/quiz-imports/${progressiveQuizId}/progress`,
+            {
+              method: "PATCH",
+              headers: { "Idempotency-Key": idempotencyKey },
+              body: jsonBody({ state: "retrying" }),
+              signal,
+            },
+            ExtensionQuizProgressiveImportResponseSchema,
+          );
+          await publishStoredState(response);
+        });
+        void ingestion.catch(() => undefined);
+      };
+
+      try {
+        await requestExtensionLocalQuiz(
+          context,
           signal,
-        },
-        ExtensionQuizImportResponseSchema,
-      );
-      const start = await apiRequest(
-        `/api/quizzes/${importedQuiz.quizId}/start`,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": idempotencyKey },
-          body: jsonBody({
-            mode: "learn",
-            sessionLength: params.sessionLength,
-            questionTypes,
-            watched: params.watched === "true",
-          }),
-          signal,
-        },
-        QuizStartResponseSchema,
-      );
-      await saveAttemptStart(start);
-      await clearImportedVideo(imported.video.id);
-      await finishJourneyPresentation(signal);
-      setStage("complete");
-      router.replace({
-        pathname: "/quiz/[attemptId]",
-        params: { attemptId: start.attemptId },
-      });
+          (nextStage, _progress, detail) => {
+            updateStage(nextStage);
+            if (detail.status === "retrying") enqueueRetrying();
+          },
+          enqueueQuestion,
+        );
+        await ingestion;
+        if (!latestGeneration || latestGeneration.state !== "ready") {
+          throw new Error(
+            "DeepSeek finished before every planned question was stored.",
+          );
+        }
+        updateStage("complete");
+        await clearImportedVideo(imported.video.id);
+      } catch (cause) {
+        await ingestion.catch(() => undefined);
+        if (!progressiveQuizId) throw cause;
+        const reasonCode =
+          cause instanceof LocalGenerationRequestError
+            ? cause.reasonCode
+            : "automatic_retries_exhausted";
+        const response = await apiRequest(
+          `/api/quiz-imports/${progressiveQuizId}/progress`,
+          {
+            method: "PATCH",
+            headers: { "Idempotency-Key": idempotencyKey },
+            body: jsonBody({ state: "retry_required", reasonCode }),
+          },
+          ExtensionQuizProgressiveImportResponseSchema,
+        ).catch(() => undefined);
+        if (response) await publishStoredState(response);
+        if (!attemptId) throw cause;
+      }
     },
     [
       params.quizLanguage,
@@ -299,7 +421,6 @@ export default function GenerationScreen() {
       params.videoId,
       params.watched,
       beginJourney,
-      finishJourneyPresentation,
       questionCount,
       questionTypes,
       t,
@@ -307,26 +428,39 @@ export default function GenerationScreen() {
   );
 
   useEffect(() => {
-    const controller = new AbortController();
-    controllerRef.current = controller;
-    void Promise.resolve()
-      .then(() => execute(controller.signal))
+    taskKeyRef.current = taskKey;
+    const task = getOrStartProgressiveGenerationTask(taskKey, execute);
+    const unsubscribe = task.subscribe((snapshot) => {
+      setStage(snapshot.stage);
+    });
+    let active = true;
+    void task.firstReady
+      .then((start) => {
+        if (!active) return;
+        finishingPresentationRef.current = true;
+        setEstimatedProgress(1);
+        setStage("complete");
+        router.replace({
+          pathname: "/quiz/[attemptId]",
+          params: { attemptId: start.attemptId },
+        });
+      })
       .catch((cause) => {
-        // Expo's development Strict Mode mounts, cleans up, then remounts an
-        // effect. Ignore the aborted controller from the obsolete run so it
-        // cannot mark the fresh generation as paused.
-        if (controllerRef.current !== controller) return;
+        if (!active || taskKeyRef.current !== taskKey) return;
         if (
           cause instanceof TranscriptionPausedError ||
-          controller.signal.aborted
+          task.controller.signal.aborted
         ) {
           setPaused(true);
           return;
         }
         setError(formatGenerationError(cause, t("trustworthyError")));
       });
-    return () => controller.abort();
-  }, [execute, runNumber, t]);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [execute, setEstimatedProgress, t, taskKey]);
 
   const failed = Boolean(error);
   const activeIndex = journeyStepIndex(estimatedProgress, journeySteps.length);
@@ -347,7 +481,7 @@ export default function GenerationScreen() {
       : activeStep.label;
 
   const pause = () => {
-    controllerRef.current?.abort();
+    if (taskKeyRef.current) cancelProgressiveGenerationTask(taskKeyRef.current);
     setPaused(true);
   };
   const retry = () => {
@@ -358,7 +492,7 @@ export default function GenerationScreen() {
   const cancel = async () => {
     if (cancelling) return;
     setCancelling(true);
-    controllerRef.current?.abort();
+    if (taskKeyRef.current) cancelProgressiveGenerationTask(taskKeyRef.current);
     try {
       await clearGenerationState(params.videoId);
       router.replace("/(tabs)");
@@ -588,24 +722,6 @@ function formatEstimatedRemaining(
   return locale === "zh-CN"
     ? `预计还需约 ${minutes} 分钟`
     : `About ${minutes} min left`;
-}
-
-function abortableDelay(
-  milliseconds: number,
-  signal: AbortSignal,
-): Promise<void> {
-  if (signal.aborted) return Promise.reject(new TranscriptionPausedError());
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve();
-    }, milliseconds);
-    const abort = () => {
-      clearTimeout(timeout);
-      reject(new TranscriptionPausedError());
-    };
-    signal.addEventListener("abort", abort, { once: true });
-  });
 }
 
 const styles = StyleSheet.create({

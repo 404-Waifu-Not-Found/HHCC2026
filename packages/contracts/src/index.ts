@@ -305,12 +305,28 @@ export const MediaResolveResponseSchema = z.object({
 export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 
 export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
-export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 3 as const;
-export const LOCAL_QUIZ_PIPELINE_VERSION = 7 as const;
+export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 5 as const;
+export const LOCAL_QUIZ_PIPELINE_VERSION = 9 as const;
 export const LOCAL_QUIZ_MODEL = "deepseek-v4-flash" as const;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-tool-v2.0" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.0" as const;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
-  "validator-local-tool-v2.0" as const;
+  "validator-local-progressive-v4.0" as const;
+export const LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION =
+  "extension-progressive-import-v3" as const;
+export const LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
+  "question-stream-v1" as const;
+
+export const LocalAcceptedQuestionSummarySchema = z
+  .object({
+    id: z.string().regex(/^q(?:[1-9]|1[0-5])$/),
+    type: z.enum(["multiple_choice", "true_false", "short_answer"]),
+    concept: z.string().trim().min(1).max(200),
+    question: z.string().trim().min(1).max(700),
+  })
+  .strict();
+export type LocalAcceptedQuestionSummary = z.infer<
+  typeof LocalAcceptedQuestionSummarySchema
+>;
 
 export const LocalQuizContextSchema = z
   .object({
@@ -327,8 +343,49 @@ export const LocalQuizContextSchema = z
       .array(TranscriptSegmentSchema)
       .min(1)
       .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
+    continuation: z
+      .object({
+        startIndex: z.number().int().min(1).max(14),
+        acceptedQuestions: z
+          .array(LocalAcceptedQuestionSummarySchema)
+          .min(1)
+          .max(14),
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (!value.continuation) return;
+    if (
+      value.continuation.startIndex >= value.questionCount ||
+      value.continuation.acceptedQuestions.length !==
+        value.continuation.startIndex
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation"],
+        message: "Continuation must begin at the first missing question.",
+      });
+      return;
+    }
+    const typePlan = questionTypePlanForSelection(
+      value.questionTypes,
+      value.questionCount,
+    );
+    value.continuation.acceptedQuestions.forEach((question, index) => {
+      if (
+        question.id !== `q${index + 1}` ||
+        question.type !== typePlan[index]
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["continuation", "acceptedQuestions", index],
+          message: "Accepted question summaries must match the global plan.",
+        });
+      }
+    });
+  });
 export type LocalQuizContext = z.infer<typeof LocalQuizContextSchema>;
 
 const LocalQuestionBaseSchema = z
@@ -432,6 +489,22 @@ export const LocalConceptQuizSchema = z
   });
 export type LocalConceptQuiz = z.infer<typeof LocalConceptQuizSchema>;
 
+function localQuizMetricsSchema(minimumAiCalls: 0 | 1) {
+  return z
+    .object({
+      aiCalls: z.number().int().min(minimumAiCalls).max(45),
+      retryCount: z.number().int().min(0).max(30),
+      inputTokens: z.number().int().nonnegative(),
+      outputTokens: z.number().int().nonnegative(),
+      reasoningTokens: z.number().int().nonnegative(),
+      elapsedMs: z.number().int().positive(),
+    })
+    .strict();
+}
+
+const LocalQuizMetricsSchema = localQuizMetricsSchema(1);
+const LocalQuizChunkMetricsSchema = localQuizMetricsSchema(0);
+
 export const LocalConceptQuizResultSchema = z
   .object({
     protocolVersion: z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
@@ -441,20 +514,255 @@ export const LocalConceptQuizResultSchema = z
     promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
     validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
     quiz: LocalConceptQuizSchema,
-    metrics: z
-      .object({
-        aiCalls: z.number().int().min(1).max(3),
-        retryCount: z.number().int().min(0).max(2),
-        inputTokens: z.number().int().nonnegative(),
-        outputTokens: z.number().int().nonnegative(),
-        reasoningTokens: z.number().int().nonnegative(),
-        elapsedMs: z.number().int().positive(),
-      })
-      .strict(),
+    metrics: LocalQuizMetricsSchema,
   })
   .strict();
 export type LocalConceptQuizResult = z.infer<
   typeof LocalConceptQuizResultSchema
+>;
+
+export const LocalConceptQuizContinuationResultSchema = z
+  .object({
+    protocolVersion: z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+    pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
+    model: z.literal(LOCAL_QUIZ_MODEL),
+    reasoningEffort: z.literal("high"),
+    promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
+    validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
+    title: z.string().trim().min(1).max(300),
+    generatedStartIndex: z.number().int().min(1).max(14),
+    totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    metrics: LocalQuizMetricsSchema,
+  })
+  .strict();
+export const LocalConceptQuizGenerationResultSchema = z.union([
+  LocalConceptQuizResultSchema,
+  LocalConceptQuizContinuationResultSchema,
+]);
+export type LocalConceptQuizGenerationResult = z.infer<
+  typeof LocalConceptQuizGenerationResultSchema
+>;
+
+export const LocalConceptQuizQuestionChunkSchema = z
+  .object({
+    protocolVersion: z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+    pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
+    model: z.literal(LOCAL_QUIZ_MODEL),
+    reasoningEffort: z.literal("high"),
+    promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
+    validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
+    title: z.string().trim().min(1).max(300),
+    startIndex: z.number().int().min(0).max(14),
+    totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    question: LocalConceptQuizQuestionSchema,
+    metrics: LocalQuizChunkMetricsSchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const { startIndex, totalQuestions, question } = value;
+    if (startIndex >= totalQuestions) {
+      context.addIssue({
+        code: "custom",
+        path: ["startIndex"],
+        message: "A streamed question must begin at a valid quiz position.",
+      });
+    }
+    if (question.id !== `q${startIndex + 1}`) {
+      context.addIssue({
+        code: "custom",
+        path: ["question", "id"],
+        message: "The question ID must match its global quiz position.",
+      });
+    }
+  });
+export type LocalConceptQuizQuestionChunk = z.infer<
+  typeof LocalConceptQuizQuestionChunkSchema
+>;
+
+// Temporary source-compatible aliases for app modules migrating from the
+// rolled-back protocol-4 prototype. Both aliases validate protocol 5 only.
+export const LocalConceptQuizChunkSchema = LocalConceptQuizQuestionChunkSchema;
+export type LocalConceptQuizChunk = LocalConceptQuizQuestionChunk;
+
+export const ExtensionQuizProgressiveImportRequestSchema = z
+  .object({
+    videoId: z.string().uuid(),
+    quizLanguage: LanguageSchema,
+    sessionLength: SessionLengthSchema,
+    questionTypes: QuizQuestionTypesSchema,
+    watched: z.boolean(),
+    chunk: LocalConceptQuizQuestionChunkSchema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const expectedCount = questionLimitForSession(value.sessionLength);
+    if (value.chunk.totalQuestions !== expectedCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["chunk", "totalQuestions"],
+        message: "The planned quiz count must match the session length.",
+      });
+    }
+    const expectedTypes = questionTypePlanForSelection(
+      value.questionTypes,
+      expectedCount,
+    );
+    if (value.chunk.question.type !== expectedTypes[value.chunk.startIndex]) {
+      context.addIssue({
+        code: "custom",
+        path: ["chunk", "question", "type"],
+        message: "The streamed question type must match the requested plan.",
+      });
+    }
+  });
+export type ExtensionQuizProgressiveImportRequest = z.infer<
+  typeof ExtensionQuizProgressiveImportRequestSchema
+>;
+
+export const ExtensionQuizChunkAppendRequestSchema = z
+  .object({ chunk: LocalConceptQuizQuestionChunkSchema })
+  .strict();
+export type ExtensionQuizChunkAppendRequest = z.infer<
+  typeof ExtensionQuizChunkAppendRequestSchema
+>;
+
+export const AttemptGenerationAvailabilitySchema = z
+  .object({
+    state: z.enum(["generating", "retrying", "retry_required", "ready"]),
+    availableQuestions: z.number().int().min(1).max(15),
+    totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    reasonCode: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z0-9_]+$/)
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.availableQuestions > value.totalQuestions) {
+      context.addIssue({
+        code: "custom",
+        path: ["availableQuestions"],
+        message: "Available questions cannot exceed the planned total.",
+      });
+    }
+    if (
+      (value.state === "ready") !==
+      (value.availableQuestions === value.totalQuestions)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["state"],
+        message: "Only a fully stored quiz may be marked ready.",
+      });
+    }
+    if (value.reasonCode && value.state !== "retry_required") {
+      context.addIssue({
+        code: "custom",
+        path: ["reasonCode"],
+        message: "Only an action-required state may include a reason code.",
+      });
+    }
+  });
+export type AttemptGenerationAvailability = z.infer<
+  typeof AttemptGenerationAvailabilitySchema
+>;
+
+export const ExtensionQuizProgressiveImportResponseSchema = z
+  .object({
+    quizId: z.string().uuid(),
+    generation: AttemptGenerationAvailabilitySchema,
+  })
+  .strict();
+export type ExtensionQuizProgressiveImportResponse = z.infer<
+  typeof ExtensionQuizProgressiveImportResponseSchema
+>;
+
+export const ExtensionQuizGenerationProgressRequestSchema = z
+  .object({
+    state: z.enum(["retrying", "retry_required"]),
+    reasonCode: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z0-9_]+$/)
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.reasonCode && value.state !== "retry_required") {
+      context.addIssue({
+        code: "custom",
+        path: ["reasonCode"],
+        message: "Only retry_required may include a reason code.",
+      });
+    }
+  });
+export type ExtensionQuizGenerationProgressRequest = z.infer<
+  typeof ExtensionQuizGenerationProgressRequestSchema
+>;
+
+export const AttemptGenerationResponseSchema = z
+  .object({
+    attemptId: z.string().uuid(),
+    quizId: z.string().uuid(),
+    generation: AttemptGenerationAvailabilitySchema,
+    continuation: z
+      .object({
+        videoId: z.string().uuid(),
+        quizLanguage: LanguageSchema,
+        sessionLength: SessionLengthSchema,
+        questionTypes: QuizQuestionTypesSchema,
+        watched: z.boolean(),
+        startIndex: z.number().int().min(1).max(14),
+        acceptedQuestions: z
+          .array(LocalAcceptedQuestionSummarySchema)
+          .min(1)
+          .max(14),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (!value.continuation) return;
+    if (
+      value.generation.state === "ready" ||
+      value.continuation.startIndex !== value.generation.availableQuestions ||
+      value.continuation.acceptedQuestions.length !==
+        value.continuation.startIndex ||
+      questionLimitForSession(value.continuation.sessionLength) !==
+        value.generation.totalQuestions
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation"],
+        message: "Continuation must describe the authoritative missing suffix.",
+      });
+      return;
+    }
+    const typePlan = questionTypePlanForSelection(
+      value.continuation.questionTypes,
+      value.generation.totalQuestions,
+    );
+    value.continuation.acceptedQuestions.forEach((question, index) => {
+      if (
+        question.id !== `q${index + 1}` ||
+        question.type !== typePlan[index]
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["continuation", "acceptedQuestions", index],
+          message: "Accepted summaries must match the global question plan.",
+        });
+      }
+    });
+  });
+export type AttemptGenerationResponse = z.infer<
+  typeof AttemptGenerationResponseSchema
 >;
 
 export const ExtensionQuizImportRequestSchema = z
@@ -527,6 +835,7 @@ export const QuizStartResponseSchema = z.object({
   attemptId: z.string().uuid(),
   primer: z.string().nullable(),
   question: PublicQuestionSchema,
+  generation: AttemptGenerationAvailabilitySchema,
 });
 export type QuizStartResponse = z.infer<typeof QuizStartResponseSchema>;
 
@@ -551,6 +860,7 @@ export const AttemptAnswerResponseSchema = z.object({
   completed: z.boolean(),
   score: z.number().min(0).max(100).nullable(),
   mastery: MasteryStateSchema.nullable(),
+  generation: AttemptGenerationAvailabilitySchema,
 });
 export type AttemptAnswerResponse = z.infer<typeof AttemptAnswerResponseSchema>;
 
@@ -560,6 +870,7 @@ export const AttemptResumeResponseSchema = z.object({
   completed: z.boolean(),
   score: z.number().min(0).max(100).nullable(),
   mastery: MasteryStateSchema.nullable(),
+  generation: AttemptGenerationAvailabilitySchema,
 });
 export type AttemptResumeResponse = z.infer<typeof AttemptResumeResponseSchema>;
 

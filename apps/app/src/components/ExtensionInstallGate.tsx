@@ -10,7 +10,9 @@ import { Modal, Platform, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import {
   detectClipQuestExtension,
+  isCompatibleClipQuestExtensionVersion,
   subscribeToClipQuestExtension,
+  supportsQuestionStream,
 } from "../transcription/clipquest-extension";
 import {
   borders,
@@ -25,7 +27,7 @@ import { PrimaryButton } from "./PrimaryButton";
 import { FeedbackMotion, MotionView, StaggerItem } from "../motion/Motion";
 import { routeRequiresClipQuestExtension } from "../transcription/extension-route";
 
-type GateStatus = "checking" | "missing" | "available";
+type GateStatus = "checking" | "missing" | "outdated" | "available";
 
 export function ExtensionInstallGate({ children }: PropsWithChildren) {
   const { reduceMotion, t, theme } = useSettings();
@@ -40,14 +42,27 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
     if (Platform.OS !== "web") return;
     setChecking(true);
     const result = await detectClipQuestExtension();
-    setStatus(result.available ? "available" : "missing");
+    setStatus(
+      !result.available
+        ? "missing"
+        : isCompatibleClipQuestExtensionVersion(result.version) &&
+            supportsQuestionStream(result.capabilities)
+          ? "available"
+          : "outdated",
+    );
     setChecking(false);
   }, []);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const unsubscribe = subscribeToClipQuestExtension(() =>
-      setStatus("available"),
+    const unsubscribe = subscribeToClipQuestExtension(
+      ({ version, capabilities }) =>
+        setStatus(
+          isCompatibleClipQuestExtensionVersion(version) &&
+            supportsQuestionStream(capabilities)
+            ? "available"
+            : "outdated",
+        ),
     );
     const initialCheck = setTimeout(() => void check(), 0);
     const onFocus = () => void check();
@@ -75,7 +90,8 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
       {children}
       <Modal
         visible={
-          status === "missing" && routeRequiresClipQuestExtension(pathname)
+          (status === "missing" || status === "outdated") &&
+          routeRequiresClipQuestExtension(pathname)
         }
         transparent
         animationType={reduceMotion ? "none" : "fade"}
@@ -113,10 +129,18 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
                   accessibilityRole="header"
                   style={[styles.title, { color: theme.text }]}
                 >
-                  {t("extensionRequiredTitle")}
+                  {t(
+                    status === "outdated"
+                      ? "extensionUpdateTitle"
+                      : "extensionRequiredTitle",
+                  )}
                 </Text>
                 <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-                  {t("extensionRequiredBody")}
+                  {t(
+                    status === "outdated"
+                      ? "extensionUpdateBody"
+                      : "extensionRequiredBody",
+                  )}
                 </Text>
               </View>
             </MotionView>

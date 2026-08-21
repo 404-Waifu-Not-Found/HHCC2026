@@ -1,7 +1,9 @@
 import {
+  AttemptGenerationResponseSchema,
   AttemptAnswerResponseSchema,
   AttemptResumeResponseSchema,
   type AttemptAnswerResponse,
+  type AttemptGenerationAvailability,
   type AttemptResumeResponse,
   type MasteryState,
   type PublicQuestion,
@@ -9,7 +11,7 @@ import {
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { AnswerCard, type AnswerState } from "../../src/components/AnswerCard";
 import { AppTextInput } from "../../src/components/AppTextInput";
@@ -19,11 +21,22 @@ import { IconButton } from "../../src/components/IconButton";
 import { LessonHeader } from "../../src/components/LessonHeader";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { QuestionStreamIndicator } from "../../src/components/QuestionStreamIndicator";
 import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
-import { createInitialOrdering } from "../../src/lib/quiz-order";
+import {
+  createChoicePresentation,
+  createInitialOrdering,
+  type ChoicePresentation,
+} from "../../src/lib/quiz-order";
+import { continueProgressiveAttempt } from "../../src/generation/progressive-continuation";
+import {
+  hasActiveProgressiveGenerationForAttempt,
+  publishAttemptGeneration,
+  subscribeToAttemptGeneration,
+} from "../../src/generation/progressive-coordinator";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import {
   FeedbackMotion,
@@ -61,11 +74,36 @@ export default function QuizScreen() {
   const [showCompletion, setShowCompletion] = useState(false);
   const [completedTotal, setCompletedTotal] = useState<number>();
   const [loading, setLoading] = useState(true);
+  const [waitingForQuestions, setWaitingForQuestions] = useState(false);
+  const [generation, setGeneration] = useState<AttemptGenerationAvailability>();
+  const [choicePresentation, setChoicePresentation] =
+    useState<ChoicePresentation>();
+  const [continuingGeneration, setContinuingGeneration] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
+  const recoveryAttemptedRef = useRef(false);
+
+  const updateGeneration = useCallback(
+    (next: AttemptGenerationAvailability) =>
+      setGeneration((current) =>
+        current?.state === next.state &&
+        current.availableQuestions === next.availableQuestions &&
+        current.totalQuestions === next.totalQuestions &&
+        current.reasonCode === next.reasonCode
+          ? current
+          : next,
+      ),
+    [],
+  );
 
   const activateQuestion = useCallback((nextQuestion: PublicQuestion) => {
     setQuestion(nextQuestion);
+    setChoicePresentation(
+      nextQuestion.type === "multiple_choice" &&
+        nextQuestion.options?.length === 4
+        ? createChoicePresentation(nextQuestion.options)
+        : undefined,
+    );
     setAnswer(
       nextQuestion.type === "ordering"
         ? createInitialOrdering(nextQuestion.items?.length ?? 0)
@@ -74,28 +112,44 @@ export default function QuizScreen() {
     setOrderingTouched(false);
     setFeedback(undefined);
     setError(undefined);
+    setWaitingForQuestions(false);
   }, []);
 
   const applyResume = useCallback(
     async (resumed: AttemptResumeResponse) => {
       setFeedback(undefined);
       setError(undefined);
+      updateGeneration(resumed.generation);
       if (resumed.completed) {
         setQuestion(undefined);
         setAnswer(undefined);
+        setWaitingForQuestions(false);
         setScore(resumed.score ?? 0);
         setMastery(resumed.mastery ?? "learning");
         setShowCompletion(true);
         return;
       }
-      if (!resumed.question) throw new Error(t("quizResumeMissing"));
+      if (!resumed.question) {
+        setQuestion(undefined);
+        setAnswer(undefined);
+        setScore(undefined);
+        setMastery(undefined);
+        setShowCompletion(false);
+        if (resumed.generation.state !== "ready") {
+          setWaitingForQuestions(true);
+          return;
+        }
+        setWaitingForQuestions(false);
+        setError(t("quizResumeMissing"));
+        return;
+      }
       activateQuestion(resumed.question);
       setScore(undefined);
       setMastery(undefined);
       setShowCompletion(false);
       await saveAttemptQuestion(attemptId, resumed.question);
     },
-    [activateQuestion, attemptId, t],
+    [activateQuestion, attemptId, t, updateGeneration],
   );
 
   const resume = useCallback(async () => {
@@ -137,11 +191,125 @@ export default function QuizScreen() {
     };
   }, [activateQuestion, attemptId, resume, t]);
 
+  useEffect(() => {
+    if (!waitingForQuestions) return;
+    let active = true;
+    let failures = 0;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      try {
+        await resume();
+        failures = 0;
+      } catch (cause) {
+        failures += 1;
+        if (failures >= 3 && active) {
+          setWaitingForQuestions(false);
+          setError(
+            cause instanceof Error ? cause.message : t("quizResumeFailed"),
+          );
+          return;
+        }
+      }
+      if (active) timeout = setTimeout(() => void poll(), 900);
+    };
+    timeout = setTimeout(() => void poll(), 500);
+    return () => {
+      active = false;
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [resume, t, waitingForQuestions]);
+
+  useEffect(
+    () =>
+      subscribeToAttemptGeneration(attemptId, (snapshot) => {
+        if (snapshot.generation) updateGeneration(snapshot.generation);
+      }),
+    [attemptId, updateGeneration],
+  );
+
+  useEffect(() => {
+    let active = true;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      try {
+        const status = await apiRequest(
+          `/api/attempts/${attemptId}/generation`,
+          {},
+          AttemptGenerationResponseSchema,
+        );
+        if (!active) return;
+        updateGeneration(status.generation);
+        publishAttemptGeneration(attemptId, status.quizId, status.generation);
+        if (
+          !recoveryAttemptedRef.current &&
+          (status.generation.state === "generating" ||
+            status.generation.state === "retrying") &&
+          !hasActiveProgressiveGenerationForAttempt(attemptId)
+        ) {
+          recoveryAttemptedRef.current = true;
+          void continueProgressiveAttempt(attemptId).catch((cause) => {
+            if (!active) return;
+            setError(
+              cause instanceof Error
+                ? cause.message
+                : t("quizGenerationFailed"),
+            );
+          });
+        }
+        if (status.generation.state !== "ready") {
+          timeout = setTimeout(() => void poll(), 1_000);
+        }
+      } catch {
+        if (active) timeout = setTimeout(() => void poll(), 1_500);
+      }
+    };
+    const onFocus = () => {
+      if (timeout) clearTimeout(timeout);
+      void poll();
+    };
+    void poll();
+    if (typeof window !== "undefined")
+      window.addEventListener("focus", onFocus);
+    return () => {
+      active = false;
+      if (timeout) clearTimeout(timeout);
+      if (typeof window !== "undefined")
+        window.removeEventListener("focus", onFocus);
+    };
+  }, [attemptId, t, updateGeneration]);
+
+  const continueGeneration = useCallback(async () => {
+    setContinuingGeneration(true);
+    setError(undefined);
+    try {
+      await continueProgressiveAttempt(attemptId);
+      await resume();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : t("quizGenerationFailed"),
+      );
+    } finally {
+      setContinuingGeneration(false);
+    }
+  }, [attemptId, resume, t]);
+
   const canSubmit = useMemo(() => {
     if (answer === undefined) return false;
     if (typeof answer === "string") return answer.trim().length > 0;
     return question?.type !== "ordering" || orderingTouched;
   }, [answer, orderingTouched, question?.type]);
+
+  const streamIndicator = generation ? (
+    <QuestionStreamIndicator
+      generation={generation}
+      continuing={continuingGeneration}
+      onContinue={
+        generation.state === "retry_required"
+          ? () => void continueGeneration()
+          : undefined
+      }
+    />
+  ) : undefined;
 
   const submit = async () => {
     if (!question || !canSubmit || answer === undefined) {
@@ -151,12 +319,26 @@ export default function QuizScreen() {
     setSubmitting(true);
     setError(undefined);
     try {
+      const submittedAnswer =
+        question.type === "multiple_choice" && typeof answer === "number"
+          ? choicePresentation?.displayToCanonical[answer]
+          : answer;
+      if (submittedAnswer === undefined) {
+        throw new Error(t("answerRequired"));
+      }
       const result = await apiRequest(
         `/api/attempts/${attemptId}/answer`,
-        { method: "POST", body: jsonBody({ questionId: question.id, answer }) },
+        {
+          method: "POST",
+          body: jsonBody({
+            questionId: question.id,
+            answer: submittedAnswer,
+          }),
+        },
         AttemptAnswerResponseSchema,
       );
       setFeedback(result);
+      updateGeneration(result.generation);
       await saveAttemptQuestion(attemptId, result.nextQuestion);
       if (result.completed) {
         setScore(result.score ?? 0);
@@ -202,7 +384,21 @@ export default function QuizScreen() {
       setShowCompletion(true);
       return;
     }
-    if (feedback.nextQuestion) activateQuestion(feedback.nextQuestion);
+    if (feedback.nextQuestion) {
+      activateQuestion(feedback.nextQuestion);
+      return;
+    }
+    setFeedback(undefined);
+    setQuestion(undefined);
+    setAnswer(undefined);
+    void saveAttemptQuestion(attemptId, null);
+    if (feedback.generation.state !== "ready") {
+      setWaitingForQuestions(true);
+      setError(undefined);
+      return;
+    }
+    setWaitingForQuestions(false);
+    setError(t("quizResumeMissing"));
   };
 
   if (loading) {
@@ -310,6 +506,54 @@ export default function QuizScreen() {
     );
   }
 
+  if (waitingForQuestions) {
+    return (
+      <Screen
+        scroll={false}
+        contentWidth="reading"
+        centered
+        floating={streamIndicator}
+      >
+        <MotionView
+          preset="pop"
+          accessibilityLiveRegion="polite"
+          style={styles.waiting}
+        >
+          <LearningPrism size={124} variant="tile" />
+          <ActivityIndicator size="large" color={theme.primary} />
+          <View style={styles.waitingCopy}>
+            <Text
+              accessibilityRole="header"
+              style={[styles.waitingTitle, { color: theme.text }]}
+            >
+              {t("preparingNextQuestion")}
+            </Text>
+            <Text style={[styles.waitingBody, { color: theme.textMuted }]}>
+              {t("quizStillGenerating")}
+            </Text>
+            {error ? (
+              <Text
+                accessibilityRole="alert"
+                style={[styles.error, { color: theme.error }]}
+              >
+                {error}
+              </Text>
+            ) : null}
+          </View>
+          <MotionSkeleton
+            color={theme.primarySoft}
+            style={styles.loadingLine}
+          />
+          <MotionSkeleton
+            color={theme.primarySoft}
+            delay={100}
+            style={styles.loadingLineShort}
+          />
+        </MotionView>
+      </Screen>
+    );
+  }
+
   if (error && !question) {
     return (
       <Screen contentWidth="reading" centered>
@@ -330,7 +574,7 @@ export default function QuizScreen() {
 
   if (showPrimer && primer) {
     return (
-      <Screen contentWidth="reading" centered>
+      <Screen contentWidth="reading" centered floating={streamIndicator}>
         <MotionView preset="from-left" style={styles.primerTop}>
           <LearningPrism size={132} variant="tile" />
           <View style={styles.primerHeading}>
@@ -405,7 +649,12 @@ export default function QuizScreen() {
   );
 
   return (
-    <Screen contentWidth="lesson" footer={footer} footerFlush>
+    <Screen
+      contentWidth="lesson"
+      footer={footer}
+      footerFlush
+      floating={streamIndicator}
+    >
       <LessonHeader
         progress={progress}
         progressLabel={progressLabel}
@@ -453,6 +702,7 @@ export default function QuizScreen() {
         </MotionView>
         <QuestionInput
           question={question}
+          displayOptions={choicePresentation?.options}
           answer={answer}
           feedback={feedback}
           setAnswer={setAnswer}
@@ -478,6 +728,7 @@ export default function QuizScreen() {
 
 function QuestionInput({
   question,
+  displayOptions,
   answer,
   feedback,
   setAnswer,
@@ -485,6 +736,7 @@ function QuestionInput({
   disabled,
 }: {
   question: PublicQuestion;
+  displayOptions?: string[];
   answer: Answer | undefined;
   feedback?: AttemptAnswerResponse;
   setAnswer(answer: Answer): void;
@@ -501,7 +753,7 @@ function QuestionInput({
   if (question.type === "multiple_choice") {
     return (
       <View style={styles.options}>
-        {question.options?.map((option, index) => (
+        {(displayOptions ?? question.options)?.map((option, index) => (
           <StaggerItem key={`${index}-${option}`} index={index}>
             <AnswerCard
               indexLabel={String.fromCharCode(65 + index)}
@@ -645,6 +897,30 @@ const styles = StyleSheet.create({
     width: 150,
     height: 10,
     borderRadius: radii.pill,
+  },
+  waiting: {
+    width: "100%",
+    minHeight: 420,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[4],
+  },
+  waitingCopy: {
+    maxWidth: 460,
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  waitingTitle: {
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.title,
+    lineHeight: typography.lineHeight.title,
+    textAlign: "center",
+  },
+  waitingBody: {
+    fontFamily: typography.body,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+    textAlign: "center",
   },
   quizBody: {
     width: "100%",

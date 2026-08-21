@@ -32,11 +32,11 @@ libraryRouter.get("/", async (c) => {
       v.title,
       v.original_url,
       v.origin,
-      (SELECT qb.id FROM quiz_banks qb WHERE qb.video_id = v.id AND qb.user_id = v.owner_id AND qb.pipeline_version = ? AND qb.quality_status = 'passed' ORDER BY qb.created_at DESC LIMIT 1) AS quiz_id,
+      (SELECT qb.id FROM quiz_banks qb WHERE qb.video_id = v.id AND qb.user_id = v.owner_id AND qb.pipeline_version IN (7, ?) AND qb.quality_status = 'passed' ORDER BY qb.created_at DESC LIMIT 1) AS quiz_id,
       m.best_score,
       m.state AS mastery_state,
       m.next_review_at,
-      (SELECT a.id FROM attempts a JOIN quiz_banks aq ON aq.id = a.quiz_id AND aq.pipeline_version = ? AND aq.quality_status = 'passed' WHERE aq.video_id = v.id AND a.user_id = v.owner_id AND a.status = 'active' ORDER BY a.updated_at DESC LIMIT 1) AS active_attempt_id
+      (SELECT a.id FROM attempts a JOIN quiz_banks aq ON aq.id = a.quiz_id AND aq.pipeline_version IN (7, ?) AND aq.quality_status = 'passed' WHERE aq.video_id = v.id AND a.user_id = v.owner_id AND a.status = 'active' ORDER BY a.updated_at DESC LIMIT 1) AS active_attempt_id
     FROM videos v
     LEFT JOIN mastery m ON m.user_id = v.owner_id AND m.video_id = v.id
     WHERE v.owner_id = ? AND v.source = 'youtube'

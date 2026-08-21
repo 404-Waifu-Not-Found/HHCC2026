@@ -2,13 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   AdminMeResponseSchema,
   AdminSystemResponseSchema,
+  AttemptGenerationAvailabilitySchema,
+  AttemptGenerationResponseSchema,
   ExtensionQuizImportRequestSchema,
+  ExtensionQuizProgressiveImportRequestSchema,
+  LocalConceptQuizChunkSchema,
   LocalConceptQuizResultSchema,
+  LocalQuizContextSchema,
   QuizQuestionTypesSchema,
   identifyVideoSource,
   questionLimitForSession,
   questionTypePlanForSelection,
   type LocalConceptQuizQuestion,
+  type LocalConceptQuizChunk,
   type LocalConceptQuizResult,
   type QuizQuestionType,
 } from "../src/index";
@@ -142,7 +148,189 @@ describe("generated questions", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts strict sequential question chunks for progressive delivery", () => {
+    const first = localQuizChunk(10, 0);
+    const second = localQuizChunk(10, 1);
+    expect(LocalConceptQuizChunkSchema.parse(first)).toEqual(first);
+    expect(LocalConceptQuizChunkSchema.parse(second)).toEqual(second);
+    expect(
+      ExtensionQuizProgressiveImportRequestSchema.safeParse({
+        videoId: "11111111-1111-4111-8111-111111111111",
+        quizLanguage: "en",
+        sessionLength: "medium",
+        questionTypes: ["multiple_choice", "true_false", "short_answer"],
+        watched: true,
+        chunk: first,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects progressive chunks with the wrong position, ids, or type plan", () => {
+    const chunk = localQuizChunk(10, 5);
+    expect(
+      LocalConceptQuizChunkSchema.safeParse({
+        ...chunk,
+        startIndex: 10,
+      }).success,
+    ).toBe(false);
+    expect(
+      LocalConceptQuizChunkSchema.safeParse({
+        ...chunk,
+        question: { ...chunk.question, id: "q5" },
+      }).success,
+    ).toBe(false);
+    expect(
+      ExtensionQuizProgressiveImportRequestSchema.safeParse({
+        videoId: "11111111-1111-4111-8111-111111111111",
+        quizLanguage: "en",
+        sessionLength: "medium",
+        questionTypes: ["multiple_choice"],
+        watched: true,
+        chunk,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires authoritative generation counts and a truthful ready state", () => {
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse({
+        state: "generating",
+        availableQuestions: 3,
+        totalQuestions: 10,
+      }).success,
+    ).toBe(true);
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse({
+        state: "ready",
+        availableQuestions: 3,
+        totalQuestions: 10,
+      }).success,
+    ).toBe(false);
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse({
+        state: "retry_required",
+        availableQuestions: 3,
+        totalQuestions: 10,
+        reasonCode: "raw error text!",
+      }).success,
+    ).toBe(false);
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse({
+        state: "generating",
+        availableQuestions: 3,
+        totalQuestions: 10,
+        reasonCode: "generation_stalled",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts only first-missing continuation metadata with the global type plan", () => {
+    const complete = localQuizResult(5);
+    const acceptedQuestions = complete.quiz.questions
+      .slice(0, 3)
+      .map(({ id, type, concept, question }) => ({
+        id,
+        type,
+        concept,
+        question,
+      }));
+    const context = {
+      protocolVersion: 1,
+      jobId: "11111111-1111-4111-8111-111111111111",
+      videoId: "22222222-2222-4222-8222-222222222222",
+      title: "A trusted source title",
+      quizLanguage: "en",
+      questionTypes: ["multiple_choice", "true_false", "short_answer"],
+      questionCount: 5,
+      transcriptFingerprint: "1234abcd",
+      transcriptLanguage: "en",
+      segments: [{ id: "s1", startMs: 0, endMs: 1_000, text: "Lesson" }],
+      continuation: { startIndex: 3, acceptedQuestions },
+    };
+    expect(LocalQuizContextSchema.safeParse(context).success).toBe(true);
+    expect(
+      LocalQuizContextSchema.safeParse({
+        ...context,
+        continuation: { startIndex: 2, acceptedQuestions },
+      }).success,
+    ).toBe(false);
+    expect(
+      LocalQuizContextSchema.safeParse({
+        ...context,
+        continuation: {
+          startIndex: 3,
+          acceptedQuestions: acceptedQuestions.map((question, index) =>
+            index === 1 ? { ...question, type: "short_answer" } : question,
+          ),
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("exposes only safe owner continuation metadata for incomplete attempts", () => {
+    const complete = localQuizResult(5);
+    const acceptedQuestions = complete.quiz.questions
+      .slice(0, 2)
+      .map(({ id, type, concept, question }) => ({
+        id,
+        type,
+        concept,
+        question,
+      }));
+    const response = {
+      attemptId: "11111111-1111-4111-8111-111111111111",
+      quizId: "22222222-2222-4222-8222-222222222222",
+      generation: {
+        state: "generating",
+        availableQuestions: 2,
+        totalQuestions: 5,
+      },
+      continuation: {
+        videoId: "33333333-3333-4333-8333-333333333333",
+        quizLanguage: "en",
+        sessionLength: "short",
+        questionTypes: ["multiple_choice", "true_false", "short_answer"],
+        watched: true,
+        startIndex: 2,
+        acceptedQuestions,
+      },
+    };
+    expect(AttemptGenerationResponseSchema.safeParse(response).success).toBe(
+      true,
+    );
+    expect(
+      AttemptGenerationResponseSchema.safeParse({
+        ...response,
+        continuation: {
+          ...response.continuation,
+          apiKey: "must-never-cross-the-bridge",
+          transcript: "must-stay-local",
+        },
+      }).success,
+    ).toBe(false);
+  });
 });
+
+function localQuizChunk(
+  questionCount: 5 | 10 | 15,
+  startIndex: number,
+): LocalConceptQuizChunk {
+  const complete = localQuizResult(questionCount);
+  return {
+    protocolVersion: complete.protocolVersion,
+    pipelineVersion: complete.pipelineVersion,
+    model: complete.model,
+    reasoningEffort: complete.reasoningEffort,
+    promptVersion: complete.promptVersion,
+    validatorVersion: complete.validatorVersion,
+    title: complete.quiz.title,
+    startIndex,
+    totalQuestions: questionCount,
+    question: complete.quiz.questions[startIndex]!,
+    metrics: complete.metrics,
+  };
+}
 
 function localQuizResult(questionCount: 5 | 10 | 15): LocalConceptQuizResult {
   const questionTypes: QuizQuestionType[] = [
@@ -152,12 +340,12 @@ function localQuizResult(questionCount: 5 | 10 | 15): LocalConceptQuizResult {
   ];
   const typePlan = questionTypePlanForSelection(questionTypes, questionCount);
   return {
-    protocolVersion: 3,
-    pipelineVersion: 7,
+    protocolVersion: 5,
+    pipelineVersion: 9,
     model: "deepseek-v4-flash" as const,
     reasoningEffort: "high" as const,
-    promptVersion: "quiz-local-tool-v2.0" as const,
-    validatorVersion: "validator-local-tool-v2.0" as const,
+    promptVersion: "quiz-local-json-stream-v5.0" as const,
+    validatorVersion: "validator-local-progressive-v4.0" as const,
     quiz: {
       title: "A local concept quiz",
       questions: typePlan.map((type, index) => localQuestion(type, index)),

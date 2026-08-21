@@ -27,6 +27,7 @@
         type: "ready",
         version,
         configured: configuration?.configured === true,
+        capabilities: ["question-stream-v1"],
       });
     } catch {
       // An unpacked extension can be reloaded while a page is open. The page
@@ -85,6 +86,14 @@
             attempt: response.attempt,
             maxAttempts: response.maxAttempts,
             status: response.status,
+          });
+          return;
+        }
+        if (response.type === "question") {
+          post({
+            type: "generation-question",
+            requestId,
+            result: response.result,
           });
           return;
         }

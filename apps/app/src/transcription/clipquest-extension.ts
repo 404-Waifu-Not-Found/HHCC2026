@@ -1,11 +1,14 @@
 import {
   GenerationStageSchema,
-  LocalConceptQuizResultSchema,
+  LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  LocalConceptQuizGenerationResultSchema,
+  LocalConceptQuizQuestionChunkSchema,
   LocalQuizContextSchema,
   MAX_COMPLETE_TRANSCRIPT_SEGMENTS,
   TranscriptSegmentSchema,
   type GenerationStage,
-  type LocalConceptQuizResult,
+  type LocalConceptQuizQuestionChunk,
+  type LocalConceptQuizGenerationResult,
   type LocalQuizContext,
   type TranscriptSegment,
 } from "@clipquest/contracts";
@@ -16,6 +19,7 @@ const WEBSITE_SOURCE = "clipquest-website";
 const EXTENSION_SOURCE = "clipquest-extension";
 const DETECTION_TIMEOUT_MS = 900;
 const EXTRACTION_TIMEOUT_MS = 55_000;
+export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.0";
 
 type ExtensionReadyMessage = {
   channel: typeof CHANNEL;
@@ -23,6 +27,7 @@ type ExtensionReadyMessage = {
   type: "ready";
   version?: string;
   configured?: boolean;
+  capabilities?: unknown;
 };
 
 type ExtensionExtractionResult = {
@@ -74,12 +79,67 @@ type ExtensionGenerationResultMessage = {
   source: typeof EXTENSION_SOURCE;
   type: "generation-result";
   requestId: string;
-  response?: { ok?: boolean; result?: unknown; error?: string };
+  response?: {
+    ok?: boolean;
+    result?: unknown;
+    error?: string;
+    reasonCode?: string;
+  };
+};
+
+type ExtensionGenerationQuestionMessage = {
+  channel: typeof CHANNEL;
+  source: typeof EXTENSION_SOURCE;
+  type: "generation-question";
+  requestId: string;
+  result?: unknown;
 };
 
 export type ClipQuestExtensionStatus =
   | { available: false }
-  | { available: true; configured: boolean; version?: string };
+  | {
+      available: true;
+      configured: boolean;
+      version?: string;
+      capabilities: string[];
+    };
+
+export class LocalGenerationRequestError extends Error {
+  constructor(
+    message: string,
+    readonly reasonCode: string,
+  ) {
+    super(message);
+  }
+}
+
+export function isCompatibleClipQuestExtensionVersion(
+  version: string | undefined,
+): boolean {
+  if (!version) return false;
+  const actual = version.split(".").map((part) => Number(part));
+  const required = MINIMUM_LOCAL_AI_EXTENSION_VERSION.split(".").map((part) =>
+    Number(part),
+  );
+  if (
+    actual.length < 3 ||
+    actual.some((part) => !Number.isInteger(part) || part < 0)
+  ) {
+    return false;
+  }
+  for (let index = 0; index < required.length; index += 1) {
+    const requiredPart = required[index] ?? 0;
+    if ((actual[index] ?? 0) > requiredPart) return true;
+    if ((actual[index] ?? 0) < requiredPart) return false;
+  }
+  return true;
+}
+
+export function supportsQuestionStream(
+  capabilities: readonly string[],
+): boolean {
+  return capabilities.includes(LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY);
+}
 
 function canUseExtensionBridge(): boolean {
   return (
@@ -146,6 +206,19 @@ function isGenerationResultMessage(
   );
 }
 
+function isGenerationQuestionMessage(
+  value: unknown,
+): value is ExtensionGenerationQuestionMessage {
+  if (!value || typeof value !== "object") return false;
+  const message = value as Partial<ExtensionGenerationQuestionMessage>;
+  return (
+    message.channel === CHANNEL &&
+    message.source === EXTENSION_SOURCE &&
+    message.type === "generation-question" &&
+    typeof message.requestId === "string"
+  );
+}
+
 function post(message: Record<string, unknown>): void {
   window.postMessage(
     { channel: CHANNEL, source: WEBSITE_SOURCE, ...message },
@@ -154,7 +227,11 @@ function post(message: Record<string, unknown>): void {
 }
 
 export function subscribeToClipQuestExtension(
-  listener: (status: { version?: string; configured: boolean }) => void,
+  listener: (status: {
+    version?: string;
+    configured: boolean;
+    capabilities: string[];
+  }) => void,
 ): () => void {
   if (!canUseExtensionBridge()) return () => undefined;
   const receive = (event: MessageEvent<unknown>) => {
@@ -163,6 +240,7 @@ export function subscribeToClipQuestExtension(
     if (!isReadyMessage(event.data)) return;
     listener({
       configured: event.data.configured === true,
+      capabilities: extensionCapabilities(event.data.capabilities),
       ...(typeof event.data.version === "string"
         ? { version: event.data.version }
         : {}),
@@ -192,6 +270,7 @@ export async function detectClipQuestExtension(
       finish({
         available: true,
         configured: event.data.configured === true,
+        capabilities: extensionCapabilities(event.data.capabilities),
         ...(typeof event.data.version === "string"
           ? { version: event.data.version }
           : {}),
@@ -201,6 +280,14 @@ export async function detectClipQuestExtension(
     window.addEventListener("message", receive);
     post({ type: "ping" });
   });
+}
+
+function extensionCapabilities(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter(
+        (capability): capability is string => typeof capability === "string",
+      )
+    : [];
 }
 
 function parseExtractionResult(value: unknown): ExtensionExtractionResult {
@@ -357,11 +444,22 @@ export async function requestExtensionLocalQuiz(
     progress: number,
     detail: LocalGenerationProgress,
   ) => void,
-): Promise<LocalConceptQuizResult> {
+  onQuestion: (chunk: LocalConceptQuizQuestionChunk) => void = () => undefined,
+): Promise<LocalConceptQuizGenerationResult> {
   const context = LocalQuizContextSchema.parse(rawContext);
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
     throw new Error("ClipQuest Local AI is not installed.");
+  }
+  if (!isCompatibleClipQuestExtensionVersion(extension.version)) {
+    throw new Error(
+      `ClipQuest Local AI ${MINIMUM_LOCAL_AI_EXTENSION_VERSION} or newer is required for streamed questions. Download and reload the current extension.`,
+    );
+  }
+  if (!supportsQuestionStream(extension.capabilities)) {
+    throw new Error(
+      "Update ClipQuest Local AI. This extension does not support question-stream-v1.",
+    );
   }
   if (!extension.configured) {
     throw new Error(
@@ -402,6 +500,22 @@ export async function requestExtensionLocalQuiz(
         return;
       }
       if (
+        isGenerationQuestionMessage(event.data) &&
+        event.data.requestId === id
+      ) {
+        const chunk = LocalConceptQuizQuestionChunkSchema.safeParse(
+          event.data.result,
+        );
+        if (!chunk.success) {
+          finish(() =>
+            reject(new Error("The extension returned an invalid quiz chunk.")),
+          );
+          return;
+        }
+        onQuestion(chunk.data);
+        return;
+      }
+      if (
         !isGenerationResultMessage(event.data) ||
         event.data.requestId !== id
       ) {
@@ -411,10 +525,13 @@ export async function requestExtensionLocalQuiz(
       if (!response?.ok) {
         finish(() =>
           reject(
-            new Error(
+            new LocalGenerationRequestError(
               typeof response?.error === "string"
                 ? response.error
                 : "Local quiz generation failed.",
+              typeof response?.reasonCode === "string"
+                ? response.reasonCode
+                : "automatic_retries_exhausted",
             ),
           ),
         );
@@ -445,8 +562,10 @@ export async function requestExtensionLocalQuiz(
   });
 }
 
-function parseLocalConceptQuizResult(value: unknown): LocalConceptQuizResult {
-  const parsed = LocalConceptQuizResultSchema.safeParse(value);
+function parseLocalConceptQuizResult(
+  value: unknown,
+): LocalConceptQuizGenerationResult {
+  const parsed = LocalConceptQuizGenerationResultSchema.safeParse(value);
   if (!parsed.success) {
     throw new Error("The extension returned an invalid local quiz.");
   }

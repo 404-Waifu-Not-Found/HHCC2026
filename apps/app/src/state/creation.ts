@@ -5,6 +5,7 @@ import {
   VideoImportResponseSchema,
   type AppLanguage,
   type QuizQuestionType,
+  type SessionLength,
   type VideoImportResponse,
 } from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -24,6 +25,12 @@ export type StoredGeneration = {
   jobId?: string;
   quizLanguage?: AppLanguage;
   questionTypes?: QuizQuestionType[];
+  sessionLength?: SessionLength;
+  watched?: boolean;
+  quizId?: string;
+  attemptId?: string;
+  acceptedCount?: number;
+  plannedCount?: 5 | 10 | 15;
   preworkStatus?: "running" | "ready" | "unavailable" | "failed";
 };
 
@@ -122,7 +129,18 @@ export async function loadGenerationState(
       (value.quizLanguage !== undefined &&
         !LanguageSchema.safeParse(value.quizLanguage).success) ||
       (value.questionTypes !== undefined &&
-        !QuizQuestionTypesSchema.safeParse(value.questionTypes).success)
+        !QuizQuestionTypesSchema.safeParse(value.questionTypes).success) ||
+      (value.sessionLength !== undefined &&
+        !["short", "medium", "long"].includes(value.sessionLength)) ||
+      (value.watched !== undefined && typeof value.watched !== "boolean") ||
+      (value.quizId !== undefined && !isUuid(value.quizId)) ||
+      (value.attemptId !== undefined && !isUuid(value.attemptId)) ||
+      (value.acceptedCount !== undefined &&
+        (!Number.isInteger(value.acceptedCount) ||
+          value.acceptedCount < 1 ||
+          value.acceptedCount > 15)) ||
+      (value.plannedCount !== undefined &&
+        ![5, 10, 15].includes(value.plannedCount))
     ) {
       throw new Error("Invalid generation state");
     }
@@ -131,6 +149,12 @@ export async function loadGenerationState(
     await AsyncStorage.removeItem(generationKeyFor(videoId));
     return null;
   }
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 export async function saveGenerationState(

@@ -392,9 +392,11 @@ chrome.runtime.onConnect.addListener((port) => {
       .then(async (stored) => {
         const apiKey = stored[API_KEY_STORAGE_KEY];
         if (typeof apiKey !== "string") {
-          throw new Error(
+          const error = new Error(
             "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
           );
+          error.reasonCode = "credential_missing";
+          throw error;
         }
         const progress = (stage, value, detail = {}) => {
           post({
@@ -405,12 +407,20 @@ chrome.runtime.onConnect.addListener((port) => {
             ...detail,
           });
         };
+        const question = (result) => {
+          post({
+            type: "question",
+            requestId,
+            result,
+          });
+        };
         return message.context
           ? generateLocalQuiz(
               message.context,
               apiKey,
               progress,
               controller.signal,
+              question,
             )
           : generateQuizForVideo(message, apiKey, progress, controller.signal);
       })
@@ -423,6 +433,10 @@ chrome.runtime.onConnect.addListener((port) => {
           requestId,
           response: {
             ok: false,
+            reasonCode:
+              typeof error?.reasonCode === "string"
+                ? error.reasonCode
+                : "automatic_retries_exhausted",
             error:
               error instanceof Error
                 ? error.message

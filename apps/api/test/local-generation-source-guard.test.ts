@@ -34,4 +34,23 @@ describe("extension generation source guard", () => {
     expect(quizImportRoute).not.toContain("segments:");
     expect(quizImportRoute).not.toContain("reasoning_content");
   });
+
+  it("stores validated questions and exposes background generation state", () => {
+    const quizRoute = readFileSync(
+      resolve(apiRoot, "routes/quizzes.ts"),
+      "utf8",
+    );
+    const quizImportRoute = readFileSync(
+      resolve(apiRoot, "routes/quiz-imports.ts"),
+      "utf8",
+    );
+
+    expect(quizImportRoute).toContain('post("/progressive"');
+    expect(quizImportRoute).toContain('put("/:quizId/questions"');
+    expect(quizImportRoute).toContain('patch("/:quizId/progress"');
+    expect(quizImportRoute).toContain("INSERT OR IGNORE INTO attempt_items");
+    expect(quizRoute).toContain('get("/attempts/:attemptId/generation"');
+    expect(quizRoute).toContain("attemptGenerationAvailability");
+    expect(quizRoute).toContain("progressiveSummary.plannedCount");
+  });
 });

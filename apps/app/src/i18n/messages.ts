@@ -133,6 +133,9 @@ export const messages = {
     extensionRequiredTitle: "Install the Chrome extension",
     extensionRequiredBody:
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
+    extensionUpdateTitle: "Update ClipQuest Local AI",
+    extensionUpdateBody:
+      "This version cannot stream validated questions yet. Install ClipQuest Local AI 0.8.0 or newer to continue.",
     extensionStepDownload: "Download and unzip the extension package.",
     extensionStepOpen: "Open chrome://extensions and turn on Developer mode.",
     extensionStepLoad:
@@ -171,6 +174,11 @@ export const messages = {
       "This quiz changed on another screen. The current question has been restored.",
     quizResumeMissing: "The current quiz question is missing.",
     quizResumeFailed: "Could not resume this quiz.",
+    preparingNextQuestion: "Preparing your next question",
+    quizStillGenerating:
+      "You reached the questions that are ready. The rest of your quiz is still generating.",
+    quizGenerationFailed:
+      "The rest of this quiz could not be generated. Start again from the video.",
     answerCheckFailed: "Could not check that answer.",
     retryingConcept: "Retrying this concept",
     generationFailed: "Quiz creation stopped",
@@ -179,7 +187,7 @@ export const messages = {
     cancelGenerationFailed: "Could not cancel quiz creation. Please try again.",
     tryAgain: "Try again",
     privateTranscription:
-      "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only the completed quiz so you can answer it and save progress.",
+      "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only validated quiz questions so you can answer them and save progress.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -349,6 +357,9 @@ export const messages = {
     extensionRequiredTitle: "安装 Chrome 扩展",
     extensionRequiredBody:
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
+    extensionUpdateTitle: "更新 ClipQuest Local AI",
+    extensionUpdateBody:
+      "当前版本尚不支持逐题流式传输。请安装 ClipQuest Local AI 0.8.0 或更高版本后继续。",
     extensionStepDownload: "下载并解压扩展安装包。",
     extensionStepOpen: "打开 chrome://extensions，并启用开发者模式。",
     extensionStepLoad:
@@ -385,6 +396,9 @@ export const messages = {
     quizResynced: "此测验已在其他页面更新，现已恢复到当前题目。",
     quizResumeMissing: "当前测验题目缺失。",
     quizResumeFailed: "无法继续此测验。",
+    preparingNextQuestion: "正在准备下一题",
+    quizStillGenerating: "你已完成当前准备好的题目，其余题目仍在生成中。",
+    quizGenerationFailed: "其余题目未能生成，请从该视频重新开始。",
     answerCheckFailed: "无法检查此答案。",
     retryingConcept: "换一种方式再练一次",
     generationFailed: "测验生成已停止",
@@ -392,7 +406,7 @@ export const messages = {
     cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
     privateTranscription:
-      "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存完成的测验，供你作答并保存学习进度。",
+      "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目，供你作答并保存学习进度。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",
