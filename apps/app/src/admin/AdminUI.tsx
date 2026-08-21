@@ -471,16 +471,16 @@ export function ActionDialog({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={copy.cancel}
-        onPress={busy ? undefined : onClose}
-        style={[styles.backdrop, { backgroundColor: theme.overlay }]}
-      >
+      <View style={[styles.backdrop, { backgroundColor: theme.overlay }]}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={copy.cancel}
+          onPress={busy ? undefined : onClose}
+          style={styles.backdropDismiss}
+        />
+        <View
+          role="dialog"
           accessibilityViewIsModal
-          accessibilityRole="none"
-          onPress={(event) => event.stopPropagation()}
           style={[
             styles.dialog,
             {
@@ -544,8 +544,8 @@ export function ActionDialog({
               </PrimaryButton>
             </View>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -761,6 +761,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: spacing[4],
+  },
+  backdropDismiss: {
+    position: "absolute",
+    inset: 0,
   },
   dialog: {
     width: "100%",

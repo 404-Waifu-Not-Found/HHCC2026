@@ -194,7 +194,15 @@ The native bridge used to turn source media into Whisper-compatible PCM without 
 
 ### 5. [Documentation and browser QA](./docs/)
 
-The [current UI handoff](./docs/HANDOFF-2026-07-31-UI-REBUILD.md) records architecture and honest acceptance status. [Playwright journeys](./e2e/clipquest.spec.ts) cover the primary visual, responsive, validation, retry, feedback, and completion states.
+The [current admin handoff](./docs/HANDOFF-2026-07-31-ADMIN-CONSOLE.md) and [UI handoff](./docs/HANDOFF-2026-07-31-UI-REBUILD.md) record architecture and honest acceptance status. [Playwright journeys](./e2e/clipquest.spec.ts) cover the primary visual, responsive, validation, retry, feedback, completion, and operations states.
+
+### 6. [Private operations console](./docs/ADMIN-CONSOLE.md)
+
+Authorized operators use `/admin` to inspect system health, manage accounts and sessions, recover generation jobs, review lessons, and trace privileged actions. Roles are server-owned, every management API is permission checked, and privileged mutations are added to an audit log. The console never exposes Worker secrets, auth tokens, raw transcripts, answer keys, or password controls.
+
+| Desktop overview                                                                           | Mobile people management                                                                   |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| ![ClipQuest operations overview](./docs/screenshots/final/admin-overview-desktop-1440.png) | ![ClipQuest mobile people management](./docs/screenshots/final/admin-users-mobile-390.png) |
 
 ## Repository structure
 
@@ -267,7 +275,7 @@ npm run test:e2e
 npm run build
 ```
 
-The current verified baseline is 38 Vitest tests and five Playwright journeys. Browser coverage includes YouTube/bilibili link validation, unavailable media, processing retry, keyboard answer selection, correct/incorrect feedback, completion, horizontal overflow, and target desktop/tablet/mobile viewports.
+The current verified baseline is 43 Vitest tests and seven Playwright journeys. Browser coverage includes YouTube/bilibili link validation, unavailable media, processing retry, keyboard answer selection, correct/incorrect feedback, completion, operations authorization/actions, horizontal overflow, and target desktop/tablet/mobile viewports.
 
 Prepare native projects after native dependency changes:
 
@@ -338,6 +346,8 @@ npm run cf:deploy
 - Only timestamped transcript segments—not raw audio—are uploaded for private storage and question generation.
 - DeepSeek and Resend credentials remain Worker-only and never enter Expo or web bundles.
 - D1 queries and R2/KV objects are scoped to authenticated ClipQuest users and server-side authorization.
+- Operations roles are stored server-side; learners receive no management permissions, operators cannot elevate roles, and owners are protected from self-lockout.
+- Privileged account/job changes require a reason and write an audit record. Generic Better Auth admin endpoints are blocked so they cannot bypass ClipQuest auditing.
 - Generated questions must pass shared schema, answer, evidence, and transcript-segment validation.
 - YouTube OAuth, watch-history imports, subscriptions, playlists, liked videos, and personalized account feeds are outside the core product and disabled.
 - The experimental YouTube device connection remains behind `ENABLE_YOUTUBE_DEMO_HISTORY=false`; it is not required to create a quest.

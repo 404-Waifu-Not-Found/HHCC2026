@@ -528,13 +528,15 @@ adminRouter.get("/audit", requireAdminPermission("audit:read"), async (c) => {
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const total = await count(
     c.env.DB,
-    `SELECT COUNT(*) AS count FROM admin_audit_log a JOIN user u ON u.id = a.actor_user_id ${clause}`,
+    `SELECT COUNT(*) AS count FROM admin_audit_log a LEFT JOIN user u ON u.id = a.actor_user_id ${clause}`,
     values,
   );
   const rows = await c.env.DB.prepare(
     `SELECT a.id, a.action, a.target_type, a.target_id, a.reason, a.metadata_json, a.outcome, a.created_at,
-      u.id AS actor_id, u.name AS actor_name, u.email AS actor_email
-      FROM admin_audit_log a JOIN user u ON u.id = a.actor_user_id ${clause}
+      COALESCE(u.id, 'deleted-operator') AS actor_id,
+      COALESCE(u.name, 'Deleted operator') AS actor_name,
+      COALESCE(u.email, 'deleted-operator@clipquest.invalid') AS actor_email
+      FROM admin_audit_log a LEFT JOIN user u ON u.id = a.actor_user_id ${clause}
       ORDER BY a.created_at DESC LIMIT ? OFFSET ?`,
   )
     .bind(...values, query.pageSize, (query.page - 1) * query.pageSize)
@@ -581,7 +583,10 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
       },
       model: c.env.DEEPSEEK_MODEL,
       jobs,
-      database: { migration: "0006_admin_console", auditEnabled: true },
+      database: {
+        migration: "0007_admin_audit_retention",
+        auditEnabled: true,
+      },
     }),
   );
 });

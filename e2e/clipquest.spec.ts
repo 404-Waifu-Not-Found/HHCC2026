@@ -14,6 +14,7 @@ const SCREENSHOT_DIR = "docs/screenshots/final";
 const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
 
 type Scenario = {
+  adminMode: "allowed" | "denied";
   answerCorrect: boolean;
   completedAttempt: boolean;
   generationMode: "stable" | "failed";
@@ -364,6 +365,14 @@ test("admin operations console is responsive and uses real management contracts"
   await expect(page.getByText("Morgan Operator")).toBeVisible();
   await expect(page.getByRole("button", { name: "Suspend" })).toBeVisible();
   await capture(page, "admin-users-desktop-1440");
+  await page.getByRole("button", { name: "Suspend" }).click();
+  await page
+    .getByLabel("Reason")
+    .fill("Confirmed policy violation after support review");
+  await page.getByRole("button", { name: "Suspend" }).last().click();
+  await expect(
+    page.getByText("Action completed and added to the audit log."),
+  ).toBeVisible();
 
   await page.getByRole("tab", { name: "Processing" }).click();
   await expect(
@@ -383,8 +392,23 @@ test("admin operations console is responsive and uses real management contracts"
   await capture(page, "admin-users-mobile-390");
 });
 
+test("admin console rejects a signed-in learner using the server role guard", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.adminMode = "denied";
+  await page.goto("/admin");
+  await expect(
+    page.getByRole("heading", { name: "Operations access required" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Return to ClipQuest" }),
+  ).toBeVisible();
+});
+
 async function installMocks(page: Page): Promise<Scenario> {
   const scenario: Scenario = {
+    adminMode: "allowed",
     answerCorrect: true,
     completedAttempt: false,
     generationMode: "stable",
@@ -411,6 +435,19 @@ async function installMocks(page: Page): Promise<Scenario> {
       return;
     }
     if (path === "/api/admin/me") {
+      if (scenario.adminMode === "denied") {
+        await json(
+          route,
+          {
+            error: {
+              code: "admin_access_required",
+              message: "You do not have access to ClipQuest operations.",
+            },
+          },
+          403,
+        );
+        return;
+      }
       await json(route, {
         user: {
           id: "99999999-9999-4999-8999-999999999999",
@@ -579,7 +616,10 @@ async function installMocks(page: Page): Promise<Scenario> {
         },
         model: "deepseek-v4-flash",
         jobs: { queued: 4, running: 3, complete: 3755, failed: 3 },
-        database: { migration: "0006_admin_console", auditEnabled: true },
+        database: {
+          migration: "0007_admin_audit_retention",
+          auditEnabled: true,
+        },
       });
       return;
     }

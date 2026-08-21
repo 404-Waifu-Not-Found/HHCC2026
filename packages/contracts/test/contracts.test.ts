@@ -31,7 +31,10 @@ describe("admin contracts", () => {
         },
         model: "deepseek-v4-flash",
         jobs: { queued: 1, running: 2, complete: 3, failed: 4 },
-        database: { migration: "0006_admin_console", auditEnabled: true },
+        database: {
+          migration: "0007_admin_audit_retention",
+          auditEnabled: true,
+        },
       }).configuration,
     ).toEqual({
       authentication: true,
