@@ -301,7 +301,7 @@ export default function QuizScreen() {
                 router.replace("/(tabs)");
               }}
             >
-              {t("finish")}
+              {t("returnToLibrary")}
             </PrimaryButton>
           </View>
         </View>

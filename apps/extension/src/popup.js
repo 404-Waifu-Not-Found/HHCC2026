@@ -125,10 +125,12 @@ generateQuiz.addEventListener("click", () => {
     if (message?.requestId !== requestId) return;
     if (message.type === "progress") {
       const percent = Math.round(Number(message.progress ?? 0) * 100);
+      const attempt = Number(message.attempt ?? 1);
+      const maxAttempts = Number(message.maxAttempts ?? 3);
       setStatus(
         message.stage === "getting_video"
           ? `Reading YouTube captions… ${percent}%`
-          : `DeepSeek is generating all questions in one tool call… ${percent}%`,
+          : `${message.status === "retrying" ? "Retrying invalid quiz output" : "DeepSeek is generating the complete quiz"} · attempt ${attempt}/${maxAttempts} · ${percent}%`,
       );
       return;
     }
@@ -147,7 +149,7 @@ generateQuiz.addEventListener("click", () => {
     );
     quizOutput.hidden = false;
     finish(
-      `Generated ${message.response.result.quiz.questions.length} questions in one DeepSeek call and saved ${message.response.result.filename}.`,
+      `Generated ${message.response.result.quiz.questions.length} questions in ${message.response.result.metrics.aiCalls} DeepSeek call(s) and saved ${message.response.result.filename}.`,
       "success",
     );
   });
@@ -165,6 +167,7 @@ generateQuiz.addEventListener("click", () => {
     videoId,
     quizLanguage: "en",
     questionCount: 15,
+    questionTypes: ["multiple_choice", "true_false", "short_answer"],
   });
 });
 

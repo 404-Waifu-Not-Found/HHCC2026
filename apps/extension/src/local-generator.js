@@ -2,13 +2,21 @@ import { captionsToPlainText } from "./caption-text.js";
 
 const MODEL = "deepseek-v4-flash";
 const TOOL_NAME = "submit_quiz";
-const PROTOCOL_VERSION = 2;
-const PIPELINE_VERSION = 6;
-const PROMPT_VERSION = "quiz-local-tool-v1.0";
-const VALIDATOR_VERSION = "validator-local-tool-v1.0";
+const PROTOCOL_VERSION = 3;
+const PIPELINE_VERSION = 7;
+const PROMPT_VERSION = "quiz-local-tool-v2.0";
+const VALIDATOR_VERSION = "validator-local-tool-v2.0";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const GENERATION_OUTPUT_TOKENS = 48_000;
+const MAX_GENERATION_ATTEMPTS = 3;
+const SUPPORTED_QUESTION_TYPES = [
+  "multiple_choice",
+  "true_false",
+  "short_answer",
+];
+
+class TerminalGenerationError extends Error {}
 
 function strictJson(text, operation) {
   try {
@@ -38,6 +46,25 @@ function normalize(value) {
 }
 
 function quizTool(questionCount) {
+  const commonProperties = {
+    id: {
+      type: "string",
+      description: "Sequential id: q1, q2, q3, and so on.",
+    },
+    concept: {
+      type: "string",
+      description: "The exact lesson concept being tested.",
+    },
+    question: {
+      type: "string",
+      description: "A complete, self-contained question or statement.",
+    },
+    explanation: {
+      type: "string",
+      description:
+        "A concise explanation grounded only in the supplied lesson text.",
+    },
+  };
   return {
     type: "function",
     function: {
@@ -59,54 +86,104 @@ function quizTool(questionCount) {
             maxItems: questionCount,
             description: `Exactly ${questionCount} questions returned together.`,
             items: {
-              type: "object",
-              additionalProperties: false,
-              required: [
-                "id",
-                "concept",
-                "question",
-                "choices",
-                "answerIndex",
-                "answer",
-                "explanation",
+              oneOf: [
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "id",
+                    "type",
+                    "concept",
+                    "question",
+                    "choices",
+                    "answerIndex",
+                    "answer",
+                    "explanation",
+                  ],
+                  properties: {
+                    ...commonProperties,
+                    type: { type: "string", enum: ["multiple_choice"] },
+                    choices: {
+                      type: "array",
+                      minItems: 4,
+                      maxItems: 4,
+                      items: { type: "string" },
+                      description:
+                        "Exactly four plausible and meaningfully different choices.",
+                    },
+                    answerIndex: {
+                      type: "integer",
+                      minimum: 0,
+                      maximum: 3,
+                    },
+                    answer: {
+                      type: "string",
+                      description:
+                        "The exact text of choices[answerIndex], copied without changes.",
+                    },
+                  },
+                },
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "id",
+                    "type",
+                    "concept",
+                    "question",
+                    "answer",
+                    "correction",
+                    "explanation",
+                  ],
+                  properties: {
+                    ...commonProperties,
+                    type: { type: "string", enum: ["true_false"] },
+                    answer: { type: "boolean" },
+                    correction: {
+                      type: "string",
+                      description:
+                        "For a false statement, give the corrected statement. For a true statement, explain that it is accurate as written.",
+                    },
+                  },
+                },
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "id",
+                    "type",
+                    "concept",
+                    "question",
+                    "answer",
+                    "rubricIdeas",
+                    "acceptableAnswers",
+                    "explanation",
+                  ],
+                  properties: {
+                    ...commonProperties,
+                    type: { type: "string", enum: ["short_answer"] },
+                    answer: {
+                      type: "string",
+                      description: "A complete reference answer.",
+                    },
+                    rubricIdeas: {
+                      type: "array",
+                      minItems: 1,
+                      maxItems: 6,
+                      items: { type: "string" },
+                      description:
+                        "Every evidence-supported idea required for a correct answer.",
+                    },
+                    acceptableAnswers: {
+                      type: "array",
+                      maxItems: 8,
+                      items: { type: "string" },
+                      description:
+                        "Equivalent complete answers or phrasings that must be accepted.",
+                    },
+                  },
+                },
               ],
-              properties: {
-                id: {
-                  type: "string",
-                  description: "Sequential id: q1, q2, q3, and so on.",
-                },
-                concept: {
-                  type: "string",
-                  description: "The exact lesson concept being tested.",
-                },
-                question: {
-                  type: "string",
-                  description: "A complete, self-contained question.",
-                },
-                choices: {
-                  type: "array",
-                  minItems: 4,
-                  maxItems: 4,
-                  items: { type: "string" },
-                  description: "Exactly four meaningfully different choices.",
-                },
-                answerIndex: {
-                  type: "integer",
-                  minimum: 0,
-                  maximum: 3,
-                  description: "Zero-based index of the correct choice.",
-                },
-                answer: {
-                  type: "string",
-                  description:
-                    "The exact text of choices[answerIndex], copied without changes.",
-                },
-                explanation: {
-                  type: "string",
-                  description:
-                    "A concise explanation grounded only in the supplied lesson text.",
-                },
-              },
             },
           },
         },
@@ -115,35 +192,72 @@ function quizTool(questionCount) {
   };
 }
 
-function generationMessages(input) {
+function generationMessages(input, previousFailure) {
   const example = {
-    title: "Limits and Continuity Concept Quiz",
+    title: "Motion Concept Quiz",
     questions: [
       {
         id: "q1",
-        concept: "Continuity at a point",
-        question: "Which condition is required for continuity at x = a?",
+        type: "multiple_choice",
+        concept: "Average speed",
+        question: "Which calculation gives average speed?",
         choices: [
-          "The function value and limit both exist and are equal",
-          "Only the left-hand limit exists",
-          "The derivative is zero",
-          "The function has a vertical asymptote",
+          "Total distance divided by total time",
+          "Total time divided by total distance",
+          "Final speed minus initial speed",
+          "Distance multiplied by time",
         ],
         answerIndex: 0,
-        answer: "The function value and limit both exist and are equal",
+        answer: "Total distance divided by total time",
+        explanation: "Average speed compares total distance with total time.",
+      },
+      {
+        id: "q2",
+        type: "true_false",
+        concept: "Constant speed",
+        question:
+          "An object moving at constant speed covers equal distances in equal time intervals.",
+        answer: true,
+        correction: "The statement is accurate as written.",
         explanation:
-          "Continuity requires the limit to exist, the function value to exist, and the two values to agree.",
+          "That equal-distance relationship defines constant speed in the lesson.",
+      },
+      {
+        id: "q3",
+        type: "short_answer",
+        concept: "Acceleration",
+        question: "Explain what it means for an object to accelerate.",
+        answer: "Its velocity changes over time.",
+        rubricIdeas: ["Velocity changes", "The change occurs over time"],
+        acceptableAnswers: ["Its speed or direction changes over time."],
+        explanation: "Acceleration is the rate at which velocity changes.",
       },
     ],
   };
+  const typePlan = input.questionTypePlan
+    .map((type, index) => `q${index + 1}: ${type}`)
+    .join("\n");
+  const truthPlan = input.trueFalseAnswerPlan
+    .flatMap((answer, index) =>
+      typeof answer === "boolean" ? [`q${index + 1}: ${answer}`] : [],
+    )
+    .join("\n");
+  const retryInstruction = previousFailure
+    ? `\nThe previous complete response was rejected for this exact reason: ${previousFailure}\nGenerate the entire bank again from scratch and do not repeat that defect.`
+    : "";
   return [
     {
       role: "system",
-      content: `You are an expert teacher who creates rigorous multiple-choice quizzes from lesson transcripts.
+      content: `You are an expert teacher who creates rigorous mixed-format quizzes from lesson transcripts.
 
 Use only concepts explicitly taught in the supplied plain text. Do not add outside facts, infer missing visual information, or invent claims. Ignore greetings, promotions, sponsor messages, jokes, repeated filler, and transcription noise.
 
-Create exactly ${input.questionCount} questions about the most important concepts taught across the complete lesson. Generate every question in this single response. Each question must be self-contained, specific, and useful for learning. Favor conceptual understanding, application, and analysis over simple word-for-word recall. Each question must have exactly four plausible and meaningfully different choices, exactly one correct answer, and a short explanation supported by the lesson text. Avoid generic stems such as "What does the video explain?" and never mention timestamps or caption segments.
+Create exactly ${input.questionCount} questions about the most important concepts taught across the complete lesson. Generate every question in this single response. Each question must be self-contained, specific, and useful for learning. Favor conceptual understanding, application, and analysis over simple word-for-word recall. Avoid generic stems such as "What does the video explain?" and never mention timestamps or caption segments.
+
+The type of every slot is server-assigned and mandatory:
+${typePlan}
+${truthPlan ? `\nThe answer polarity of every true/false slot is also mandatory:\n${truthPlan}\n` : ""}
+For multiple choice, provide exactly four unique choices, exactly one supported answer, and three plausible but lesson-contradicted distractors. For true/false, write a complete declarative statement and include a correction or confirmation. For short answer, provide a complete reference answer, all required rubric ideas, and equivalent acceptable answers. Do not include fields belonging to another question type.${retryInstruction}
 
 You must call the ${TOOL_NAME} tool exactly once. Put the complete quiz in that tool call. The answer field must exactly equal choices[answerIndex]. Do not return prose, Markdown, or a partial quiz. Example tool arguments: ${JSON.stringify(example)}`,
     },
@@ -154,7 +268,7 @@ You must call the ${TOOL_NAME} tool exactly once. Put the complete quiz in that 
   ];
 }
 
-function validateQuiz(quiz, questionCount) {
+function validateQuiz(quiz, input) {
   if (!quiz || typeof quiz !== "object" || Array.isArray(quiz)) {
     throw new Error("DeepSeek returned an invalid quiz object.");
   }
@@ -163,10 +277,10 @@ function validateQuiz(quiz, questionCount) {
   }
   if (
     !Array.isArray(quiz.questions) ||
-    quiz.questions.length !== questionCount
+    quiz.questions.length !== input.questionCount
   ) {
     throw new Error(
-      `DeepSeek returned ${Array.isArray(quiz.questions) ? quiz.questions.length : 0} questions instead of ${questionCount}.`,
+      `DeepSeek returned ${Array.isArray(quiz.questions) ? quiz.questions.length : 0} questions instead of ${input.questionCount}.`,
     );
   }
   const ids = new Set();
@@ -176,14 +290,25 @@ function validateQuiz(quiz, questionCount) {
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       throw new Error(`Question ${index + 1} is not a JSON object.`);
     }
+    const expectedType = input.questionTypePlan[index];
+    if (question.type !== expectedType) {
+      throw new Error(
+        `Question ${index + 1} must be ${expectedType}, not ${String(question.type)}.`,
+      );
+    }
+    const typeSpecificKeys =
+      question.type === "multiple_choice"
+        ? ["choices", "answerIndex", "answer"]
+        : question.type === "true_false"
+          ? ["answer", "correction"]
+          : ["answer", "rubricIdeas", "acceptableAnswers"];
     const allowedKeys = new Set([
       "id",
+      "type",
       "concept",
       "question",
-      "choices",
-      "answerIndex",
-      "answer",
       "explanation",
+      ...typeSpecificKeys,
     ]);
     if (Object.keys(question).some((key) => !allowedKeys.has(key))) {
       throw new Error(`Question ${index + 1} contains an unexpected field.`);
@@ -192,7 +317,6 @@ function validateQuiz(quiz, questionCount) {
       !nonEmptyString(question.id, 40) ||
       !nonEmptyString(question.concept, 200) ||
       !nonEmptyString(question.question, 700) ||
-      !nonEmptyString(question.answer, 500) ||
       !nonEmptyString(question.explanation, 1_000)
     ) {
       throw new Error(
@@ -208,27 +332,138 @@ function validateQuiz(quiz, questionCount) {
       throw new Error(`Question ${index + 1} duplicates another question.`);
     }
     prompts.add(prompt);
-    if (
-      !Array.isArray(question.choices) ||
-      question.choices.length !== 4 ||
-      question.choices.some((choice) => !nonEmptyString(choice, 500)) ||
-      new Set(question.choices.map(normalize)).size !== 4
+    if (question.type === "multiple_choice") {
+      if (
+        !Array.isArray(question.choices) ||
+        question.choices.length !== 4 ||
+        question.choices.some((choice) => !nonEmptyString(choice, 500)) ||
+        new Set(question.choices.map(normalize)).size !== 4
+      ) {
+        throw new Error(`Question ${index + 1} must have four unique choices.`);
+      }
+      if (
+        !nonEmptyString(question.answer, 500) ||
+        !Number.isInteger(question.answerIndex) ||
+        question.answerIndex < 0 ||
+        question.answerIndex > 3 ||
+        question.answer !== question.choices[question.answerIndex]
+      ) {
+        throw new Error(`Question ${index + 1} has an invalid answer.`);
+      }
+    } else if (question.type === "true_false") {
+      if (
+        typeof question.answer !== "boolean" ||
+        question.answer !== input.trueFalseAnswerPlan[index] ||
+        !nonEmptyString(question.correction, 700)
+      ) {
+        throw new Error(
+          `Question ${index + 1} has an invalid true/false answer or correction.`,
+        );
+      }
+    } else if (
+      !nonEmptyString(question.answer, 1_000) ||
+      !Array.isArray(question.rubricIdeas) ||
+      question.rubricIdeas.length < 1 ||
+      question.rubricIdeas.length > 6 ||
+      question.rubricIdeas.some((idea) => !nonEmptyString(idea, 500)) ||
+      !Array.isArray(question.acceptableAnswers) ||
+      question.acceptableAnswers.length > 8 ||
+      question.acceptableAnswers.some(
+        (answer) => !nonEmptyString(answer, 1_000),
+      )
     ) {
-      throw new Error(`Question ${index + 1} must have four unique choices.`);
-    }
-    if (
-      !Number.isInteger(question.answerIndex) ||
-      question.answerIndex < 0 ||
-      question.answerIndex > 3 ||
-      question.answer !== question.choices[question.answerIndex]
-    ) {
-      throw new Error(`Question ${index + 1} has an invalid answer.`);
+      throw new Error(
+        `Question ${index + 1} has an invalid short-answer rubric.`,
+      );
     }
   }
   return quiz;
 }
 
-async function callDeepSeekTool(input, apiKey, externalSignal) {
+function buildQuestionTypePlan(questionTypes, questionCount) {
+  if (
+    !Array.isArray(questionTypes) ||
+    questionTypes.length < 1 ||
+    questionTypes.length > SUPPORTED_QUESTION_TYPES.length ||
+    new Set(questionTypes).size !== questionTypes.length ||
+    questionTypes.some((type) => !SUPPORTED_QUESTION_TYPES.includes(type))
+  ) {
+    throw new Error("Choose at least one supported question type.");
+  }
+  return Array.from(
+    { length: questionCount },
+    (_, index) => questionTypes[index % questionTypes.length],
+  );
+}
+
+function buildTrueFalseAnswerPlan(questionTypePlan) {
+  let trueFalseIndex = 0;
+  return questionTypePlan.map((type) => {
+    if (type !== "true_false") return null;
+    const answer = trueFalseIndex % 2 === 0;
+    trueFalseIndex += 1;
+    return answer;
+  });
+}
+
+function hashString(value) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function nextRandom(state) {
+  let value = state || 0x9e3779b9;
+  value ^= value << 13;
+  value ^= value >>> 17;
+  value ^= value << 5;
+  return value >>> 0;
+}
+
+function balanceMultipleChoiceAnswers(quiz, seedMaterial) {
+  const seed = hashString(seedMaterial);
+  let multipleChoiceIndex = 0;
+  return {
+    ...quiz,
+    questions: quiz.questions.map((question) => {
+      if (question.type !== "multiple_choice") return question;
+      const targetIndex = (seed + multipleChoiceIndex) % 4;
+      let state = nextRandom(seed + multipleChoiceIndex + 1);
+      const distractors = question.choices.filter(
+        (_, index) => index !== question.answerIndex,
+      );
+      for (let index = distractors.length - 1; index > 0; index -= 1) {
+        state = nextRandom(state);
+        const swapIndex = state % (index + 1);
+        [distractors[index], distractors[swapIndex]] = [
+          distractors[swapIndex],
+          distractors[index],
+        ];
+      }
+      const choices = [];
+      let distractorIndex = 0;
+      for (let index = 0; index < 4; index += 1) {
+        choices.push(
+          index === targetIndex
+            ? question.answer
+            : distractors[distractorIndex++],
+        );
+      }
+      multipleChoiceIndex += 1;
+      return { ...question, choices, answerIndex: targetIndex };
+    }),
+  };
+}
+
+async function callDeepSeekTool(
+  input,
+  apiKey,
+  externalSignal,
+  previousFailure,
+) {
   const controller = new AbortController();
   const abortFromCaller = () =>
     controller.abort(
@@ -247,7 +482,7 @@ async function callDeepSeekTool(input, apiKey, externalSignal) {
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: generationMessages(input),
+        messages: generationMessages(input, previousFailure),
         thinking: { type: "enabled" },
         reasoning_effort: "high",
         tools: [quizTool(input.questionCount)],
@@ -258,9 +493,9 @@ async function callDeepSeekTool(input, apiKey, externalSignal) {
   } catch (error) {
     if (controller.signal.aborted) {
       if (externalSignal?.aborted) {
-        throw new Error("Local generation was cancelled.");
+        throw new TerminalGenerationError("Local generation was cancelled.");
       }
-      throw new Error(
+      throw new TerminalGenerationError(
         "DeepSeek took longer than 15 minutes. Retry the local generation.",
       );
     }
@@ -280,7 +515,14 @@ async function callDeepSeekTool(input, apiKey, externalSignal) {
     } catch {
       // The HTTP status remains the authoritative error.
     }
-    throw new Error(message);
+    if (
+      response.status === 408 ||
+      response.status === 429 ||
+      response.status >= 500
+    ) {
+      throw new Error(message);
+    }
+    throw new TerminalGenerationError(message);
   }
   const outer = strictJson(await response.text(), "DeepSeek");
   const choice = outer?.choices?.[0];
@@ -303,10 +545,7 @@ async function callDeepSeekTool(input, apiKey, externalSignal) {
   }
   const usage = outer.usage ?? {};
   return {
-    quiz: validateQuiz(
-      strictJson(toolCalls[0].function.arguments, TOOL_NAME),
-      input.questionCount,
-    ),
+    quiz: strictJson(toolCalls[0].function.arguments, TOOL_NAME),
     usage: {
       inputTokens: Number.isInteger(usage.prompt_tokens)
         ? usage.prompt_tokens
@@ -334,6 +573,11 @@ export async function generateQuizFromPlainText(
     title: String(rawInput?.title ?? "Untitled lesson").trim(),
     quizLanguage: String(rawInput?.quizLanguage ?? "en").trim(),
     questionCount: Number(rawInput?.questionCount ?? 15),
+    questionTypes: rawInput?.questionTypes ?? SUPPORTED_QUESTION_TYPES,
+    jobId: String(rawInput?.jobId ?? "standalone"),
+    transcriptFingerprint: String(
+      rawInput?.transcriptFingerprint ?? "standalone",
+    ),
     plainText: String(rawInput?.plainText ?? "")
       .replace(/\s+/g, " ")
       .trim(),
@@ -350,19 +594,92 @@ export async function generateQuizFromPlainText(
       "The complete transcript is too large for the local DeepSeek request. It was not sampled or truncated.",
     );
   }
-  onProgress("creating_questions", 0.25);
-  const result = await callDeepSeekTool(input, apiKey, signal);
-  onProgress("finalizing_questions", 1);
-  return {
-    protocolVersion: PROTOCOL_VERSION,
-    pipelineVersion: PIPELINE_VERSION,
-    model: MODEL,
-    reasoningEffort: "high",
-    promptVersion: PROMPT_VERSION,
-    validatorVersion: VALIDATOR_VERSION,
-    quiz: result.quiz,
-    metrics: { aiCalls: 1, ...result.usage },
+  input.questionTypePlan = buildQuestionTypePlan(
+    input.questionTypes,
+    input.questionCount,
+  );
+  input.trueFalseAnswerPlan = buildTrueFalseAnswerPlan(input.questionTypePlan);
+  const startedAt = Date.now();
+  const totals = {
+    inputTokens: 0,
+    outputTokens: 0,
+    reasoningTokens: 0,
   };
+  let previousFailure;
+  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+    onProgress("creating_questions", 0.2 + attempt * 0.18, {
+      attempt,
+      maxAttempts: MAX_GENERATION_ATTEMPTS,
+      status: attempt === 1 ? "generating" : "retrying",
+    });
+    try {
+      const result = await callDeepSeekTool(
+        input,
+        apiKey,
+        signal,
+        previousFailure,
+      );
+      totals.inputTokens += result.usage.inputTokens;
+      totals.outputTokens += result.usage.outputTokens;
+      totals.reasoningTokens += result.usage.reasoningTokens;
+      const validated = validateQuiz(result.quiz, input);
+      const balanced = balanceMultipleChoiceAnswers(
+        validated,
+        `${input.jobId}:${input.transcriptFingerprint}`,
+      );
+      onProgress("finalizing_questions", 1, {
+        attempt,
+        maxAttempts: MAX_GENERATION_ATTEMPTS,
+        status: "complete",
+      });
+      return {
+        protocolVersion: PROTOCOL_VERSION,
+        pipelineVersion: PIPELINE_VERSION,
+        model: MODEL,
+        reasoningEffort: "high",
+        promptVersion: PROMPT_VERSION,
+        validatorVersion: VALIDATOR_VERSION,
+        quiz: balanced,
+        metrics: {
+          aiCalls: attempt,
+          retryCount: attempt - 1,
+          ...totals,
+          elapsedMs: Math.max(1, Date.now() - startedAt),
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof TerminalGenerationError ||
+        attempt === MAX_GENERATION_ATTEMPTS
+      ) {
+        throw error;
+      }
+      previousFailure =
+        error instanceof Error ? error.message : "The quiz output was invalid.";
+      onProgress("creating_questions", 0.2 + attempt * 0.18, {
+        attempt,
+        maxAttempts: MAX_GENERATION_ATTEMPTS,
+        status: "retrying",
+      });
+      await waitForRetry(750 * 2 ** (attempt - 1), signal);
+    }
+  }
+  throw new Error("Local quiz generation exhausted every attempt.");
+}
+
+async function waitForRetry(milliseconds, signal) {
+  if (signal?.aborted) {
+    throw new TerminalGenerationError("Local generation was cancelled.");
+  }
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(resolve, milliseconds);
+    const abort = () => {
+      clearTimeout(timeout);
+      reject(new TerminalGenerationError("Local generation was cancelled."));
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    setTimeout(() => signal?.removeEventListener("abort", abort), milliseconds);
+  });
 }
 
 export async function generateLocalQuiz(
@@ -377,6 +694,9 @@ export async function generateLocalQuiz(
       title: context?.title,
       quizLanguage: context?.quizLanguage,
       questionCount: context?.questionCount,
+      questionTypes: context?.questionTypes,
+      jobId: context?.jobId,
+      transcriptFingerprint: context?.transcriptFingerprint,
       plainText,
     },
     apiKey,

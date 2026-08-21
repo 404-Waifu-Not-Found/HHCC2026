@@ -27,23 +27,53 @@ const manifest = JSON.parse(
   await readFile(new URL("../manifest.json", import.meta.url), "utf8"),
 );
 
-function quiz(questionCount = 5) {
+function quiz(
+  questionCount = 5,
+  questionTypes = ["multiple_choice", "true_false", "short_answer"],
+) {
+  let trueFalseIndex = 0;
   return {
     title: "Concept quiz",
-    questions: Array.from({ length: questionCount }, (_, index) => ({
-      id: `q${index + 1}`,
-      concept: `Concept ${index + 1}`,
-      question: `How does concept ${index + 1} apply in this complete scenario?`,
-      choices: [
-        `Supported answer ${index + 1}`,
-        `Distractor A ${index + 1}`,
-        `Distractor B ${index + 1}`,
-        `Distractor C ${index + 1}`,
-      ],
-      answerIndex: 0,
-      answer: `Supported answer ${index + 1}`,
-      explanation: `The lesson text supports answer ${index + 1}.`,
-    })),
+    questions: Array.from({ length: questionCount }, (_, index) => {
+      const type = questionTypes[index % questionTypes.length];
+      const common = {
+        id: `q${index + 1}`,
+        type,
+        concept: `Concept ${index + 1}`,
+        question: `How does concept ${index + 1} apply in this complete scenario?`,
+        explanation: `The lesson text supports answer ${index + 1}.`,
+      };
+      if (type === "multiple_choice") {
+        return {
+          ...common,
+          choices: [
+            `Supported answer ${index + 1}`,
+            `Distractor A ${index + 1}`,
+            `Distractor B ${index + 1}`,
+            `Distractor C ${index + 1}`,
+          ],
+          answerIndex: 0,
+          answer: `Supported answer ${index + 1}`,
+        };
+      }
+      if (type === "true_false") {
+        const answer = trueFalseIndex % 2 === 0;
+        trueFalseIndex += 1;
+        return {
+          ...common,
+          answer,
+          correction: answer
+            ? "The statement is accurate as written."
+            : "The corrected statement is supported by the lesson.",
+        };
+      }
+      return {
+        ...common,
+        answer: `Reference answer ${index + 1}`,
+        rubricIdeas: [`Required idea ${index + 1}`],
+        acceptableAnswers: [`Equivalent answer ${index + 1}`],
+      };
+    }),
   };
 }
 
@@ -88,7 +118,7 @@ test("long local generation uses a heartbeat port", () => {
 
 test("the popup exposes local quiz JSON and plain-text caption download", () => {
   assert.ok(manifest.permissions.includes("downloads"));
-  assert.equal(manifest.version, "0.3.2");
+  assert.equal(manifest.version, "0.4.0");
   assert.match(popupHtml, /Generate quiz JSON/);
   assert.match(popupHtml, /Download \.txt/);
   assert.match(popup, /message\.response\.result\.quiz/);
@@ -127,6 +157,9 @@ test("one thinking-mode request exposes only the submit_quiz tool", async (conte
       title: "Lesson",
       quizLanguage: "en",
       questionCount: 5,
+      questionTypes: ["multiple_choice", "true_false", "short_answer"],
+      jobId: "11111111-1111-4111-8111-111111111111",
+      transcriptFingerprint: "1234abcd",
       plainText:
         "A complete lesson transcript about important concepts. ".repeat(8),
     },
@@ -140,7 +173,21 @@ test("one thinking-mode request exposes only the submit_quiz tool", async (conte
   assert.equal("tool_choice" in requestBody, false);
   assert.equal("response_format" in requestBody, false);
   assert.equal(result.metrics.aiCalls, 1);
-  assert.deepEqual(result.quiz, quiz());
+  assert.equal(result.metrics.retryCount, 0);
+  assert.deepEqual(
+    result.quiz.questions.map((question) => question.type),
+    [
+      "multiple_choice",
+      "true_false",
+      "short_answer",
+      "multiple_choice",
+      "true_false",
+    ],
+  );
+  const answerIndices = result.quiz.questions
+    .filter((question) => question.type === "multiple_choice")
+    .map((question) => question.answerIndex);
+  assert.equal(new Set(answerIndices).size, answerIndices.length);
 });
 
 test("invalid tool arguments fail instead of producing fallback questions", async (context) => {
@@ -157,6 +204,7 @@ test("invalid tool arguments fail instead of producing fallback questions", asyn
         title: "Lesson",
         quizLanguage: "en",
         questionCount: 5,
+        questionTypes: ["multiple_choice", "true_false", "short_answer"],
         plainText:
           "A complete lesson transcript about important concepts. ".repeat(8),
       },
@@ -168,4 +216,36 @@ test("invalid tool arguments fail instead of producing fallback questions", asyn
     generator,
     /fallbackQuizItem|question\.fallback|jsonrepair/,
   );
+});
+
+test("invalid complete output is retried locally before the website sees an error", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  const progress = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async () => {
+    calls += 1;
+    const value = quiz();
+    if (calls === 1)
+      value.questions[0].choices[1] = value.questions[0].choices[0];
+    return toolResponse(value);
+  };
+  const result = await generateQuizFromPlainText(
+    {
+      title: "Lesson",
+      quizLanguage: "en",
+      questionCount: 5,
+      questionTypes: ["multiple_choice", "true_false", "short_answer"],
+      plainText:
+        "A complete lesson transcript about important concepts. ".repeat(8),
+    },
+    "sk-test-key-for-local-generation",
+    (stage, value, detail) => progress.push({ stage, value, detail }),
+  );
+  assert.equal(calls, 2);
+  assert.equal(result.metrics.aiCalls, 2);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.ok(progress.some((event) => event.detail?.status === "retrying"));
 });

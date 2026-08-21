@@ -7,6 +7,10 @@ import {
   QuizQuestionTypesSchema,
   identifyVideoSource,
   questionLimitForSession,
+  questionTypePlanForSelection,
+  type LocalConceptQuizQuestion,
+  type LocalConceptQuizResult,
+  type QuizQuestionType,
 } from "../src/index";
 
 describe("admin contracts", () => {
@@ -91,7 +95,7 @@ describe("generated questions", () => {
         quiz: {
           ...quiz.quiz,
           questions: quiz.quiz.questions.map((question, index) =>
-            index === 0
+            index === 0 && question.type === "multiple_choice"
               ? { ...question, answer: question.choices[1] }
               : question,
           ),
@@ -110,6 +114,7 @@ describe("generated questions", () => {
         videoId: "11111111-1111-4111-8111-111111111111",
         quizLanguage: "en",
         sessionLength: "medium",
+        questionTypes: ["multiple_choice", "true_false", "short_answer"],
         watched: true,
         quiz: localQuizResult(5),
       }).success,
@@ -119,44 +124,94 @@ describe("generated questions", () => {
         videoId: "11111111-1111-4111-8111-111111111111",
         quizLanguage: "en",
         sessionLength: "short",
+        questionTypes: ["multiple_choice", "true_false", "short_answer"],
         watched: true,
         quiz: localQuizResult(5),
       }).success,
     ).toBe(true);
   });
+
+  it("rejects a generated type sequence that does not match the request", () => {
+    const quiz = localQuizResult(5);
+    expect(
+      ExtensionQuizImportRequestSchema.safeParse({
+        videoId: "11111111-1111-4111-8111-111111111111",
+        quizLanguage: "en",
+        sessionLength: "short",
+        questionTypes: ["multiple_choice"],
+        watched: true,
+        quiz,
+      }).success,
+    ).toBe(false);
+  });
 });
 
-function localQuizResult(questionCount: 5 | 10 | 15) {
+function localQuizResult(questionCount: 5 | 10 | 15): LocalConceptQuizResult {
+  const questionTypes: QuizQuestionType[] = [
+    "multiple_choice",
+    "true_false",
+    "short_answer",
+  ];
+  const typePlan = questionTypePlanForSelection(questionTypes, questionCount);
   return {
-    protocolVersion: 2 as const,
-    pipelineVersion: 6 as const,
+    protocolVersion: 3,
+    pipelineVersion: 7,
     model: "deepseek-v4-flash" as const,
     reasoningEffort: "high" as const,
-    promptVersion: "quiz-local-tool-v1.0" as const,
-    validatorVersion: "validator-local-tool-v1.0" as const,
+    promptVersion: "quiz-local-tool-v2.0" as const,
+    validatorVersion: "validator-local-tool-v2.0" as const,
     quiz: {
       title: "A local concept quiz",
-      questions: Array.from({ length: questionCount }, (_, index) => ({
-        id: `q${index + 1}`,
-        concept: `Concept ${index + 1}`,
-        question: `How does concept ${index + 1} work?`,
-        choices: [
-          `Correct ${index + 1}`,
-          `Distractor A ${index + 1}`,
-          `Distractor B ${index + 1}`,
-          `Distractor C ${index + 1}`,
-        ] as [string, string, string, string],
-        answerIndex: 0,
-        answer: `Correct ${index + 1}`,
-        explanation: `Concept ${index + 1} supports this answer.`,
-      })),
+      questions: typePlan.map((type, index) => localQuestion(type, index)),
     },
     metrics: {
-      aiCalls: 1 as const,
+      aiCalls: 1,
+      retryCount: 0,
       inputTokens: 100,
       outputTokens: 200,
       reasoningTokens: 50,
       elapsedMs: 1_000,
     },
+  };
+}
+
+function localQuestion(
+  type: QuizQuestionType,
+  index: number,
+): LocalConceptQuizQuestion {
+  const common = {
+    id: `q${index + 1}`,
+    concept: `Concept ${index + 1}`,
+    question: `How does concept ${index + 1} work?`,
+    explanation: `Concept ${index + 1} supports this answer.`,
+  };
+  if (type === "multiple_choice") {
+    return {
+      ...common,
+      type,
+      choices: [
+        `Correct ${index + 1}`,
+        `Distractor A ${index + 1}`,
+        `Distractor B ${index + 1}`,
+        `Distractor C ${index + 1}`,
+      ],
+      answerIndex: 0,
+      answer: `Correct ${index + 1}`,
+    };
+  }
+  if (type === "true_false") {
+    return {
+      ...common,
+      type,
+      answer: index % 2 === 0,
+      correction: "The statement is accurate or corrected here.",
+    };
+  }
+  return {
+    ...common,
+    type,
+    answer: `Complete answer ${index + 1}`,
+    rubricIdeas: [`Required idea ${index + 1}`],
+    acceptableAnswers: [`Equivalent answer ${index + 1}`],
   };
 }

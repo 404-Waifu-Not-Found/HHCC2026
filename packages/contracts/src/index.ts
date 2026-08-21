@@ -305,12 +305,12 @@ export const MediaResolveResponseSchema = z.object({
 export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 
 export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
-export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 2 as const;
-export const LOCAL_QUIZ_PIPELINE_VERSION = 6 as const;
+export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 3 as const;
+export const LOCAL_QUIZ_PIPELINE_VERSION = 7 as const;
 export const LOCAL_QUIZ_MODEL = "deepseek-v4-flash" as const;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-tool-v1.0" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-tool-v2.0" as const;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
-  "validator-local-tool-v1.0" as const;
+  "validator-local-tool-v2.0" as const;
 
 export const LocalQuizContextSchema = z
   .object({
@@ -331,11 +331,18 @@ export const LocalQuizContextSchema = z
   .strict();
 export type LocalQuizContext = z.infer<typeof LocalQuizContextSchema>;
 
-export const LocalConceptQuizQuestionSchema = z
+const LocalQuestionBaseSchema = z
   .object({
     id: z.string().regex(/^q(?:[1-9]|1[0-5])$/),
     concept: z.string().trim().min(1).max(200),
     question: z.string().trim().min(1).max(700),
+    explanation: z.string().trim().min(1).max(1_500),
+  })
+  .strict();
+
+export const LocalMultipleChoiceQuestionSchema = LocalQuestionBaseSchema.extend(
+  {
+    type: z.literal("multiple_choice"),
     choices: z.tuple([
       z.string().trim().min(1).max(500),
       z.string().trim().min(1).max(500),
@@ -344,8 +351,8 @@ export const LocalConceptQuizQuestionSchema = z
     ]),
     answerIndex: z.number().int().min(0).max(3),
     answer: z.string().trim().min(1).max(500),
-    explanation: z.string().trim().min(1).max(1_500),
-  })
+  },
+)
   .strict()
   .superRefine((question, context) => {
     const normalizedChoices = question.choices.map((choice) =>
@@ -366,6 +373,25 @@ export const LocalConceptQuizQuestionSchema = z
       });
     }
   });
+
+export const LocalTrueFalseQuestionSchema = LocalQuestionBaseSchema.extend({
+  type: z.literal("true_false"),
+  answer: z.boolean(),
+  correction: z.string().trim().min(1).max(700),
+}).strict();
+
+export const LocalShortAnswerQuestionSchema = LocalQuestionBaseSchema.extend({
+  type: z.literal("short_answer"),
+  answer: z.string().trim().min(1).max(1_000),
+  rubricIdeas: z.array(z.string().trim().min(1).max(500)).min(1).max(6),
+  acceptableAnswers: z.array(z.string().trim().min(1).max(1_000)).max(8),
+}).strict();
+
+export const LocalConceptQuizQuestionSchema = z.discriminatedUnion("type", [
+  LocalMultipleChoiceQuestionSchema,
+  LocalTrueFalseQuestionSchema,
+  LocalShortAnswerQuestionSchema,
+]);
 export type LocalConceptQuizQuestion = z.infer<
   typeof LocalConceptQuizQuestionSchema
 >;
@@ -417,7 +443,8 @@ export const LocalConceptQuizResultSchema = z
     quiz: LocalConceptQuizSchema,
     metrics: z
       .object({
-        aiCalls: z.literal(1),
+        aiCalls: z.number().int().min(1).max(3),
+        retryCount: z.number().int().min(0).max(2),
         inputTokens: z.number().int().nonnegative(),
         outputTokens: z.number().int().nonnegative(),
         reasoningTokens: z.number().int().nonnegative(),
@@ -435,6 +462,7 @@ export const ExtensionQuizImportRequestSchema = z
     videoId: z.string().uuid(),
     quizLanguage: LanguageSchema,
     sessionLength: SessionLengthSchema,
+    questionTypes: QuizQuestionTypesSchema,
     watched: z.boolean(),
     quiz: LocalConceptQuizResultSchema,
   })
@@ -448,6 +476,20 @@ export const ExtensionQuizImportRequestSchema = z
         message: "The quiz count must match the requested session length.",
       });
     }
+    const expectedTypes = questionTypePlanForSelection(
+      value.questionTypes,
+      expectedCount,
+    );
+    value.quiz.quiz.questions.forEach((question, index) => {
+      if (question.type !== expectedTypes[index]) {
+        context.addIssue({
+          code: "custom",
+          path: ["quiz", "quiz", "questions", index, "type"],
+          message:
+            "The generated question type must match the requested type plan.",
+        });
+      }
+    });
   });
 export type ExtensionQuizImportRequest = z.infer<
   typeof ExtensionQuizImportRequestSchema
@@ -589,4 +631,18 @@ export function identifyVideoSource(rawUrl: string): VideoSource | null {
 
 export function questionLimitForSession(length: SessionLength): number {
   return length === "short" ? 5 : length === "medium" ? 10 : 15;
+}
+
+export function questionTypePlanForSelection(
+  types: QuizQuestionType[],
+  questionCount: number,
+): QuizQuestionType[] {
+  const selected = QuizQuestionTypesSchema.parse(types);
+  if (![5, 10, 15].includes(questionCount)) {
+    throw new Error("A question type plan must contain 5, 10, or 15 slots.");
+  }
+  return Array.from(
+    { length: questionCount },
+    (_, index) => selected[index % selected.length]!,
+  );
 }

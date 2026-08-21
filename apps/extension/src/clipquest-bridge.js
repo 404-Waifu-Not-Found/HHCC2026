@@ -76,6 +76,9 @@
             requestId,
             stage: response.stage,
             progress: response.progress,
+            attempt: response.attempt,
+            maxAttempts: response.maxAttempts,
+            status: response.status,
           });
           return;
         }

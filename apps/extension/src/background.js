@@ -134,6 +134,13 @@ async function generateQuizForVideo(request, apiKey, onProgress, signal) {
       title: response.result.title || `YouTube ${request.videoId}`,
       quizLanguage: request.quizLanguage || "en",
       questionCount: request.questionCount || 15,
+      questionTypes: request.questionTypes ?? [
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+      ],
+      jobId: request.requestId,
+      transcriptFingerprint: request.videoId,
       plainText,
     },
     apiKey,
@@ -341,8 +348,14 @@ chrome.runtime.onConnect.addListener((port) => {
             "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
           );
         }
-        const progress = (stage, value) => {
-          post({ type: "progress", requestId, stage, progress: value });
+        const progress = (stage, value, detail = {}) => {
+          post({
+            type: "progress",
+            requestId,
+            stage,
+            progress: value,
+            ...detail,
+          });
         };
         return message.context
           ? generateLocalQuiz(

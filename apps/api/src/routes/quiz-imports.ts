@@ -17,7 +17,7 @@ import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 
 const IdempotencyKeySchema = z.string().uuid();
-const QUIZ_IMPORT_VERSION = "extension-quiz-import-v2" as const;
+const QUIZ_IMPORT_VERSION = "extension-quiz-import-v3" as const;
 
 export const quizImportsRouter = new Hono<ApiBindings>();
 
@@ -104,6 +104,8 @@ async function persistImportedQuiz(input: {
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
     qualityStatus: "passed",
+    requestedQuestionTypes: input.input.questionTypes,
+    generatedQuestionTypes: questions.map((question) => question.type),
     plannedCount: questions.length,
     passedCount: questions.length,
     transcriptStored: false,
@@ -175,28 +177,32 @@ function questionInsert(
   ordinal: number,
   questionCount: number,
 ): D1PreparedStatement {
+  const stored = storedQuestionFields(question);
   return db
     .prepare(
       `INSERT INTO questions
        (id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)
-       VALUES (?, ?, ?, ?, 'multiple_choice', ?, ?, ?, ?, NULL, ?, NULL, ?, '[]', ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?)`,
     )
     .bind(
       createId(),
       quizId,
       ordinal,
       question.id,
+      question.type,
       question.id,
       question.question,
       question.question,
-      JSON.stringify(question.choices),
-      JSON.stringify(question.answerIndex),
-      question.explanation,
+      stored.optionsJson,
+      stored.correctAnswerJson,
+      stored.rubricJson,
+      stored.explanation,
       assignedDifficulty(ordinal, questionCount),
       JSON.stringify({
         source: "extension-local-tool",
         blueprintSlot: question.id,
         concept: question.concept,
+        questionType: question.type,
         model: LOCAL_QUIZ_MODEL,
         promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
         validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
@@ -204,6 +210,41 @@ function questionInsert(
         transcriptStored: false,
       }),
     );
+}
+
+export function storedQuestionFields(question: LocalConceptQuizQuestion): {
+  optionsJson: string | null;
+  correctAnswerJson: string | null;
+  rubricJson: string | null;
+  explanation: string;
+} {
+  if (question.type === "multiple_choice") {
+    return {
+      optionsJson: JSON.stringify(question.choices),
+      correctAnswerJson: JSON.stringify(question.answerIndex),
+      rubricJson: null,
+      explanation: question.explanation,
+    };
+  }
+  if (question.type === "true_false") {
+    return {
+      optionsJson: null,
+      correctAnswerJson: JSON.stringify(question.answer),
+      rubricJson: null,
+      explanation: question.answer
+        ? question.explanation
+        : `${question.correction} ${question.explanation}`,
+    };
+  }
+  return {
+    optionsJson: null,
+    correctAnswerJson: null,
+    rubricJson: JSON.stringify({
+      requiredIdeas: question.rubricIdeas,
+      acceptableAlternatives: [question.answer, ...question.acceptableAnswers],
+    }),
+    explanation: question.explanation,
+  };
 }
 
 function assignedDifficulty(ordinal: number, questionCount: number): number {

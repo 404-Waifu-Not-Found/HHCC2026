@@ -120,7 +120,7 @@ export async function gradeWrittenAnswer(
       {
         role: "system",
         content:
-          'Grade using only the rubric and cited evidence. Accept equivalent wording. Return valid JSON exactly like {"correct":true,"feedback":"..."}.',
+          'Grade using only the supplied rubric and, when present, the cited evidence. Some locally generated quizzes intentionally provide no stored transcript evidence; in that case, use only the rubric and acceptable alternatives. Accept equivalent wording. Do not add outside facts. Return valid JSON exactly like {"correct":true,"feedback":"..."}.',
       },
       {
         role: "user",

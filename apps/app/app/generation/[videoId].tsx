@@ -54,6 +54,9 @@ type ProgressDetail = {
   loadedBytes?: number;
   totalBytes?: number;
   cached?: boolean;
+  attempt?: number;
+  maxAttempts?: number;
+  retrying?: boolean;
 };
 
 export default function GenerationScreen() {
@@ -174,9 +177,14 @@ export default function GenerationScreen() {
       const result = await requestExtensionLocalQuiz(
         context,
         signal,
-        (nextStage, value) => {
+        (nextStage, value, nextDetail) => {
           setStage(nextStage);
           setProgress(value);
+          setDetail({
+            attempt: nextDetail.attempt,
+            maxAttempts: nextDetail.maxAttempts,
+            retrying: nextDetail.status === "retrying",
+          });
         },
       );
       setStage("finalizing_questions");
@@ -190,6 +198,7 @@ export default function GenerationScreen() {
             videoId: imported.video.id,
             quizLanguage: params.quizLanguage,
             sessionLength: params.sessionLength,
+            questionTypes,
             watched: params.watched === "true",
             quiz: result,
           }),
@@ -204,7 +213,7 @@ export default function GenerationScreen() {
           body: jsonBody({
             mode: "learn",
             sessionLength: params.sessionLength,
-            questionTypes: ["multiple_choice"],
+            questionTypes,
             watched: params.watched === "true",
           }),
           signal,
@@ -273,6 +282,10 @@ export default function GenerationScreen() {
   const bytes =
     detail?.loadedBytes !== undefined && detail.totalBytes !== undefined
       ? `${formatBytes(detail.loadedBytes)} / ${formatBytes(detail.totalBytes)}`
+      : null;
+  const aiAttempt =
+    detail?.attempt && detail.maxAttempts
+      ? `${detail.retrying ? t("retryingGeneration") : t("generationAttempt")} ${detail.attempt}/${detail.maxAttempts}`
       : null;
   const compactFooter = width < breakpoints.compact;
   const stageTitle = failed
@@ -390,7 +403,7 @@ export default function GenerationScreen() {
               }
               tone={failed ? "secondary" : "primary"}
             />
-            {detail?.cached || bytes ? (
+            {detail?.cached || bytes || aiAttempt ? (
               <View style={styles.detailRow}>
                 {detail?.cached ? (
                   <Text style={[styles.cached, { color: theme.success }]}>
@@ -400,6 +413,11 @@ export default function GenerationScreen() {
                 {bytes ? (
                   <Text style={[styles.detail, { color: theme.textMuted }]}>
                     {bytes}
+                  </Text>
+                ) : null}
+                {aiAttempt ? (
+                  <Text style={[styles.detail, { color: theme.textMuted }]}>
+                    {aiAttempt}
                   </Text>
                 ) : null}
               </View>

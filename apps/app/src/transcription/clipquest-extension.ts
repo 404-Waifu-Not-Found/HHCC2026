@@ -58,6 +58,15 @@ type ExtensionGenerationProgressMessage = {
   requestId: string;
   stage: GenerationStage;
   progress: number;
+  attempt?: number;
+  maxAttempts?: number;
+  status?: "generating" | "retrying" | "complete";
+};
+
+export type LocalGenerationProgress = {
+  attempt?: number;
+  maxAttempts?: number;
+  status?: "generating" | "retrying" | "complete";
 };
 
 type ExtensionGenerationResultMessage = {
@@ -114,7 +123,13 @@ function isGenerationProgressMessage(
     GenerationStageSchema.safeParse(message.stage).success &&
     typeof message.progress === "number" &&
     message.progress >= 0 &&
-    message.progress <= 1
+    message.progress <= 1 &&
+    (message.attempt === undefined ||
+      (Number.isInteger(message.attempt) && message.attempt >= 1)) &&
+    (message.maxAttempts === undefined ||
+      (Number.isInteger(message.maxAttempts) && message.maxAttempts >= 1)) &&
+    (message.status === undefined ||
+      ["generating", "retrying", "complete"].includes(message.status))
   );
 }
 
@@ -337,7 +352,11 @@ export async function requestExtensionYouTubeTranscript(
 export async function requestExtensionLocalQuiz(
   rawContext: LocalQuizContext,
   signal: AbortSignal,
-  onProgress: (stage: GenerationStage, progress: number) => void,
+  onProgress: (
+    stage: GenerationStage,
+    progress: number,
+    detail: LocalGenerationProgress,
+  ) => void,
 ): Promise<LocalConceptQuizResult> {
   const context = LocalQuizContextSchema.parse(rawContext);
   const extension = await detectClipQuestExtension();
@@ -375,7 +394,11 @@ export async function requestExtensionLocalQuiz(
         isGenerationProgressMessage(event.data) &&
         event.data.requestId === id
       ) {
-        onProgress(event.data.stage, event.data.progress);
+        onProgress(event.data.stage, event.data.progress, {
+          attempt: event.data.attempt,
+          maxAttempts: event.data.maxAttempts,
+          status: event.data.status,
+        });
         return;
       }
       if (
