@@ -113,7 +113,7 @@ export const messages = {
     videoReady: "Video ready",
     sourceCaptions: "Captions found — no model download needed.",
     localTranscript:
-      "No embedded captions. ClipQuest will retrieve a transcript or transcribe audio privately on this device.",
+      "No usable captions. Audio will be transcribed privately on this device.",
     modelSize: "Speech model · about 45 MB",
     removeModelConfirm: "Downloaded speech model removed from this device.",
     modelNotDownloaded: "No speech model is stored on this device.",
@@ -296,8 +296,7 @@ export const messages = {
     notFoundBody: "该页面不存在。返回首页开始或继续视频学习任务。",
     videoReady: "视频已准备好",
     sourceCaptions: "已找到字幕，无需下载模型。",
-    localTranscript:
-      "没有嵌入字幕。ClipQuest 将获取文字稿，或在此设备上私密转写音频。",
+    localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
     modelSize: "语音模型 · 约 45 MB",
     removeModelConfirm: "已从此设备删除语音模型。",
     modelNotDownloaded: "此设备未保存语音模型。",

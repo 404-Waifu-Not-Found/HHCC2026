@@ -35,7 +35,6 @@ import {
 } from "../../src/state/creation";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
-import { fetchBrowserYouTubeTranscript } from "../../src/transcription/youtube-transcript";
 import {
   breakpoints,
   layout,
@@ -131,49 +130,33 @@ export default function GenerationScreen() {
         setProgress(1);
         segments = imported.captions.preferredSegments;
       } else {
-        setStage("preparing_audio");
-        setProgress(0.25);
-        const browserTranscript =
-          imported.video.source === "youtube"
-            ? await fetchBrowserYouTubeTranscript(
-                imported.video.sourceVideoId,
-                signal,
-              )
-            : [];
-        if (browserTranscript.length) {
-          setLocalTranscription(false);
-          setProgress(1);
-          language = imported.video.sourceLanguage ?? "en";
-          segments = browserTranscript;
-        } else {
-          const media = await apiRequest(
-            "/api/media/resolve",
-            {
-              method: "POST",
-              body: jsonBody({ videoId: imported.video.id }),
-              signal,
-            },
-            MediaResolveResponseSchema,
-          );
-          const result = await transcribeLocally({
-            videoId: imported.video.id,
-            mediaUrl: media.mediaUrl,
-            durationSeconds: imported.video.durationSeconds,
-            language: imported.video.sourceLanguage,
+        const media = await apiRequest(
+          "/api/media/resolve",
+          {
+            method: "POST",
+            body: jsonBody({ videoId: imported.video.id }),
             signal,
-            onPhase: (phase) => {
-              setStage(phase);
-              setProgress(0);
-            },
-            onProgress: (value, nextDetail) => {
-              setProgress(value);
-              setDetail(nextDetail);
-            },
-          });
-          language = result.language;
-          segments = result.segments;
-          origin = "device_whisper";
-        }
+          },
+          MediaResolveResponseSchema,
+        );
+        const result = await transcribeLocally({
+          videoId: imported.video.id,
+          mediaUrl: media.mediaUrl,
+          durationSeconds: imported.video.durationSeconds,
+          language: imported.video.sourceLanguage,
+          signal,
+          onPhase: (phase) => {
+            setStage(phase);
+            setProgress(0);
+          },
+          onProgress: (value, nextDetail) => {
+            setProgress(value);
+            setDetail(nextDetail);
+          },
+        });
+        language = result.language;
+        segments = result.segments;
+        origin = "device_whisper";
       }
       if (signal.aborted) throw new TranscriptionPausedError();
       setStage("creating_questions");

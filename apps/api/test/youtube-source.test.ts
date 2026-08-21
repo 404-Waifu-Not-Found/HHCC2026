@@ -2,9 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   extractYouTubePlayerResponse,
   loadYouTubeCaptionSegments,
-  loadYouTubeTranscriptFallback,
   parseYouTubePlayerResponse,
-  parseYouTubeTranscriptMarkdown,
   parseYouTubeTimedText,
   selectPreferredYouTubeCaptionTrack,
 } from "../src/sources/youtube";
@@ -36,7 +34,9 @@ describe("YouTube timed text", () => {
       },
     })};</script>`;
 
-    expect(parseYouTubePlayerResponse(extractYouTubePlayerResponse(html))).toEqual({
+    expect(
+      parseYouTubePlayerResponse(extractYouTubePlayerResponse(html)),
+    ).toEqual({
       title: "Neural {networks}",
       durationSeconds: 1120,
       thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }],
@@ -96,7 +96,9 @@ describe("YouTube timed text", () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          events: [{ tStartMs: 0, dDurationMs: 500, segs: [{ utf8: "Caption" }] }],
+          events: [
+            { tStartMs: 0, dDurationMs: 500, segs: [{ utf8: "Caption" }] },
+          ],
         }),
         {
           status: 200,
@@ -111,7 +113,9 @@ describe("YouTube timed text", () => {
         base_url: "https://www.youtube.com/api/timedtext?v=video-id",
         language_code: "en",
       }),
-    ).resolves.toEqual([{ id: "yt-1", startMs: 0, endMs: 500, text: "Caption" }]);
+    ).resolves.toEqual([
+      { id: "yt-1", startMs: 0, endMs: 500, text: "Caption" },
+    ]);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({ hostname: "www.youtube.com" }),
       expect.objectContaining({ redirect: "error" }),
@@ -124,73 +128,5 @@ describe("YouTube timed text", () => {
       }),
     ).rejects.toThrow("YouTube captions could not be loaded");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("parses a bounded timestamped transcript fallback for the requested video", () => {
-    const markdown = `# Transcript: AP Biology Photosynthesis
-
-Source video: https://www.youtube.com/watch?v=Le7KOX91w7U
-Language: English · Duration: 3:41 · Words: 574
-
-## Transcript
-[0:00] Light energy drives the light-dependent reactions.
-
-[0:30] Water is split to replace chlorophyll's electrons.
-
-[1:04] A proton gradient powers ATP synthase.`;
-
-    expect(parseYouTubeTranscriptMarkdown("Le7KOX91w7U", markdown)).toEqual({
-      title: "AP Biology Photosynthesis",
-      durationSeconds: 221,
-      languageCode: "en",
-      segments: [
-        {
-          id: "yt-fallback-1",
-          startMs: 0,
-          endMs: 30_000,
-          text: "Light energy drives the light-dependent reactions.",
-        },
-        {
-          id: "yt-fallback-2",
-          startMs: 30_000,
-          endMs: 64_000,
-          text: "Water is split to replace chlorophyll's electrons.",
-        },
-        {
-          id: "yt-fallback-3",
-          startMs: 64_000,
-          endMs: 221_000,
-          text: "A proton gradient powers ATP synthase.",
-        },
-      ],
-    });
-    expect(parseYouTubeTranscriptMarkdown("different-id", markdown)).toBeNull();
-  });
-
-  it("loads the transcript fallback without sending user data", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        `# Transcript: AP Biology Photosynthesis
-
-Source video: https://www.youtube.com/watch?v=Le7KOX91w7U
-Language: English · Duration: 0:30
-
-## Transcript
-[0:00] Photosynthesis begins when pigments absorb light.`,
-        { status: 200, headers: { "content-type": "text/markdown" } },
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(loadYouTubeTranscriptFallback("Le7KOX91w7U")).resolves.toMatchObject({
-      title: "AP Biology Photosynthesis",
-      durationSeconds: 30,
-      languageCode: "en",
-      segments: [{ text: "Photosynthesis begins when pigments absorb light." }],
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      new URL("https://youtube-transcript.ai/transcript/Le7KOX91w7U.txt?lang=en"),
-      expect.objectContaining({ redirect: "error" }),
-    );
   });
 });
