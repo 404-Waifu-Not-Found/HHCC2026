@@ -1,24 +1,73 @@
+# Dependencies and local tool state
 node_modules/
+.npm/
+.cache/
 .expo/
+.expo-shared/
+.metro-cache/
 .wrangler/
 .model-cache/
+.gradle/
+.cxx/
+DerivedData/
+.DS_Store
+
+# Local configuration and secrets
 .dev.vars
 .env
 .env.*
 !.env.example
+
+# Generated build, test, and coverage output
 dist/
+build/
 coverage/
 playwright-report/
 test-results/
 *.log
 *.tsbuildinfo
+*.map
+*.bundle
+*.jsbundle
+*.hbc
+
+# Generated Expo and native projects
 apps/app/android/
 apps/app/ios/
 apps/app/.expo/
 apps/app/expo-env.d.ts
 apps/app/public/runtime/
 apps/api/worker-configuration.d.ts
-modules/*/android/build/
-modules/*/android/.gradle/
+
+# Model weights and compiled ML assets stay in R2/local caches
+*.onnx
+*.safetensors
+*.gguf
+ggml-*.bin
+*.pt
+*.pth
+*.ckpt
+*.tflite
+*.mlmodel
+*.mlmodelc/
+*.mlpackage/
+
+# Native release packages, symbols, and signing material
 *.apk
+*.aab
 *.ipa
+*.app/
+*.xcarchive/
+*.dSYM/
+*.so
+*.o
+*.dex
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
