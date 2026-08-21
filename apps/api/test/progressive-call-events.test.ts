@@ -1482,6 +1482,156 @@ describe("protocol-9 concept-first call lifecycles", () => {
     ).toBe(201);
   });
 
+  it("reclaims a recoverable protocol-9 failed bank without replacing its accepted prefix", async () => {
+    const timestamp = Date.now();
+    const db = createConceptFirstDatabase(timestamp);
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "local_state_conflict",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      generation: {
+        state: "generation_failed",
+        availableQuestions: 1,
+        totalQuestions: 5,
+      },
+      continuation: {
+        claim: { state: "available" },
+        activeCall: { callIndex: 1, startIndex: 1 },
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
+        .get(QUIZ_ID),
+    ).toMatchObject({ count: 1 });
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT lifecycle_state, outcome_code FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({
+      lifecycle_state: "abandoned",
+      outcome_code: "network_interrupted",
+    });
+    const reclaimed = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(reclaimed.quality_summary_json)).toMatchObject({
+      acceptedCount: 1,
+      generationState: "recovering",
+      recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+    });
+  });
+
+  it("keeps terminal protocol-9 failures unclaimable", async () => {
+    const db = createConceptFirstDatabase();
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "recovery_budget_exhausted",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+    const { app, env } = testApp(db);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      continuation: { claim: { state: "not_required" } },
+    });
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(409);
+    expect(await claim.json()).toMatchObject({
+      error: { code: "generation_claim_not_available" },
+    });
+  });
+
   it("rejects a terminal lifecycle that was never dispatched", async () => {
     const db = createConceptFirstDatabase();
     const { app, env } = testApp(db);

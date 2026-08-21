@@ -49,9 +49,9 @@ const QuestionTypeSchema = z.enum([
 ]);
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
-const LEGACY_AUTOMATIC_RECOVERY_RETRY_LIMIT = 12;
-const LEGACY_AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
-const LEGACY_AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
+const AUTOMATIC_RECOVERY_RETRY_LIMIT = 12;
+const AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
+const AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
 
 function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
@@ -82,16 +82,18 @@ function recoverableFailureReason(reasonCode: string | undefined): boolean {
   ]).has(reasonCode ?? "");
 }
 
-function hasLegacyRecoveryBudget(
+function hasAutomaticRecoveryBudget(
   snapshot: ProgressiveGenerationSnapshot,
 ): boolean {
-  return (
+  const retryBudgetUsed =
     snapshot.telemetry.automaticRetries +
-      snapshot.telemetry.manualContinuations <
-      LEGACY_AUTOMATIC_RECOVERY_RETRY_LIMIT &&
-    snapshot.telemetry.automaticRecoveries <
-      LEGACY_AUTOMATIC_RECOVERY_CYCLE_LIMIT &&
-    snapshot.telemetry.elapsedMs < LEGACY_AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS
+    (snapshot.summary?.resultProtocolVersion === 5
+      ? snapshot.telemetry.manualContinuations
+      : 0);
+  return (
+    retryBudgetUsed < AUTOMATIC_RECOVERY_RETRY_LIMIT &&
+    snapshot.telemetry.automaticRecoveries < AUTOMATIC_RECOVERY_CYCLE_LIMIT &&
+    snapshot.telemetry.elapsedMs < AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS
   );
 }
 
@@ -99,12 +101,12 @@ function recoverableStoppedGeneration(
   snapshot: ProgressiveGenerationSnapshot,
 ): boolean {
   return Boolean(
-    snapshot.summary?.resultProtocolVersion === 5 &&
+    supportsAutomaticRecovery(snapshot) &&
     snapshot.availability?.state === "generation_failed" &&
     recoverableFailureReason(
-      snapshot.availability.reasonCode ?? snapshot.summary.reasonCode,
+      snapshot.availability.reasonCode ?? snapshot.summary?.reasonCode,
     ) &&
-    hasLegacyRecoveryBudget(snapshot),
+    hasAutomaticRecoveryBudget(snapshot),
   );
 }
 const QuestionRowSchema = z.object({
