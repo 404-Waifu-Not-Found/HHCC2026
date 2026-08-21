@@ -196,7 +196,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.5",
+            version: outdated ? "0.7.9" : "0.8.6",
             configured: true,
             capabilities: outdated
               ? []
@@ -205,6 +205,7 @@ test.beforeEach(async ({ page }) => {
                   "question-stream-v2",
                   "question-stream-v3",
                   "question-stream-v4",
+                  "question-stream-v5",
                   "ensure-source-ready-v1",
                 ],
           },
@@ -218,6 +219,9 @@ test.beforeEach(async ({ page }) => {
         const questionCount = event.data.context?.questionCount ?? 10;
         const generatedStartIndex =
           event.data.context?.continuation?.startIndex ?? 0;
+        const legacyAutomaticRecovery =
+          event.data.context?.continuation?.resultProtocolVersion === 5 &&
+          generatedStartIndex > 0;
         const selectedTypes = event.data.context?.questionTypes ?? [
           "multiple_choice",
           "true_false",
@@ -283,8 +287,8 @@ test.beforeEach(async ({ page }) => {
               pipelineVersion: 9,
               model: "deepseek-v4-flash",
               reasoningEffort: "none",
-              promptVersion: "quiz-local-json-stream-v5.5",
-              validatorVersion: "validator-local-progressive-v4.4",
+              promptVersion: "quiz-local-json-stream-v5.6",
+              validatorVersion: "validator-local-progressive-v4.5",
               importVersion: "extension-progressive-import-v6",
               generationProfile: "evidence_grounded_auto_v5_4",
               generationId: event.data.context.generationId,
@@ -335,7 +339,7 @@ test.beforeEach(async ({ page }) => {
             relativeCallIndex === 0
               ? (event.data.context?.continuation?.nextOrdinalAttempt ?? 1)
               : 1;
-          if (automatic) {
+          if (automatic || legacyAutomaticRecovery) {
             window.postMessage(
               {
                 channel: "clipquest:captions:v1",
@@ -343,8 +347,8 @@ test.beforeEach(async ({ page }) => {
                 type: "generation-call",
                 requestId: event.data.requestId,
                 event: {
-                  protocolVersion: 8,
-                  purpose: "generation",
+                  protocolVersion: automatic ? 8 : 5,
+                  purpose: automatic ? "generation" : "automatic_recovery",
                   generationSessionId: event.data.context.generationSessionId,
                   recoverySessionId: event.data.context.recoverySessionId,
                   callIndex: initialCallIndex + relativeCallIndex,
@@ -675,7 +679,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.5 or newer", { exact: false }),
+    page.getByText("0.8.6 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -1853,9 +1857,15 @@ async function installMocks(page: Page): Promise<Scenario> {
           extensionRequired: true,
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
-          promptVersion: "quiz-local-json-stream-v5.5",
-          validatorVersion: "validator-local-progressive-v4.4",
+          promptVersion: "quiz-local-json-stream-v5.6",
+          validatorVersion: "validator-local-progressive-v4.5",
           rolloutMode: "disabled",
+          supportedProfile: "evidence_grounded_auto_v5_4",
+          supportedPromptVersion: "quiz-local-json-stream-v5.6",
+          supportedValidatorVersion: "validator-local-progressive-v4.5",
+          effectiveDefaultProfile: "legacy_reasoning_v5_1",
+          requiredExtensionVersion: "0.8.6",
+          requiredCapability: "question-stream-v5",
           states: {
             generating: 2,
             retrying: 1,
@@ -1950,8 +1960,8 @@ async function installMocks(page: Page): Promise<Scenario> {
     if (path === "/api/local-ai/profile" && request.method() === "GET") {
       await json(route, {
         generationProfile: "evidence_grounded_auto_v5_4",
-        minimumExtensionVersion: "0.8.5",
-        requiredCapability: "question-stream-v4",
+        minimumExtensionVersion: "0.8.6",
+        requiredCapability: "question-stream-v5",
       });
       return;
     }
@@ -2108,6 +2118,11 @@ async function installMocks(page: Page): Promise<Scenario> {
                 importVersion: "extension-progressive-import-v3",
                 generationProfile: "legacy_reasoning_v5_1",
                 generationId: GENERATION_ID,
+                generationSessionId: GENERATION_SESSION_ID,
+                nextCallIndex: 0,
+                automaticRetryCount: 0,
+                retryBudgetUsedCount: 0,
+                automaticRecoveryCount: 0,
                 claim: {
                   state:
                     scenario.progressiveState === "retry_required"
