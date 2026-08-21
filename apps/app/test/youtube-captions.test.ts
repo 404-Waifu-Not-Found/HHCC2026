@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   collapseAdjacentCaptionRepeats,
+  downloadYouTubeCaptions,
   parseBrowserTranscript,
   parseYouTubeTimedText,
+  readBoundedCaptionResponseText,
 } from "../src/transcription/youtube-captions";
 
 describe("YouTube browser captions", () => {
@@ -113,5 +115,55 @@ describe("YouTube browser captions", () => {
     expect(transcript.segments.at(-1)?.text).toBe(
       `full subtitle line ${lineCount}`,
     );
+  });
+
+  it("rejects a chunked caption response before buffering past its limit", async () => {
+    const response = new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("1234"));
+          controller.enqueue(new TextEncoder().encode("5678"));
+          controller.close();
+        },
+      }),
+    );
+
+    await expect(readBoundedCaptionResponseText(response, 6)).rejects.toThrow(
+      "safe size limit",
+    );
+  });
+
+  it("keeps the caption timeout active after response headers arrive", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const requestSignal = init?.signal;
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              requestSignal?.addEventListener(
+                "abort",
+                () => controller.error(requestSignal.reason),
+                { once: true },
+              );
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    try {
+      const pending = downloadYouTubeCaptions(
+        "https://www.youtube.com/api/timedtext?v=TTsLhDHWopI&fmt=json3",
+        new AbortController().signal,
+      );
+      const rejection = expect(pending).rejects.toThrow("timed out");
+      await vi.advanceTimersByTimeAsync(15_000);
+      await rejection;
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 });
