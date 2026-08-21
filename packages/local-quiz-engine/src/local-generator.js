@@ -5311,6 +5311,20 @@ function validateQuiz(quiz, input) {
         repairContextForCandidate(question, normalizedConceptFailure),
       );
     }
+    if (input.promptFirstV511Mode || input.promptFirstV512Mode) {
+      const qualityFailure = promptFirstLearnerQualityFailure(
+        question,
+        input.focusExcerpt,
+        input.promptFirstPrimaryClaims?.[index],
+      );
+      if (qualityFailure) {
+        validationFailure(
+          `Question ${index + 1} is not a complete, softly worded learner-facing assessment.`,
+          qualityFailure,
+          repairContextForCandidate(question, qualityFailure),
+        );
+      }
+    }
     if (
       !input.promptFirstV512Mode &&
       prompts.some(
@@ -5713,12 +5727,12 @@ function promptFirstV511DuplicatesAccepted(question, acceptedQuestions) {
 
 function promptFirstV512ExactlyDuplicatesAccepted(question, acceptedQuestions) {
   const prompt = normalize(question.question ?? "");
-  const target = normalize(promptFirstGradingTarget(question) ?? "");
-  if (!prompt || !target) return false;
+  if (!prompt) return false;
   return acceptedQuestions.some((accepted) => {
     const acceptedPrompt = normalize(accepted.question ?? "");
-    const acceptedTarget = normalize(promptFirstGradingTarget(accepted) ?? "");
-    return prompt === acceptedPrompt && target === acceptedTarget;
+    // Repeated concepts are fine, but an exactly repeated learner-facing stem
+    // is still the same question even when the model varies its answer text.
+    return prompt === acceptedPrompt;
   });
 }
 
