@@ -4,6 +4,21 @@ ClipQuest deploys its Cloudflare Worker and content-hashed static assets as one 
 
 ## Last verified production baseline
 
+Verified on 2026-08-13:
+
+| Item                          | Production value                                                       |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| Worker version                | `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2`                                 |
+| Worker tag / Git SHA          | `297747e`                                                              |
+| Extension installed in Chrome | `0.8.8`                                                                |
+| Current generation metadata   | prompt v5.8, validator v4.7, protocol 9, pipeline 9                    |
+| Generation rollout            | canary; general enablement blocked                                     |
+| Blocking live gate            | local route served a non-ClipQuest TLS certificate; matrix not counted |
+
+The public Cloudflare edge served the exact SHA and coherent shell/assets. The official-site Chrome matrix was halted rather than bypassing `NET::ERR_CERT_COMMON_NAME_INVALID`. See the [dated 0.8.8 canary report](../qa-results/concept-first-extension-0.8.8-canary-blocked-2026-08-13.md).
+
+### Historical 2026-08-11 baseline
+
 Verified on 2026-08-11:
 
 | Item                                       | Production value                                                             |
@@ -22,13 +37,13 @@ The current [ten-video production report](../qa-results/live-production-quiz-gen
 
 This table is a dated observation, not a substitute for checking the live service before the next release.
 
-## Pending 0.8.7 candidate
+## Current 0.8.8 canary
 
-The current local source candidate uses extension `0.8.7`, result protocol `8`, capability `question-stream-v5`, pipeline `9`, prompt `quiz-local-json-stream-v5.7`, validator `validator-local-progressive-v4.6`, progressive import `v6`, and generation profile `evidence_grounded_auto_v5_4`.
+The current pushed candidate uses extension `0.8.8`, result protocol `9`, capability `question-stream-v6`, pipeline `9`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.7`, progressive import `v7`, and generation profile `concept_first_auto_v5_8`.
 
 Its compatibility path preserves accepted legacy prefixes and uses the original bank and attempt. Previously failed ordinals are retried as singleton `automatic_retry` requests; never-attempted ordinals remain `primary`. New `manual_continuation` inserts are rejected after the exact historical replay check, but existing rows remain immutable evidence. Prompt v5.7 treats the transcript as private evidence, fails closed when no positively scored instructional excerpt exists, rejects source framing, logistics, presentation metadata, and low-value recall across every learner-visible field, and repairs only the affected singleton. The display compatibility guard removes only complete grammar-safe source-attribution clauses from old prompts. Prose short-answer rubrics are bounded to independent propositions and complete paraphrases, while the deterministic grader adds conservative alias and acronym normalization without lowering its threshold.
 
-This change requires no D1 migration. The existing `0018_automatic_generation_recovery.sql` and `0019_grounded_generation_telemetry.sql` columns are sufficient. The candidate has not been pushed, deployed, installed for acceptance, benchmarked, canaried, or enabled merely because it exists in the local source tree.
+Migration `0020_generation_call_lifecycle.sql` is additive and remains compatible with rollback. The candidate is pushed, deployed, installed, and canary-assigned, but it is not generally enabled because the required live matrices have not passed.
 
 ## One-time Cloudflare version affinity
 

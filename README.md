@@ -104,9 +104,9 @@ ClipQuest page ───── ordered singleton questions ─────► st
 
 ## 🚦 Current release status
 
-As of **2026-08-11**, this source tree implements concept-focused, evidence-grounded automatic-recovery progressive extension-local quiz streaming. The evidence-grounded profile remains disabled by default until its benchmark and canary gates pass. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc); a local commit is not evidence that production has been deployed.
+As of **2026-08-13**, this source tree implements concept-first automatic-recovery progressive extension-local quiz streaming. Extension 0.8.8 and prompt v5.8 are deployed in canary mode; general rollout remains blocked until both official-site ten-video matrices pass. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc); a local commit is not evidence that production has been deployed.
 
-- When enabled, new banks use extension `0.8.7`, result protocol `8`, capability `question-stream-v5`, pipeline `9`, prompt `quiz-local-json-stream-v5.7`, validator `validator-local-progressive-v4.6`, and progressive import `v6`.
+- Canary banks use extension `0.8.8`, result protocol `9`, capability `question-stream-v6`, pipeline `9`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.7`, and progressive import `v7`.
 - Extension `0.8.7` retains isolated protocol-8/v5.4-v5.6 and protocol-5/v5.0-v5.1 continuation paths, while the app and API continue reading protocol-6/v5.2, protocol-7/v5.3, completed pipeline-7, and existing pipeline-9 data without mixing generation metadata.
 - Backend quiz generation disabled; extension generation required.
 - No Worker generation Queue binding and no generated-question fallback path.
