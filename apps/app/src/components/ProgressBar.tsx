@@ -8,15 +8,17 @@ export function ProgressBar({
   accessibilityLabel,
   tone = "action",
   compact = false,
+  fillColor,
 }: {
   progress: number;
   accessibilityLabel: string;
   tone?: "action" | "primary" | "success" | "secondary";
   compact?: boolean;
+  fillColor?: string;
 }) {
   const { theme } = useSettings();
   const value = Math.max(0, Math.min(1, progress));
-  const fillColor =
+  const toneColor =
     tone === "primary"
       ? theme.primary
       : tone === "success"
@@ -24,6 +26,7 @@ export function ProgressBar({
         : tone === "secondary"
           ? theme.secondary
           : theme.action;
+  const resolvedFillColor = fillColor ?? toneColor;
 
   return (
     <View
@@ -38,7 +41,7 @@ export function ProgressBar({
     >
       <MotionProgressFill
         progress={value}
-        color={fillColor}
+        color={resolvedFillColor}
         style={styles.fill}
       >
         <View style={styles.highlight} />

@@ -186,6 +186,9 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain(
       "<MasteryBadge state={card.mastery} compact />",
     );
+    expect(videoCard).toContain("<ProgressBar");
+    expect(videoCard).toContain("fillColor={masteryColor}");
+    expect(videoCard).toContain("styles.scoreBar");
     expect(quiz).toContain("masteryStateForScore(score)");
     expect(quiz).not.toContain('t("learning")');
   });

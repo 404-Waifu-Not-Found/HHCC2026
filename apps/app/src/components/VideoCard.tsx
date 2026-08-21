@@ -18,6 +18,7 @@ import {
   masteryColors,
   masteryPresentation,
 } from "./MasteryBadge";
+import { ProgressBar } from "./ProgressBar";
 import { ReliableThumbnail } from "./ReliableThumbnail";
 
 export function VideoCard({
@@ -132,12 +133,27 @@ export function VideoCard({
           </Text>
           <View style={styles.meta}>
             <MasteryBadge state={card.mastery} compact />
-            {card.bestScore !== null ? (
-              <Text style={[styles.score, { color: masteryColor }]}>
+          </View>
+          {card.bestScore !== null ? (
+            <View
+              style={[
+                styles.scoreBar,
+                { paddingRight: spacing[20] + spacing[5] },
+              ]}
+            >
+              <View style={styles.scoreProgress}>
+                <ProgressBar
+                  accessibilityLabel={`${t("score")}: ${Math.round(card.bestScore)}%`}
+                  compact
+                  fillColor={masteryColor}
+                  progress={card.bestScore / 100}
+                />
+              </View>
+              <Text style={[styles.scoreValue, { color: masteryColor }]}>
                 {Math.round(card.bestScore)}%
               </Text>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
         </View>
       </MotionPressable>
       <View style={styles.actions}>
@@ -330,6 +346,7 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     paddingBottom: spacing[7],
     gap: spacing[3],
+    justifyContent: "space-between",
   },
   title: {
     minHeight: 48,
@@ -344,10 +361,18 @@ const styles = StyleSheet.create({
     gap: spacing[2],
     paddingRight: spacing[20] + spacing[5],
   },
-  score: {
-    marginLeft: "auto",
+  scoreBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  scoreValue: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.label,
+  },
+  scoreProgress: {
+    flex: 1,
+    minWidth: 0,
   },
   actions: {
     position: "absolute",
