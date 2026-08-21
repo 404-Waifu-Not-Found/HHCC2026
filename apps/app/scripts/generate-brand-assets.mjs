@@ -1,10 +1,14 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = resolve(appRoot, "assets/brand/learning-prism.png");
+const wordmarkFont = resolve(
+  appRoot,
+  "../../node_modules/@expo-google-fonts/fredoka/700Bold/Fredoka_700Bold.ttf",
+);
 const launcherBackground = "#19683A";
 
 async function ensureParent(path) {
@@ -15,6 +19,76 @@ const trimmed = await sharp(source)
   .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 1 })
   .png()
   .toBuffer();
+
+const embeddedWordmarkFont = (await readFile(wordmarkFont)).toString("base64");
+
+async function renderLockup(path, textColor, questColor) {
+  await ensureParent(path);
+  const width = 1600;
+  const height = 420;
+  const markSize = 360;
+  const mark = await sharp(trimmed)
+    .resize({
+      width: markSize,
+      height: markSize,
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer();
+  const wordmark = Buffer.from(`
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        @font-face {
+          font-family: "ClipQuest Fredoka";
+          src: url("data:font/ttf;base64,${embeddedWordmarkFont}") format("truetype");
+          font-weight: 700;
+        }
+        text {
+          font-family: "ClipQuest Fredoka";
+          font-size: 214px;
+          font-weight: 700;
+          letter-spacing: -5px;
+        }
+      </style>
+      <text x="420" y="278">
+        <tspan fill="${textColor}">Clip</tspan><tspan fill="${questColor}">Quest</tspan>
+      </text>
+    </svg>
+  `);
+  await sharp({
+    create: {
+      width,
+      height,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([
+      { input: mark, left: 28, top: 30 },
+      { input: wordmark, left: 0, top: 0 },
+    ])
+    .png({ compressionLevel: 9 })
+    .toFile(path);
+}
+
+const lockupVariants = [
+  ["clipquest-lockup-on-light.png", "#203329", "#247D49"],
+  ["clipquest-lockup-on-dark.png", "#F0F6F1", "#84D6A0"],
+];
+
+for (const [name, textColor, questColor] of lockupVariants) {
+  await renderLockup(
+    resolve(appRoot, `assets/brand/${name}`),
+    textColor,
+    questColor,
+  );
+  await renderLockup(
+    resolve(appRoot, `public/brand/${name}`),
+    textColor,
+    questColor,
+  );
+}
 
 async function renderSquare(
   path,
@@ -122,7 +196,7 @@ for (const [density, size] of Object.entries(splashSizes)) {
 
 await writeFile(
   resolve(appRoot, "assets/platform/README.md"),
-  "# Generated ClipQuest platform assets\n\nRun `npm run brand:assets -w @clipquest/app` after changing the canonical learning prism. Canonical artwork and foreground derivatives remain transparent; required Apple and legacy launcher backplates use structural green. Do not edit these derivatives by hand.\n",
+  "# Generated ClipQuest brand assets\n\nRun `npm run brand:assets -w @clipquest/app` after changing the canonical learning prism. The light and dark primary wordmarks are generated from that prism and the existing Fredoka font. Canonical artwork, wordmarks, and foreground derivatives remain transparent; required Apple and legacy launcher backplates use structural green. Do not edit these derivatives by hand.\n",
 );
 
 console.log(

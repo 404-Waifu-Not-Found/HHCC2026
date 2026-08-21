@@ -134,6 +134,8 @@ test("the popup exposes local quiz JSON and plain-text caption download", () => 
   assert.equal(manifest.version, "0.4.1");
   assert.match(popupHtml, /Generate quiz JSON/);
   assert.match(popupHtml, /Download \.txt/);
+  assert.match(popupHtml, /clipquest-lockup-on-light\.png/);
+  assert.match(popupHtml, /clipquest-lockup-on-dark\.png/);
   assert.match(popup, /message\.response\.result\.quiz/);
   assert.match(background, /captionsToPlainText/);
 });

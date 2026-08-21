@@ -8,13 +8,17 @@
   </head>
   <body>
     <main>
-      <div class="brand">
-        <img src="icons/icon-48.png" alt="" />
-        <div>
-          <h1>ClipQuest Local AI</h1>
-          <p>Quiz generation runs from this browser.</p>
-        </div>
-      </div>
+      <header class="brand">
+        <picture class="brand-lockup">
+          <source
+            media="(prefers-color-scheme: dark)"
+            srcset="brand/clipquest-lockup-on-dark.png"
+          />
+          <img src="brand/clipquest-lockup-on-light.png" alt="ClipQuest" />
+        </picture>
+        <div class="brand-edition">Local AI</div>
+        <p>Private quiz generation from this browser.</p>
+      </header>
       <section class="tool">
         <div>
           <h2>Generate a concept quiz</h2>
@@ -47,8 +51,8 @@
         placeholder="sk-…"
       />
       <p class="privacy">
-        Stored only in Chrome's local extension storage. ClipQuest never
-        receives your key.
+        Stored only in Chrome's local extension storage. The ClipQuest website
+        and servers never receive your key.
       </p>
       <div class="actions">
         <button id="save" class="primary">Save &amp; test</button>

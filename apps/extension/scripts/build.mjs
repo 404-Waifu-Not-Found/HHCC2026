@@ -8,10 +8,12 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputRoot = resolve(root, "dist");
 const extensionOutput = resolve(outputRoot, "clipquest-captions-extension");
 const appIcon = resolve(root, "../app/assets/brand/learning-prism.png");
+const appBrandRoot = resolve(root, "../app/assets/brand");
 const generatedIconRoot = resolve(root, "../app/assets/platform/extension");
 
 rmSync(outputRoot, { recursive: true, force: true });
 mkdirSync(resolve(extensionOutput, "icons"), { recursive: true });
+mkdirSync(resolve(extensionOutput, "brand"), { recursive: true });
 
 for (const file of ["manifest.json", "LICENSE", "NOTICE.md"]) {
   cpSync(resolve(root, file), resolve(extensionOutput, file));
@@ -33,6 +35,12 @@ for (const file of [
 for (const size of [16, 48, 128]) {
   const generated = resolve(generatedIconRoot, `icon-${size}.png`);
   cpSync(generated, resolve(extensionOutput, `icons/icon-${size}.png`));
+}
+for (const name of [
+  "clipquest-lockup-on-light.png",
+  "clipquest-lockup-on-dark.png",
+]) {
+  cpSync(resolve(appBrandRoot, name), resolve(extensionOutput, "brand", name));
 }
 
 const iconStats = await sharp(appIcon).stats();

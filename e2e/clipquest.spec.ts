@@ -307,6 +307,10 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
     const brandRect = brand.getBoundingClientRect();
     const formRect = form.getBoundingClientRect();
     const dividerRect = split.getBoundingClientRect();
+    const lockup = brand.querySelector<HTMLElement>(
+      '[data-testid="clipquest-auth-wordmark"]',
+    );
+    const lockupRect = lockup?.getBoundingClientRect();
     return {
       brandWidth: brandRect.width,
       formWidth: formRect.width,
@@ -314,7 +318,10 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
       brandBackground: getComputedStyle(brand).backgroundColor,
       formBackground: getComputedStyle(form).backgroundColor,
       dividerShadow: getComputedStyle(split).boxShadow,
-      logoWidth: brand.querySelector("img")?.getBoundingClientRect().width,
+      lockupWidth: lockupRect?.width,
+      markWidth: lockup?.querySelector("img")?.getBoundingClientRect().width,
+      lockupLeftGutter: lockupRect ? lockupRect.left - brandRect.left : null,
+      lockupRightGutter: lockupRect ? brandRect.right - lockupRect.right : null,
       hasOverflow:
         document.documentElement.scrollWidth >
         document.documentElement.clientWidth + 1,
@@ -327,7 +334,13 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
   expect(desktopLayout.brandBackground).not.toBe(desktopLayout.formBackground);
   expect(desktopLayout.dividerShadow).not.toBe("none");
   expect(desktopLayout.dividerShadow).toContain("24px 0px 24px -8px");
-  expect(desktopLayout.logoWidth).toBe(300);
+  expect(desktopLayout.lockupWidth).toBeGreaterThan(440);
+  expect(desktopLayout.lockupWidth).toBeLessThan(480);
+  expect(desktopLayout.markWidth).toBe(148);
+  expect(desktopLayout.lockupLeftGutter).toBeCloseTo(
+    desktopLayout.lockupRightGutter ?? 0,
+    0,
+  );
   expect(desktopLayout.hasOverflow).toBe(false);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -338,7 +351,7 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
   await expect(page.getByTestId("auth-split-brand-pane")).toHaveCount(0);
   await expect(page.getByTestId("auth-split-form-pane")).toHaveCount(0);
   await expect(page.getByTestId("auth-split-divider")).toHaveCount(0);
-  await expect(page.getByText("ClipQuest", { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "ClipQuest" })).toBeVisible();
 
   const mobileOverflow = await page.evaluate(
     () =>
@@ -424,7 +437,7 @@ test("requires the local caption extension and reconnects automatically", async 
   await page.reload();
 
   await expect(
-    page.getByRole("heading", { name: "Install ClipQuest Local AI" }),
+    page.getByRole("heading", { name: "Install the Chrome extension" }),
   ).toBeVisible();
   await expect(page.getByTestId("download-caption-extension")).toBeVisible();
   await expect(
@@ -436,7 +449,7 @@ test("requires the local caption extension and reconnects automatically", async 
   );
   await page.getByTestId("check-caption-extension").click();
   await expect(
-    page.getByRole("heading", { name: "Install ClipQuest Local AI" }),
+    page.getByRole("heading", { name: "Install the Chrome extension" }),
   ).toBeHidden();
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(

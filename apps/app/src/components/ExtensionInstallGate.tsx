@@ -19,6 +19,7 @@ import {
   spacing,
   typography,
 } from "../theme/tokens";
+import { BrandLockup } from "./BrandLockup";
 import { PrimaryButton } from "./PrimaryButton";
 
 type GateStatus = "checking" | "missing" | "available";
@@ -92,6 +93,7 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
               },
             ]}
           >
+            <BrandLockup descriptor="Local AI" size="compact" />
             <View style={styles.headingRow}>
               <View
                 style={[styles.icon, { backgroundColor: theme.primarySoft }]}

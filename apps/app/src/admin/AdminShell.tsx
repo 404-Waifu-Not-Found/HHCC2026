@@ -20,8 +20,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BrandLockup } from "../components/BrandLockup";
 import { EmptyState } from "../components/EmptyState";
-import { LearningPrism } from "../components/LearningPrism";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
 import { useAppSession } from "../lib/auth-client";
@@ -254,27 +254,14 @@ function AdminMobileHeader({ me }: { me: AdminMeResponse }) {
 }
 
 function BrandBlock({ compact = false }: { compact?: boolean }) {
-  const { theme } = useSettings();
   const copy = useAdminCopy();
   return (
     <View style={[styles.brand, compact && styles.brandCompact]}>
-      <View
-        style={[
-          styles.brandMark,
-          {
-            backgroundColor: theme.actionSoft,
-            borderColor: theme.actionPressed,
-          },
-        ]}
-      >
-        <LearningPrism size={compact ? 36 : 40} variant="tile" />
-      </View>
-      <View style={styles.brandCopy}>
-        <Text style={[styles.brandName, { color: theme.text }]}>ClipQuest</Text>
-        <Text style={[styles.brandSection, { color: theme.primary }]}>
-          {copy.operations}
-        </Text>
-      </View>
+      <BrandLockup
+        descriptor={copy.operations}
+        size="compact"
+        style={styles.brandLockup}
+      />
     </View>
   );
 }
@@ -368,33 +355,10 @@ const styles = StyleSheet.create({
     gap: spacing[5],
   },
   brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
     paddingHorizontal: spacing[2],
   },
   brandCompact: { paddingHorizontal: 0 },
-  brandMark: {
-    width: 46,
-    height: 46,
-    borderRadius: radii.large,
-    borderWidth: borders.standard,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brandCopy: { minWidth: 0 },
-  brandName: {
-    fontFamily: typography.displayMedium,
-    fontSize: 21,
-    lineHeight: 24,
-  },
-  brandSection: {
-    fontFamily: typography.bodyBold,
-    fontSize: 12,
-    lineHeight: 16,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
+  brandLockup: { maxWidth: "100%" },
   sidebarNav: { flex: 1, gap: spacing[2] },
   navItem: {
     minHeight: 50,

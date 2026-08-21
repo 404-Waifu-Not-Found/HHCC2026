@@ -36,26 +36,35 @@ main {
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  justify-items: start;
+  gap: 2px;
 }
 
-.brand img {
-  width: 52px;
-  height: 52px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+.brand-lockup {
+  display: block;
+  width: 248px;
+  max-width: 100%;
 }
 
-h1,
+.brand-lockup img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.brand-edition {
+  margin-top: -5px;
+  padding-left: 66px;
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
 p {
   margin: 0;
-}
-
-h1 {
-  font-size: 19px;
-  letter-spacing: -0.2px;
 }
 
 h2 {
@@ -71,6 +80,10 @@ h2 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.brand p {
+  padding-left: 66px;
 }
 
 .tool {

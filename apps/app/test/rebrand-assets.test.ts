@@ -133,6 +133,37 @@ describe("ClipQuest rebrand assets", () => {
     }
   });
 
+  it("keeps both primary wordmark lockups transparent and production-sized", async () => {
+    for (const root of ["assets/brand", "public/brand"]) {
+      for (const variant of ["on-light", "on-dark"]) {
+        const image = sharp(
+          resolve(appRoot, root, `clipquest-lockup-${variant}.png`),
+        );
+        const metadata = await image.metadata();
+        const stats = await image.stats();
+        expect(metadata).toMatchObject({
+          width: 1600,
+          height: 420,
+          channels: 4,
+          hasAlpha: true,
+        });
+        expect(stats.entropy).toBeGreaterThan(1);
+
+        const { data, info } = await image
+          .ensureAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+        const cornerAlphaOffsets = [
+          3,
+          (info.width - 1) * info.channels + 3,
+          (info.height - 1) * info.width * info.channels + 3,
+          (info.width * info.height - 1) * info.channels + 3,
+        ];
+        for (const offset of cornerAlphaOffsets) expect(data[offset]).toBe(0);
+      }
+    }
+  });
+
   it("contains no old icon package or mood mascot references", async () => {
     const files = [
       ...(await sourceFiles(resolve(appRoot, "app"))),

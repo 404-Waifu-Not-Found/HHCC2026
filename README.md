@@ -1,10 +1,13 @@
 <a id="top"></a>
 
-<h1 align="center"><strong>ClipQuest:</strong> turn YouTube lessons into real mastery</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./apps/app/assets/brand/clipquest-lockup-on-dark.png" />
+    <img src="./apps/app/assets/brand/clipquest-lockup-on-light.png" alt="ClipQuest" width="620" />
+  </picture>
+</h1>
 
-<p align="center">
-  <img src="./apps/app/assets/brand/learning-prism.png" alt="ClipQuest learning prism: an abstract voxel video frame and quiz card" width="220" />
-</p>
+<p align="center"><strong>Turn YouTube lessons into real mastery.</strong></p>
 
 <p align="center">
   <strong>Paste a public YouTube lesson, build an evidence-based quiz in your browser, and learn through immediate feedback.</strong>
@@ -17,6 +20,7 @@
 <p align="center">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
   <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=20232A" />
+  <img alt="React 19" src="https://img.shields.io/badge/React_19-149ECA?style=for-the-badge&logo=react&logoColor=white" />
   <img alt="Swift" src="https://img.shields.io/badge/Swift-F05138?style=for-the-badge&logo=swift&logoColor=white" />
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" />
   <img alt="SQL" src="https://img.shields.io/badge/SQL-336791?style=for-the-badge&logoColor=white" />
@@ -108,7 +112,7 @@ As of **2026-08-06**, `main` and [clipquest.ccwu.cc](https://clipquest.ccwu.cc) 
 
 The live `/health` response and Wrangler deployment history are the authoritative production checks. Health exposes the model and pipeline versions plus `backendQuizGeneration`, `extensionQuizGeneration`, and `extensionRequired` readiness flags without exposing secrets or relying on a stale version number in this document.
 
-The 2026-08-06 release gate passes **77 unit, contract, and extension tests** plus **12 Playwright journeys**, repository-wide TypeScript, ESLint, and Prettier checks, the Expo static export, extension packaging, Worker bundling, asset validation, and a Wrangler dry run.
+The 2026-08-06 release gate passes **78 unit, contract, and extension tests** plus **12 Playwright journeys**, repository-wide TypeScript, ESLint, and Prettier checks, the Expo static export, extension packaging, Worker bundling, asset validation, and a Wrangler dry run.
 
 Remaining release acceptance includes repeated real-browser runs across varied YouTube subjects, the captionless local-Whisper path on supported hardware, Resend and push delivery, and production-signed native builds.
 
@@ -120,20 +124,24 @@ Remaining release acceptance includes repeated real-browser runs across varied Y
 
 ClipQuest's interface takes product-craft cues from polished learning software—focused tasks, visible progress, large controls, tactile depth, immediate feedback, and generous whitespace—while using independently authored colors, geometry, components, and artwork. The [design research and adaptation boundary](./docs/duolingo-ui-research.md) explicitly excludes Duolingo assets, Feather Green, characters, proprietary fonts, sounds, copy, and traced illustrations.
 
-| System element    | ClipQuest implementation                                                                                                     |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Brand anchor      | Structural green `#247D49` with action green `#54C878`; neither reproduces Duolingo's palette                                |
-| Themes            | Equally supported light and deep-green dark themes with semantic blue, warning, and error roles                              |
-| Brand object      | A non-anthropomorphic learning prism made from an interlocking video frame, quiz card, knowledge marker, and companion block |
-| Iconography       | Individually generated, transparent, low-density isometric voxel PNGs resolved through a typed static registry               |
-| Typography        | Fredoka for short display copy and DM Sans for body/interface copy, with existing language fallbacks unchanged               |
-| Interaction       | 44 px minimum touch targets, 16–24 px radii, visible keyboard focus, semantic feedback, and reduced-motion support           |
-| Platform identity | Deterministic derivatives for favicon, PWA, browser extension, iOS, Android, and splash artwork                              |
+| System element    | ClipQuest implementation                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Brand anchor      | Structural green `#247D49` with action green `#54C878`; neither reproduces Duolingo's palette                                 |
+| Themes            | Equally supported light and deep-green dark themes with semantic blue, warning, and error roles                               |
+| Brand object      | A non-anthropomorphic learning prism made from an interlocking video frame, quiz card, knowledge marker, and companion block  |
+| Primary lockup    | The learning prism paired with a custom-cased Fredoka `ClipQuest` wordmark; constrained launcher icons retain the prism alone |
+| Iconography       | Individually generated, transparent, low-density isometric voxel PNGs resolved through a typed static registry                |
+| Typography        | Fredoka for short display copy and DM Sans for body/interface copy, with existing language fallbacks unchanged                |
+| Interaction       | 44 px minimum touch targets, 16–24 px radii, visible keyboard focus, semantic feedback, and reduced-motion support            |
+| Platform identity | Deterministic derivatives for favicon, PWA, browser extension, iOS, Android, and splash artwork                               |
 
 The learning prism has no face, body, limbs, clothing, pose, mood, or character reactions. Processing, success, and error states are communicated by status copy, semantic panels, and progress—not mascot behavior.
 
 <p align="center">
-  <img src="./apps/app/assets/brand/learning-prism.png" alt="Transparent ClipQuest voxel learning prism" width="180" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./apps/app/assets/brand/clipquest-lockup-on-dark.png" />
+    <img src="./apps/app/assets/brand/clipquest-lockup-on-light.png" alt="ClipQuest learning-prism wordmark" width="520" />
+  </picture>
 </p>
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
@@ -238,6 +246,7 @@ The language inventory below comes from the tracked repository, including the na
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | TypeScript and TSX                 | Expo routes and components, Cloudflare Worker API, shared Zod contracts, Playwright, tests, and build configuration            |
 | JavaScript and ESM (`.js`, `.mjs`) | Manifest V3 extension runtime, caption processing, local quiz generation, web workers, asset scripts, and packaging            |
+| React ecosystem                    | React 19, React DOM 19, React Native 0.86, and Expo Router power the shared web, iOS, and Android product interface            |
 | SQL                                | Fourteen ordered D1 migrations for authentication, quiz storage, reliability, administration, and local mixed-question imports |
 | Swift                              | iOS implementation of the local audio-decoder Expo module                                                                      |
 | Kotlin                             | Android implementation of the local audio-decoder Expo module                                                                  |

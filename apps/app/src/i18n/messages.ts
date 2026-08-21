@@ -128,7 +128,7 @@ export const messages = {
     sourceCaptions: "Complete source captions are ready.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
-    extensionRequiredTitle: "Install ClipQuest Local AI",
+    extensionRequiredTitle: "Install the Chrome extension",
     extensionRequiredBody:
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
     extensionStepDownload: "Download and unzip the extension package.",
@@ -342,7 +342,7 @@ export const messages = {
     videoReady: "视频已准备好",
     sourceCaptions: "完整的来源字幕已准备好。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
-    extensionRequiredTitle: "安装 ClipQuest 本地 AI 扩展",
+    extensionRequiredTitle: "安装 Chrome 扩展",
     extensionRequiredBody:
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
     extensionStepDownload: "下载并解压扩展安装包。",

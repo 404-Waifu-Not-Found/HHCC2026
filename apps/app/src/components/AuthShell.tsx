@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { breakpoints, spacing, typography } from "../theme/tokens";
-import { LearningPrism } from "./LearningPrism";
+import { BrandLockup } from "./BrandLockup";
 import { Screen } from "./Screen";
 
 type AuthShellVariant = "form" | "welcome" | "split";
@@ -87,13 +87,12 @@ export function AuthShell({
               ]}
             >
               <View style={styles.splitBrand}>
-                <LearningPrism size={300} variant="hero" />
+                <BrandLockup
+                  centered
+                  size="hero"
+                  testID="clipquest-auth-wordmark"
+                />
                 <View style={styles.splitBrandCopy}>
-                  <Text
-                    style={[styles.splitBrandName, { color: theme.primary }]}
-                  >
-                    {t("appName")}
-                  </Text>
                   <Text
                     testID="auth-split-tagline"
                     style={[styles.splitTagline, { color: theme.text }]}
@@ -149,11 +148,8 @@ export function AuthShell({
           <>
             {welcome && desktop ? (
               <View style={styles.intro}>
-                <LearningPrism size={292} variant="hero" />
+                <BrandLockup centered size="hero" />
                 <View style={styles.brandCopy}>
-                  <Text style={[styles.kicker, { color: theme.primary }]}>
-                    {t("appName")}
-                  </Text>
                   <Text style={[styles.tagline, { color: theme.text }]}>
                     {t("authShellTagline")}
                   </Text>
@@ -166,12 +162,7 @@ export function AuthShell({
               <View
                 style={[styles.compactBrand, welcome && styles.welcomeBrand]}
               >
-                <LearningPrism size={welcome ? 72 : 64} />
-                <Text
-                  style={[styles.compactBrandName, { color: theme.primary }]}
-                >
-                  {t("appName")}
-                </Text>
+                <BrandLockup centered size={welcome ? "standard" : "compact"} />
               </View>
             )}
             {formColumn}
@@ -254,12 +245,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
   },
-  splitBrandName: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.bodyLarge,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
   splitTagline: {
     maxWidth: 440,
     textAlign: "center",
@@ -288,18 +273,6 @@ const styles = StyleSheet.create({
   },
   welcomeBrand: {
     marginBottom: 0,
-  },
-  compactBrandName: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.caption,
-    letterSpacing: typography.tracking.wide,
-    textTransform: "uppercase",
-  },
-  kicker: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.label,
-    letterSpacing: typography.tracking.wide,
-    textTransform: "uppercase",
   },
   tagline: {
     fontFamily: typography.display,

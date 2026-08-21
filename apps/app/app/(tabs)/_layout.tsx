@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { authClient } from "../../src/lib/auth-client";
-import { LearningPrism } from "../../src/components/LearningPrism";
+import { BrandLockup } from "../../src/components/BrandLockup";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import {
   borders,
@@ -119,29 +119,7 @@ function LearningTabBar({
             },
       ]}
     >
-      {desktop ? (
-        <View
-          style={styles.brand}
-          accessible
-          accessibilityRole="text"
-          accessibilityLabel="ClipQuest"
-        >
-          <View
-            style={[
-              styles.brandMark,
-              {
-                backgroundColor: theme.primarySoft,
-                borderColor: theme.primary,
-              },
-            ]}
-          >
-            <LearningPrism size={40} variant="tile" />
-          </View>
-          <Text style={[styles.brandName, { color: theme.text }]}>
-            ClipQuest
-          </Text>
-        </View>
-      ) : null}
+      {desktop ? <BrandLockup size="compact" style={styles.brand} /> : null}
 
       <View
         style={[
@@ -251,24 +229,8 @@ const styles = StyleSheet.create({
   },
   brand: {
     minHeight: 58,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
     paddingHorizontal: spacing[2],
     marginBottom: spacing[8],
-  },
-  brandMark: {
-    width: controls.iconTarget,
-    height: controls.iconTarget,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: borders.standard,
-    borderRadius: radii.medium,
-  },
-  brandName: {
-    fontFamily: typography.display,
-    fontSize: typography.size.titleSmall,
-    lineHeight: typography.lineHeight.titleSmall,
   },
   items: {
     minWidth: 0,
