@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ClipQuest Local AI</title>
+    <title>ClipQuest — DeepSeek configuration</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
@@ -16,52 +16,38 @@
           />
           <img src="brand/clipquest-lockup-on-light.png" alt="ClipQuest" />
         </picture>
-        <div class="brand-edition">Local AI</div>
-        <p>Private quiz generation from this browser.</p>
       </header>
-      <section class="tool">
-        <div>
-          <h2>Generate a concept quiz</h2>
+      <form id="deepseek-config" class="config" aria-labelledby="config-title">
+        <div class="config-copy">
+          <p class="eyebrow">DeepSeek</p>
+          <h1 id="config-title">DeepSeek configuration</h1>
           <p>
-            Reads captions, removes timestamps, then sends the complete plain
-            text directly to DeepSeek from this extension.
+            Add the API key ClipQuest uses for private quiz generation in this
+            browser.
           </p>
         </div>
-        <label for="youtube-url">YouTube URL</label>
+        <label for="api-key">DeepSeek API key</label>
         <input
-          id="youtube-url"
-          type="url"
-          inputmode="url"
+          id="api-key"
+          type="password"
           autocomplete="off"
           spellcheck="false"
-          placeholder="https://youtube.com/watch?v=…"
+          placeholder="sk-…"
         />
+        <p class="privacy">
+          Stored only in Chrome's local extension storage. The ClipQuest website
+          and servers never receive your key.
+        </p>
         <div class="actions">
-          <button id="generate-quiz" class="primary">Generate quiz JSON</button>
-          <button id="download-text" class="secondary">Download .txt</button>
+          <button id="save" class="primary" type="submit" disabled>
+            Save &amp; test
+          </button>
+          <button id="remove" class="secondary" type="button" disabled>
+            Remove key
+          </button>
         </div>
-      </section>
-      <div class="divider"></div>
-      <label for="api-key">DeepSeek API key</label>
-      <input
-        id="api-key"
-        type="password"
-        autocomplete="off"
-        spellcheck="false"
-        placeholder="sk-…"
-      />
-      <p class="privacy">
-        Stored only in Chrome's local extension storage. The ClipQuest website
-        and servers never receive your key.
-      </p>
-      <div class="actions">
-        <button id="save" class="primary">Save &amp; test</button>
-        <button id="remove" class="secondary">Remove key</button>
-      </div>
-      <button id="reload" class="secondary">Reload extension update</button>
-      <p id="version" class="version"></p>
-      <p id="status" role="status" aria-live="polite"></p>
-      <pre id="quiz-output" hidden></pre>
+        <p id="status" role="status" aria-live="polite"></p>
+      </form>
     </main>
     <script type="module" src="popup.js"></script>
   </body>

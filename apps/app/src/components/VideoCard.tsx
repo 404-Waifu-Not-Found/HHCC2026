@@ -3,7 +3,6 @@ import { VoxelIcon } from "./VoxelIcon";
 import { Image } from "expo-image";
 import {
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, motion, radii, spacing, typography } from "../theme/tokens";
+import { MotionPressable, MotionView } from "../motion/Motion";
 
 const masteryKeys = {
   not_started: "notStarted",
@@ -44,7 +44,7 @@ export function VideoCard({
         : theme.textMuted;
 
   return (
-    <Pressable
+    <MotionPressable
       accessibilityRole="button"
       accessibilityLabel={`${card.title}. ${t(masteryKeys[card.mastery])}. ${actionLabel}`}
       onPress={onPress}
@@ -59,18 +59,8 @@ export function VideoCard({
             : theme.borderStrong,
         },
         {
-          borderBottomWidth: pressed
-            ? borders.standard
-            : borders.tactileDepth + borders.standard,
-          transform: [
-            {
-              translateY: pressed
-                ? borders.tactileDepth
-                : hovered && !reduceMotion
-                  ? -2
-                  : 0,
-            },
-          ],
+          borderBottomWidth: borders.tactileDepth + borders.standard,
+          opacity: pressed ? 0.94 : 1,
         },
         Platform.OS === "web" && {
           transitionDuration: `${motion.fast}ms`,
@@ -86,7 +76,9 @@ export function VideoCard({
           transition={reduceMotion ? 0 : 180}
           style={styles.image}
         />
-        <View
+        <MotionView
+          preset="from-left"
+          delay={80}
           style={[
             styles.sourceBadge,
             { backgroundColor: "rgba(11,20,48,0.78)" },
@@ -94,7 +86,7 @@ export function VideoCard({
         >
           <VoxelIcon name="video" size={15} color="#FFFFFF" />
           <Text style={styles.source}>YouTube</Text>
-        </View>
+        </MotionView>
       </View>
       <View style={styles.body}>
         <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>
@@ -115,14 +107,18 @@ export function VideoCard({
             </Text>
           ) : null}
         </View>
-        <View style={[styles.actionRow, { borderTopColor: theme.divider }]}>
+        <MotionView
+          preset="from-right"
+          delay={120}
+          style={[styles.actionRow, { borderTopColor: theme.divider }]}
+        >
           <Text style={[styles.action, { color: theme.primary }]}>
             {actionLabel}
           </Text>
           <VoxelIcon name="next" size={20} color={theme.primary} />
-        </View>
+        </MotionView>
       </View>
-    </Pressable>
+    </MotionPressable>
   );
 }
 

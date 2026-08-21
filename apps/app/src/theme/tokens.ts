@@ -222,10 +222,36 @@ export const breakpoints = {
 
 export const motion = {
   instant: 80,
-  fast: 120,
-  standard: 180,
-  route: 260,
-  celebration: 420,
+  quick: 120,
+  fast: 160,
+  standard: 220,
+  route: 300,
+  emphasized: 380,
+  celebration: 520,
+  stagger: 44,
+  distance: {
+    micro: 2,
+    small: 8,
+    medium: 16,
+    large: 28,
+  },
+  scale: {
+    press: 0.975,
+    iconPress: 0.92,
+    enter: 0.96,
+    emphasis: 1.035,
+  },
+  easing: {
+    standard: [0.2, 0, 0, 1] as const,
+    enter: [0.16, 1, 0.3, 1] as const,
+    exit: [0.4, 0, 1, 1] as const,
+    emphasized: [0.2, 0.8, 0.2, 1] as const,
+  },
+  spring: {
+    responsive: { damping: 18, stiffness: 260, mass: 0.72 },
+    gentle: { damping: 22, stiffness: 180, mass: 0.9 },
+    celebration: { damping: 14, stiffness: 210, mass: 0.8 },
+  },
 } as const;
 
 export const safeArea = {

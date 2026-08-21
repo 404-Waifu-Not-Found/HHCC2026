@@ -10,6 +10,7 @@ import { useSettings } from "../providers/SettingsProvider";
 import { breakpoints, spacing, typography } from "../theme/tokens";
 import { BrandLockup } from "./BrandLockup";
 import { Screen } from "./Screen";
+import { MotionView } from "../motion/Motion";
 
 type AuthShellVariant = "form" | "welcome" | "split";
 
@@ -34,31 +35,45 @@ export function AuthShell({
   const splitDesktop = variant === "split" && desktop;
 
   const formColumn = (
-    <View style={[styles.formColumn, welcome && styles.welcomeColumn]}>
-      <Text
-        accessibilityRole="header"
-        style={[
-          styles.title,
-          !welcome && styles.formTitle,
-          { color: theme.text },
-        ]}
-      >
-        {title}
-      </Text>
-      {subtitle ? (
+    <MotionView
+      preset={splitDesktop ? "from-right" : "rise"}
+      delay={80}
+      style={[styles.formColumn, welcome && styles.welcomeColumn]}
+    >
+      <MotionView preset="rise" delay={120}>
         <Text
+          accessibilityRole="header"
           style={[
-            styles.subtitle,
-            !welcome && styles.formSubtitle,
-            { color: theme.textMuted },
+            styles.title,
+            !welcome && styles.formTitle,
+            { color: theme.text },
           ]}
         >
-          {subtitle}
+          {title}
         </Text>
+      </MotionView>
+      {subtitle ? (
+        <MotionView preset="rise" delay={164}>
+          <Text
+            style={[
+              styles.subtitle,
+              !welcome && styles.formSubtitle,
+              { color: theme.textMuted },
+            ]}
+          >
+            {subtitle}
+          </Text>
+        </MotionView>
       ) : null}
-      <View style={styles.form}>{children}</View>
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
-    </View>
+      <MotionView preset="rise" delay={208} style={styles.form}>
+        {children}
+      </MotionView>
+      {footer ? (
+        <MotionView preset="fade" delay={252} style={styles.footer}>
+          {footer}
+        </MotionView>
+      ) : null}
+    </MotionView>
   );
 
   const screen = (
@@ -79,7 +94,8 @@ export function AuthShell({
       >
         {splitDesktop ? (
           <>
-            <View
+            <MotionView
+              preset="from-left"
               testID="auth-split-brand-pane"
               style={[
                 styles.splitPane,
@@ -101,12 +117,13 @@ export function AuthShell({
                   </Text>
                 </View>
               </View>
-            </View>
-            <View
+            </MotionView>
+            <MotionView
+              preset="fade"
+              delay={140}
               testID="auth-split-divider"
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
-              pointerEvents="none"
               style={[
                 styles.splitDivider,
                 { backgroundColor: theme.divider },
@@ -129,7 +146,8 @@ export function AuthShell({
                     },
               ]}
             />
-            <View
+            <MotionView
+              preset="from-right"
               testID="auth-split-form-pane"
               style={[
                 styles.splitPane,
@@ -142,12 +160,12 @@ export function AuthShell({
               ]}
             >
               {formColumn}
-            </View>
+            </MotionView>
           </>
         ) : (
           <>
             {welcome && desktop ? (
-              <View style={styles.intro}>
+              <MotionView preset="from-left" style={styles.intro}>
                 <BrandLockup centered size="hero" />
                 <View style={styles.brandCopy}>
                   <Text style={[styles.tagline, { color: theme.text }]}>
@@ -157,17 +175,24 @@ export function AuthShell({
                     {t("authShellDetail")}
                   </Text>
                 </View>
-              </View>
+              </MotionView>
             ) : (
-              <View
+              <MotionView
+                preset="drop"
                 style={[styles.compactBrand, welcome && styles.welcomeBrand]}
               >
                 <BrandLockup centered size={welcome ? "standard" : "compact"} />
-              </View>
+              </MotionView>
             )}
             {formColumn}
             {cornerAction && !desktop ? (
-              <View style={styles.cornerActionInline}>{cornerAction}</View>
+              <MotionView
+                preset="fade"
+                delay={260}
+                style={styles.cornerActionInline}
+              >
+                {cornerAction}
+              </MotionView>
             ) : null}
           </>
         )}
@@ -179,7 +204,13 @@ export function AuthShell({
     <View style={[styles.shell, { backgroundColor: theme.background }]}>
       {screen}
       {cornerAction && desktop ? (
-        <View style={styles.cornerActionDesktop}>{cornerAction}</View>
+        <MotionView
+          preset="from-right"
+          delay={260}
+          style={styles.cornerActionDesktop}
+        >
+          {cornerAction}
+        </MotionView>
       ) : null}
     </View>
   );
@@ -227,6 +258,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[10],
   },
   splitDivider: {
+    pointerEvents: "none",
     position: "absolute",
     top: 0,
     bottom: 0,

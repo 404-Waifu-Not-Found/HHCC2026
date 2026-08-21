@@ -371,6 +371,15 @@ test("unauthenticated entry defaults to sign-in and sign-up links to welcome", a
     page.getByRole("heading", { name: "Welcome back" }),
   ).toBeVisible();
 
+  await page.goto("/forgot-password");
+  await expect(
+    page.getByRole("heading", { name: "Forgot password?" }),
+  ).toBeVisible();
+  await expect(page.locator("img")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Send reset link" }).locator("img"),
+  ).toHaveCount(0);
+
   await page.goto("/sign-up");
   const trialLink = page.getByTestId("try-without-account-link");
   await expect(trialLink).toHaveText(
@@ -399,6 +408,10 @@ test("unauthenticated entry defaults to sign-in and sign-up links to welcome", a
       name: "Paste a YouTube video. Build real mastery.",
     }),
   ).toBeVisible();
+
+  const quickOpenVideo = "https://www.youtube.com/watch?v=AbCdEfGhI12";
+  await page.goto(`/welcome?url=${encodeURIComponent(quickOpenVideo)}`);
+  await expect(page.locator('input[type="url"]')).toHaveValue(quickOpenVideo);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/sign-up");
@@ -576,6 +589,14 @@ test("desktop learning journey and visual states", async ({ page }) => {
 
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Review reminders" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Privacy & storage" }),
+  ).toHaveCount(0);
   await capture(page, "desktop-settings");
 
   expect(

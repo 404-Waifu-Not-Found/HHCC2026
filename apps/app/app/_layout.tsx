@@ -69,7 +69,7 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { ready, theme } = useSettings();
+  const { ready, reduceMotion, theme } = useSettings();
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
@@ -84,7 +84,8 @@ function RootNavigator() {
           title: SITE_TITLE,
           headerShown: false,
           contentStyle: { backgroundColor: theme.background },
-          animation: "fade",
+          animation: reduceMotion ? "none" : "fade",
+          animationDuration: reduceMotion ? 0 : 300,
         }}
       />
     </ExtensionInstallGate>

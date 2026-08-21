@@ -1,7 +1,8 @@
 import { VoxelIcon } from "./VoxelIcon";
 import type { ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
+import { FeedbackMotion, MotionPressable, MotionView } from "../motion/Motion";
 import {
   borders,
   controls,
@@ -29,7 +30,7 @@ export function AnswerCard({
   supporting?: string;
   leading?: ReactNode;
 }) {
-  const { theme, reduceMotion } = useSettings();
+  const { theme } = useSettings();
   const disabled = state === "disabled";
   const selected = state !== "default" && state !== "disabled";
   const backgroundColor =
@@ -57,100 +58,104 @@ export function AnswerCard({
           ? theme.primaryPressed
           : theme.borderStrong;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected, disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed, hovered }) => [
-        styles.card,
-        {
-          backgroundColor: disabled ? theme.surfaceSunken : backgroundColor,
-          borderColor,
-          borderBottomColor: depthColor,
-          borderBottomWidth: pressed
-            ? borders.standard
-            : borders.tactileDepth + borders.standard,
-          opacity: disabled ? 0.7 : 1,
-          transform: [
-            {
-              translateY: pressed
-                ? borders.tactileDepth
-                : hovered && !reduceMotion
-                  ? -1
-                  : 0,
-            },
-          ],
-        },
-        Platform.OS === "web" && {
-          transitionDuration: `${motion.fast}ms`,
-          transitionProperty: "transform, background-color, border-color",
-          outlineColor: theme.focus,
-        },
-      ]}
+    <FeedbackMotion
+      signal={selected ? state : false}
+      kind={
+        state === "correct"
+          ? "success"
+          : state === "incorrect"
+            ? "error"
+            : "attention"
+      }
+      style={styles.feedbackWrap}
     >
-      {indexLabel ? (
-        <View
-          style={[
-            styles.index,
-            {
-              backgroundColor: selected ? borderColor : theme.surfaceSunken,
-              borderColor,
-            },
-          ]}
-        >
-          <Text
+      <MotionPressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ selected, disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        style={({ pressed, hovered }) => [
+          styles.card,
+          {
+            backgroundColor: disabled ? theme.surfaceSunken : backgroundColor,
+            borderColor,
+            borderBottomColor: depthColor,
+            borderBottomWidth: borders.tactileDepth + borders.standard,
+            opacity: disabled ? 0.7 : 1,
+          },
+          Platform.OS === "web" && {
+            transitionDuration: `${motion.fast}ms`,
+            transitionProperty: "transform, background-color, border-color",
+            outlineColor: theme.focus,
+          },
+        ]}
+      >
+        {indexLabel ? (
+          <View
             style={[
-              styles.indexText,
-              { color: selected ? theme.textOnPrimary : theme.textMuted },
+              styles.index,
+              {
+                backgroundColor: selected ? borderColor : theme.surfaceSunken,
+                borderColor,
+              },
             ]}
           >
-            {indexLabel}
-          </Text>
-        </View>
-      ) : leading ? (
-        <View style={styles.leading}>{leading}</View>
-      ) : null}
-      <View style={styles.copy}>
-        <Text
-          style={[
-            styles.label,
-            { color: disabled ? theme.textMuted : theme.text },
-          ]}
-        >
-          {label}
-        </Text>
-        {supporting ? (
-          <Text style={[styles.supporting, { color: theme.textMuted }]}>
-            {supporting}
-          </Text>
+            <Text
+              style={[
+                styles.indexText,
+                { color: selected ? theme.textOnPrimary : theme.textMuted },
+              ]}
+            >
+              {indexLabel}
+            </Text>
+          </View>
+        ) : leading ? (
+          <View style={styles.leading}>{leading}</View>
         ) : null}
-      </View>
-      {selected ? (
-        <VoxelIcon
-          name={
-            state === "correct"
-              ? "correct"
-              : state === "incorrect"
-                ? "error"
-                : "correct"
-          }
-          size={24}
-          color={
-            state === "correct"
-              ? theme.success
-              : state === "incorrect"
-                ? theme.error
-                : theme.primary
-          }
-        />
-      ) : null}
-    </Pressable>
+        <View style={styles.copy}>
+          <Text
+            style={[
+              styles.label,
+              { color: disabled ? theme.textMuted : theme.text },
+            ]}
+          >
+            {label}
+          </Text>
+          {supporting ? (
+            <Text style={[styles.supporting, { color: theme.textMuted }]}>
+              {supporting}
+            </Text>
+          ) : null}
+        </View>
+        {selected ? (
+          <MotionView preset="pop" exiting>
+            <VoxelIcon
+              name={
+                state === "correct"
+                  ? "correct"
+                  : state === "incorrect"
+                    ? "error"
+                    : "correct"
+              }
+              size={24}
+              color={
+                state === "correct"
+                  ? theme.success
+                  : state === "incorrect"
+                    ? theme.error
+                    : theme.primary
+              }
+            />
+          </MotionView>
+        ) : null}
+      </MotionPressable>
+    </FeedbackMotion>
   );
 }
 
 const styles = StyleSheet.create({
+  feedbackWrap: { width: "100%" },
   card: {
     minHeight: controls.answerMinHeight,
     flexDirection: "row",

@@ -29,6 +29,8 @@ for (const file of [
   "popup.js",
   "youtube-content.js",
   "youtube-page.js",
+  "youtube-quick-open.css",
+  "youtube-quick-open.js",
 ]) {
   cpSync(resolve(root, "src", file), resolve(extensionOutput, file));
 }

@@ -26,6 +26,12 @@ import {
   typography,
 } from "../theme/tokens";
 import { useAdminCopy } from "./copy";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionSkeleton,
+  MotionView,
+} from "../motion/Motion";
 
 export function AdminPage({
   title,
@@ -42,7 +48,7 @@ export function AdminPage({
   const { theme } = useSettings();
   return (
     <Screen contentWidth="wide">
-      <View style={styles.pageHeader}>
+      <MotionView preset="rise" style={styles.pageHeader}>
         <View style={styles.pageHeading}>
           <View
             style={[
@@ -68,7 +74,7 @@ export function AdminPage({
           </View>
         </View>
         {action ? <View style={styles.pageAction}>{action}</View> : null}
-      </View>
+      </MotionView>
       {children}
     </Screen>
   );
@@ -81,8 +87,8 @@ export function AdminSection({
 }: PropsWithChildren<{ title: string; description?: string }>) {
   const { theme } = useSettings();
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeading}>
+    <MotionView preset="rise" layout style={styles.section}>
+      <MotionView preset="from-left" style={styles.sectionHeading}>
         <Text
           accessibilityRole="header"
           style={[styles.sectionTitle, { color: theme.text }]}
@@ -94,9 +100,9 @@ export function AdminSection({
             {description}
           </Text>
         ) : null}
-      </View>
+      </MotionView>
       {children}
-    </View>
+    </MotionView>
   );
 }
 
@@ -162,7 +168,7 @@ export function FilterChips<T extends string>({
       {options.map((option) => {
         const selected = value === option.value;
         return (
-          <Pressable
+          <MotionPressable
             key={option.value}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
@@ -192,7 +198,7 @@ export function FilterChips<T extends string>({
             >
               {option.label}
             </Text>
-          </Pressable>
+          </MotionPressable>
         );
       })}
     </ScrollView>
@@ -204,9 +210,11 @@ export function AdminRecord({
   tone,
 }: PropsWithChildren<{ tone?: "default" | "error" | "warning" }>) {
   return (
-    <Surface tone={tone} style={styles.record}>
-      {children}
-    </Surface>
+    <MotionView preset="rise" layout>
+      <Surface tone={tone} style={styles.record}>
+        {children}
+      </Surface>
+    </MotionView>
   );
 }
 
@@ -348,12 +356,22 @@ export function AdminDataState({
   const copy = useAdminCopy();
   if (loading) {
     return (
-      <View style={styles.dataState} accessibilityRole="progressbar">
+      <MotionView
+        preset="fade"
+        style={styles.dataState}
+        accessibilityRole="progressbar"
+      >
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.dataStateText, { color: theme.textMuted }]}>
           {copy.loading}
         </Text>
-      </View>
+        <MotionSkeleton color={theme.primarySoft} style={styles.dataSkeleton} />
+        <MotionSkeleton
+          color={theme.primarySoft}
+          delay={100}
+          style={styles.dataSkeletonShort}
+        />
+      </MotionView>
     );
   }
   if (error) {
@@ -379,7 +397,11 @@ export function AdminDataState({
       />
     );
   }
-  return <View style={styles.records}>{children}</View>;
+  return (
+    <MotionView preset="rise" style={styles.records}>
+      {children}
+    </MotionView>
+  );
 }
 
 export function Pagination({
@@ -397,7 +419,10 @@ export function Pagination({
   const { theme } = useSettings();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
-    <View style={[styles.pagination, { borderTopColor: theme.divider }]}>
+    <MotionView
+      preset="rise"
+      style={[styles.pagination, { borderTopColor: theme.divider }]}
+    >
       <Text style={[styles.paginationText, { color: theme.textMuted }]}>
         {total} {copy.results} · {page}/{pages}
       </Text>
@@ -419,7 +444,7 @@ export function Pagination({
           {copy.next}
         </PrimaryButton>
       </InlineActions>
-    </View>
+    </MotionView>
   );
 }
 
@@ -466,7 +491,8 @@ export function ActionDialog({
           onPress={busy ? undefined : onClose}
           style={styles.backdropDismiss}
         />
-        <View
+        <MotionView
+          preset="pop"
           role="dialog"
           accessibilityViewIsModal
           style={[
@@ -477,7 +503,7 @@ export function ActionDialog({
             },
           ]}
         >
-          <View style={styles.dialogHeading}>
+          <MotionView preset="rise" delay={44} style={styles.dialogHeading}>
             <View
               style={[
                 styles.dialogIcon,
@@ -499,7 +525,7 @@ export function ActionDialog({
                 {description}
               </Text>
             </View>
-          </View>
+          </MotionView>
           {children}
           <AppTextInput
             label={copy.reason}
@@ -528,7 +554,7 @@ export function ActionDialog({
               </PrimaryButton>
             </View>
           </View>
-        </View>
+        </MotionView>
       </View>
     </Modal>
   );
@@ -544,19 +570,25 @@ export function Notice({
   const { theme } = useSettings();
   const color = tone === "success" ? theme.success : theme.error;
   return (
-    <Surface tone={tone} style={styles.notice}>
-      <View
-        accessibilityRole={tone === "error" ? "alert" : undefined}
-        style={styles.noticeRow}
-      >
-        <VoxelIcon
-          name={tone === "success" ? "correct" : "error"}
-          size={22}
-          color={color}
-        />
-        <Text style={[styles.noticeText, { color: theme.text }]}>{text}</Text>
-      </View>
-    </Surface>
+    <FeedbackMotion signal={text} kind={tone === "error" ? "error" : "success"}>
+      <MotionView preset="rise" exiting>
+        <Surface tone={tone} style={styles.notice}>
+          <View
+            accessibilityRole={tone === "error" ? "alert" : undefined}
+            style={styles.noticeRow}
+          >
+            <VoxelIcon
+              name={tone === "success" ? "correct" : "error"}
+              size={22}
+              color={color}
+            />
+            <Text style={[styles.noticeText, { color: theme.text }]}>
+              {text}
+            </Text>
+          </View>
+        </Surface>
+      </MotionView>
+    </FeedbackMotion>
   );
 }
 
@@ -725,6 +757,18 @@ const styles = StyleSheet.create({
   dataStateText: {
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.body,
+  },
+  dataSkeleton: {
+    width: "72%",
+    maxWidth: 420,
+    height: 10,
+    borderRadius: radii.pill,
+  },
+  dataSkeletonShort: {
+    width: "46%",
+    maxWidth: 280,
+    height: 10,
+    borderRadius: radii.pill,
   },
   pagination: {
     marginTop: spacing[4],

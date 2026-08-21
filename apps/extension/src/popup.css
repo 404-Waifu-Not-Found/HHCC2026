@@ -14,6 +14,12 @@
   --focus: #246fae;
   --success: #19683a;
   --error: #c53a43;
+  --motion-quick: 120ms;
+  --motion-fast: 160ms;
+  --motion-standard: 220ms;
+  --motion-route: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   font-family:
     ui-sans-serif,
     -apple-system,
@@ -23,27 +29,35 @@
 }
 
 body {
-  width: 360px;
+  width: 348px;
   margin: 0;
   color: var(--text);
   background: var(--canvas);
+  animation: popup-enter var(--motion-route) var(--ease-enter) both;
 }
 
 main {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   padding: 20px;
+}
+
+main > * {
+  animation: content-rise var(--motion-standard) var(--ease-enter) both;
+}
+
+main > :nth-child(2) {
+  animation-delay: 44ms;
 }
 
 .brand {
   display: grid;
   justify-items: start;
-  gap: 2px;
 }
 
 .brand-lockup {
   display: block;
-  width: 248px;
+  width: 232px;
   max-width: 100%;
 }
 
@@ -51,11 +65,42 @@ main {
   display: block;
   width: 100%;
   height: auto;
+  transform-origin: left center;
+  animation: brand-settle 380ms var(--ease-enter) both;
 }
 
-.brand-edition {
-  margin-top: -5px;
-  padding-left: 66px;
+p {
+  margin: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.config {
+  display: grid;
+  gap: 12px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.config-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.config-copy > p:not(.eyebrow),
+.privacy {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.eyebrow {
   color: var(--primary);
   font-size: 10px;
   font-weight: 800;
@@ -63,45 +108,8 @@ main {
   text-transform: uppercase;
 }
 
-p {
-  margin: 0;
-}
-
-h2 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.brand p,
-.tool p,
-.privacy,
-.version {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.brand p {
-  padding-left: 66px;
-}
-
-.tool {
-  display: grid;
-  gap: 10px;
-}
-
-.divider {
-  height: 2px;
-  background: var(--border);
-}
-
-.version {
-  text-align: center;
-}
-
 label {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 13px;
   font-weight: 700;
 }
@@ -116,6 +124,10 @@ input {
   color: var(--text);
   background: var(--surface);
   outline: none;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 input:focus {
@@ -138,9 +150,10 @@ button {
   font-weight: 750;
   cursor: pointer;
   transition:
-    transform 120ms ease,
-    background-color 120ms ease,
-    border-color 120ms ease;
+    transform var(--motion-quick) var(--ease-standard),
+    opacity var(--motion-quick) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 button:hover:not(:disabled) {
@@ -149,7 +162,7 @@ button:hover:not(:disabled) {
 
 button:active:not(:disabled) {
   transform: translateY(3px);
-  border-bottom-width: 2px;
+  opacity: 0.9;
 }
 
 button:focus-visible {
@@ -158,8 +171,13 @@ button:focus-visible {
 }
 
 button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.65;
+}
+
+html[data-busy="true"] button:disabled {
+  cursor: wait;
+  animation: busy-breathe 900ms ease-in-out infinite alternate;
 }
 
 .primary {
@@ -188,18 +206,74 @@ button:disabled {
   color: var(--error);
 }
 
-#quiz-output {
-  max-height: 320px;
-  margin: 0;
-  overflow: auto;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  color: var(--text);
-  background: var(--sunken);
-  font-size: 10px;
-  line-height: 1.45;
-  white-space: pre-wrap;
+#status.is-updating[data-tone="success"] {
+  animation: status-success var(--motion-standard) var(--ease-enter) both;
+}
+
+#status.is-updating[data-tone="error"] {
+  animation: status-error 320ms var(--ease-standard) both;
+}
+
+#status.is-updating:not([data-tone="success"]):not([data-tone="error"]) {
+  animation: status-update var(--motion-standard) var(--ease-enter) both;
+}
+
+@keyframes popup-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes content-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes brand-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateX(-6px);
+  }
+}
+
+@keyframes busy-breathe {
+  to {
+    opacity: 0.48;
+  }
+}
+
+@keyframes status-success {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(4px);
+  }
+}
+
+@keyframes status-error {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(-4px);
+  }
+  60% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes status-update {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -230,7 +304,12 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  button {
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

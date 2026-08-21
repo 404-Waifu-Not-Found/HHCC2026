@@ -1,7 +1,7 @@
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
@@ -9,6 +9,11 @@ import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { radii, spacing, typography } from "../../src/theme/tokens";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionView,
+} from "../../src/motion/Motion";
 
 export default function SignInScreen() {
   const { t, theme } = useSettings();
@@ -85,20 +90,25 @@ export default function SignInScreen() {
         onSubmitEditing={() => void submit()}
       />
       {error ? (
-        <Surface tone="error" style={styles.status}>
-          <View style={styles.statusRow}>
-            <VoxelIcon name="error" size={22} color={theme.error} />
-            <Text
-              accessibilityRole="alert"
-              selectable
-              style={[styles.statusText, { color: theme.text }]}
-            >
-              {error}
-            </Text>
-          </View>
-        </Surface>
+        <FeedbackMotion signal={error} kind="error">
+          <MotionView preset="rise" exiting>
+            <Surface tone="error" style={styles.status}>
+              <View style={styles.statusRow}>
+                <VoxelIcon name="error" size={22} color={theme.error} />
+                <Text
+                  accessibilityRole="alert"
+                  selectable
+                  style={[styles.statusText, { color: theme.text }]}
+                >
+                  {error}
+                </Text>
+              </View>
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
-      <Pressable
+      <MotionPressable
+        pressDepth={0}
         accessibilityRole="link"
         onPress={() => router.push("/(auth)/forgot-password")}
         style={({ pressed }) => [
@@ -109,7 +119,7 @@ export default function SignInScreen() {
         <Text style={[styles.link, { color: theme.primary }]}>
           {t("forgotPassword")}
         </Text>
-      </Pressable>
+      </MotionPressable>
       <PrimaryButton
         loading={loading}
         disabled={!canSubmit}

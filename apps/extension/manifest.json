@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ClipQuest Local AI",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Reads YouTube captions and generates ClipQuest quizzes locally with your own DeepSeek API key.",
   "permissions": ["downloads", "scripting", "storage", "tabs"],
   "host_permissions": [
@@ -40,8 +40,15 @@
         "https://www.youtube.com/watch*",
         "https://youtube.com/watch*"
       ],
-      "js": ["caption-core.js", "youtube-content.js"],
+      "css": ["youtube-quick-open.css"],
+      "js": ["caption-core.js", "youtube-content.js", "youtube-quick-open.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon-48.png"],
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"]
     }
   ],
   "action": {

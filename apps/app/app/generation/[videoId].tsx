@@ -26,6 +26,11 @@ import { Surface } from "../../src/components/Surface";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import {
+  FeedbackMotion,
+  MotionProgressFill,
+  MotionView,
+} from "../../src/motion/Motion";
+import {
   clearImportedVideo,
   clearGenerationState,
   loadGenerationState,
@@ -406,72 +411,88 @@ export default function GenerationScreen() {
       contentWidth="reading"
     >
       <View style={styles.page}>
-        <View style={styles.top}>
+        <MotionView preset="drop" style={styles.top}>
           <LearningPrism size={112} variant="tile" />
-          <Text
-            accessibilityRole="header"
-            style={[styles.title, { color: theme.text }]}
-          >
-            {stageTitle}
-          </Text>
-        </View>
-
-        <Surface elevated style={styles.processingSurface}>
-          <View style={styles.progressSummary}>
-            <View style={styles.progressCopy}>
-              <Text style={[styles.progressLabel, { color: theme.text }]}>
-                {activeStep.label} · {activeIndex + 1}/{journeySteps.length}
-              </Text>
-              <Text style={[styles.progressPercent, { color: theme.primary }]}>
-                {Math.round(estimatedProgress * 100)}%
-              </Text>
-            </View>
-            <LinearJourneyBar
-              progress={estimatedProgress}
-              accessibilityLabel={`${t("estimatedProgress")}: ${Math.round(estimatedProgress * 100)}%`}
-              failed={failed}
-              segmentCount={journeySteps.length}
-            />
-            <View style={styles.detailRow}>
-              <Text style={[styles.detail, { color: theme.textMuted }]}>
-                {t("estimatedProgress")}
-              </Text>
-              <Text style={[styles.detail, { color: theme.textMuted }]}>
-                {estimatedSecondsLeft > 0
-                  ? formatEstimatedRemaining(estimatedSecondsLeft, locale)
-                  : t("takingLonger")}
-              </Text>
-            </View>
-          </View>
-        </Surface>
-
-        <Surface tone="tinted" style={styles.privacySurface}>
-          <View style={styles.privacyRow}>
-            <View
-              style={[styles.privacyIcon, { backgroundColor: theme.surface }]}
+          <MotionView key={stageTitle} preset="rise" exiting>
+            <Text
+              accessibilityRole="header"
+              style={[styles.title, { color: theme.text }]}
             >
-              <VoxelIcon name="privacy" size={27} color={theme.primary} />
-            </View>
-            <Text style={[styles.privacyText, { color: theme.textMuted }]}>
-              {t("privateTranscription")}
+              {stageTitle}
             </Text>
-          </View>
-        </Surface>
+          </MotionView>
+        </MotionView>
 
-        {error ? (
-          <View accessibilityLiveRegion="assertive">
-            <Surface tone="error" style={styles.errorSurface}>
-              <View style={styles.errorRow}>
-                <VoxelIcon name="error" size={27} color={theme.error} />
-                <Text
-                  accessibilityRole="alert"
-                  style={[styles.error, { color: theme.text }]}
-                >
-                  {error}
+        <MotionView preset="rise" delay={60}>
+          <Surface elevated style={styles.processingSurface}>
+            <View style={styles.progressSummary}>
+              <View style={styles.progressCopy}>
+                <Text style={[styles.progressLabel, { color: theme.text }]}>
+                  {activeStep.label} · {activeIndex + 1}/{journeySteps.length}
+                </Text>
+                <FeedbackMotion signal={activeIndex} kind="progress">
+                  <Text
+                    style={[styles.progressPercent, { color: theme.primary }]}
+                  >
+                    {Math.round(estimatedProgress * 100)}%
+                  </Text>
+                </FeedbackMotion>
+              </View>
+              <LinearJourneyBar
+                progress={estimatedProgress}
+                accessibilityLabel={`${t("estimatedProgress")}: ${Math.round(estimatedProgress * 100)}%`}
+                failed={failed}
+                segmentCount={journeySteps.length}
+              />
+              <View style={styles.detailRow}>
+                <Text style={[styles.detail, { color: theme.textMuted }]}>
+                  {t("estimatedProgress")}
+                </Text>
+                <Text style={[styles.detail, { color: theme.textMuted }]}>
+                  {estimatedSecondsLeft > 0
+                    ? formatEstimatedRemaining(estimatedSecondsLeft, locale)
+                    : t("takingLonger")}
                 </Text>
               </View>
-            </Surface>
-          </View>
+            </View>
+          </Surface>
+        </MotionView>
+
+        <MotionView preset="rise" delay={120}>
+          <Surface tone="tinted" style={styles.privacySurface}>
+            <View style={styles.privacyRow}>
+              <View
+                style={[styles.privacyIcon, { backgroundColor: theme.surface }]}
+              >
+                <VoxelIcon name="privacy" size={27} color={theme.primary} />
+              </View>
+              <Text style={[styles.privacyText, { color: theme.textMuted }]}>
+                {t("privateTranscription")}
+              </Text>
+            </View>
+          </Surface>
+        </MotionView>
+
+        {error ? (
+          <FeedbackMotion signal={error} kind="error">
+            <MotionView
+              preset="rise"
+              exiting
+              accessibilityLiveRegion="assertive"
+            >
+              <Surface tone="error" style={styles.errorSurface}>
+                <View style={styles.errorRow}>
+                  <VoxelIcon name="error" size={27} color={theme.error} />
+                  <Text
+                    accessibilityRole="alert"
+                    style={[styles.error, { color: theme.text }]}
+                  >
+                    {error}
+                  </Text>
+                </View>
+              </Surface>
+            </MotionView>
+          </FeedbackMotion>
         ) : null}
       </View>
     </Screen>
@@ -498,17 +519,14 @@ function LinearJourneyBar({
       accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}
       style={[styles.journeyTrack, { backgroundColor: theme.surfaceSunken }]}
     >
-      <View
-        style={[
-          styles.journeyFill,
-          {
-            width: `${value * 100}%`,
-            backgroundColor: failed ? theme.secondary : theme.primary,
-          },
-        ]}
+      <MotionProgressFill
+        progress={value}
+        duration={120}
+        color={failed ? theme.secondary : theme.primary}
+        style={styles.journeyFill}
       >
         <View style={styles.journeyHighlight} />
-      </View>
+      </MotionProgressFill>
       <View pointerEvents="none" style={styles.journeySegments}>
         {Array.from({ length: segmentCount }, (_, index) => (
           <View

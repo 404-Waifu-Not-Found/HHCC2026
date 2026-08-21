@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { identifyVideoSource } from "@clipquest/contracts";
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
@@ -13,7 +13,13 @@ import { spacing, typography } from "../../src/theme/tokens";
 
 export default function WelcomeScreen() {
   const { t, theme, locale, setLocale } = useSettings();
-  const [url, setUrl] = useState("");
+  const params = useLocalSearchParams<{ url?: string | string[] }>();
+  const [url, setUrl] = useState(() => {
+    const candidate = Array.isArray(params.url) ? params.url[0] : params.url;
+    return typeof candidate === "string" && identifyVideoSource(candidate)
+      ? candidate
+      : "";
+  });
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 

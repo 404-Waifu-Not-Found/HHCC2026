@@ -40,6 +40,11 @@ import {
 } from "../../src/theme/tokens";
 import { canTranscribeInBrowser } from "../../src/transcription/limits";
 import { blurActiveWebElement } from "../../src/lib/web-focus";
+import {
+  FeedbackMotion,
+  MotionSkeleton,
+  MotionView,
+} from "../../src/motion/Motion";
 
 export default function CreateQuestScreen() {
   const { videoId } = useLocalSearchParams<{ videoId: string }>();
@@ -71,9 +76,13 @@ export default function CreateQuestScreen() {
   if (!video && !error) {
     return (
       <Screen scroll={false}>
-        <View style={styles.center}>
+        <MotionView preset="fade" style={styles.center}>
           <ActivityIndicator color={theme.secondary} />
-        </View>
+          <MotionSkeleton
+            color={theme.primarySoft}
+            style={styles.loadingSkeleton}
+          />
+        </MotionView>
       </Screen>
     );
   }
@@ -81,15 +90,19 @@ export default function CreateQuestScreen() {
     return (
       <Screen contentWidth="reading" centered>
         <BackButton />
-        <Surface tone="error" style={styles.expiredCard}>
-          <LearningPrism size={96} variant="tile" />
-          <Text
-            accessibilityRole="alert"
-            style={[styles.expiredText, { color: theme.text }]}
-          >
-            {error}
-          </Text>
-        </Surface>
+        <FeedbackMotion signal={error} kind="error">
+          <MotionView preset="rise">
+            <Surface tone="error" style={styles.expiredCard}>
+              <LearningPrism size={96} variant="tile" />
+              <Text
+                accessibilityRole="alert"
+                style={[styles.expiredText, { color: theme.text }]}
+              >
+                {error}
+              </Text>
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       </Screen>
     );
   }
@@ -140,7 +153,7 @@ export default function CreateQuestScreen() {
       <View style={styles.page}>
         <BackButton />
 
-        <View style={styles.heading}>
+        <MotionView preset="rise" style={styles.heading}>
           <Text
             accessibilityRole="header"
             style={[styles.pageTitle, { color: theme.text }]}
@@ -150,149 +163,171 @@ export default function CreateQuestScreen() {
           <Text style={[styles.pageSubtitle, { color: theme.textMuted }]}>
             {t("tagline")}
           </Text>
-        </View>
+        </MotionView>
 
-        <Surface elevated padded={false} style={styles.previewSurface}>
-          <View style={[styles.preview, compact && styles.previewCompact]}>
-            <Image
-              accessibilityLabel={video.video.title}
-              source={{ uri: video.video.thumbnailUrl }}
-              contentFit="cover"
-              style={[styles.thumbnail, compact && styles.thumbnailCompact]}
-            />
-            <View style={styles.previewCopy}>
-              <Text style={[styles.source, { color: theme.primary }]}>
-                YouTube
-              </Text>
-              <Text
-                accessibilityRole="header"
-                style={[styles.videoTitle, { color: theme.text }]}
-              >
-                {video.video.title}
-              </Text>
-              <View
-                style={[
-                  styles.captionStatus,
-                  {
-                    backgroundColor: video.requiresLocalTranscription
-                      ? theme.secondarySoft
-                      : theme.successSoft,
-                    borderColor: video.requiresLocalTranscription
-                      ? theme.secondary
-                      : theme.success,
-                  },
-                ]}
-              >
-                <VoxelIcon
-                  name={
-                    video.requiresLocalTranscription ? "processing" : "captions"
-                  }
-                  size={22}
-                  color={
-                    video.requiresLocalTranscription
-                      ? theme.secondaryPressed
-                      : theme.successPressed
-                  }
-                />
-                <Text style={[styles.captionStatusText, { color: theme.text }]}>
-                  {transcriptStatus}
+        <MotionView preset="rise" delay={44}>
+          <Surface elevated padded={false} style={styles.previewSurface}>
+            <View style={[styles.preview, compact && styles.previewCompact]}>
+              <Image
+                accessibilityLabel={video.video.title}
+                source={{ uri: video.video.thumbnailUrl }}
+                contentFit="cover"
+                style={[styles.thumbnail, compact && styles.thumbnailCompact]}
+              />
+              <View style={styles.previewCopy}>
+                <Text style={[styles.source, { color: theme.primary }]}>
+                  YouTube
                 </Text>
-              </View>
-            </View>
-          </View>
-        </Surface>
-
-        <Surface style={styles.setupSurface}>
-          <SettingGroup title={t("watchedQuestion")} help={t("watchedHelp")}>
-            <SegmentedControl
-              label={t("watchedQuestion")}
-              value={watched ? "yes" : "no"}
-              onChange={(value) => setWatched(value === "yes")}
-              options={
-                [
-                  { value: "yes", label: t("watchedYes") },
-                  { value: "no", label: t("watchedNo") },
-                ] as const
-              }
-            />
-          </SettingGroup>
-          <SettingGroup
-            divided
-            title={t("quizLanguage")}
-            help={t("quizLanguageHelp")}
-          >
-            <SegmentedControl
-              label={t("quizLanguage")}
-              value={quizLanguage}
-              onChange={(value) => setQuizLanguage(value as AppLanguage)}
-              options={
-                [
-                  { value: "en", label: t("languageEnglish") },
-                  { value: "zh-CN", label: t("languageChinese") },
-                ] as const
-              }
-            />
-          </SettingGroup>
-          <SettingGroup divided title={t("sessionLength")}>
-            <SegmentedControl
-              label={t("sessionLength")}
-              value={sessionLength}
-              onChange={(value) => setSessionLength(value as SessionLength)}
-              options={
-                [
-                  { value: "short", label: t("short") },
-                  { value: "medium", label: t("medium") },
-                  { value: "long", label: t("long") },
-                ] as const
-              }
-            />
-          </SettingGroup>
-          <SettingGroup
-            divided
-            title={t("questionTypes")}
-            help={t("questionTypesHelp")}
-          >
-            <QuestionTypeSelector
-              value={questionTypes}
-              onChange={setQuestionTypes}
-            />
-          </SettingGroup>
-        </Surface>
-
-        {video.requiresLocalTranscription ? (
-          <Surface tone="tinted" style={styles.noticeSurface}>
-            <View style={styles.noticeRow}>
-              <View
-                style={[styles.noticeIcon, { backgroundColor: theme.surface }]}
-              >
-                <VoxelIcon name="privacy" size={27} color={theme.primary} />
-              </View>
-              <View style={styles.noticeCopy}>
-                <Text style={[styles.noticeTitle, { color: theme.text }]}>
-                  {t("modelSize")}
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.videoTitle, { color: theme.text }]}
+                >
+                  {video.video.title}
                 </Text>
-                <Text style={[styles.help, { color: theme.textMuted }]}>
-                  {t("privateTranscription")}
-                </Text>
+                <View
+                  style={[
+                    styles.captionStatus,
+                    {
+                      backgroundColor: video.requiresLocalTranscription
+                        ? theme.secondarySoft
+                        : theme.successSoft,
+                      borderColor: video.requiresLocalTranscription
+                        ? theme.secondary
+                        : theme.success,
+                    },
+                  ]}
+                >
+                  <VoxelIcon
+                    name={
+                      video.requiresLocalTranscription
+                        ? "processing"
+                        : "captions"
+                    }
+                    size={22}
+                    color={
+                      video.requiresLocalTranscription
+                        ? theme.secondaryPressed
+                        : theme.successPressed
+                    }
+                  />
+                  <Text
+                    style={[styles.captionStatusText, { color: theme.text }]}
+                  >
+                    {transcriptStatus}
+                  </Text>
+                </View>
               </View>
             </View>
           </Surface>
+        </MotionView>
+
+        <MotionView preset="rise" delay={88}>
+          <Surface style={styles.setupSurface}>
+            <SettingGroup title={t("watchedQuestion")} help={t("watchedHelp")}>
+              <SegmentedControl
+                label={t("watchedQuestion")}
+                value={watched ? "yes" : "no"}
+                onChange={(value) => setWatched(value === "yes")}
+                options={
+                  [
+                    { value: "yes", label: t("watchedYes") },
+                    { value: "no", label: t("watchedNo") },
+                  ] as const
+                }
+              />
+            </SettingGroup>
+            <SettingGroup
+              divided
+              title={t("quizLanguage")}
+              help={t("quizLanguageHelp")}
+            >
+              <SegmentedControl
+                label={t("quizLanguage")}
+                value={quizLanguage}
+                onChange={(value) => setQuizLanguage(value as AppLanguage)}
+                options={
+                  [
+                    { value: "en", label: t("languageEnglish") },
+                    { value: "zh-CN", label: t("languageChinese") },
+                  ] as const
+                }
+              />
+            </SettingGroup>
+            <SettingGroup divided title={t("sessionLength")}>
+              <SegmentedControl
+                label={t("sessionLength")}
+                value={sessionLength}
+                onChange={(value) => setSessionLength(value as SessionLength)}
+                options={
+                  [
+                    { value: "short", label: t("short") },
+                    { value: "medium", label: t("medium") },
+                    { value: "long", label: t("long") },
+                  ] as const
+                }
+              />
+            </SettingGroup>
+            <SettingGroup
+              divided
+              title={t("questionTypes")}
+              help={t("questionTypesHelp")}
+            >
+              <QuestionTypeSelector
+                value={questionTypes}
+                onChange={setQuestionTypes}
+              />
+            </SettingGroup>
+          </Surface>
+        </MotionView>
+
+        {video.requiresLocalTranscription ? (
+          <MotionView preset="rise" delay={132} exiting>
+            <Surface tone="tinted" style={styles.noticeSurface}>
+              <View style={styles.noticeRow}>
+                <View
+                  style={[
+                    styles.noticeIcon,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <VoxelIcon name="privacy" size={27} color={theme.primary} />
+                </View>
+                <View style={styles.noticeCopy}>
+                  <Text style={[styles.noticeTitle, { color: theme.text }]}>
+                    {t("modelSize")}
+                  </Text>
+                  <Text style={[styles.help, { color: theme.textMuted }]}>
+                    {t("privateTranscription")}
+                  </Text>
+                </View>
+              </View>
+            </Surface>
+          </MotionView>
         ) : null}
 
         {tooLong || tooLongForWeb ? (
-          <Surface tone="error" style={styles.limitSurface}>
-            <View style={styles.noticeRow}>
-              <VoxelIcon name="error" size={25} color={theme.error} />
-              <Text
-                accessibilityRole="alert"
-                style={[styles.limitText, { color: theme.text }]}
-              >
-                {t(
-                  tooLongForWeb ? "webUnsupportedLength" : "unsupportedLength",
-                )}
-              </Text>
-            </View>
-          </Surface>
+          <FeedbackMotion
+            signal={tooLongForWeb ? "web" : "duration"}
+            kind="error"
+          >
+            <MotionView preset="rise" exiting>
+              <Surface tone="error" style={styles.limitSurface}>
+                <View style={styles.noticeRow}>
+                  <VoxelIcon name="error" size={25} color={theme.error} />
+                  <Text
+                    accessibilityRole="alert"
+                    style={[styles.limitText, { color: theme.text }]}
+                  >
+                    {t(
+                      tooLongForWeb
+                        ? "webUnsupportedLength"
+                        : "unsupportedLength",
+                    )}
+                  </Text>
+                </View>
+              </Surface>
+            </MotionView>
+          </FeedbackMotion>
         ) : null}
       </View>
     </Screen>
@@ -354,6 +389,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 18,
+  },
+  loadingSkeleton: {
+    width: 220,
+    height: 10,
+    borderRadius: radii.pill,
   },
   page: { width: "100%", maxWidth: 920, alignSelf: "center", gap: spacing[5] },
   back: {

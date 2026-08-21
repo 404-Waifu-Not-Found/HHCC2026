@@ -21,11 +21,12 @@ import {
 } from "../theme/tokens";
 import { BrandLockup } from "./BrandLockup";
 import { PrimaryButton } from "./PrimaryButton";
+import { FeedbackMotion, MotionView, StaggerItem } from "../motion/Motion";
 
 type GateStatus = "checking" | "missing" | "available";
 
 export function ExtensionInstallGate({ children }: PropsWithChildren) {
-  const { t, theme } = useSettings();
+  const { reduceMotion, t, theme } = useSettings();
   const [status, setStatus] = useState<GateStatus>(
     Platform.OS === "web" ? "checking" : "available",
   );
@@ -72,7 +73,7 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
       <Modal
         visible={status === "missing"}
         transparent
-        animationType="fade"
+        animationType={reduceMotion ? "none" : "fade"}
         onRequestClose={() => undefined}
         statusBarTranslucent
       >
@@ -80,7 +81,8 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
           accessibilityViewIsModal
           style={[styles.overlay, { backgroundColor: theme.overlay }]}
         >
-          <View
+          <MotionView
+            preset="pop"
             style={[
               styles.card,
               {
@@ -94,12 +96,13 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
             ]}
           >
             <BrandLockup descriptor="Local AI" size="compact" />
-            <View style={styles.headingRow}>
-              <View
+            <MotionView preset="rise" delay={44} style={styles.headingRow}>
+              <MotionView
+                preset="pop"
                 style={[styles.icon, { backgroundColor: theme.primarySoft }]}
               >
                 <VoxelIcon name="captions" size={30} color={theme.primary} />
-              </View>
+              </MotionView>
               <View style={styles.headingCopy}>
                 <Text
                   accessibilityRole="header"
@@ -111,15 +114,23 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
                   {t("extensionRequiredBody")}
                 </Text>
               </View>
-            </View>
+            </MotionView>
 
             <View style={styles.steps}>
-              <InstallStep number="1" text={t("extensionStepDownload")} />
-              <InstallStep number="2" text={t("extensionStepOpen")} />
-              <InstallStep number="3" text={t("extensionStepLoad")} />
+              <StaggerItem index={0}>
+                <InstallStep number="1" text={t("extensionStepDownload")} />
+              </StaggerItem>
+              <StaggerItem index={1}>
+                <InstallStep number="2" text={t("extensionStepOpen")} />
+              </StaggerItem>
+              <StaggerItem index={2}>
+                <InstallStep number="3" text={t("extensionStepLoad")} />
+              </StaggerItem>
             </View>
 
-            <View
+            <MotionView
+              preset="rise"
+              delay={132}
               style={[
                 styles.privacy,
                 {
@@ -136,7 +147,7 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
               <Text style={[styles.privacyText, { color: theme.text }]}>
                 {t("extensionPrivacy")}
               </Text>
-            </View>
+            </MotionView>
 
             <View style={styles.actions}>
               <PrimaryButton
@@ -167,14 +178,18 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
               </PrimaryButton>
             </View>
             {downloaded ? (
-              <Text
-                accessibilityRole="alert"
-                style={[styles.downloaded, { color: theme.primary }]}
-              >
-                {t("extensionDownloaded")}
-              </Text>
+              <FeedbackMotion signal={downloaded} kind="success">
+                <MotionView preset="rise" exiting>
+                  <Text
+                    accessibilityRole="alert"
+                    style={[styles.downloaded, { color: theme.primary }]}
+                  >
+                    {t("extensionDownloaded")}
+                  </Text>
+                </MotionView>
+              </FeedbackMotion>
             ) : null}
-          </View>
+          </MotionView>
         </View>
       </Modal>
     </>

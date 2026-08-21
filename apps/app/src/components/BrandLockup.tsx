@@ -8,6 +8,7 @@ import {
 import { useSettings } from "../providers/SettingsProvider";
 import { spacing, typography } from "../theme/tokens";
 import { LearningPrism } from "./LearningPrism";
+import { MotionView } from "../motion/Motion";
 
 export type BrandLockupSize = "compact" | "standard" | "hero";
 
@@ -46,7 +47,9 @@ export function BrandLockup({
       ]}
     >
       <LearningPrism size={metric.mark} />
-      <View
+      <MotionView
+        preset="from-right"
+        delay={80}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={[styles.copy, centered && styles.copyCentered]}
@@ -77,7 +80,7 @@ export function BrandLockup({
             {descriptor}
           </Text>
         ) : null}
-      </View>
+      </MotionView>
     </View>
   );
 }

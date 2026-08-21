@@ -1,5 +1,7 @@
 import { Image } from "expo-image";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
+import { MotionView } from "../motion/Motion";
+import { motion } from "../theme/tokens";
 
 const learningPrismAsset = require("../../assets/brand/learning-prism.png");
 
@@ -13,7 +15,9 @@ export function LearningPrism({
   variant?: LearningPrismVariant;
 }) {
   return (
-    <View
+    <MotionView
+      preset="pop"
+      duration={motion.emphasized}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={[
@@ -28,7 +32,7 @@ export function LearningPrism({
         contentFit="contain"
         style={styles.image}
       />
-    </View>
+    </MotionView>
   );
 }
 

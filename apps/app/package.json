@@ -6,6 +6,7 @@
   "scripts": {
     "brand:transparent": "node scripts/remove-asset-backgrounds.mjs",
     "brand:assets": "npm run brand:transparent && node scripts/generate-brand-assets.mjs",
+    "motion:docs": "node scripts/generate-motion-doc.mjs && prettier --write ../../docs/MOTION-SYSTEM.md",
     "dev": "expo start",
     "prepare:web": "node scripts/prepare-web-runtime.mjs",
     "web": "npm run prepare:web && expo start --web",

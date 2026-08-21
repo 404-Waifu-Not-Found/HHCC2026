@@ -1,7 +1,7 @@
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
@@ -15,6 +15,11 @@ import {
   spacing,
   typography,
 } from "../../src/theme/tokens";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionView,
+} from "../../src/motion/Motion";
 
 export default function SignUpScreen() {
   const { t, theme } = useSettings();
@@ -148,51 +153,57 @@ export default function SignUpScreen() {
         editable={!loading}
         onSubmitEditing={() => void submit()}
       />
-      <Pressable
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: ageConfirmed, disabled: loading }}
-        disabled={loading}
-        onPress={() => setAgeConfirmed((value) => !value)}
-        style={({ pressed, hovered }) => [
-          styles.checkboxRow,
-          {
-            backgroundColor: ageConfirmed
-              ? theme.actionSoft
-              : hovered
-                ? theme.surfaceTint
-                : theme.surface,
-            borderColor: ageConfirmed
-              ? theme.actionPressed
-              : theme.borderStrong,
-            transform: [{ scale: pressed ? 0.99 : 1 }],
-          },
-          loading && styles.disabled,
-        ]}
-      >
-        <View style={styles.checkboxSlot}>
-          <VoxelIcon
-            name={ageConfirmed ? "checkbox-checked" : "checkbox-unchecked"}
-            size={32}
-            style={styles.balancedIcon}
-          />
-        </View>
-        <Text style={[styles.checkboxText, { color: theme.text }]}>
-          {t("ageConfirmation")}
-        </Text>
-      </Pressable>
-      {error ? (
-        <Surface tone="error" style={styles.status}>
-          <View style={styles.statusRow}>
-            <VoxelIcon name="error" size={22} color={theme.error} />
-            <Text
-              accessibilityRole="alert"
-              selectable
-              style={[styles.statusText, { color: theme.text }]}
-            >
-              {error}
-            </Text>
+      <FeedbackMotion signal={ageConfirmed} kind="attention">
+        <MotionPressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: ageConfirmed, disabled: loading }}
+          disabled={loading}
+          onPress={() => setAgeConfirmed((value) => !value)}
+          style={({ pressed, hovered }) => [
+            styles.checkboxRow,
+            {
+              backgroundColor: ageConfirmed
+                ? theme.actionSoft
+                : hovered
+                  ? theme.surfaceTint
+                  : theme.surface,
+              borderColor: ageConfirmed
+                ? theme.actionPressed
+                : theme.borderStrong,
+              opacity: pressed ? 0.82 : 1,
+            },
+            loading && styles.disabled,
+          ]}
+        >
+          <View style={styles.checkboxSlot}>
+            <VoxelIcon
+              name={ageConfirmed ? "checkbox-checked" : "checkbox-unchecked"}
+              size={32}
+              style={styles.balancedIcon}
+            />
           </View>
-        </Surface>
+          <Text style={[styles.checkboxText, { color: theme.text }]}>
+            {t("ageConfirmation")}
+          </Text>
+        </MotionPressable>
+      </FeedbackMotion>
+      {error ? (
+        <FeedbackMotion signal={error} kind="error">
+          <MotionView preset="rise" exiting>
+            <Surface tone="error" style={styles.status}>
+              <View style={styles.statusRow}>
+                <VoxelIcon name="error" size={22} color={theme.error} />
+                <Text
+                  accessibilityRole="alert"
+                  selectable
+                  style={[styles.statusText, { color: theme.text }]}
+                >
+                  {error}
+                </Text>
+              </View>
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
       <PrimaryButton
         loading={loading}

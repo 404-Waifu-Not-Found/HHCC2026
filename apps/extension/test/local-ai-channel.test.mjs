@@ -26,6 +26,18 @@ const popupHtml = await readFile(
   new URL("../src/popup.html", import.meta.url),
   "utf8",
 );
+const quickOpen = await readFile(
+  new URL("../src/youtube-quick-open.js", import.meta.url),
+  "utf8",
+);
+const quickOpenCss = await readFile(
+  new URL("../src/youtube-quick-open.css", import.meta.url),
+  "utf8",
+);
+const buildScript = await readFile(
+  new URL("../scripts/build.mjs", import.meta.url),
+  "utf8",
+);
 const manifest = JSON.parse(
   await readFile(new URL("../manifest.json", import.meta.url), "utf8"),
 );
@@ -123,21 +135,49 @@ test("long local generation uses a heartbeat port", () => {
   assert.match(background, /chrome\.runtime\.onConnect\.addListener/);
   assert.match(bridge, /chrome\.runtime\.connect\(\{ name: LOCAL_AI_PORT \}\)/);
   assert.match(bridge, /setInterval\([\s\S]*type: "heartbeat"/);
-  assert.match(
-    popup,
-    /chrome\.runtime\.connect\(\{ name: "clipquest-local-ai-v1" \}\)/,
-  );
+  assert.doesNotMatch(popup, /chrome\.runtime\.connect/);
 });
 
-test("the popup exposes local quiz JSON and plain-text caption download", () => {
-  assert.ok(manifest.permissions.includes("downloads"));
-  assert.equal(manifest.version, "0.4.1");
-  assert.match(popupHtml, /Generate quiz JSON/);
-  assert.match(popupHtml, /Download \.txt/);
+test("the popup exposes only DeepSeek configuration", () => {
+  assert.equal(manifest.version, "0.4.2");
+  assert.match(popupHtml, /DeepSeek configuration/);
+  assert.match(popupHtml, /DeepSeek API key/);
+  assert.match(popupHtml, /Save &amp; test/);
+  assert.match(popupHtml, /Remove key/);
   assert.match(popupHtml, /clipquest-lockup-on-light\.png/);
   assert.match(popupHtml, /clipquest-lockup-on-dark\.png/);
-  assert.match(popup, /message\.response\.result\.quiz/);
+  assert.doesNotMatch(popupHtml, /Generate a concept quiz/);
+  assert.doesNotMatch(popupHtml, /YouTube URL/);
+  assert.doesNotMatch(popupHtml, /Generate quiz JSON/);
+  assert.doesNotMatch(popupHtml, /Download \.txt/);
+  assert.doesNotMatch(popup, /youtubeVideoId|quiz-output|download-text/);
   assert.match(background, /captionsToPlainText/);
+});
+
+test("YouTube watch pages embed a quick ClipQuest handoff", () => {
+  const youtubeScript = manifest.content_scripts.find((entry) =>
+    entry.js?.includes("youtube-quick-open.js"),
+  );
+  assert.ok(youtubeScript);
+  assert.ok(youtubeScript.css.includes("youtube-quick-open.css"));
+  assert.ok(
+    manifest.web_accessible_resources.some(
+      (entry) =>
+        entry.resources.includes("icons/icon-48.png") &&
+        entry.matches.includes("https://www.youtube.com/*"),
+    ),
+  );
+  assert.match(quickOpen, /clipquest-quick-open/);
+  assert.match(quickOpen, /Open in ClipQuest/);
+  assert.match(quickOpen, /https:\/\/clipquest\.ccwu\.cc/);
+  assert.match(quickOpen, /new URL\("\/welcome"/);
+  assert.match(quickOpen, /searchParams\.set\(\s*"url"/);
+  assert.match(quickOpen, /chrome\.runtime\.getURL\("icons\/icon-48\.png"\)/);
+  assert.match(quickOpen, /yt-navigate-finish/);
+  assert.match(quickOpen, /new MutationObserver/);
+  assert.match(quickOpenCss, /prefers-reduced-motion: reduce/);
+  assert.match(buildScript, /youtube-quick-open\.css/);
+  assert.match(buildScript, /youtube-quick-open\.js/);
 });
 
 test("choice order uses unbiased random shuffling and preserves every answer", () => {

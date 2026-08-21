@@ -23,6 +23,12 @@ import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { breakpoints, spacing, typography } from "../../src/theme/tokens";
+import {
+  FeedbackMotion,
+  MotionSkeleton,
+  MotionView,
+  StaggerItem,
+} from "../../src/motion/Motion";
 
 type VisibleLibrary = Pick<LibraryResponse, "dueReviews" | "saved">;
 
@@ -119,21 +125,34 @@ export default function LibraryScreen() {
       </View>
 
       {error || openError ? (
-        <Text
-          accessibilityRole="alert"
-          style={[styles.error, { color: theme.error }]}
-        >
-          {error ?? openError}
-        </Text>
+        <FeedbackMotion signal={error ?? openError} kind="error">
+          <MotionView preset="rise" exiting>
+            <Text
+              accessibilityRole="alert"
+              style={[styles.error, { color: theme.error }]}
+            >
+              {error ?? openError}
+            </Text>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
 
       {loading ? (
-        <View style={styles.loader}>
+        <MotionView preset="fade" style={styles.loader}>
           <ActivityIndicator color={theme.secondary} />
           <Text style={[styles.loadingText, { color: theme.textMuted }]}>
             {t("loading")}
           </Text>
-        </View>
+          <MotionSkeleton
+            color={theme.primarySoft}
+            style={styles.listSkeleton}
+          />
+          <MotionSkeleton
+            color={theme.primarySoft}
+            delay={100}
+            style={styles.listSkeletonShort}
+          />
+        </MotionView>
       ) : filtered.length ? (
         <View style={styles.sections}>
           {normalizedQuery ? (
@@ -200,9 +219,10 @@ function QuestList({
     <View>
       <SectionHeader title={title} />
       <View style={styles.list}>
-        {cards.map((card) => (
-          <View
+        {cards.map((card, index) => (
+          <StaggerItem
             key={card.videoId}
+            index={index}
             style={[
               styles.cardWrap,
               compact && styles.cardWrapCompact,
@@ -220,7 +240,7 @@ function QuestList({
                 color={theme.secondary}
               />
             ) : null}
-          </View>
+          </StaggerItem>
         ))}
       </View>
     </View>
@@ -262,6 +282,16 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.label,
+  },
+  listSkeleton: {
+    width: "82%",
+    height: 10,
+    borderRadius: 999,
+  },
+  listSkeletonShort: {
+    width: "58%",
+    height: 10,
+    borderRadius: 999,
   },
   sections: {
     marginTop: spacing[4],

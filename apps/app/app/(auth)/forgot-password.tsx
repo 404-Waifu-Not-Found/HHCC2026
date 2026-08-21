@@ -1,6 +1,5 @@
-import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
@@ -8,6 +7,7 @@ import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { spacing, typography } from "../../src/theme/tokens";
+import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
 
 export default function ForgotPasswordScreen() {
   const { t, theme } = useSettings();
@@ -45,7 +45,6 @@ export default function ForgotPasswordScreen() {
         label={t("email")}
         value={email}
         onChangeText={setEmail}
-        leading={<VoxelIcon name="mail" size={22} color={theme.textMuted} />}
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
@@ -54,38 +53,37 @@ export default function ForgotPasswordScreen() {
         onSubmitEditing={() => void submit()}
       />
       {message ? (
-        <Surface tone="success" style={styles.status}>
-          <View style={styles.statusRow}>
-            <VoxelIcon name="correct" size={22} color={theme.success} />
-            <Text
-              accessibilityLiveRegion="polite"
-              style={[styles.statusText, { color: theme.text }]}
-            >
-              {message}
-            </Text>
-          </View>
-        </Surface>
+        <FeedbackMotion signal={message} kind="success">
+          <MotionView preset="rise" exiting>
+            <Surface tone="success" style={styles.status}>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[styles.statusText, { color: theme.text }]}
+              >
+                {message}
+              </Text>
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
       {error ? (
-        <Surface tone="error" style={styles.status}>
-          <View style={styles.statusRow}>
-            <VoxelIcon name="error" size={22} color={theme.error} />
-            <Text
-              accessibilityRole="alert"
-              selectable
-              style={[styles.statusText, { color: theme.text }]}
-            >
-              {error}
-            </Text>
-          </View>
-        </Surface>
+        <FeedbackMotion signal={error} kind="error">
+          <MotionView preset="rise" exiting>
+            <Surface tone="error" style={styles.status}>
+              <Text
+                accessibilityRole="alert"
+                selectable
+                style={[styles.statusText, { color: theme.text }]}
+              >
+                {error}
+              </Text>
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
       <PrimaryButton
         loading={loading}
         disabled={!email.includes("@")}
-        leadingIcon={
-          <VoxelIcon name="mail" size={21} color={theme.textOnAction} />
-        }
         onPress={() => void submit()}
       >
         {t("sendResetLink")}
@@ -96,13 +94,7 @@ export default function ForgotPasswordScreen() {
 
 const styles = StyleSheet.create({
   status: { padding: spacing[4] },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing[3],
-  },
   statusText: {
-    flex: 1,
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,

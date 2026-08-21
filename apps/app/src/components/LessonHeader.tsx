@@ -1,4 +1,4 @@
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import {
   borders,
@@ -9,6 +9,7 @@ import {
   typography,
 } from "../theme/tokens";
 import { ProgressBar } from "./ProgressBar";
+import { MotionPressable, MotionView } from "../motion/Motion";
 
 export function LessonHeader({
   progress,
@@ -23,10 +24,12 @@ export function LessonHeader({
   statusLabel?: string;
   closeLabel?: string;
 }) {
-  const { theme, reduceMotion } = useSettings();
+  const { theme } = useSettings();
   return (
     <View style={styles.header}>
-      <Pressable
+      <MotionPressable
+        pressScale={motion.scale.iconPress}
+        pressDepth={0}
         testID="quiz-close-button"
         accessibilityRole="button"
         accessibilityLabel={closeLabel}
@@ -36,7 +39,7 @@ export function LessonHeader({
           {
             backgroundColor: hovered ? theme.surfaceTint : "transparent",
             borderColor: pressed ? theme.borderStrong : "transparent",
-            transform: [{ scale: pressed && !reduceMotion ? 0.94 : 1 }],
+            opacity: pressed ? 0.74 : 1,
           },
           Platform.OS === "web" && {
             transitionDuration: `${motion.fast}ms`,
@@ -46,14 +49,16 @@ export function LessonHeader({
         ]}
       >
         <Text style={[styles.closeGlyph, { color: theme.textMuted }]}>×</Text>
-      </Pressable>
-      <View style={styles.progress}>
+      </MotionPressable>
+      <MotionView preset="from-left" style={styles.progress}>
         <ProgressBar progress={progress} accessibilityLabel={progressLabel} />
-      </View>
+      </MotionView>
       {statusLabel ? (
-        <Text style={[styles.status, { color: theme.textMuted }]}>
-          {statusLabel}
-        </Text>
+        <MotionView key={statusLabel} preset="pop">
+          <Text style={[styles.status, { color: theme.textMuted }]}>
+            {statusLabel}
+          </Text>
+        </MotionView>
       ) : (
         <View style={styles.placeholder} />
       )}

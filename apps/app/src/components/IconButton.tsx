@@ -1,8 +1,9 @@
 import type { ComponentProps } from "react";
 import { VoxelIcon } from "./VoxelIcon";
-import { Platform, Pressable, StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, controls, motion, radii } from "../theme/tokens";
+import { MotionPressable } from "../motion/Motion";
 
 export function IconButton({
   icon,
@@ -19,7 +20,7 @@ export function IconButton({
   tone?: "neutral" | "primary" | "danger";
   size?: number;
 }) {
-  const { theme, reduceMotion } = useSettings();
+  const { theme } = useSettings();
   const foreground = disabled
     ? theme.textSubtle
     : tone === "danger"
@@ -29,7 +30,9 @@ export function IconButton({
         : theme.textMuted;
 
   return (
-    <Pressable
+    <MotionPressable
+      pressScale={motion.scale.iconPress}
+      pressDepth={0}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
@@ -41,7 +44,7 @@ export function IconButton({
           backgroundColor:
             hovered && !disabled ? theme.surfaceTint : "transparent",
           borderColor: pressed ? theme.borderStrong : "transparent",
-          transform: [{ scale: pressed && !reduceMotion ? 0.94 : 1 }],
+          opacity: pressed ? 0.76 : 1,
         },
         Platform.OS === "web" && {
           transitionDuration: `${motion.fast}ms`,
@@ -51,7 +54,7 @@ export function IconButton({
       ]}
     >
       <VoxelIcon name={icon} size={size} color={foreground} />
-    </Pressable>
+    </MotionPressable>
   );
 }
 

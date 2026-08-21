@@ -2,6 +2,7 @@ import { VoxelIcon } from "./VoxelIcon";
 import { StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, spacing, typography } from "../theme/tokens";
+import { FeedbackMotion, StaggerItem } from "../motion/Motion";
 
 export type ProcessingStepState = "complete" | "active" | "upcoming" | "error";
 
@@ -35,9 +36,19 @@ export function ProcessingSteps({
                 ? "processing"
                 : "progress";
         return (
-          <View key={`${step.label}-${index}`} style={styles.row}>
+          <StaggerItem
+            key={`${step.label}-${index}`}
+            index={index}
+            style={styles.row}
+          >
             <View style={styles.rail}>
-              <View
+              <FeedbackMotion
+                signal={
+                  step.state === "active" || step.state === "complete"
+                    ? step.state
+                    : false
+                }
+                kind={step.state === "complete" ? "success" : "progress"}
                 style={[
                   styles.marker,
                   {
@@ -54,7 +65,7 @@ export function ProcessingSteps({
                     step.state === "upcoming" ? theme.textMuted : theme.surface
                   }
                 />
-              </View>
+              </FeedbackMotion>
               {index < steps.length - 1 ? (
                 <View
                   style={[
@@ -87,7 +98,7 @@ export function ProcessingSteps({
                 </Text>
               ) : null}
             </View>
-          </View>
+          </StaggerItem>
         );
       })}
     </View>

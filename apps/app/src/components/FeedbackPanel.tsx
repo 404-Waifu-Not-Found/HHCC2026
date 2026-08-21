@@ -9,6 +9,7 @@ import {
   spacing,
   typography,
 } from "../theme/tokens";
+import { FeedbackMotion, MotionView } from "../motion/Motion";
 
 export function FeedbackPanel({
   status,
@@ -40,7 +41,9 @@ export function FeedbackPanel({
   const icon = isCorrect ? "correct" : isIncorrect ? "error" : "idea";
 
   return (
-    <View
+    <MotionView
+      preset="rise"
+      exiting
       accessibilityRole="summary"
       accessibilityLiveRegion="polite"
       style={[
@@ -49,10 +52,18 @@ export function FeedbackPanel({
       ]}
     >
       <View style={[styles.inner, compact && styles.innerCompact]}>
-        <View style={[styles.icon, { borderColor: color }]}>
-          <VoxelIcon name={icon} color={color} size={28} />
-        </View>
-        <View style={styles.copy}>
+        <FeedbackMotion
+          signal={status}
+          kind={isIncorrect ? "error" : "success"}
+        >
+          <MotionView
+            preset="pop"
+            style={[styles.icon, { borderColor: color }]}
+          >
+            <VoxelIcon name={icon} color={color} size={28} />
+          </MotionView>
+        </FeedbackMotion>
+        <MotionView preset="rise" delay={44} style={styles.copy}>
           <Text accessibilityRole="header" style={[styles.title, { color }]}>
             {title}
           </Text>
@@ -62,14 +73,18 @@ export function FeedbackPanel({
             </Text>
           ) : null}
           {children}
-        </View>
+        </MotionView>
         {action ? (
-          <View style={[styles.action, compact && styles.actionCompact]}>
+          <MotionView
+            preset="from-right"
+            delay={88}
+            style={[styles.action, compact && styles.actionCompact]}
+          >
             {action}
-          </View>
+          </MotionView>
         ) : null}
       </View>
-    </View>
+    </MotionView>
   );
 }
 

@@ -4,7 +4,6 @@ import type { ComponentProps } from "react";
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -24,6 +23,11 @@ import {
   spacing,
   typography,
 } from "../../src/theme/tokens";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionView,
+} from "../../src/motion/Motion";
 
 type LearningTabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
@@ -93,7 +97,7 @@ function LearningTabBar({
   navigation,
   insets,
 }: LearningTabBarProps) {
-  const { reduceMotion, theme } = useSettings();
+  const { theme } = useSettings();
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
 
@@ -155,7 +159,7 @@ function LearningTabBar({
           };
 
           return (
-            <Pressable
+            <MotionPressable
               key={route.key}
               accessibilityRole="tab"
               accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
@@ -173,7 +177,7 @@ function LearningTabBar({
                       ? theme.surfaceSunken
                       : "transparent",
                   borderColor: selected ? theme.primary : "transparent",
-                  transform: [{ translateY: pressed && !reduceMotion ? 2 : 0 }],
+                  opacity: pressed ? 0.76 : 1,
                 },
                 Platform.OS === "web" && {
                   transitionDuration: `${motion.fast}ms`,
@@ -182,11 +186,18 @@ function LearningTabBar({
                 },
               ]}
             >
-              {options.tabBarIcon?.({
-                focused: selected,
-                color,
-                size: desktop ? 27 : 25,
-              })}
+              <FeedbackMotion
+                signal={selected ? route.key : false}
+                kind="attention"
+              >
+                <MotionView key={selected ? "selected" : "idle"} preset="pop">
+                  {options.tabBarIcon?.({
+                    focused: selected,
+                    color,
+                    size: desktop ? 27 : 25,
+                  })}
+                </MotionView>
+              </FeedbackMotion>
               <Text
                 numberOfLines={1}
                 style={[
@@ -197,7 +208,7 @@ function LearningTabBar({
               >
                 {label}
               </Text>
-            </Pressable>
+            </MotionPressable>
           );
         })}
       </View>

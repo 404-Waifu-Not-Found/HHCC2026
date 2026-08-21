@@ -1,14 +1,8 @@
-import {
-  PushRegisterRequestSchema,
-  type AppLanguage,
-} from "@clipquest/contracts";
+import type { AppLanguage } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
-import Constants from "expo-constants";
-import * as Device from "expo-device";
 import { router } from "expo-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
-  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -21,14 +15,9 @@ import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { Surface } from "../../src/components/Surface";
-import { apiRequest, jsonBody } from "../../src/lib/api";
 import { authClient, useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import {
-  getLocalModelStatus,
-  removeLocalModel,
-} from "../../src/transcription/local-transcriber";
-import type { ModelStatus } from "../../src/transcription/types";
+import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
 import {
   breakpoints,
   radii,
@@ -51,77 +40,10 @@ export default function SettingsScreen() {
   const { data: session } = useAppSession();
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
-  const [model, setModel] = useState<ModelStatus>({
-    cached: false,
-    sizeBytes: null,
-  });
-  const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState<string>();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
-
-  useEffect(() => {
-    void getLocalModelStatus()
-      .then(setModel)
-      .catch(() => undefined);
-  }, []);
-
-  const removeModel = async () => {
-    setBusy("model");
-    setError(undefined);
-    try {
-      const removed = await removeLocalModel();
-      setModel({ cached: false, sizeBytes: model.sizeBytes });
-      setMessage(removed ? t("removeModelConfirm") : t("modelNotDownloaded"));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("removeModelFailed"));
-    } finally {
-      setBusy(undefined);
-    }
-  };
-
-  const registerPush = async () => {
-    setBusy("push");
-    setError(undefined);
-    try {
-      const Notifications = await import("expo-notifications");
-      if (Platform.OS !== "web" && !Device.isDevice)
-        throw new Error(t("pushPhysicalDevice"));
-      const permission = await Notifications.requestPermissionsAsync();
-      if (!permission.granted)
-        throw new Error(t("notificationPermissionDenied"));
-      if (Platform.OS === "android") {
-        await Notifications.setNotificationChannelAsync("study-reviews", {
-          name: t("notifications"),
-          importance: Notifications.AndroidImportance.DEFAULT,
-        });
-      }
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId as
-        string | undefined;
-      if (!projectId || projectId.startsWith("00000000"))
-        throw new Error(t("pushNeedsEas"));
-      const token = (await Notifications.getExpoPushTokenAsync({ projectId }))
-        .data;
-      const platform =
-        Platform.OS === "ios"
-          ? "ios"
-          : Platform.OS === "android"
-            ? "android"
-            : "web";
-      await apiRequest("/api/push/register", {
-        method: "POST",
-        body: jsonBody(
-          PushRegisterRequestSchema.parse({ token, platform, locale }),
-        ),
-      });
-      setMessage(t("remindersEnabled"));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("remindersFailed"));
-    } finally {
-      setBusy(undefined);
-    }
-  };
 
   const signOut = async () => {
     if (busy) return;
@@ -159,7 +81,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen contentWidth="wide">
-      <View style={styles.heading}>
+      <MotionView preset="from-left" style={styles.heading}>
         <View
           style={[styles.headingIcon, { backgroundColor: theme.primarySoft }]}
         >
@@ -176,21 +98,20 @@ export default function SettingsScreen() {
             {t("settingsSubtitle")}
           </Text>
         </View>
-      </View>
+      </MotionView>
 
-      {message ? (
-        <Surface tone="success" style={styles.notice}>
-          <Notice icon="correct" color={theme.success} text={message} />
-        </Surface>
-      ) : null}
       {error ? (
-        <Surface tone="error" style={styles.notice}>
-          <Notice icon="error" color={theme.error} text={error} alert />
-        </Surface>
+        <FeedbackMotion signal={error} kind="error">
+          <MotionView preset="rise" exiting>
+            <Surface tone="error" style={styles.notice}>
+              <Notice icon="error" color={theme.error} text={error} alert />
+            </Surface>
+          </MotionView>
+        </FeedbackMotion>
       ) : null}
 
       <View style={[styles.grid, desktop && styles.gridDesktop]}>
-        <View style={styles.column}>
+        <MotionView preset="from-left" delay={44} style={styles.column}>
           <SettingsSection title={t("account")} icon="people">
             <View style={styles.accountRow}>
               <View
@@ -226,45 +147,47 @@ export default function SettingsScreen() {
               {t("signOut")}
             </PrimaryButton>
             {confirmingDelete ? (
-              <Surface tone="error" style={styles.deletePanel}>
-                <Text style={[styles.warning, { color: theme.error }]}>
-                  {t("deleteAccountBody")}
-                </Text>
-                <AppTextInput
-                  label={t("password")}
-                  value={deletePassword}
-                  onChangeText={setDeletePassword}
-                  secureTextEntry
-                  autoComplete="current-password"
-                  editable={busy !== "delete"}
-                  returnKeyType="done"
-                  onSubmitEditing={() => void deleteAccount()}
-                />
-                <View style={styles.deleteActions}>
-                  <View style={styles.deleteAction}>
-                    <PrimaryButton
-                      variant="ghost"
-                      disabled={busy === "delete"}
-                      onPress={() => {
-                        setConfirmingDelete(false);
-                        setDeletePassword("");
-                      }}
-                    >
-                      {t("cancel")}
-                    </PrimaryButton>
+              <MotionView preset="rise" exiting>
+                <Surface tone="error" style={styles.deletePanel}>
+                  <Text style={[styles.warning, { color: theme.error }]}>
+                    {t("deleteAccountBody")}
+                  </Text>
+                  <AppTextInput
+                    label={t("password")}
+                    value={deletePassword}
+                    onChangeText={setDeletePassword}
+                    secureTextEntry
+                    autoComplete="current-password"
+                    editable={busy !== "delete"}
+                    returnKeyType="done"
+                    onSubmitEditing={() => void deleteAccount()}
+                  />
+                  <View style={styles.deleteActions}>
+                    <View style={styles.deleteAction}>
+                      <PrimaryButton
+                        variant="ghost"
+                        disabled={busy === "delete"}
+                        onPress={() => {
+                          setConfirmingDelete(false);
+                          setDeletePassword("");
+                        }}
+                      >
+                        {t("cancel")}
+                      </PrimaryButton>
+                    </View>
+                    <View style={styles.deleteAction}>
+                      <PrimaryButton
+                        variant="danger"
+                        loading={busy === "delete"}
+                        disabled={deletePassword.length < 8}
+                        onPress={() => void deleteAccount()}
+                      >
+                        {t("confirmDeleteAccount")}
+                      </PrimaryButton>
+                    </View>
                   </View>
-                  <View style={styles.deleteAction}>
-                    <PrimaryButton
-                      variant="danger"
-                      loading={busy === "delete"}
-                      disabled={deletePassword.length < 8}
-                      onPress={() => void deleteAccount()}
-                    >
-                      {t("confirmDeleteAccount")}
-                    </PrimaryButton>
-                  </View>
-                </View>
-              </Surface>
+                </Surface>
+              </MotionView>
             ) : (
               <PrimaryButton
                 variant="ghost"
@@ -275,22 +198,9 @@ export default function SettingsScreen() {
               </PrimaryButton>
             )}
           </SettingsSection>
+        </MotionView>
 
-          <SettingsSection title={t("notifications")} icon="notifications">
-            <Text style={[styles.help, { color: theme.textMuted }]}>
-              {t("remindersHelp")}
-            </Text>
-            <PrimaryButton
-              variant="secondary"
-              loading={busy === "push"}
-              onPress={() => void registerPush()}
-            >
-              {t("enableNotifications")}
-            </PrimaryButton>
-          </SettingsSection>
-        </View>
-
-        <View style={styles.column}>
+        <MotionView preset="from-right" delay={88} style={styles.column}>
           <SettingsSection title={t("appearance")} icon="appearance">
             <FieldLabel>{t("theme")}</FieldLabel>
             <SegmentedControl
@@ -323,49 +233,7 @@ export default function SettingsScreen() {
               onChange={setReduceMotion}
             />
           </SettingsSection>
-
-          <SettingsSection title={t("privacyStorage")} icon="privacy">
-            <View
-              style={[
-                styles.authNotice,
-                { backgroundColor: theme.primarySoft },
-              ]}
-            >
-              <VoxelIcon name="privacy" size={24} color={theme.primary} />
-              <Text style={[styles.authNoticeText, { color: theme.text }]}>
-                {t("youtubeAuthNotRequired")}
-              </Text>
-            </View>
-            <View style={styles.modelRow}>
-              <View style={styles.modelCopy}>
-                <Text style={[styles.label, { color: theme.text }]}>
-                  {t("speechModel")}
-                </Text>
-                <Text style={[styles.help, { color: theme.textMuted }]}>
-                  {model.cached
-                    ? `${t("cached")} · ${formatBytes(model.sizeBytes)}`
-                    : t("modelNotDownloaded")}
-                </Text>
-              </View>
-              <VoxelIcon
-                name={model.cached ? "correct" : "download"}
-                size={28}
-                color={model.cached ? theme.success : theme.textMuted}
-              />
-            </View>
-            <Text style={[styles.help, { color: theme.textMuted }]}>
-              {t("privateTranscription")}
-            </Text>
-            <PrimaryButton
-              variant="ghost"
-              disabled={!model.cached}
-              loading={busy === "model"}
-              onPress={() => void removeModel()}
-            >
-              {t("removeModel")}
-            </PrimaryButton>
-          </SettingsSection>
-        </View>
+        </MotionView>
       </View>
     </Screen>
   );
@@ -377,7 +245,7 @@ function SettingsSection({
   children,
 }: {
   title: string;
-  icon: "people" | "appearance" | "privacy" | "notifications";
+  icon: "people" | "appearance";
   children: ReactNode;
 }) {
   const { theme } = useSettings();
@@ -469,11 +337,6 @@ function initials(value: string): string {
       ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`
       : value.slice(0, 2)
   ).toUpperCase();
-}
-
-function formatBytes(value: number | null): string {
-  if (!value) return "~45 MB";
-  return `${(value / 1_000_000).toFixed(1)} MB`;
 }
 
 const styles = StyleSheet.create({
@@ -616,30 +479,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flex: 1,
     gap: spacing[1],
-  },
-  modelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-  },
-  modelCopy: {
-    minWidth: 0,
-    flex: 1,
-    gap: spacing[1],
-  },
-  authNotice: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing[3],
-    borderRadius: radii.medium,
-    padding: spacing[4],
-  },
-  authNoticeText: {
-    minWidth: 0,
-    flex: 1,
-    fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
   },
   warning: {
     fontFamily: typography.bodyBold,
