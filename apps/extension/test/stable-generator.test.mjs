@@ -157,8 +157,8 @@ function questionForSlot(slot, automaticMode = true) {
     id: `q${slot.ordinal}`,
     type: slot.type,
     concept: `Supported ${marker} concept`,
-    question: `In the lesson's ${marker} example, which specific result is supported for case ${slot.ordinal}?`,
-    explanation: `The lesson explicitly supports concept ${slot.ordinal}.`,
+    question: `Which specific ${marker} result is supported for case ${slot.ordinal}?`,
+    explanation: `The stated relationship supports concept ${slot.ordinal}.`,
   };
   if (slot.type === "multiple_choice") {
     if (!automaticMode) {
@@ -473,7 +473,7 @@ test("v5.3 uses singleton primary calls and local answer mapping", async (contex
   );
 });
 
-test("v5.5 streams concept-focused grounded singleton calls with protocol 8 telemetry", async (context) => {
+test("v5.6 streams concept-only grounded singleton calls with protocol 8 telemetry", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
   context.after(() => {
@@ -491,8 +491,8 @@ test("v5.5 streams concept-focused grounded singleton calls with protocol 8 tele
   );
 
   assert.equal(result.protocolVersion, 8);
-  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.5");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.4");
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.6");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.5");
   assert.equal(result.importVersion, "extension-progressive-import-v6");
   assert.equal(result.generationProfile, "evidence_grounded_auto_v5_4");
   assert.equal(calls.length, 5);
@@ -582,15 +582,16 @@ test("v5.5 grants content repair budgets independently to each ordinal", async (
   );
 });
 
-test("v5.5 removes empty lesson framing locally without an extra model call", async (context) => {
+test("v5.6 rejects raw lesson framing and repairs only that singleton", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
+  let q1Attempts = 0;
   context.after(() => {
     globalThis.fetch = originalFetch;
   });
   globalThis.fetch = async (_url, init) =>
     responseForRequest(init.body, (value, task) => {
-      if (task.slots[0].ordinal === 1) {
+      if (task.slots[0].ordinal === 1 && ++q1Attempts === 1) {
         value.questions[0].question =
           "According to the lesson, what exact supported value is reported for instructional claim 1?";
         value.questions[0].explanation =
@@ -608,14 +609,21 @@ test("v5.5 removes empty lesson framing locally without an extra model call", as
     (event) => calls.push(event),
   );
 
-  assert.equal(result.metrics.aiCalls, 5);
-  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.metrics.aiCalls, calls.length);
+  assert.equal(
+    result.metrics.retryCount,
+    calls.filter((event) => event.classification === "automatic_retry").length,
+  );
   assert.doesNotMatch(result.quiz.questions[0].question, /according to/iu);
   assert.equal(
     result.quiz.questions[0].question,
     "What exact supported value is reported for instructional claim 1?",
   );
-  assert.ok(calls.every((event) => event.classification === "primary"));
+  assert.equal(calls[0]?.outcome, "schema_invalid");
+  assert.equal(calls[1]?.classification, "automatic_retry");
+  assert.equal(calls[1]?.retryKind, "content_repair");
+  assert.equal(calls[0]?.startIndex, 0);
+  assert.equal(calls[1]?.startIndex, 0);
 });
 
 test("v5.5 automatically repairs a grounded course-trivia question before storage", async (context) => {
@@ -1024,7 +1032,7 @@ test("duplicate content repairs only the first missing singleton", async (contex
     return responseForRequest(init.body, (value) => {
       if (fetchCount === 2) {
         value.questions[0].question =
-          "In the lesson's photosynthesis example, which specific result is supported for case 1?";
+          "Which specific photosynthesis result is supported for case 1?";
       }
       return value;
     });
@@ -1237,7 +1245,7 @@ test("stable prompt prefixes are byte-identical while suffix tasks evolve", asyn
   assert.match(requests[1].messages[2].content, /Already accepted questions/);
 });
 
-test("v5.1 continuation remains isolated on its original metadata", async (context) => {
+test("v5.1 continuation uses singleton automatic recovery on original metadata", async (context) => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   const events = [];
@@ -1280,8 +1288,81 @@ test("v5.1 continuation remains isolated on its original metadata", async (conte
   assert.equal(result.validatorVersion, "validator-local-progressive-v4.0");
   assert.ok(requests.every((request) => request.thinking.type === "enabled"));
   assert.ok(requests.every((request) => request.reasoning_effort === "high"));
+  assert.ok(events.every((event) => event.classification === "primary"));
+  assert.ok(events.every((event) => event.protocolVersion === 5));
+  assert.ok(events.every((event) => event.purpose === "automatic_recovery"));
+  assert.ok(events.every((event) => event.requestedCount === 1));
+  assert.ok(events.every((event) => event.recoverySessionId === IDS.recovery));
+});
+
+test("Run 8 recovery preserves q1-q11 and classifies only attempted q12-q13 as retries", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const events = [];
+  const chunks = [];
+  const types = Array.from(
+    { length: 15 },
+    (_, index) => ["multiple_choice", "true_false", "short_answer"][index % 3],
+  );
+  const acceptedQuestions = types.slice(0, 11).map((type, index) => ({
+    id: `q${index + 1}`,
+    type,
+    concept: `Immutable accepted concept ${index + 1}`,
+    question: `How does immutable concept ${index + 1} work?`,
+  }));
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => responseForRequest(init.body);
+
+  const result = await generateQuizFromPlainText(
+    {
+      ...stableInput(15),
+      generationProfile: "legacy_reasoning_v5_1",
+      continuation: {
+        startIndex: 11,
+        resultProtocolVersion: 5,
+        promptVersion: "quiz-local-json-stream-v5.1",
+        validatorVersion: "validator-local-progressive-v4.0",
+        generationProfile: "legacy_reasoning_v5_1",
+        nextCallIndex: 7,
+        nextOrdinalAttempt: 2,
+        retryOrdinals: [12, 13],
+        previousOutcome: "schema_invalid",
+        automaticRetryCount: 0,
+        retryBudgetUsedCount: 1,
+        acceptedQuestions,
+      },
+    },
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    (chunk) => chunks.push(chunk),
+    (event) => events.push(event),
+  );
+
+  assert.equal(result.generatedStartIndex, 11);
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.question.id),
+    ["q12", "q13", "q14", "q15"],
+  );
+  assert.deepEqual(
+    events.map((event) => event.classification),
+    ["automatic_retry", "automatic_retry", "primary", "primary"],
+  );
+  assert.deepEqual(
+    events.map((event) => event.callIndex),
+    [7, 8, 9, 10],
+  );
+  assert.deepEqual(
+    events.slice(0, 2).map((event) => event.retryKind),
+    ["content_repair", "content_repair"],
+  );
+  assert.ok(events.every((event) => event.protocolVersion === 5));
+  assert.ok(events.every((event) => event.purpose === "automatic_recovery"));
   assert.ok(
-    events.every((event) => event.classification === "manual_continuation"),
+    acceptedQuestions.every(
+      (question, index) => question.id === `q${index + 1}`,
+    ),
   );
 });
 

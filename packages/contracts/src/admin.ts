@@ -148,8 +148,8 @@ export const AdminGenerationSchema = z
     primaryCalls: z.number().int().nonnegative(),
     automaticRetries: z.number().int().nonnegative(),
     automaticRecoveries: z.number().int().nonnegative().optional(),
-    // Historical v5.2 evidence remains readable but new protocol-7 banks
-    // cannot create manual continuation events.
+    // Historical rows remain immutable. This compatibility classification
+    // does not prove that a learner clicked a continuation control.
     manualContinuations: z.number().int().nonnegative(),
     partialCalls: z.number().int().nonnegative(),
     outcomeCounts: z.record(
@@ -277,6 +277,17 @@ export const AdminSystemResponseSchema = z.object({
       promptVersion: z.string(),
       validatorVersion: z.string(),
       rolloutMode: z.enum(["disabled", "canary", "enabled"]),
+      supportedProfile: z.literal("evidence_grounded_auto_v5_4"),
+      supportedPromptVersion: z.literal("quiz-local-json-stream-v5.6"),
+      supportedValidatorVersion: z.literal("validator-local-progressive-v4.5"),
+      effectiveDefaultProfile: z.enum([
+        "legacy_reasoning_v5_1",
+        "stable_non_thinking_v5_2",
+        "stable_auto_recovery_v5_3",
+        "evidence_grounded_auto_v5_4",
+      ]),
+      requiredExtensionVersion: z.literal("0.8.6"),
+      requiredCapability: z.literal("question-stream-v5"),
       states: z.object({
         generating: z.number().int().nonnegative(),
         retrying: z.number().int().nonnegative(),

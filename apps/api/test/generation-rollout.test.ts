@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  generationProfileAllowsNewBank,
   quizGenerationProfile,
   quizGenerationRolloutMode,
 } from "../src/lib/generation-rollout";
@@ -67,15 +68,54 @@ describe("quiz generation rollout", () => {
     );
   });
 
-  it("requires extension 0.8.5 for the concept-focused grounded rollout", () => {
+  it("requires extension 0.8.6 for the concept-only grounded rollout", () => {
     const canary = env("enabled", "", "enabled", "", "canary", "learner-1");
     expect(quizGenerationProfile(canary, "learner-1")).toEqual({
       generationProfile: "evidence_grounded_auto_v5_4",
-      minimumExtensionVersion: "0.8.5",
-      requiredCapability: "question-stream-v4",
+      minimumExtensionVersion: "0.8.6",
+      requiredCapability: "question-stream-v5",
     });
     expect(quizGenerationProfile(canary, "learner-2").generationProfile).toBe(
       "stable_auto_recovery_v5_3",
     );
+    expect(
+      generationProfileAllowsNewBank(
+        canary,
+        "learner-1",
+        "evidence_grounded_auto_v5_4",
+      ),
+    ).toBe(true);
+    expect(
+      generationProfileAllowsNewBank(
+        canary,
+        "learner-1",
+        "legacy_reasoning_v5_1",
+      ),
+    ).toBe(false);
+    expect(
+      generationProfileAllowsNewBank(
+        canary,
+        "learner-2",
+        "legacy_reasoning_v5_1",
+      ),
+    ).toBe(false);
+  });
+
+  it("accepts a new legacy bank only while legacy is the assigned profile", () => {
+    const disabled = env();
+    expect(
+      generationProfileAllowsNewBank(
+        disabled,
+        "learner-1",
+        "legacy_reasoning_v5_1",
+      ),
+    ).toBe(true);
+    expect(
+      generationProfileAllowsNewBank(
+        disabled,
+        "learner-1",
+        "evidence_grounded_auto_v5_4",
+      ),
+    ).toBe(false);
   });
 });

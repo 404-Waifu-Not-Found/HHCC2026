@@ -194,6 +194,21 @@ export default function AdminSystemScreen() {
                     value={data.generation.rolloutMode}
                   />
                   <SystemDetail
+                    icon="model"
+                    label={copy.supportedGenerationProfile}
+                    value={`${data.generation.supportedProfile} · ${data.generation.supportedPromptVersion} · ${data.generation.supportedValidatorVersion}`}
+                  />
+                  <SystemDetail
+                    icon="processing"
+                    label={copy.effectiveDefaultProfile}
+                    value={data.generation.effectiveDefaultProfile}
+                  />
+                  <SystemDetail
+                    icon="system"
+                    label={copy.groundedExtensionRequirement}
+                    value={`${data.generation.requiredExtensionVersion} · ${data.generation.requiredCapability}`}
+                  />
+                  <SystemDetail
                     icon="system"
                     label={copy.workerVersion}
                     value={

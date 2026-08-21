@@ -65,6 +65,12 @@ describe("admin contracts", () => {
           promptVersion: "quiz-local-json-stream-v5.1",
           validatorVersion: "validator-local-progressive-v4.0",
           rolloutMode: "disabled",
+          supportedProfile: "evidence_grounded_auto_v5_4",
+          supportedPromptVersion: "quiz-local-json-stream-v5.6",
+          supportedValidatorVersion: "validator-local-progressive-v4.5",
+          effectiveDefaultProfile: "legacy_reasoning_v5_1",
+          requiredExtensionVersion: "0.8.6",
+          requiredCapability: "question-stream-v5",
           states: {
             generating: 1,
             retrying: 2,
@@ -456,6 +462,8 @@ describe("generated questions", () => {
         validatorVersion: "validator-local-progressive-v4.0",
         importVersion: "extension-progressive-import-v3",
         generationProfile: "legacy_reasoning_v5_1",
+        automaticRetryCount: 0,
+        retryBudgetUsedCount: 1,
         claim: { state: "available", leaseExpiresAt: null },
         acceptedQuestions,
       },
@@ -535,6 +543,25 @@ describe("generated questions", () => {
         outputTokens: 20,
         reasoningTokens: 0,
         usageComplete: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        protocolVersion: 5,
+        purpose: "automatic_recovery",
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        recoverySessionId: "33333333-3333-4333-8333-333333333333",
+        callIndex: 7,
+        startIndex: 11,
+        ordinalAttempt: 2,
+        requestedCount: 1,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+        outcome: "schema_invalid",
+        retryDelayMs: 250,
+        elapsedMs: 2_000,
+        usageComplete: false,
       }).success,
     ).toBe(true);
 

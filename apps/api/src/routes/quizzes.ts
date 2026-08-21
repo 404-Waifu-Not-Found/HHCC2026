@@ -47,11 +47,61 @@ const QuestionTypeSchema = z.enum([
 ]);
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
+const LEGACY_AUTOMATIC_RECOVERY_RETRY_LIMIT = 12;
+const LEGACY_AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
+const LEGACY_AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
 
 function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4"
+  );
+}
+
+function supportsAutomaticRecovery(
+  snapshot: ProgressiveGenerationSnapshot,
+): boolean {
+  return (
+    isAutomaticGenerationProfile(snapshot.summary?.generationProfile) ||
+    snapshot.summary?.resultProtocolVersion === 5
+  );
+}
+
+function recoverableFailureReason(reasonCode: string | undefined): boolean {
+  return !new Set([
+    "credential_required",
+    "credential_invalid",
+    "credential_missing",
+    "billing_required",
+    "source_unavailable",
+    "recovery_budget_exhausted",
+    "cost_limit_reached",
+  ]).has(reasonCode ?? "");
+}
+
+function hasLegacyRecoveryBudget(
+  snapshot: ProgressiveGenerationSnapshot,
+): boolean {
+  return (
+    snapshot.telemetry.automaticRetries +
+      snapshot.telemetry.manualContinuations <
+      LEGACY_AUTOMATIC_RECOVERY_RETRY_LIMIT &&
+    snapshot.telemetry.automaticRecoveries <
+      LEGACY_AUTOMATIC_RECOVERY_CYCLE_LIMIT &&
+    snapshot.telemetry.elapsedMs < LEGACY_AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS
+  );
+}
+
+function recoverableStoppedGeneration(
+  snapshot: ProgressiveGenerationSnapshot,
+): boolean {
+  return Boolean(
+    snapshot.summary?.resultProtocolVersion === 5 &&
+    snapshot.availability?.state === "generation_failed" &&
+    recoverableFailureReason(
+      snapshot.availability.reasonCode ?? snapshot.summary.reasonCode,
+    ) &&
+    hasLegacyRecoveryBudget(snapshot),
   );
 }
 const QuestionRowSchema = z.object({
@@ -706,13 +756,25 @@ quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
               importVersion: summary.importVersion,
               generationProfile: summary.generationProfile,
               generationId: summary.generationId,
-              generationSessionId: summary.generationSessionId,
+              generationSessionId:
+                generationState.snapshot.latestGenerationSessionId ??
+                summary.generationSessionId,
               recoverySessionId: summary.recoverySessionId,
-              nextCallIndex: generationState.snapshot.telemetry.callCount,
+              nextCallIndex: generationState.snapshot.nextCallIndex,
               nextOrdinalAttempt: generationState.snapshot.nextOrdinalAttempt,
               retryKind: generationState.snapshot.nextRetryKind ?? undefined,
               automaticRetryCount:
                 generationState.snapshot.telemetry.automaticRetries,
+              retryBudgetUsedCount:
+                summary.resultProtocolVersion === 5
+                  ? generationState.snapshot.telemetry.automaticRetries +
+                    generationState.snapshot.telemetry.manualContinuations
+                  : generationState.snapshot.telemetry.automaticRetries,
+              automaticRecoveryCount:
+                generationState.snapshot.telemetry.automaticRecoveries,
+              retryOrdinals: generationState.snapshot.retryOrdinals,
+              previousOutcome:
+                generationState.snapshot.previousOutcome ?? undefined,
               ...(summary.questionPlanSeed
                 ? {
                     questionPlan: {
@@ -736,13 +798,17 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
   const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
   const generationState = await attemptGenerationState(c.env.DB, attempt);
   const summary = generationState.snapshot.summary;
-  const automatic = isAutomaticGenerationProfile(summary?.generationProfile);
+  const automatic = supportsAutomaticRecovery(generationState.snapshot);
+  const recoverableStopped = recoverableStoppedGeneration(
+    generationState.snapshot,
+  );
   const timestamp = now();
   if (
     !summary ||
     generationState.snapshot.qualityStatus !== "generating" ||
     generationState.generation.state === "ready" ||
-    generationState.generation.state === "generation_failed" ||
+    (generationState.generation.state === "generation_failed" &&
+      !recoverableStopped) ||
     (!automatic && generationState.generation.state !== "retry_required")
   ) {
     throw new ApiError(
@@ -766,7 +832,11 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
   if (
     automatic &&
     (!input.recoverySessionId ||
-      input.generationSessionId !== summary.generationSessionId)
+      (generationState.snapshot.latestGenerationSessionId
+        ? input.generationSessionId !==
+          generationState.snapshot.latestGenerationSessionId
+        : Boolean(summary.generationSessionId) &&
+          input.generationSessionId !== summary.generationSessionId))
   ) {
     throw new ApiError(
       409,
@@ -810,7 +880,9 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       : (generationState.generation.reasonCode ??
         summary.reasonCode ??
         "local_state_conflict"),
-    recoverySessionId: input.recoverySessionId ?? summary.recoverySessionId,
+    recoverySessionId: isAutomaticGenerationProfile(summary.generationProfile)
+      ? (input.recoverySessionId ?? summary.recoverySessionId)
+      : summary.recoverySessionId,
     retryOrdinal: undefined,
     ordinalAttempt: undefined,
     retryKind: undefined,
@@ -989,12 +1061,12 @@ function readyGeneration(total: number): AttemptGenerationAvailability {
 }
 
 function claimForSnapshot(snapshot: ProgressiveGenerationSnapshot) {
-  const automatic = isAutomaticGenerationProfile(
-    snapshot.summary?.generationProfile,
-  );
+  const automatic = supportsAutomaticRecovery(snapshot);
+  const recoverableStopped = recoverableStoppedGeneration(snapshot);
   if (
     snapshot.availability?.state === "ready" ||
-    snapshot.availability?.state === "generation_failed" ||
+    (snapshot.availability?.state === "generation_failed" &&
+      !recoverableStopped) ||
     (!automatic && snapshot.availability?.state !== "retry_required")
   ) {
     return { state: "not_required" as const, leaseExpiresAt: null };

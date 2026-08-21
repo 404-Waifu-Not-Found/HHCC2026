@@ -422,6 +422,179 @@ function groundedCallEvent(
   };
 }
 
+function legacyAutomaticRecoveryCallEvent(
+  overrides: Partial<{
+    generationSessionId: string;
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+    acceptedCount: 0 | 1;
+    classification: "primary" | "automatic_retry";
+    retryKind:
+      | "transport"
+      | "empty_content"
+      | "truncated_output"
+      | "content_repair"
+      | "duplicate_repair"
+      | "answer_repair"
+      | "automatic_resume";
+    outcome:
+      | "complete"
+      | "transient_http"
+      | "network_interrupted"
+      | "schema_invalid"
+      | "empty_content";
+    retryDelayMs: number;
+  }> = {},
+) {
+  const event = {
+    protocolVersion: 5 as const,
+    purpose: "automatic_recovery" as const,
+    generationSessionId: SECOND_SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    callIndex: 7,
+    startIndex: 11,
+    ordinalAttempt: 2,
+    requestedCount: 1 as const,
+    acceptedCount: 1 as 0 | 1,
+    classification: "automatic_retry" as const,
+    retryKind: "content_repair" as const,
+    outcome: "complete" as const,
+    retryDelayMs: 0,
+    elapsedMs: 2_000,
+    inputTokens: 100,
+    outputTokens: 20,
+    reasoningTokens: 0,
+    usageComplete: true,
+    ...overrides,
+  };
+  if (event.classification === "primary" && !("retryKind" in overrides)) {
+    delete (event as { retryKind?: string }).retryKind;
+  }
+  return event;
+}
+
+function legacyRun8Summary(
+  acceptedCount: number,
+  state: "generation_failed" | "recovering" | "generating" | "ready",
+  timestamp = Date.now(),
+) {
+  return {
+    source: "extension-local-json-stream",
+    importVersion: "extension-progressive-import-v3",
+    resultProtocolVersion: 5,
+    pipelineVersion: 9,
+    model: "deepseek-v4-flash",
+    reasoningEffort: "high",
+    promptVersion: "quiz-local-json-stream-v5.1",
+    validatorVersion: "validator-local-progressive-v4.0",
+    generationProfile: "legacy_reasoning_v5_1",
+    generationState: state,
+    ...(state === "generation_failed" ? { reasonCode: "schema_invalid" } : {}),
+    requestedQuestionTypes: ["multiple_choice"],
+    plannedQuestionTypes: Array(15).fill("multiple_choice"),
+    generatedQuestionTypes: Array(acceptedCount).fill("multiple_choice"),
+    plannedCount: 15,
+    acceptedCount,
+    lastProgressAt: timestamp,
+    lastQuestionAt: timestamp,
+    stateChangedAt: timestamp,
+    telemetryAvailable: true,
+    acceptedQuestionSummaries: Array.from(
+      { length: acceptedCount },
+      (_, index) => ({
+        id: `q${index + 1}`,
+        type: "multiple_choice",
+        concept: `Supported concept ${index + 1}`,
+        question: `Which result is supported in case ${index + 1}?`,
+      }),
+    ),
+    transcriptStored: false,
+    aiCalls: 7,
+    retryCount: 0,
+    inputTokens: 700,
+    outputTokens: 140,
+    reasoningTokens: 0,
+    elapsedMs: 14_000,
+  };
+}
+
+function createLegacyRun8Database(timestamp = Date.now() - 60_000) {
+  const db = createDatabase("generating", timestamp);
+  for (let ordinal = 2; ordinal <= 11; ordinal += 1) {
+    db.sqlite
+      .prepare("INSERT INTO questions VALUES (?, ?)")
+      .run(
+        `00000000-0000-4000-8000-${String(ordinal).padStart(12, "0")}`,
+        QUIZ_ID,
+      );
+  }
+  db.sqlite
+    .prepare("UPDATE attempts SET item_count = 15 WHERE id = ?")
+    .run(ATTEMPT_ID);
+  db.sqlite
+    .prepare(
+      "UPDATE quiz_banks SET session_length = 'long', quality_summary_json = ? WHERE id = ?",
+    )
+    .run(
+      JSON.stringify(legacyRun8Summary(11, "generation_failed", timestamp)),
+      QUIZ_ID,
+    );
+  db.sqlite
+    .prepare(
+      `INSERT INTO quiz_generation_call_events
+       (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at)
+       VALUES (?, ?, 6, 11, 2, 0, 'primary', 'schema_invalid', 0, 2000, 100, 20, 0, 1, ?)`,
+    )
+    .run(QUIZ_ID, SESSION_ID, timestamp + 1_000);
+  db.sqlite
+    .prepare(
+      `INSERT INTO quiz_generation_call_events
+       (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at)
+       VALUES (?, ?, 0, 11, 1, 0, 'manual_continuation', 'schema_invalid', 0, 2000, 100, 20, 0, 1, ?)`,
+    )
+    .run(QUIZ_ID, SECOND_SESSION_ID, timestamp + 2_000);
+  return db;
+}
+
+function advanceLegacyRun8Frontier(db: SqliteD1Adapter, acceptedCount: number) {
+  db.sqlite
+    .prepare("INSERT INTO questions VALUES (?, ?)")
+    .run(
+      `00000000-0000-4000-8000-${String(acceptedCount).padStart(12, "0")}`,
+      QUIZ_ID,
+    );
+  const stored = db.sqlite
+    .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+    .get(QUIZ_ID) as { quality_summary_json: string };
+  const current = JSON.parse(stored.quality_summary_json) as Record<
+    string,
+    unknown
+  >;
+  const next = legacyRun8Summary(
+    acceptedCount,
+    acceptedCount === 15 ? "ready" : "generating",
+  );
+  db.sqlite
+    .prepare(
+      "UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ? WHERE id = ?",
+    )
+    .run(
+      acceptedCount === 15 ? "passed" : "generating",
+      JSON.stringify({
+        ...current,
+        ...next,
+        aiCalls: current.aiCalls,
+        retryCount: current.retryCount,
+        inputTokens: current.inputTokens,
+        outputTokens: current.outputTokens,
+        reasoningTokens: current.reasoningTokens,
+        elapsedMs: current.elapsedMs,
+      }),
+      QUIZ_ID,
+    );
+}
+
 function putCall<T extends { generationSessionId: string; callIndex: number }>(
   app: Hono<ApiBindings>,
   env: ApiBindings["Bindings"],
@@ -441,6 +614,183 @@ function putCall<T extends { generationSessionId: string; callIndex: number }>(
     env,
   );
 }
+
+describe("protocol-5 automatic compatibility recovery", () => {
+  it("recovers the Run 8 q1-q11 prefix and classifies only attempted ordinals as retries", async () => {
+    const db = createLegacyRun8Database();
+    const { app, env } = testApp(db);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      quizId: QUIZ_ID,
+      generation: {
+        state: "generation_failed",
+        availableQuestions: 11,
+        totalQuestions: 15,
+      },
+      continuation: {
+        startIndex: 11,
+        generationSessionId: SECOND_SESSION_ID,
+        nextCallIndex: 1,
+        automaticRetryCount: 0,
+        retryBudgetUsedCount: 1,
+        retryOrdinals: [12, 13],
+        previousOutcome: "schema_invalid",
+        claim: { state: "available" },
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SECOND_SESSION_ID,
+          recoverySessionId: RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+
+    for (const event of [
+      legacyAutomaticRecoveryCallEvent({ callIndex: 1 }),
+      legacyAutomaticRecoveryCallEvent({ callIndex: 2, startIndex: 12 }),
+      legacyAutomaticRecoveryCallEvent({
+        callIndex: 3,
+        startIndex: 13,
+        ordinalAttempt: 1,
+        classification: "primary",
+      }),
+      legacyAutomaticRecoveryCallEvent({
+        callIndex: 4,
+        startIndex: 14,
+        ordinalAttempt: 1,
+        classification: "primary",
+      }),
+    ]) {
+      const response = await putCall(app, env, event, CLAIM_KEY);
+      expect(response.status).toBe(201);
+      advanceLegacyRun8Frontier(db, event.startIndex + 1);
+    }
+
+    expect(
+      db.sqlite
+        .prepare(
+          `SELECT call_index, start_ordinal, requested_count, classification, protocol_version, retry_kind, recovery_session_id
+           FROM quiz_generation_call_events
+           WHERE generation_session_id = ? AND call_index >= 1
+           ORDER BY call_index`,
+        )
+        .all(SECOND_SESSION_ID),
+    ).toEqual([
+      {
+        call_index: 1,
+        start_ordinal: 11,
+        requested_count: 1,
+        classification: "automatic_retry",
+        protocol_version: 5,
+        retry_kind: "content_repair",
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+      {
+        call_index: 2,
+        start_ordinal: 12,
+        requested_count: 1,
+        classification: "automatic_retry",
+        protocol_version: 5,
+        retry_kind: "content_repair",
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+      {
+        call_index: 3,
+        start_ordinal: 13,
+        requested_count: 1,
+        classification: "primary",
+        protocol_version: 5,
+        retry_kind: null,
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+      {
+        call_index: 4,
+        start_ordinal: 14,
+        requested_count: 1,
+        classification: "primary",
+        protocol_version: 5,
+        retry_kind: null,
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+    ]);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT quality_status, quality_summary_json FROM quiz_banks WHERE id = ?",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({ quality_status: "passed" });
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
+        .get(QUIZ_ID),
+    ).toMatchObject({ count: 15 });
+  });
+
+  it("replays historical manual rows exactly but rejects every new insertion", async () => {
+    const db = createDatabase("retry_required");
+    const { app, env } = testApp(db);
+    const historical = callEvent({
+      generationSessionId: SECOND_SESSION_ID,
+      acceptedCount: 0,
+      classification: "manual_continuation",
+      outcome: "schema_invalid",
+    });
+    db.sqlite
+      .prepare(
+        `INSERT INTO quiz_generation_call_events
+         (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        QUIZ_ID,
+        historical.generationSessionId,
+        historical.callIndex,
+        historical.startIndex,
+        historical.requestedCount,
+        historical.acceptedCount,
+        historical.classification,
+        historical.outcome,
+        historical.retryDelayMs,
+        historical.elapsedMs,
+        historical.inputTokens,
+        historical.outputTokens,
+        historical.reasoningTokens,
+        historical.usageComplete ? 1 : 0,
+        Date.now(),
+      );
+
+    expect((await putCall(app, env, historical)).status).toBe(200);
+    const fresh = await putCall(app, env, {
+      ...historical,
+      callIndex: 1,
+    });
+    expect(fresh.status).toBe(422);
+    expect(await fresh.json()).toMatchObject({
+      error: { code: "manual_generation_continuation_removed" },
+    });
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM quiz_generation_call_events")
+        .get(),
+    ).toMatchObject({ count: 1 });
+  });
+});
 
 describe("protocol-7 automatic recovery call events", () => {
   it("accepts exactly two content repairs and rejects manual classifications", async () => {

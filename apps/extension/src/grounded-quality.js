@@ -48,17 +48,32 @@ const INSTRUCTIONAL_PATTERNS = [
   /(?:定义|意味着|因此|因为|导致|例如|公式|方程|导数|积分|定理|原理|过程|机制|函数|系统|实验|测量|包含|组成|位于|表示|关系|条件|性质|特征|用途|作用|用于|分类|产生|转换|求解|应用|预测|描述)/u,
 ];
 
+const SAFE_INTERROGATIVE_LOOKAHEAD =
+  "(?=what|which|how|why|when|where|who|is|are|does|do|can|should|explain|describe|identify|calculate|determine|define)";
+const SOURCE_NOUN =
+  "(?:lesson|video|lecture|lecturer|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)";
+const SAFE_DELIMITER = "(?:\\s*[,;:\\-–—]\\s*|\\s+)";
 const SOURCE_FRAMING_PREFIX_PATTERNS = [
-  /^\s*(?:(?:according to|based on)\s+(?:the\s+)?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:in|from)\s+(?:the\s+)?(?:lesson|video|lecture|course|class|transcript|episode|presentation))\s*[,;:\-]?\s*/iu,
-  /^\s*(?:the\s+)?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)\s+(?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|supports?|describes?)\s+(?:that\s+)?/iu,
-  /^\s*(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)[，,:：;；\-]?\s*/u,
-  /^\s*(?:在|从)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示)中[，,:：;；\-]?\s*/u,
+  new RegExp(
+    `^\\s*(?:(?:according to|based on)\\s+(?:the\\s+)?${SOURCE_NOUN}|(?:in|from)\\s+(?:(?:the|this|that)\\s+)?${SOURCE_NOUN})(?!['’]s)\\b${SAFE_DELIMITER}${SAFE_INTERROGATIVE_LOOKAHEAD}`,
+    "iu",
+  ),
+  new RegExp(
+    `^\\s*(?:the\\s+)?${SOURCE_NOUN}(?!['’]s)\\b\\s+(?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|supports?|describes?)\\s+(?:that\\s+)?`,
+    "iu",
+  ),
+  /^\s*(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)(?:[，,:：;；\-–—]\s*|\s+(?=什么|如何|为什么|哪|谁|是否|请|解释|描述|计算|确定|定义))/u,
+  /^\s*(?:在|从)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示)中(?:[，,:：;；\-–—]\s*|\s+(?=什么|如何|为什么|哪|谁|是否|请|解释|描述|计算|确定|定义))/u,
 ];
 
 const SOURCE_REFERENCE_PATTERNS = [
-  /\b(?:(?:according to|based on) (?:the )?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:lesson|video|lecture|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator) (?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|covers?))\b/iu,
+  /^\s*according to\b/iu,
+  /\b(?:(?:according to|based on) (?:the )?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:lesson|video|lecture|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)(?: (?:explicitly|directly|clearly|specifically|also))? (?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|covers?|lists?|listed|supports?|describes?))\b/iu,
+  /\b(?:in|from) (?:this|the|that) (?:lesson|video|lecture|transcript|presentation)\b/iu,
+  /\b(?:lesson|video|lecture|transcript|presentation|lecturer|presenter|narrator|speaker)['’]s\s+(?:account|example|explanation|description|discussion|demonstration|claim|wording|method|approach)\b/iu,
+  /\b(?:lecturer|presenter|narrator|speaker)\s+(?:says?|said|states?|stated|mentions?|mentioned|explains?|explained|shows?|showed|demonstrates?|demonstrated|teaches?|taught|calls?|called|describes?|described)\b/iu,
   /\b(?:what|which|how) (?:did|does|was|were) (?:the )?(?:lesson|video|lecture|presenter|instructor|teacher|professor|speaker|narrator).{0,80}\b(?:say|state|mention|show|explain|call|name|cover|teach|discuss)\b/iu,
-  /\b(?:mentioned|shown|said|stated|covered|discussed) (?:in|by) (?:the )?(?:lesson|video|lecture|transcript|presenter|instructor|teacher|professor|speaker|narrator)\b/iu,
+  /\b(?:mentioned|shown|said|stated|covered|discussed|supported|described) (?:in|by) (?:the )?(?:lesson|video|lecture|transcript|presenter|instructor|teacher|professor|speaker|narrator)\b/iu,
   /(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)|(?:课|课程|视频|讲座|讲解|老师|讲师|主讲人)(?:中|里)?(?:提到|说到|讲到|介绍|展示)/u,
 ];
 
@@ -166,15 +181,15 @@ function capitalizeFirstLetter(value) {
  */
 export function stripQuestionSourceFraming(value) {
   if (typeof value !== "string") return value;
-  let result = value.normalize("NFC").trim();
-  for (let pass = 0; pass < 2; pass += 1) {
-    const previous = result;
-    for (const pattern of SOURCE_FRAMING_PREFIX_PATTERNS) {
-      result = result.replace(pattern, "");
-    }
-    if (result === previous) break;
+  const original = value.normalize("NFC").replace(/\s+/g, " ").trim();
+  for (const pattern of SOURCE_FRAMING_PREFIX_PATTERNS) {
+    const match = original.match(pattern);
+    if (!match) continue;
+    const remainder = original.slice(match[0].length).trim();
+    if (!remainder) return original;
+    return capitalizeFirstLetter(remainder);
   }
-  return capitalizeFirstLetter(result.replace(/\s+/g, " ").trim());
+  return original;
 }
 
 /**
@@ -189,6 +204,7 @@ export function questionTestsTaughtConcept(candidate) {
   const inspected = [
     question,
     candidate?.concept,
+    candidate?.explanation,
     claim?.subject,
     claim?.relation,
     claim?.value,

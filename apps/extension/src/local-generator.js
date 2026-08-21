@@ -18,8 +18,8 @@ import { formulaFingerprint } from "./math-expression.js";
 const MODEL = "deepseek-v4-flash";
 const PROTOCOL_VERSION = 8;
 const PIPELINE_VERSION = 9;
-const PROMPT_VERSION = "quiz-local-json-stream-v5.5";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.4";
+const PROMPT_VERSION = "quiz-local-json-stream-v5.6";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.5";
 const IMPORT_VERSION = "extension-progressive-import-v6";
 const GENERATION_PROFILE = "evidence_grounded_auto_v5_4";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
@@ -30,6 +30,7 @@ const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 4;
 const MAX_CONTENT_RETRIES_PER_ORDINAL = 2;
 const MAX_V5_3_AUTOMATIC_RETRIES = 12;
 const MAX_V5_4_AUTOMATIC_RETRIES = 48;
+const MAX_V5_6_AUTOMATIC_RETRIES = 12;
 const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 12;
 const MAX_ACTIVE_RECOVERY_MS = 15 * 60 * 1_000;
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
@@ -419,7 +420,7 @@ function generationMessages(input, isTransientRetry) {
     ? `Every question must include sourceEvidence copied exactly from the primary source focus and a structured claim describing that evidence. Never cite material outside the primary focus. For multiple choice, correctAnswer must be an exact phrase contained in sourceEvidence. Each distractor must contain text and a specific whyWrong explanation; equivalent wording, algebraic identities, and another defensible answer are forbidden. For true/false, never return an answer boolean. Copy sourceEvidence into supportedStatement. For mode=supported, question must equal supportedStatement and mutation must be null. For mode=mutated, change exactly one occurrence using mutation.sourceValue and mutation.replacementValue; question must equal the locally reproducible mutation. Prefer the requested polarity, but use supported mode whenever a safe mutation is unavailable.`
     : "";
   const conceptMasteryInstructions = input.conceptMasteryMode
-    ? `Test only transferable instructional concepts taught in the source: definitions, relationships, mechanisms, formulas, methods, reasoning, applications, or examples needed to understand those concepts. Ask the concept directly. Never begin with or use phrases such as "According to the lesson", "According to the video", "In the lecture", or "What did the presenter say?" Never test exam or unit weighting, points, grades, course schedules, requirements, readings, assignments, instructor or teaching-assistant identity or biography, video metadata, introductions, outros, promotions, jokes, or what the course will cover. Include a number only when it is necessary to understand or solve the instructional concept, never merely because it appeared in the source.`
+    ? `Test only transferable instructional concepts taught in the source: definitions, relationships, mechanisms, formulas, methods, reasoning, applications, or examples needed to understand those concepts. Ask the concept directly. The question, concept, structured claim, and learner-visible explanation must stand alone without referring to a lesson, transcript, video, lecture, lecturer, presenter, narrator, or speaker. Never begin any question with "According to". Never test exam or unit weighting, points, grades, course schedules, requirements, readings, assignments, instructor or teaching-assistant identity or biography, video metadata, introductions, outros, promotions, jokes, or future course coverage. Include a number only when it is necessary to understand or solve the instructional concept, never merely because it appeared in the source.`
     : "";
   return [
     {
@@ -795,6 +796,14 @@ function validateQuiz(quiz, input) {
   const prompts = accepted.map((question) => question.question);
   const questions = quiz.questions.map((rawQuestion, index) => {
     const expectedId = `q${input.questionOffset + index + 1}`;
+    if (
+      input.rawConceptValidationMode &&
+      !questionTestsTaughtConcept(rawQuestion)
+    ) {
+      validationFailure(
+        `Question ${index + 1} must directly test a taught concept without source framing or course logistics.`,
+      );
+    }
     const question = normalizeGeneratedQuestion(rawQuestion, {
       expectedId,
       automaticMode: input.automaticMode,
@@ -1532,13 +1541,14 @@ async function callDeepSeekJson(
         ...(input.legacyMode ? { reasoning_effort: "high" } : {}),
         ...(input.legacyMode ? {} : { temperature: 0.2 }),
         response_format: { type: "json_object" },
-        max_tokens: input.legacyMode
-          ? 48_000
-          : input.questionCount === 1
-            ? 4_096
-            : input.questionCount === 2
-              ? 6_144
-              : 8_192,
+        max_tokens:
+          input.legacyMode && !input.legacyAutomaticRecoveryMode
+            ? 48_000
+            : input.questionCount === 1
+              ? 4_096
+              : input.questionCount === 2
+                ? 6_144
+                : 8_192,
         stream: true,
         stream_options: { include_usage: true },
       }),
@@ -1731,6 +1741,7 @@ export async function generateQuizFromPlainText(
       "The complete transcript is too large for the local DeepSeek request. It was not sampled or truncated.",
     );
   }
+  const continuationStartIndex = Number(input.continuation?.startIndex ?? 0);
   const legacyMode =
     rawInput?.generationProfile === "legacy_reasoning_v5_1" ||
     input.continuation?.promptVersion === "quiz-local-json-stream-v5.0" ||
@@ -1749,10 +1760,26 @@ export async function generateQuizFromPlainText(
     !stableV52Mode &&
     !automaticV53Mode &&
     input.continuation?.promptVersion === "quiz-local-json-stream-v5.4";
-  const automaticMode = !legacyMode && !stableV52Mode;
-  const groundedMode = automaticMode && !automaticV53Mode;
+  const groundedV55Mode =
+    !legacyMode &&
+    !stableV52Mode &&
+    !automaticV53Mode &&
+    input.continuation?.promptVersion === "quiz-local-json-stream-v5.5";
+  const legacyAutomaticRecoveryMode = legacyMode && continuationStartIndex > 0;
+  if (stableV52Mode && continuationStartIndex > 0) {
+    throw new GenerationFailure(
+      "This incomplete stable-v5.2 bank requires a compatibility upgrade before it can recover.",
+      "local_state_conflict",
+    );
+  }
+  const automaticMode =
+    legacyAutomaticRecoveryMode || (!legacyMode && !stableV52Mode);
+  const groundedMode = !legacyMode && automaticMode && !automaticV53Mode;
   input.groundedMode = groundedMode;
-  input.conceptMasteryMode = groundedMode && !groundedV54Mode;
+  input.conceptMasteryMode =
+    (groundedMode && !groundedV54Mode) || legacyAutomaticRecoveryMode;
+  input.rawConceptValidationMode = input.conceptMasteryMode && !groundedV55Mode;
+  input.legacyAutomaticRecoveryMode = legacyAutomaticRecoveryMode;
   if (
     input.conceptMasteryMode &&
     buildInstructionalExcerpts(input.plainText).length === 0
@@ -1801,7 +1828,6 @@ export async function generateQuizFromPlainText(
     input.questionTypePlan,
     polaritySeed,
   );
-  const continuationStartIndex = Number(input.continuation?.startIndex ?? 0);
   const continuationQuestions = Array.isArray(
     input.continuation?.acceptedQuestions,
   )
@@ -1902,10 +1928,14 @@ export async function generateQuizFromPlainText(
             reasoningEffort: "none",
             promptVersion: groundedV54Mode
               ? "quiz-local-json-stream-v5.4"
-              : PROMPT_VERSION,
+              : groundedV55Mode
+                ? "quiz-local-json-stream-v5.5"
+                : PROMPT_VERSION,
             validatorVersion: groundedV54Mode
               ? "validator-local-progressive-v4.3"
-              : VALIDATOR_VERSION,
+              : groundedV55Mode
+                ? "validator-local-progressive-v4.4"
+                : VALIDATOR_VERSION,
             importVersion: IMPORT_VERSION,
             generationProfile: GENERATION_PROFILE,
             generationId: input.generationId,
@@ -1942,12 +1972,18 @@ export async function generateQuizFromPlainText(
           : 1,
       initialRetryKind: rawInput?.retryKind ?? input.continuation?.retryKind,
       initialAutomaticRetryCount: Number.isInteger(
-        rawInput?.automaticRetryCount,
+        rawInput?.retryBudgetUsedCount,
       )
-        ? rawInput.automaticRetryCount
-        : Number.isInteger(input.continuation?.automaticRetryCount)
-          ? input.continuation.automaticRetryCount
-          : 0,
+        ? rawInput.retryBudgetUsedCount
+        : Number.isInteger(input.continuation?.retryBudgetUsedCount)
+          ? input.continuation.retryBudgetUsedCount
+          : Number.isInteger(rawInput?.automaticRetryCount)
+            ? rawInput.automaticRetryCount
+            : Number.isInteger(input.continuation?.automaticRetryCount)
+              ? input.continuation.automaticRetryCount
+              : 0,
+      retryOrdinals: input.continuation?.retryOrdinals,
+      previousOutcome: input.continuation?.previousOutcome,
       lastChunkAt,
     });
   }
@@ -1962,11 +1998,7 @@ export async function generateQuizFromPlainText(
           questionOffset,
           input.questionCount,
         );
-    const classification = retryNextMissing
-      ? "automatic_retry"
-      : continuationStartIndex > 0
-        ? "manual_continuation"
-        : "primary";
+    const classification = retryNextMissing ? "automatic_retry" : "primary";
     if (classification === "automatic_retry") {
       totals.retryCount += 1;
       retryNextMissing = false;
@@ -2218,16 +2250,37 @@ async function generateAutomaticQuiz({
   initialRetryKind,
   lastChunkAt: initialLastChunkAt,
   initialAutomaticRetryCount = 0,
+  retryOrdinals: initialRetryOrdinals = [],
+  previousOutcome,
 }) {
   let callIndex = initialCallIndex;
   let ordinalAttempt = initialOrdinalAttempt;
-  let retryKind = ordinalAttempt > 1 ? initialRetryKind : undefined;
+  const retryOrdinals = new Set(
+    Array.isArray(initialRetryOrdinals)
+      ? initialRetryOrdinals.filter(
+          (ordinal) =>
+            Number.isInteger(ordinal) && ordinal >= 1 && ordinal <= 15,
+        )
+      : [],
+  );
+  const historicalRetryKind =
+    automaticRetryKindForFailure(previousOutcome) ?? "automatic_resume";
+  let retryKind =
+    ordinalAttempt > 1
+      ? (initialRetryKind ?? historicalRetryKind)
+      : retryOrdinals.has(acceptedQuestions.length + 1)
+        ? historicalRetryKind
+        : undefined;
   let automaticRetryCount = initialAutomaticRetryCount;
   let cycleAutomaticRetryCount = 0;
   const cycleRetriesByOrdinalAndClass = new Map();
-  const totalAutomaticRetryLimit = input.groundedMode
-    ? MAX_V5_4_AUTOMATIC_RETRIES
-    : MAX_V5_3_AUTOMATIC_RETRIES;
+  const totalAutomaticRetryLimit = input.legacyAutomaticRecoveryMode
+    ? MAX_V5_6_AUTOMATIC_RETRIES
+    : input.rawConceptValidationMode
+      ? MAX_V5_6_AUTOMATIC_RETRIES
+      : input.groundedMode
+        ? MAX_V5_4_AUTOMATIC_RETRIES
+        : MAX_V5_3_AUTOMATIC_RETRIES;
   let lastChunkAt = initialLastChunkAt;
 
   while (acceptedQuestions.length < input.questionCount) {
@@ -2238,8 +2291,15 @@ async function generateAutomaticQuiz({
       );
     }
     const questionOffset = acceptedQuestions.length;
-    const classification = ordinalAttempt > 1 ? "automatic_retry" : "primary";
-    const callRetryKind = retryKind;
+    const previouslyAttempted = retryOrdinals.has(questionOffset + 1);
+    if (previouslyAttempted && ordinalAttempt < 2) ordinalAttempt = 2;
+    const classification =
+      ordinalAttempt > 1 || previouslyAttempted ? "automatic_retry" : "primary";
+    const callRetryKind =
+      classification === "automatic_retry"
+        ? (retryKind ?? historicalRetryKind)
+        : undefined;
+    retryKind = callRetryKind;
     if (classification === "automatic_retry") {
       if (
         !retryKind ||
@@ -2263,7 +2323,7 @@ async function generateAutomaticQuiz({
     const chunkInput = {
       ...input,
       automaticMode: true,
-      legacyMode: false,
+      legacyMode: input.legacyAutomaticRecoveryMode === true,
       questionCount: 1,
       totalQuestionCount: input.questionCount,
       questionOffset,
@@ -2422,9 +2482,11 @@ async function generateAutomaticQuiz({
 
     await onCall({
       protocolVersion: metadata.protocolVersion,
-      ...(metadata.protocolVersion === PROTOCOL_VERSION
-        ? { purpose: "generation" }
-        : {}),
+      ...(input.legacyAutomaticRecoveryMode
+        ? { purpose: "automatic_recovery" }
+        : metadata.protocolVersion === PROTOCOL_VERSION
+          ? { purpose: "generation" }
+          : {}),
       generationSessionId: input.generationSessionId,
       recoverySessionId: input.recoverySessionId,
       callIndex,
@@ -2451,8 +2513,10 @@ async function generateAutomaticQuiz({
     callIndex += 1;
 
     if (!callFailure) {
-      ordinalAttempt = 1;
-      retryKind = undefined;
+      retryOrdinals.delete(questionOffset + 1);
+      const nextOrdinalWasAttempted = retryOrdinals.has(questionOffset + 2);
+      ordinalAttempt = nextOrdinalWasAttempted ? 2 : 1;
+      retryKind = nextOrdinalWasAttempted ? historicalRetryKind : undefined;
       const complete = acceptedQuestions.length === input.questionCount;
       onProgress(
         complete ? "finalizing_questions" : "creating_questions",

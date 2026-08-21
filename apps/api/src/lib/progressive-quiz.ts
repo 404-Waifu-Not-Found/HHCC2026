@@ -5,6 +5,7 @@ import {
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
   LocalAcceptedQuestionSummarySchema,
+  LocalGenerationCallOutcomeSchema,
   LocalGenerationProfileSchema,
   LocalQuestionPlanSchema,
   LocalQuizProgressiveImportVersionSchema,
@@ -294,9 +295,10 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
+    const groundedV56 = value.promptVersion === "quiz-local-json-stream-v5.6";
     const groundedV55 = value.promptVersion === "quiz-local-json-stream-v5.5";
     const groundedV54 = value.promptVersion === "quiz-local-json-stream-v5.4";
-    const grounded = groundedV55 || groundedV54;
+    const grounded = groundedV56 || groundedV55 || groundedV54;
     const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
     const metadataMatches = grounded
@@ -304,9 +306,11 @@ export const ProgressiveQuizSummarySchema = z
         value.importVersion === "extension-progressive-import-v6" &&
         value.reasoningEffort === "none" &&
         value.validatorVersion ===
-          (groundedV55
-            ? "validator-local-progressive-v4.4"
-            : "validator-local-progressive-v4.3") &&
+          (groundedV56
+            ? "validator-local-progressive-v4.5"
+            : groundedV55
+              ? "validator-local-progressive-v4.4"
+              : "validator-local-progressive-v4.3") &&
         value.generationProfile === "evidence_grounded_auto_v5_4" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
@@ -465,6 +469,10 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
     ])
     .nullable()
     .default(null),
+  latest_generation_session_id: z.string().uuid().nullable().default(null),
+  next_call_index: z.coerce.number().int().min(0).max(128).default(0),
+  retry_ordinals_json: z.string().default("[]"),
+  previous_outcome: LocalGenerationCallOutcomeSchema.nullable().default(null),
 });
 
 export const PROGRESSIVE_GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -496,7 +504,19 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
     ,(
       SELECT CASE
         WHEN COUNT(DISTINCT event.recovery_session_id) > 0
-          THEN COUNT(DISTINCT event.recovery_session_id) - 1
+          THEN MAX(
+            0,
+            COUNT(DISTINCT event.recovery_session_id) - CASE
+              WHEN EXISTS (
+                SELECT 1
+                FROM quiz_generation_call_events initial
+                WHERE initial.quiz_id = qb.id
+                  AND initial.protocol_version IN (7, 8)
+                  AND initial.call_index = 0
+              ) THEN 1
+              ELSE 0
+            END
+          )
         ELSE 0
       END
       FROM quiz_generation_call_events event
@@ -601,6 +621,60 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       ORDER BY event.call_index DESC
       LIMIT 1
     ) AS next_retry_kind
+    ,(
+      SELECT event.generation_session_id
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+      ORDER BY event.created_at DESC, event.call_index DESC
+      LIMIT 1
+    ) AS latest_generation_session_id
+    ,COALESCE((
+      SELECT MAX(event.call_index) + 1
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.generation_session_id = (
+          SELECT latest.generation_session_id
+          FROM quiz_generation_call_events latest
+          WHERE latest.quiz_id = qb.id
+          ORDER BY latest.created_at DESC, latest.call_index DESC
+          LIMIT 1
+        )
+    ), 0) AS next_call_index
+    ,COALESCE((
+      SELECT json_group_array(attempted.ordinal)
+      FROM (
+        SELECT DISTINCT event.start_ordinal + offsets.offset + 1 AS ordinal
+        FROM quiz_generation_call_events event
+        JOIN (
+          SELECT 0 AS offset UNION ALL SELECT 1 UNION ALL SELECT 2
+        ) offsets ON offsets.offset < event.requested_count
+        WHERE event.quiz_id = qb.id
+          AND event.start_ordinal + offsets.offset >= (
+            SELECT COUNT(*) FROM questions stored_question
+            WHERE stored_question.quiz_id = qb.id
+          )
+          AND (
+            event.outcome_code <> 'complete'
+            OR event.accepted_count < event.requested_count
+          )
+        ORDER BY ordinal
+      ) attempted
+    ), '[]') AS retry_ordinals_json
+    ,(
+      SELECT event.outcome_code
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.start_ordinal <= (
+          SELECT COUNT(*) FROM questions stored_question
+          WHERE stored_question.quiz_id = qb.id
+        )
+        AND event.start_ordinal + event.requested_count > (
+          SELECT COUNT(*) FROM questions stored_question
+          WHERE stored_question.quiz_id = qb.id
+        )
+      ORDER BY event.created_at DESC, event.call_index DESC
+      LIMIT 1
+    ) AS previous_outcome
   FROM quiz_banks qb
   WHERE qb.id = ?
   LIMIT 1`;
@@ -644,6 +718,29 @@ export type ProgressiveGenerationSnapshot = {
     | "duplicate_repair"
     | "answer_repair"
     | "automatic_resume"
+    | null;
+  latestGenerationSessionId: string | null;
+  nextCallIndex: number;
+  retryOrdinals: number[];
+  previousOutcome:
+    | "complete"
+    | "partial_accepted"
+    | "transient_http"
+    | "network_interrupted"
+    | "timeout"
+    | "empty_content"
+    | "truncated_json"
+    | "finish_length"
+    | "schema_invalid"
+    | "type_or_order_mismatch"
+    | "duplicate_question"
+    | "answer_mapping_invalid"
+    | "credential_required"
+    | "billing_required"
+    | "local_state_conflict"
+    | "append_conflict"
+    | "source_unavailable"
+    | "recovery_budget_exhausted"
     | null;
 };
 
@@ -700,6 +797,10 @@ export async function readProgressiveGenerationSnapshot(
       claimHeartbeatAt: row.data.claim_heartbeat_at,
       nextOrdinalAttempt: row.data.next_ordinal_attempt,
       nextRetryKind: row.data.next_retry_kind,
+      latestGenerationSessionId: row.data.latest_generation_session_id,
+      nextCallIndex: row.data.next_call_index,
+      retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
+      previousOutcome: row.data.previous_outcome,
     };
   }
 
@@ -710,7 +811,8 @@ export async function readProgressiveGenerationSnapshot(
   );
   const automatic =
     summary.generationProfile === "stable_auto_recovery_v5_3" ||
-    summary.generationProfile === "evidence_grounded_auto_v5_4";
+    summary.generationProfile === "evidence_grounded_auto_v5_4" ||
+    summary.resultProtocolVersion === 5;
   const stalled =
     (availability.state === "generating" ||
       availability.state === "retrying" ||
@@ -747,7 +849,26 @@ export async function readProgressiveGenerationSnapshot(
     claimHeartbeatAt: row.data.claim_heartbeat_at,
     nextOrdinalAttempt: row.data.next_ordinal_attempt,
     nextRetryKind: row.data.next_retry_kind,
+    latestGenerationSessionId: row.data.latest_generation_session_id,
+    nextCallIndex: row.data.next_call_index,
+    retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
+    previousOutcome: row.data.previous_outcome,
   };
+}
+
+function parseRetryOrdinals(value: string): number[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed)]
+      .filter(
+        (ordinal): ordinal is number =>
+          Number.isInteger(ordinal) && ordinal >= 1 && ordinal <= 15,
+      )
+      .sort((left, right) => left - right);
+  } catch {
+    return [];
+  }
 }
 
 function parseOutcomeCounts(value: string): Record<string, number> {

@@ -16,13 +16,14 @@ import {
   type LocalGenerationCallEvent,
   type LocalGenerationCallEventV3,
   type LocalGenerationCallEventV4,
+  type LegacyAutomaticRecoveryCallEvent,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { ApiError } from "../lib/errors";
-import { quizGenerationProfile } from "../lib/generation-rollout";
+import { generationProfileAllowsNewBank } from "../lib/generation-rollout";
 import { createId, now } from "../lib/ids";
 import { requireIdempotencyKey } from "../lib/idempotency";
 import { enforceRateLimit } from "../lib/rate-limit";
@@ -42,9 +43,12 @@ const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
 const MAX_V5_3_AUTOMATIC_RETRIES = 12;
 const MAX_V5_4_AUTOMATIC_RETRIES = 48;
+const MAX_V5_6_AUTOMATIC_RETRIES = 12;
 
 type AutomaticGenerationCallEvent =
-  LocalGenerationCallEventV3 | LocalGenerationCallEventV4;
+  | LegacyAutomaticRecoveryCallEvent
+  | LocalGenerationCallEventV3
+  | LocalGenerationCallEventV4;
 
 function isAutomaticGenerationProfile(
   profile: ProgressiveQuizSummary["generationProfile"],
@@ -92,11 +96,12 @@ quizImportsRouter.post("/progressive", async (c) => {
     windowSeconds: 60,
   });
   const input = await parseJson(c, ExtensionQuizProgressiveImportRequestSchema);
-  const enabledProfile = quizGenerationProfile(c.env, user.id);
   if (
-    input.chunk.generationProfile &&
-    input.chunk.generationProfile !== "legacy_reasoning_v5_1" &&
-    input.chunk.generationProfile !== enabledProfile.generationProfile
+    !generationProfileAllowsNewBank(
+      c.env,
+      user.id,
+      input.chunk.generationProfile ?? "legacy_reasoning_v5_1",
+    )
   ) {
     throw new ApiError(
       403,
@@ -358,6 +363,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     importKey,
     timestamp,
     summary.generationProfile,
+    snapshot.claimRecoverySessionId ?? undefined,
   );
   return c.json(
     ExtensionQuizProgressiveImportResponseSchema.parse(
@@ -417,11 +423,14 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
   const expectedProtocol = expectedAutomaticProtocol(
     snapshot.summary.generationProfile,
   );
-  if (
-    (expectedProtocol === null && automaticEvent) ||
-    (expectedProtocol !== null &&
-      (!automaticEvent || input.protocolVersion !== expectedProtocol))
-  ) {
+  const legacyAutomaticRecovery = isLegacyAutomaticRecoveryCallEvent(input);
+  const protocolMatches =
+    snapshot.summary.generationProfile === "legacy_reasoning_v5_1"
+      ? !automaticEvent || legacyAutomaticRecovery
+      : expectedProtocol === null
+        ? !automaticEvent
+        : automaticEvent && input.protocolVersion === expectedProtocol;
+  if (!protocolMatches) {
     throw new ApiError(
       409,
       "generation_call_protocol_mismatch",
@@ -452,16 +461,33 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     );
   }
 
+  if (input.classification === "manual_continuation") {
+    throw new ApiError(
+      422,
+      "manual_generation_continuation_removed",
+      "New continuation calls must be recorded as automatic recovery.",
+    );
+  }
+
   if (input.classification === "automatic_retry") {
     const existingRetry = await c.env.DB.prepare(
-      "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND classification = 'automatic_retry'",
+      legacyAutomaticRecovery
+        ? "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND classification IN ('automatic_retry', 'manual_continuation')"
+        : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND classification = 'automatic_retry'",
     )
-      .bind(bank.id, input.generationSessionId)
+      .bind(
+        ...(legacyAutomaticRecovery
+          ? [bank.id]
+          : [bank.id, input.generationSessionId]),
+      )
       .first<{ count: number }>();
     const retryLimit = automaticEvent
-      ? snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4"
-        ? MAX_V5_4_AUTOMATIC_RETRIES
-        : MAX_V5_3_AUTOMATIC_RETRIES
+      ? legacyAutomaticRecovery ||
+        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
+        ? MAX_V5_6_AUTOMATIC_RETRIES
+        : snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4"
+          ? MAX_V5_4_AUTOMATIC_RETRIES
+          : MAX_V5_3_AUTOMATIC_RETRIES
       : 1;
     if (Number(existingRetry?.count ?? 0) >= retryLimit) {
       throw new ApiError(
@@ -474,6 +500,7 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     }
     if (automaticEvent) {
       const grounded =
+        legacyAutomaticRecovery ||
         snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4";
       const contentRetry = new Set([
         "empty_content",
@@ -650,7 +677,9 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
         input.state === "cooldown" && input.nextRecoveryAt
           ? Date.parse(input.nextRecoveryAt)
           : undefined,
-      recoverySessionId: input.recoverySessionId ?? summary.recoverySessionId,
+      recoverySessionId: isAutomaticGenerationProfile(summary.generationProfile)
+        ? (input.recoverySessionId ?? summary.recoverySessionId)
+        : summary.recoverySessionId,
       stateChangedAt:
         summary.generationState === input.state
           ? summary.stateChangedAt
@@ -780,7 +809,8 @@ async function persistProgressiveQuiz(input: {
     source: "extension-local-json-stream",
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+      (chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.4"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
         : chunk.promptVersion === "quiz-local-json-stream-v5.3"
@@ -812,7 +842,8 @@ async function persistProgressiveQuiz(input: {
       chunk.promptVersion === "quiz-local-json-stream-v5.2" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.3" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.4" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.5",
+      chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.6",
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]
       : [],
@@ -1057,8 +1088,20 @@ function isAutomaticCallEvent(
 ): event is AutomaticGenerationCallEvent {
   return (
     "protocolVersion" in event &&
-    (event.protocolVersion === AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+    (event.protocolVersion === 5 ||
+      event.protocolVersion === AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
+  );
+}
+
+function isLegacyAutomaticRecoveryCallEvent(
+  event: LocalGenerationCallEvent,
+): event is LegacyAutomaticRecoveryCallEvent {
+  return (
+    "protocolVersion" in event &&
+    event.protocolVersion === 5 &&
+    "purpose" in event &&
+    event.purpose === "automatic_recovery"
   );
 }
 
@@ -1129,6 +1172,16 @@ async function assertGenerationCallSequence(
   acceptedQuestionCount: number,
   event: LocalGenerationCallEvent,
 ): Promise<void> {
+  if (isLegacyAutomaticRecoveryCallEvent(event)) {
+    await assertLegacyAutomaticRecoveryCallSequence(
+      db,
+      quizId,
+      importKey,
+      acceptedQuestionCount,
+      event,
+    );
+    return;
+  }
   if (isAutomaticCallEvent(event)) {
     await assertAutomaticGenerationCallSequence(
       db,
@@ -1253,6 +1306,145 @@ async function assertGenerationCallSequence(
       409,
       "generation_call_classification_conflict",
       "The call classification changed within one generation session.",
+    );
+  }
+}
+
+async function assertLegacyAutomaticRecoveryCallSequence(
+  db: D1Database,
+  quizId: string,
+  importKey: string,
+  acceptedQuestionCount: number,
+  event: LegacyAutomaticRecoveryCallEvent,
+): Promise<void> {
+  const eventFrontier = event.startIndex + event.acceptedCount;
+  if (
+    event.startIndex !== acceptedQuestionCount &&
+    eventFrontier !== acceptedQuestionCount
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_progress_conflict",
+      "The recovery event does not match the stored question frontier.",
+    );
+  }
+
+  const claim = await db
+    .prepare(
+      "SELECT generation_session_id, recovery_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+    )
+    .bind(quizId)
+    .first<{
+      generation_session_id: string;
+      recovery_session_id: string | null;
+      claim_key: string;
+      lease_expires_at: number;
+    }>();
+  if (
+    claim?.generation_session_id !== event.generationSessionId ||
+    claim.recovery_session_id !== event.recoverySessionId ||
+    claim.claim_key !== importKey ||
+    Number(claim.lease_expires_at) <= now()
+  ) {
+    throw new ApiError(
+      409,
+      "generation_recovery_lease_conflict",
+      "This tab no longer owns the legacy automatic-recovery lease.",
+    );
+  }
+
+  if (event.callIndex > 0) {
+    const previous = await storedCallEvent(
+      db,
+      quizId,
+      event.generationSessionId,
+      event.callIndex - 1,
+    );
+    if (!previous) {
+      throw new ApiError(
+        409,
+        "generation_call_sequence_conflict",
+        "Legacy recovery call events must remain consecutive.",
+      );
+    }
+  }
+
+  const history = await db
+    .prepare(
+      `SELECT
+         COUNT(*) AS attempts,
+         COALESCE(MAX(COALESCE(ordinal_attempt, 1)), 1) AS latest_attempt,
+         (
+           SELECT covering.outcome_code
+           FROM quiz_generation_call_events covering
+           WHERE covering.quiz_id = ?
+             AND covering.start_ordinal <= ?
+             AND covering.start_ordinal + covering.requested_count > ?
+             AND (
+               covering.outcome_code <> 'complete'
+               OR covering.accepted_count < covering.requested_count
+             )
+           ORDER BY covering.created_at DESC, covering.call_index DESC
+           LIMIT 1
+         ) AS latest_outcome
+       FROM quiz_generation_call_events attempted
+       WHERE attempted.quiz_id = ?
+         AND attempted.start_ordinal <= ?
+         AND attempted.start_ordinal + attempted.requested_count > ?
+         AND (
+           attempted.outcome_code <> 'complete'
+           OR attempted.accepted_count < attempted.requested_count
+         )`,
+    )
+    .bind(
+      quizId,
+      event.startIndex,
+      event.startIndex,
+      quizId,
+      event.startIndex,
+      event.startIndex,
+    )
+    .first<{
+      attempts: number;
+      latest_attempt: number;
+      latest_outcome: string | null;
+    }>();
+  const previouslyAttempted = Number(history?.attempts ?? 0) > 0;
+  const expectedClassification = previouslyAttempted
+    ? "automatic_retry"
+    : "primary";
+  if (event.classification !== expectedClassification) {
+    throw new ApiError(
+      409,
+      "generation_call_classification_conflict",
+      previouslyAttempted
+        ? "A previously failed ordinal must be recorded as an automatic retry."
+        : "A never-attempted ordinal must be recorded as a primary call.",
+    );
+  }
+  if (previouslyAttempted) {
+    const expectedAttempt = Math.min(
+      24,
+      Math.max(2, Number(history?.latest_attempt ?? 1) + 1),
+    );
+    if (
+      event.ordinalAttempt !== expectedAttempt ||
+      !retryKindMatchesOutcome(
+        event.retryKind,
+        history?.latest_outcome ?? "local_state_conflict",
+      )
+    ) {
+      throw new ApiError(
+        409,
+        "generation_call_retry_conflict",
+        "The retry metadata does not match the failed ordinal history.",
+      );
+    }
+  } else if (event.ordinalAttempt !== 1 || event.retryKind !== undefined) {
+    throw new ApiError(
+      409,
+      "generation_call_sequence_conflict",
+      "A new ordinal must begin with primary attempt one.",
     );
   }
 }
@@ -1394,9 +1586,10 @@ async function renewGenerationClaim(
   profile: ProgressiveQuizSummary["generationProfile"],
   recoverySessionId?: string,
 ): Promise<void> {
-  const leaseMs = isAutomaticGenerationProfile(profile)
-    ? AUTOMATIC_GENERATION_CLAIM_LEASE_MS
-    : LEGACY_GENERATION_CLAIM_LEASE_MS;
+  const leaseMs =
+    recoverySessionId || isAutomaticGenerationProfile(profile)
+      ? AUTOMATIC_GENERATION_CLAIM_LEASE_MS
+      : LEGACY_GENERATION_CLAIM_LEASE_MS;
   await db
     .prepare(
       "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ?, heartbeat_at = COALESCE(?, heartbeat_at) WHERE quiz_id = ? AND claim_key = ? AND (? IS NULL OR recovery_session_id = ?)",

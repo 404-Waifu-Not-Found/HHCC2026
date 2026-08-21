@@ -210,6 +210,11 @@ export default function AdminJobsScreen() {
                   : ""}
               </Text>
             ) : null}
+            {generation.manualContinuations > 0 ? (
+              <Text style={[styles.note, { color: theme.textMuted }]}>
+                {copy.legacyManualContinuationsNote}
+              </Text>
+            ) : null}
             {Object.keys(generation.outcomeCounts).length ? (
               <Text style={[styles.note, { color: theme.textMuted }]}>
                 {copy.outcomes}: {formatOutcomeCounts(generation.outcomeCounts)}

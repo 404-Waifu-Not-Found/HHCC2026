@@ -68,6 +68,13 @@ const STATE_EXPRESSION =
 const PROFILE_EXPRESSION =
   "COALESCE(json_extract(q.quality_summary_json, '$.generationProfile'), 'legacy_reasoning_v5_1')";
 const AUTOMATIC_PROFILE_EXPRESSION = `${PROFILE_EXPRESSION} IN ('stable_auto_recovery_v5_3', 'evidence_grounded_auto_v5_4')`;
+const AUTOMATIC_RECOVERY_EXPRESSION = `(
+  ${AUTOMATIC_PROFILE_EXPRESSION}
+  OR (
+    ${PROFILE_EXPRESSION} = 'legacy_reasoning_v5_1'
+    AND COALESCE(CAST(json_extract(q.quality_summary_json, '$.resultProtocolVersion') AS INTEGER), 5) = 5
+  )
+)`;
 const LAST_PROGRESS_EXPRESSION = `MAX(
   COALESCE(CAST(json_extract(q.quality_summary_json, '$.lastQuestionAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
   COALESCE(CAST(json_extract(q.quality_summary_json, '$.stateChangedAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
@@ -223,9 +230,9 @@ export async function readAdminGenerationCounts(
       `SELECT
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'generating' AND ${LAST_PROGRESS_EXPRESSION} >= ? THEN 1 ELSE 0 END) AS generating,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'retrying' AND ${LAST_PROGRESS_EXPRESSION} >= ? THEN 1 ELSE 0 END) AS retrying,
-        SUM(CASE WHEN ${STATE_EXPRESSION} = 'recovering' OR (${AUTOMATIC_PROFILE_EXPRESSION} AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS recovering,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'recovering' OR (${AUTOMATIC_RECOVERY_EXPRESSION} AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS recovering,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'cooldown' THEN 1 ELSE 0 END) AS cooldown,
-        SUM(CASE WHEN ${STATE_EXPRESSION} = 'retry_required' OR (NOT (${AUTOMATIC_PROFILE_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS retry_required,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'retry_required' OR (NOT (${AUTOMATIC_RECOVERY_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS retry_required,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'action_required' THEN 1 ELSE 0 END) AS action_required,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'generation_failed' THEN 1 ELSE 0 END) AS generation_failed,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'ready' THEN 1 ELSE 0 END) AS ready
@@ -286,7 +293,7 @@ export async function readRecentGenerationFailures(
        WHERE ${validProgressiveGenerationWhere()}
          AND (
            ${STATE_EXPRESSION} IN ('retry_required', 'action_required', 'generation_failed')
-           OR (NOT (${AUTOMATIC_PROFILE_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?)
+           OR (NOT (${AUTOMATIC_RECOVERY_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?)
          )
        ORDER BY ${LAST_PROGRESS_EXPRESSION} DESC
        LIMIT ?`,
@@ -344,12 +351,12 @@ function generationFilterClause(
   }
   if (filters.state === "retry_required") {
     where.push(
-      `(${STATE_EXPRESSION} = 'retry_required' OR (NOT (${AUTOMATIC_PROFILE_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
+      `(${STATE_EXPRESSION} = 'retry_required' OR (NOT (${AUTOMATIC_RECOVERY_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
     );
     values.push(stalledBefore);
   } else if (filters.state === "recovering") {
     where.push(
-      `(${STATE_EXPRESSION} = 'recovering' OR (${AUTOMATIC_PROFILE_EXPRESSION} AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
+      `(${STATE_EXPRESSION} = 'recovering' OR (${AUTOMATIC_RECOVERY_EXPRESSION} AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
     );
     values.push(stalledBefore);
   } else if (filters.state === "generating" || filters.state === "retrying") {

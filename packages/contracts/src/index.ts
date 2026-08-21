@@ -318,23 +318,25 @@ export const LocalQuizPromptVersionSchema = z.enum([
   "quiz-local-json-stream-v5.3",
   "quiz-local-json-stream-v5.4",
   "quiz-local-json-stream-v5.5",
+  "quiz-local-json-stream-v5.6",
 ]);
 export type LocalQuizPromptVersion = z.infer<
   typeof LocalQuizPromptVersionSchema
 >;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.5" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.6" as const;
 export const LocalQuizValidatorVersionSchema = z.enum([
   "validator-local-progressive-v4.0",
   "validator-local-progressive-v4.1",
   "validator-local-progressive-v4.2",
   "validator-local-progressive-v4.3",
   "validator-local-progressive-v4.4",
+  "validator-local-progressive-v4.5",
 ]);
 export type LocalQuizValidatorVersion = z.infer<
   typeof LocalQuizValidatorVersionSchema
 >;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
-  "validator-local-progressive-v4.4" as const;
+  "validator-local-progressive-v4.5" as const;
 export const LocalQuizProgressiveImportVersionSchema = z.enum([
   "extension-progressive-import-v3",
   "extension-progressive-import-v4",
@@ -349,6 +351,8 @@ export const LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION =
 export const LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v1" as const;
 export const LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
+  "question-stream-v5" as const;
+export const GROUNDED_V4_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v4" as const;
 export const AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v3" as const;
@@ -469,11 +473,13 @@ export const QuizGenerationProfileResponseSchema = z
       "0.8.3",
       "0.8.4",
       "0.8.5",
+      "0.8.6",
     ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      GROUNDED_V4_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     ]),
   })
@@ -481,7 +487,7 @@ export const QuizGenerationProfileResponseSchema = z
   .superRefine((value, context) => {
     const expected =
       value.generationProfile === "evidence_grounded_auto_v5_4"
-        ? ["0.8.5", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        ? ["0.8.6", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
         : value.generationProfile === "stable_auto_recovery_v5_3"
           ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
           : value.generationProfile === "stable_non_thinking_v5_2"
@@ -613,6 +619,69 @@ export const LegacyLocalGenerationCallEventSchema = z
       });
     }
   });
+
+export const LegacyAutomaticRecoveryCallEventSchema = z
+  .object({
+    protocolVersion: z.literal(LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+    purpose: z.literal("automatic_recovery"),
+    generationSessionId: z.string().uuid(),
+    recoverySessionId: z.string().uuid(),
+    callIndex: z.number().int().min(0).max(127),
+    startIndex: z.number().int().min(0).max(14),
+    ordinalAttempt: z.number().int().min(1).max(24),
+    requestedCount: z.literal(1),
+    acceptedCount: z.union([z.literal(0), z.literal(1)]),
+    classification: z.enum(["primary", "automatic_retry"]),
+    retryKind: AutomaticRetryKindSchema.optional(),
+    outcome: LocalGenerationCallOutcomeSchema,
+    retryDelayMs: z.number().int().min(0).max(300_000).default(0),
+    elapsedMs: z.number().int().min(0).max(900_000),
+    inputTokens: z.number().int().min(0).max(20_000_000).optional(),
+    outputTokens: z.number().int().min(0).max(2_000_000).optional(),
+    reasoningTokens: z.number().int().min(0).max(2_000_000).optional(),
+    usageComplete: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      (value.classification === "automatic_retry") !==
+      (value.retryKind !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message: "Only automatic retries require a retry kind.",
+      });
+    }
+    if (
+      (value.outcome === "complete" && value.acceptedCount !== 1) ||
+      value.outcome === "partial_accepted"
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message: "Legacy automatic recovery uses singleton calls.",
+      });
+    }
+    const usageFields = [
+      value.inputTokens,
+      value.outputTokens,
+      value.reasoningTokens,
+    ];
+    if (
+      value.usageComplete &&
+      usageFields.some((field) => field === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["usageComplete"],
+        message: "Complete usage requires all token counters.",
+      });
+    }
+  });
+export type LegacyAutomaticRecoveryCallEvent = z.infer<
+  typeof LegacyAutomaticRecoveryCallEventSchema
+>;
 export const LocalGenerationCallEventV3Schema = z
   .object({
     protocolVersion: z.literal(AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
@@ -739,6 +808,7 @@ export type LocalGenerationCallEventV4 = z.infer<
 >;
 
 export const LocalGenerationCallEventSchema = z.union([
+  LegacyAutomaticRecoveryCallEventSchema,
   LegacyLocalGenerationCallEventSchema,
   LocalGenerationCallEventV3Schema,
   LocalGenerationCallEventV4Schema,
@@ -746,6 +816,21 @@ export const LocalGenerationCallEventSchema = z.union([
 export type LocalGenerationCallEvent = z.infer<
   typeof LocalGenerationCallEventSchema
 >;
+
+const RetryOrdinalsSchema = z
+  .array(z.number().int().min(1).max(15))
+  .max(15)
+  .superRefine((value, context) => {
+    for (let index = 0; index < value.length; index += 1) {
+      if (index > 0 && value[index]! <= value[index - 1]!) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "Retry ordinals must be unique and strictly increasing.",
+        });
+      }
+    }
+  });
 
 export const GenerationRecordV2Schema = z
   .object({
@@ -1130,6 +1215,10 @@ export const LocalQuizContextSchema = z
         nextOrdinalAttempt: z.number().int().min(1).max(24).optional(),
         retryKind: AutomaticRetryKindSchema.optional(),
         automaticRetryCount: z.number().int().min(0).max(48).optional(),
+        retryBudgetUsedCount: z.number().int().min(0).max(48).optional(),
+        automaticRecoveryCount: z.number().int().min(0).max(24).optional(),
+        retryOrdinals: RetryOrdinalsSchema.optional(),
+        previousOutcome: LocalGenerationCallOutcomeSchema.optional(),
         acceptedQuestions: z
           .array(LocalAcceptedQuestionSummarySchema)
           .min(1)
@@ -1175,6 +1264,17 @@ export const LocalQuizContextSchema = z
         message: "Continuation must begin at the first missing question.",
       });
       return;
+    }
+    if (
+      value.continuation.retryOrdinals?.some(
+        (ordinal) => ordinal <= value.continuation!.startIndex,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation", "retryOrdinals"],
+        message: "Retry ordinals must belong to the missing suffix.",
+      });
     }
     const typePlan =
       value.continuation.questionPlan?.types ??
@@ -1345,18 +1445,21 @@ function validateLocalGenerationMetadata(
   value: LocalGenerationMetadata,
   context: z.RefinementCtx,
 ): void {
+  const groundedV56 = value.promptVersion === "quiz-local-json-stream-v5.6";
   const groundedV55 = value.promptVersion === "quiz-local-json-stream-v5.5";
   const groundedV54 = value.promptVersion === "quiz-local-json-stream-v5.4";
-  const grounded = groundedV55 || groundedV54;
+  const grounded = groundedV56 || groundedV55 || groundedV54;
   const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
   const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
   const valid = grounded
     ? value.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
       value.reasoningEffort === "none" &&
       value.validatorVersion ===
-        (groundedV55
+        (groundedV56
           ? LOCAL_QUIZ_VALIDATOR_VERSION
-          : "validator-local-progressive-v4.3") &&
+          : groundedV55
+            ? "validator-local-progressive-v4.4"
+            : "validator-local-progressive-v4.3") &&
       value.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION &&
       value.generationProfile === "evidence_grounded_auto_v5_4" &&
       Boolean(value.generationId) &&
@@ -1762,6 +1865,10 @@ export const AttemptGenerationResponseSchema = z
         nextOrdinalAttempt: z.number().int().min(1).max(24).optional(),
         retryKind: AutomaticRetryKindSchema.optional(),
         automaticRetryCount: z.number().int().min(0).max(48).optional(),
+        retryBudgetUsedCount: z.number().int().min(0).max(48).optional(),
+        automaticRecoveryCount: z.number().int().min(0).max(24).optional(),
+        retryOrdinals: RetryOrdinalsSchema.optional(),
+        previousOutcome: LocalGenerationCallOutcomeSchema.optional(),
         questionPlan: LocalQuestionPlanSchema.optional(),
         claim: GenerationClaimSchema,
         acceptedQuestions: z
@@ -1789,6 +1896,17 @@ export const AttemptGenerationResponseSchema = z
         message: "Continuation must describe the authoritative missing suffix.",
       });
       return;
+    }
+    if (
+      value.continuation.retryOrdinals?.some(
+        (ordinal) => ordinal <= value.continuation!.startIndex,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation", "retryOrdinals"],
+        message: "Retry ordinals must belong to the missing suffix.",
+      });
     }
     const typePlan =
       value.continuation.questionPlan?.types ??

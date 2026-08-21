@@ -69,6 +69,29 @@ test("source framing is removed without rewriting the concept question", () => {
     stripQuestionSourceFraming("根据本课，连续的三个条件是什么？"),
     "连续的三个条件是什么？",
   );
+
+  const preserved = [
+    "In the lesson's polynomial example, which factor is repeated?",
+    "In the video’s matrix-based representation, which row is reduced first?",
+    "Based on the lecturer's account, which premise follows?",
+    "According to the lecturer's account, which premise follows?",
+  ];
+  for (const question of preserved) {
+    assert.equal(stripQuestionSourceFraming(question), question, question);
+  }
+
+  assert.equal(
+    stripQuestionSourceFraming(
+      "According to the lecturer, what is continuity?",
+    ),
+    "What is continuity?",
+  );
+  assert.equal(
+    stripQuestionSourceFraming(
+      "According to the lecturer what continuity means",
+    ),
+    "What continuity means",
+  );
 });
 
 test("question focus gate rejects source and course trivia but accepts taught concepts", () => {
@@ -88,6 +111,45 @@ test("question focus gate rejects source and course trivia but accepts taught co
       question,
     );
   }
+
+  assert.equal(
+    questionTestsTaughtConcept({
+      concept: "continuity",
+      question: "According to the lesson, what is continuity?",
+      explanation: "A function is continuous when the limit equals its value.",
+    }),
+    false,
+  );
+  assert.equal(
+    questionTestsTaughtConcept({
+      concept: "continuity",
+      question: "What three conditions define continuity?",
+      explanation: "The transcript lists all three conditions.",
+    }),
+    false,
+  );
+  assert.equal(
+    questionTestsTaughtConcept({
+      concept: "continuity",
+      question: "What three conditions define continuity?",
+      explanation: "The lesson explicitly supports all three conditions.",
+    }),
+    false,
+  );
+  assert.equal(
+    questionTestsTaughtConcept({
+      concept: "continuity",
+      question: "What three conditions define continuity?",
+      explanation: "All three conditions must hold.",
+      claim: {
+        subject: "the lecturer's explanation",
+        relation: "defines",
+        value: "continuity",
+        cluster: "continuity conditions",
+      },
+    }),
+    false,
+  );
 
   const accepted = [
     "What three conditions must hold for a function to be continuous at x = c?",

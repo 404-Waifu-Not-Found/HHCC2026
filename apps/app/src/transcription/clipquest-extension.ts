@@ -527,13 +527,15 @@ export async function requestExtensionLocalQuiz(
 ): Promise<LocalConceptQuizGenerationResult> {
   const context = LocalQuizContextSchema.parse(rawContext);
   const minimumExtensionVersion =
-    context.generationProfile === "evidence_grounded_auto_v5_4"
+    context.continuation?.resultProtocolVersion === 5
       ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
-      : context.generationProfile === "stable_auto_recovery_v5_3"
-        ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
-        : context.generationProfile === "stable_non_thinking_v5_2"
-          ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
-          : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
+      : context.generationProfile === "evidence_grounded_auto_v5_4"
+        ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
+        : context.generationProfile === "stable_auto_recovery_v5_3"
+          ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
+          : context.generationProfile === "stable_non_thinking_v5_2"
+            ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
+            : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
   const requiredCapability =
     context.generationProfile === "evidence_grounded_auto_v5_4"
       ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY

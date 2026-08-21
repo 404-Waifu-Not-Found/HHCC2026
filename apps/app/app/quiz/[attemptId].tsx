@@ -246,7 +246,8 @@ export default function QuizScreen() {
           !recoveryAttemptedRef.current &&
           status.generation.state !== "ready" &&
           status.generation.state !== "action_required" &&
-          status.generation.state !== "generation_failed" &&
+          (status.generation.state !== "generation_failed" ||
+            status.continuation?.claim.state === "available") &&
           !hasActiveProgressiveGenerationForAttempt(attemptId)
         ) {
           recoveryAttemptedRef.current = true;

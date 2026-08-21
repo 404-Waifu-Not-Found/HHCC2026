@@ -5,6 +5,7 @@ import {
   STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   QuizGenerationProfileResponseSchema,
   QuizGenerationRolloutModeSchema,
+  type LocalGenerationProfile,
   type QuizGenerationProfileResponse,
   type QuizGenerationRolloutMode,
 } from "@clipquest/contracts";
@@ -43,7 +44,7 @@ export function quizGenerationProfile(
   if (grounded) {
     return QuizGenerationProfileResponseSchema.parse({
       generationProfile: "evidence_grounded_auto_v5_4",
-      minimumExtensionVersion: "0.8.5",
+      minimumExtensionVersion: "0.8.6",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     });
   }
@@ -92,5 +93,15 @@ export function quizGenerationProfile(
           minimumExtensionVersion: "0.8.0",
           requiredCapability: LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         },
+  );
+}
+
+export function generationProfileAllowsNewBank(
+  env: Parameters<typeof quizGenerationProfile>[0],
+  userId: string,
+  requestedProfile: LocalGenerationProfile,
+): boolean {
+  return (
+    quizGenerationProfile(env, userId).generationProfile === requestedProfile
   );
 }
