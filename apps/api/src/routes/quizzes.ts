@@ -27,6 +27,7 @@ import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
   generationAvailability,
+  gradeProgressiveShortAnswer,
   tryProgressiveQuizSummary,
 } from "../lib/progressive-quiz";
 import { enforceRateLimit } from "../lib/rate-limit";
@@ -933,6 +934,16 @@ async function gradeAnswer(
       RubricSchema,
       "short-answer rubric",
     );
+    if (attempt.quiz_pipeline_version === LOCAL_QUIZ_PIPELINE_VERSION) {
+      return {
+        correct: gradeProgressiveShortAnswer({
+          answer,
+          requiredIdeas: rubric.requiredIdeas,
+          acceptableAlternatives: rubric.acceptableAlternatives,
+        }),
+        feedback: question.explanation,
+      };
+    }
     const evidenceIds = new Set(parseQuestionEvidence(question));
     let evidence: z.infer<typeof StoredTranscriptSchema>["segments"] = [];
     if (evidenceIds.size > 0) {

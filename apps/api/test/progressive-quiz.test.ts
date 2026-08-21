@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   ProgressiveQuizSummarySchema,
   generationAvailability,
+  gradeProgressiveShortAnswer,
   parseProgressiveQuizSummary,
   tryProgressiveQuizSummary,
 } from "../src/lib/progressive-quiz";
@@ -120,5 +121,53 @@ describe("progressive quiz storage state", () => {
     expect(migration).toContain("pipeline_version = 9");
     expect(migration).not.toMatch(/DROP\s+INDEX/i);
     expect(migration).not.toMatch(/pipeline_version\s*=\s*8/i);
+  });
+});
+
+describe("progressive short-answer grading", () => {
+  const areaDerivativeRubric = {
+    requiredIdeas: [
+      "dA/dx is the ratio of a tiny change in area to a tiny change in x",
+      "As dx gets smaller, the ratio approaches the height of the graph at that point",
+      "For the x² graph, that height is x²",
+    ],
+    acceptableAlternatives: [
+      "dA/dx is the derivative of A; it is the limit of the change in area divided by the change in x, equal to the value of x² at that point.",
+    ],
+  };
+
+  it("accepts equivalent learner wording without a Worker-side model call", () => {
+    expect(
+      gradeProgressiveShortAnswer({
+        answer:
+          "It is the rate of change dA/dx, the added area divided by dx; as dx approaches zero it approaches x², the graph's height at x.",
+        ...areaDerivativeRubric,
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects answers that mention only one idea", () => {
+    expect(
+      gradeProgressiveShortAnswer({
+        answer: "It is a derivative.",
+        ...areaDerivativeRubric,
+      }),
+    ).toBe(false);
+  });
+
+  it("normalizes Chinese rubric wording without accepting a lone keyword", () => {
+    const rubric = {
+      requiredIdeas: ["它被称为积分", "这个函数表示从0到x的x²曲线下面积"],
+      acceptableAlternatives: ["x²从0到x的积分，也就是曲线下的面积"],
+    };
+    expect(
+      gradeProgressiveShortAnswer({
+        answer: "这是 x² 从 0 到 x 的积分，也就是曲线下的面积。",
+        ...rubric,
+      }),
+    ).toBe(true);
+    expect(gradeProgressiveShortAnswer({ answer: "积分", ...rubric })).toBe(
+      false,
+    );
   });
 });

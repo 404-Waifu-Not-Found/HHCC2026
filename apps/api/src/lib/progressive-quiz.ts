@@ -20,6 +20,67 @@ const PlannedQuestionCountSchema = z.union([
   z.literal(15),
 ]);
 
+const ENGLISH_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "in",
+  "is",
+  "it",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "this",
+  "to",
+  "was",
+  "what",
+  "when",
+  "which",
+  "with",
+]);
+
+const CJK_STOP_CHARACTERS = new Set([
+  "一",
+  "个",
+  "为",
+  "了",
+  "以",
+  "和",
+  "在",
+  "它",
+  "是",
+  "此",
+  "的",
+  "被",
+  "这",
+  "那",
+]);
+
+const TOKEN_ALIASES = new Map([
+  ["approach", "limit"],
+  ["approache", "limit"],
+  ["approaches", "limit"],
+  ["derivative", "rate"],
+  ["divide", "ratio"],
+  ["divid", "ratio"],
+  ["divided", "ratio"],
+  ["division", "ratio"],
+  ["height", "value"],
+  ["limiting", "limit"],
+  ["quotient", "ratio"],
+  ["smaller", "small"],
+  ["tiny", "small"],
+]);
+
 export const ProgressiveQuizSummarySchema = z
   .object({
     source: z.literal("extension-local-json-stream"),
@@ -171,4 +232,115 @@ export function generationAvailability(
     totalQuestions: summary.plannedCount,
     ...(!ready && summary.reasonCode ? { reasonCode: summary.reasonCode } : {}),
   });
+}
+
+/**
+ * Grade current progressive short answers without making a Worker-side model
+ * call. DeepSeek supplies bounded rubric ideas and acceptable paraphrases while
+ * generating the question in the extension; the authenticated API remains the
+ * authoritative grader by comparing normalized semantic tokens. Pipeline-7
+ * attempts keep their historical grader for compatibility.
+ */
+export function gradeProgressiveShortAnswer(input: {
+  answer: string;
+  requiredIdeas: string[];
+  acceptableAlternatives: string[];
+}): boolean {
+  const normalizedAnswer = normalizeRubricText(input.answer);
+  const answerTokens = rubricTokens(input.answer);
+  if (!normalizedAnswer || answerTokens.size === 0) return false;
+
+  const matchesAlternative = input.acceptableAlternatives.some(
+    (alternative) => {
+      const normalizedAlternative = normalizeRubricText(alternative);
+      if (!normalizedAlternative) return false;
+      if (
+        normalizedAnswer === normalizedAlternative ||
+        normalizedAnswer.includes(normalizedAlternative)
+      ) {
+        return true;
+      }
+      return tokenCoverage(answerTokens, rubricTokens(alternative), 0.67);
+    },
+  );
+  if (matchesAlternative) return true;
+
+  return input.requiredIdeas.every((idea) =>
+    tokenCoverage(answerTokens, rubricTokens(idea), 0.5),
+  );
+}
+
+function normalizeRubricText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .replace(/[’']/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function rubricTokens(value: string): Set<string> {
+  const normalized = normalizeRubricText(value);
+  const tokens = new Set<string>();
+  for (const rawToken of normalized.match(/[\p{L}\p{N}]+/gu) ?? []) {
+    if (/[\u3400-\u9fff\uf900-\ufaff]/u.test(rawToken)) {
+      addCjkTokens(tokens, rawToken);
+      continue;
+    }
+    const canonical = canonicalEnglishToken(rawToken);
+    if (canonical) tokens.add(canonical);
+  }
+  return tokens;
+}
+
+function addCjkTokens(tokens: Set<string>, value: string): void {
+  const meaningful = [...value].filter(
+    (character) =>
+      /[\u3400-\u9fff\uf900-\ufaff]/u.test(character) &&
+      !CJK_STOP_CHARACTERS.has(character),
+  );
+  meaningful.forEach((character) => tokens.add(character));
+  for (let index = 0; index + 1 < meaningful.length; index += 1) {
+    tokens.add(`${meaningful[index]}${meaningful[index + 1]}`);
+  }
+}
+
+function canonicalEnglishToken(value: string): string | null {
+  if (ENGLISH_STOP_WORDS.has(value)) return null;
+  const directAlias = TOKEN_ALIASES.get(value);
+  if (directAlias) return directAlias;
+  let token = value;
+  if (token.length > 5 && token.endsWith("ing")) token = token.slice(0, -3);
+  else if (token.length > 4 && token.endsWith("ed")) token = token.slice(0, -2);
+  else if (token.length > 4 && token.endsWith("es")) {
+    token = /(ches|shes|sses|xes|zes)$/u.test(token)
+      ? token.slice(0, -2)
+      : token.slice(0, -1);
+  } else if (
+    token.length > 4 &&
+    token.endsWith("s") &&
+    !token.endsWith("ss") &&
+    !token.endsWith("us")
+  ) {
+    token = token.slice(0, -1);
+  }
+  return TOKEN_ALIASES.get(token) ?? token;
+}
+
+function tokenCoverage(
+  answerTokens: Set<string>,
+  expectedTokens: Set<string>,
+  requiredCoverage: number,
+): boolean {
+  if (expectedTokens.size === 0) return false;
+  let matching = 0;
+  for (const token of expectedTokens) {
+    if (answerTokens.has(token)) matching += 1;
+  }
+  const minimumMatches = expectedTokens.size === 1 ? 1 : 2;
+  return (
+    matching >= minimumMatches &&
+    matching / expectedTokens.size >= requiredCoverage
+  );
 }

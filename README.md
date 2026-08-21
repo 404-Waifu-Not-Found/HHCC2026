@@ -116,7 +116,7 @@ As of **2026-08-09**, this source tree implements progressive extension-local qu
 
 The live `/health` response and Wrangler deployment history are the authoritative production checks. Health exposes the model and pipeline versions plus `backendQuizGeneration`, `extensionQuizGeneration`, and `extensionRequired` readiness flags without exposing secrets or relying on a stale version number in this document.
 
-The 2026-08-09 source gate passes **135 unit, contract, API, app, and extension tests** plus **21 Playwright Chrome journeys**, repository-wide TypeScript and ESLint checks, the Expo static export, extension packaging, Worker bundling, and a Wrangler dry run.
+The 2026-08-09 source gate passes **138 unit, contract, API, app, and extension tests** plus **21 Playwright Chrome journeys**, repository-wide TypeScript and ESLint checks, the Expo static export, extension packaging, Worker bundling, and a Wrangler dry run.
 
 Remaining release acceptance includes repeated real-browser runs across varied YouTube subjects, the captionless local-Whisper path on supported hardware, Resend and push delivery, and production-signed native builds.
 
@@ -373,12 +373,12 @@ The distributable archive is written to `apps/extension/dist/clipquest-captions-
 
 Use placeholder credentials for presentation-only UI work. Real server integrations use these values in `apps/api/.dev.vars`:
 
-| Variable                             | Purpose                                                                                                    |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `DEEPSEEK_API_KEY`                   | Server-side short-answer grading and the disabled experimental history classifier; **not quiz generation** |
-| `RESEND_API_KEY`                     | Verification and password-recovery email                                                                   |
-| `BETTER_AUTH_SECRET`                 | Better Auth signing and session security                                                                   |
-| `YOUTUBE_CREDENTIALS_ENCRYPTION_KEY` | Encryption for the disabled experimental YouTube device flow                                               |
+| Variable                             | Purpose                                                                                                                           |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `DEEPSEEK_API_KEY`                   | Legacy pipeline-7 short-answer grading and the disabled experimental history classifier; **not pipeline-9 generation or grading** |
+| `RESEND_API_KEY`                     | Verification and password-recovery email                                                                                          |
+| `BETTER_AUTH_SECRET`                 | Better Auth signing and session security                                                                                          |
+| `YOUTUBE_CREDENTIALS_ENCRYPTION_KEY` | Encryption for the disabled experimental YouTube device flow                                                                      |
 
 > [!WARNING]
 > The quiz-generation key is entered only in the extension popup. Never put it in `EXPO_PUBLIC_*`, page storage, bridge messages, screenshots, logs, issues, or commits. Local `.dev.vars` and production Worker secrets are separate.
@@ -481,7 +481,7 @@ After this source revision is deployed, expected health invariants include pipel
 - The Worker performs no backend quiz generation and returns no generated-looking fallback questions. Invalid, incomplete, wrong-type, or malformed extension output fails closed.
 - Multiple-choice option order is securely randomized before import, then randomized again whenever a learner view is activated. Display indexes map back to canonical indexes before submission; True/False order is unchanged.
 - D1 queries and R2/KV objects are scoped to authenticated users. Progressive imports require ownership, a UUID idempotency key, rate limits, strict pipeline metadata, and an exact next ordinal. Generating banks cannot enter Library review or complete an attempt early.
-- Short-answer grading may use a separate Worker-held DeepSeek credential with the stored rubric; it is not part of quiz generation and never receives the learner's extension key.
+- Pipeline-9 short answers are graded deterministically by the authenticated Worker from the bounded stored rubric, without a model call. Legacy pipeline-7 attempts may still use the separate Worker-held grader for backward compatibility; neither path receives the learner's extension key.
 - Operations roles are stored server-side. Privileged changes require authorization and write audit records; generic Better Auth admin endpoints are blocked.
 - YouTube OAuth, watch-history imports, subscriptions, playlists, liked videos, and personalized feeds are outside the core flow and disabled by default.
 - Do not commit `.env`, `.dev.vars`, API keys, credentials, private transcripts, model caches, exported quiz answers, or QA-user secrets.

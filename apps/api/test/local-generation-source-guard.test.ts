@@ -19,6 +19,10 @@ describe("extension generation source guard", () => {
       resolve(apiRoot, "routes/quiz-imports.ts"),
       "utf8",
     );
+    const progressiveQuiz = readFileSync(
+      resolve(apiRoot, "lib/progressive-quiz.ts"),
+      "utf8",
+    );
     const generationDirectory = resolve(apiRoot, "generation");
     expect(
       existsSync(generationDirectory) ? readdirSync(generationDirectory) : [],
@@ -33,6 +37,8 @@ describe("extension generation source guard", () => {
     expect(quizImportRoute).not.toContain("generation_jobs");
     expect(quizImportRoute).not.toContain("segments:");
     expect(quizImportRoute).not.toContain("reasoning_content");
+    expect(progressiveQuiz).not.toContain("chat/completions");
+    expect(progressiveQuiz).not.toContain("fetch(");
   });
 
   it("stores validated questions and exposes background generation state", () => {
@@ -52,5 +58,6 @@ describe("extension generation source guard", () => {
     expect(quizRoute).toContain('get("/attempts/:attemptId/generation"');
     expect(quizRoute).toContain("attemptGenerationAvailability");
     expect(quizRoute).toContain("progressiveSummary.plannedCount");
+    expect(quizRoute).toContain("gradeProgressiveShortAnswer");
   });
 });
