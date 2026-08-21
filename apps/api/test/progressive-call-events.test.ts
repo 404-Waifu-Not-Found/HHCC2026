@@ -1465,7 +1465,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
     ).toMatchObject({
       lifecycle_state: "abandoned",
       outcome_code: "network_interrupted",
-      elapsed_ms: 900_000,
+      elapsed_ms: 120_000,
     });
 
     const retry = conceptFirstLifecycleEvent("started", {
@@ -1486,6 +1486,111 @@ describe("protocol-9 concept-first call lifecycles", () => {
         )
       ).status,
     ).toBe(201);
+  });
+
+  it("reclaims a failed bank whose historical abandoned call exceeded the active watchdog", async () => {
+    const timestamp = Date.now();
+    const db = createConceptFirstDatabase(timestamp);
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+
+    db.sqlite
+      .prepare(
+        `UPDATE quiz_generation_call_events
+         SET lifecycle_state = 'abandoned', outcome_code = 'network_interrupted',
+             completed_at = ?, elapsed_ms = 900000
+         WHERE quiz_id = ? AND call_index = 1`,
+      )
+      .run(timestamp, QUIZ_ID);
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "local_state_conflict",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(timestamp - 1, QUIZ_ID);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      generation: {
+        state: "generation_failed",
+        availableQuestions: 1,
+        totalQuestions: 5,
+      },
+      continuation: {
+        claim: { state: "available" },
+        nextCallIndex: 2,
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
+        .get(QUIZ_ID),
+    ).toMatchObject({ count: 1 });
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT elapsed_ms FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({ elapsed_ms: 900_000 });
+    const reclaimed = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(reclaimed.quality_summary_json)).toMatchObject({
+      acceptedCount: 1,
+      generationState: "recovering",
+      recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+    });
   });
 
   it("reclaims a recoverable protocol-9 failed bank without replacing its accepted prefix", async () => {

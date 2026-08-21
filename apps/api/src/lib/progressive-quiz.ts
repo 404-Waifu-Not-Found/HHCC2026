@@ -616,7 +616,13 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       WHERE event.quiz_id = qb.id AND event.usage_complete = 1
     ) AS complete_usage_calls
     ,COALESCE((
-      SELECT SUM(event.elapsed_ms + event.retry_delay_ms)
+      SELECT SUM(
+        CASE
+          WHEN COALESCE(event.lifecycle_state, 'completed') = 'abandoned'
+            THEN MIN(event.elapsed_ms, 120000)
+          ELSE event.elapsed_ms
+        END + event.retry_delay_ms
+      )
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
     ), 0) AS total_elapsed_ms
