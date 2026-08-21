@@ -86,6 +86,12 @@ function waitForAudioRetry(): Promise<void> {
 function safeAudioErrorCode(error: unknown): string | undefined {
   if (!(error instanceof Error)) return undefined;
   const message = error.message;
+  const innerTubeStatus = message.match(
+    /^Request to https:\/\/[^/]+\/youtubei\/v1\/[^ ]+ failed with status code (\d+)$/,
+  )?.[1];
+  if (innerTubeStatus) return `innertube_http_${innerTubeStatus}`;
+  if (message === "No matching formats found") return "format_missing";
+  if (message === "No valid URL to decipher") return "url_not_decipherable";
   return /^(audio_(?:http_\d+|url_missing|stream_unavailable)|The server responded with a non 2xx status code)$/.test(
     message,
   )
