@@ -69,7 +69,7 @@ videosRouter.post("/import", async (c) => {
           ? "server_captions"
           : inspected.preferredCaptionSourceUrl
             ? "browser_captions"
-          : "transient_audio_stream",
+            : "transient_audio_stream",
         captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
         elapsedMs: Date.now() - importStartedAt,
       }),
@@ -161,8 +161,11 @@ videosRouter.post("/import", async (c) => {
   const preferredSegments = inspected.preferredCaptionSegments?.filter(
     (segment) => segment.text.trim().length > 0,
   );
+  const browserCaptionLookup = inspected.source === "youtube";
   const captionsAvailable = Boolean(
-    preferredSegments?.length || inspected.preferredCaptionSourceUrl,
+    preferredSegments?.length ||
+    inspected.preferredCaptionSourceUrl ||
+    browserCaptionLookup,
   );
   const response = VideoImportResponseSchema.parse({
     video: {
@@ -178,11 +181,9 @@ videosRouter.post("/import", async (c) => {
       available: captionsAvailable,
       tracks: inspected.captionTracks,
       ...(preferredSegments?.length ? { preferredSegments } : {}),
-      browserSourceAvailable: Boolean(inspected.preferredCaptionSourceUrl),
+      browserSourceAvailable: browserCaptionLookup,
     },
-    transcriptionMode: captionsAvailable
-      ? "captions"
-      : "device_media",
+    transcriptionMode: captionsAvailable ? "captions" : "device_media",
     capture: {
       expectedDurationSeconds: durationSeconds,
       requiresUserGesture: false,
@@ -199,9 +200,7 @@ videosRouter.post("/import", async (c) => {
       existingVideo: Boolean(existing),
       captionTrackCount: inspected.captionTracks.length,
       captionSegmentCount: preferredSegments?.length ?? 0,
-      browserCaptionSourceAvailable: Boolean(
-        inspected.preferredCaptionSourceUrl,
-      ),
+      browserCaptionSourceAvailable: browserCaptionLookup,
       requiresLocalTranscription: !captionsAvailable,
       elapsedMs: Date.now() - importStartedAt,
     }),
@@ -234,14 +233,18 @@ videosRouter.post("/:videoId/captions/resolve", async (c) => {
   let inspected = await getSourceAdapter("youtube").inspect(
     new URL(video.original_url),
   );
-  if (!inspected.preferredCaptionSourceUrl) {
+  for (
+    let attempt = 2;
+    attempt <= 3 && !inspected.preferredCaptionSourceUrl;
+    attempt += 1
+  ) {
     console.info(
       JSON.stringify({
         scope: "youtube_captions",
         event: "browser_resolve.retrying",
         requestId,
         sourceVideoId: video.source_video_id,
-        attempt: 1,
+        attempt: attempt - 1,
       }),
     );
     inspected = await getSourceAdapter("youtube").inspect(

@@ -388,8 +388,7 @@ export function parseYouTubeTimedText(
       return {
         id: `youtube-${index}-${startMs}`,
         startMs,
-        endMs:
-          startMs + Math.max(1, Math.floor(event.dDurationMs ?? 3_000)),
+        endMs: startMs + Math.max(1, Math.floor(event.dDurationMs ?? 3_000)),
         text,
       };
     })
@@ -409,8 +408,7 @@ function prepareCaptionSourceUrl(
     const url = new URL(track.base_url);
     if (
       url.protocol !== "https:" ||
-      (url.hostname !== "youtube.com" &&
-        !url.hostname.endsWith(".youtube.com"))
+      (url.hostname !== "youtube.com" && !url.hostname.endsWith(".youtube.com"))
     ) {
       return undefined;
     }
@@ -482,7 +480,9 @@ export class YouTubeAdapter implements SourceAdapter {
         }
       }
 
-      const preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
+      const preferredTrack = selectPreferredYouTubeCaptionTrack(
+        inspected.tracks,
+      );
       const preferredCaptionSourceUrl = prepareCaptionSourceUrl(preferredTrack);
       console.info(
         JSON.stringify({
@@ -514,9 +514,7 @@ export class YouTubeAdapter implements SourceAdapter {
           inspected.tracks[0]?.language_code ??
           null,
         captionTracks,
-        ...(preferredCaptionSourceUrl
-          ? { preferredCaptionSourceUrl }
-          : {}),
+        ...(preferredCaptionSourceUrl ? { preferredCaptionSourceUrl } : {}),
       };
     } catch (error) {
       console.error("YouTube inspection failed", error);
@@ -560,7 +558,9 @@ export class YouTubeAdapter implements SourceAdapter {
       const response = await fetch(format.url, { headers });
       if (!response.ok || !response.body)
         throw new Error(`audio_http_${response.status}`);
-      const responseLength = Number(response.headers.get("content-length") ?? 0);
+      const responseLength = Number(
+        response.headers.get("content-length") ?? 0,
+      );
       if (responseLength > MAX_AUDIO_BYTES) {
         await response.body.cancel("audio_too_large");
         throw new ApiError(
