@@ -7,6 +7,7 @@ import {
   pollWorkerAssetShells,
   probeWorkerAssetShells,
 } from "./probe-worker-assets.mjs";
+import { resolveWorkerPreviewUrl } from "./worker-preview-url.mjs";
 
 const apiRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -14,6 +15,8 @@ const apiRoot = path.resolve(
 );
 const workspaceRoot = path.resolve(apiRoot, "../..");
 const productionOrigin = "https://clipquest.ccwu.cc";
+const workerName = "clipquest";
+const workersDevAccountSubdomain = "unoxyrich";
 const evidence = {
   startedAt: new Date().toISOString(),
   steps: [],
@@ -100,12 +103,12 @@ try {
   }
   newVersion = uploaded[0].id;
   evidence.newVersion = newVersion;
-  const previewUrl = uploadOutput.match(
-    /https:\/\/[^\s]+\.workers\.dev/iu,
-  )?.[0];
-  if (!previewUrl) {
-    throw new Error("Wrangler did not report the new version's preview URL.");
-  }
+  const previewUrl = resolveWorkerPreviewUrl({
+    uploadOutput,
+    alias,
+    workerName,
+    accountSubdomain: workersDevAccountSubdomain,
+  });
   evidence.previewUrl = previewUrl;
   evidence.steps.push({ name: "version_upload", ok: true, previewUrl });
 
