@@ -86,6 +86,7 @@ export const VideoImportResponseSchema = z.object({
     tracks: z.array(CaptionTrackSchema),
     preferredSegments: z.array(TranscriptSegmentSchema).optional(),
     browserSourceAvailable: z.boolean().optional(),
+    browserLookupAvailable: z.boolean().optional(),
   }),
   transcriptionMode: TranscriptionModeSchema,
   capture: z.object({
@@ -121,6 +122,14 @@ export const TranscriptUploadRequestSchema = z.object({
   videoId: z.string().uuid(),
   language: z.string().min(2).max(35),
   origin: z.enum(["captions", "device_whisper", "browser_tab_capture"]),
+  acquisition: z
+    .enum([
+      "server_captions",
+      "youtube_signed_captions",
+      "youtube_text_provider",
+      "device_whisper",
+    ])
+    .optional(),
   segments: z.array(TranscriptSegmentSchema).min(1).max(12_000),
   quizLanguage: LanguageSchema,
   sessionLength: SessionLengthSchema,

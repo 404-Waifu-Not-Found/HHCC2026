@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseYouTubeTimedText } from "../src/transcription/youtube-captions";
+import {
+  collapseAdjacentCaptionRepeats,
+  parseBrowserTranscript,
+  parseYouTubeTimedText,
+} from "../src/transcription/youtube-captions";
 
 describe("YouTube browser captions", () => {
   it("normalizes YouTube json3 transcript events", () => {
@@ -33,5 +37,47 @@ describe("YouTube browser captions", () => {
         text: "model rates of change.",
       },
     ]);
+  });
+
+  it("parses and verifies a browser transcript response", () => {
+    expect(
+      parseBrowserTranscript(
+        `# Transcript: AP Calculus\n\nSource video: https://www.youtube.com/watch?v=TTsLhDHWopI\nLanguage: en (auto-generated) · Duration: 1:05\n\n## Transcript\n[0:02] slope fields show slope fields show the derivative at sample points\n\n[1:04] Euler's method estimates a solution curve`,
+        "TTsLhDHWopI",
+      ),
+    ).toEqual({
+      language: "en",
+      segments: [
+        {
+          id: "youtube-text-0-2000",
+          startMs: 2_000,
+          endMs: 64_000,
+          text: "slope fields show the derivative at sample points",
+        },
+        {
+          id: "youtube-text-1-64000",
+          startMs: 64_000,
+          endMs: 94_000,
+          text: "Euler's method estimates a solution curve",
+        },
+      ],
+    });
+  });
+
+  it("rejects transcript text attributed to a different video", () => {
+    expect(() =>
+      parseBrowserTranscript(
+        "Source video: https://www.youtube.com/watch?v=AAAAAAAAAAA\nLanguage: en\n[0:00] This transcript belongs elsewhere.",
+        "TTsLhDHWopI",
+      ),
+    ).toThrow("did not match");
+  });
+
+  it("collapses rolling auto-caption repetitions without removing pairs", () => {
+    expect(
+      collapseAdjacentCaptionRepeats(
+        "differential equations unit seven differential equations unit seven differential equations unit seven very very useful",
+      ),
+    ).toBe("differential equations unit seven very very useful");
   });
 });

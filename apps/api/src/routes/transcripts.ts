@@ -138,6 +138,7 @@ transcriptsRouter.post("/", async (c) => {
       videoId: input.videoId,
       language: input.language,
       origin: input.origin,
+      acquisition: input.acquisition,
       segments: input.segments,
     }),
     {
@@ -156,6 +157,7 @@ transcriptsRouter.post("/", async (c) => {
       requestId,
       jobId,
       origin: input.origin,
+      acquisition: input.acquisition ?? "unspecified",
       segmentCount: input.segments.length,
       characterCount,
       elapsedMs: Date.now() - uploadStartedAt,

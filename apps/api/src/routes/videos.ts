@@ -162,10 +162,12 @@ videosRouter.post("/import", async (c) => {
     (segment) => segment.text.trim().length > 0,
   );
   const browserCaptionLookup = Boolean(inspected.preferredCaptionSourceUrl);
+  const browserTextLookupAvailable = inspected.source === "youtube";
   const captionsAvailable = Boolean(
     preferredSegments?.length ||
     inspected.preferredCaptionSourceUrl ||
-    browserCaptionLookup,
+    browserCaptionLookup ||
+    browserTextLookupAvailable,
   );
   const response = VideoImportResponseSchema.parse({
     video: {
@@ -182,6 +184,7 @@ videosRouter.post("/import", async (c) => {
       tracks: inspected.captionTracks,
       ...(preferredSegments?.length ? { preferredSegments } : {}),
       browserSourceAvailable: browserCaptionLookup,
+      browserLookupAvailable: browserTextLookupAvailable,
     },
     transcriptionMode: captionsAvailable ? "captions" : "device_media",
     capture: {
@@ -201,6 +204,7 @@ videosRouter.post("/import", async (c) => {
       captionTrackCount: inspected.captionTracks.length,
       captionSegmentCount: preferredSegments?.length ?? 0,
       browserCaptionSourceAvailable: browserCaptionLookup,
+      browserTextLookupAvailable,
       requiresLocalTranscription: !captionsAvailable,
       elapsedMs: Date.now() - importStartedAt,
     }),

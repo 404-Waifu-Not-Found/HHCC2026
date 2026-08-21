@@ -36,7 +36,10 @@ import {
 } from "../../src/state/creation";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
-import { downloadYouTubeCaptions } from "../../src/transcription/youtube-captions";
+import {
+  downloadBrowserYouTubeTranscript,
+  downloadYouTubeCaptions,
+} from "../../src/transcription/youtube-captions";
 import {
   breakpoints,
   layout,
@@ -130,46 +133,92 @@ export default function GenerationScreen() {
       let segments: TranscriptSegment[];
       let language = imported.video.sourceLanguage ?? "und";
       let origin: "captions" | "device_whisper" = "captions";
+      let acquisition:
+        | "server_captions"
+        | "youtube_signed_captions"
+        | "youtube_text_provider"
+        | "device_whisper" = "server_captions";
       if (imported.captions.preferredSegments?.length) {
         setStage("preparing_audio");
         setProgress(1);
         segments = imported.captions.preferredSegments;
       } else {
-        if (
-          imported.video.source === "youtube" &&
-          imported.captions.browserSourceAvailable
-        ) {
-          try {
-            setStage("preparing_audio");
-            setProgress(0.15);
-            const captionSource = await apiRequest(
-              `/api/videos/${encodeURIComponent(imported.video.id)}/captions/resolve`,
-              { method: "POST", signal },
-              CaptionResolveResponseSchema,
-            );
-            setProgress(0.45);
-            segments = await downloadYouTubeCaptions(
-              captionSource.captionUrl,
-              signal,
-            );
-            language = captionSource.language;
-            setProgress(1);
-          } catch (captionError) {
-            if (signal.aborted) throw captionError;
-            console.warn("YouTube browser captions failed; using audio fallback", {
-              errorName:
-                captionError instanceof Error
-                  ? captionError.name
-                  : "UnknownError",
-              errorMessage:
-                captionError instanceof Error
-                  ? captionError.message
-                  : "Caption download failed",
-            });
-            segments = [];
+        segments = [];
+        if (imported.video.source === "youtube") {
+          if (imported.captions.browserSourceAvailable) {
+            try {
+              setStage("preparing_audio");
+              setProgress(0.1);
+              const captionStartedAt = Date.now();
+              const captionSource = await apiRequest(
+                `/api/videos/${encodeURIComponent(imported.video.id)}/captions/resolve`,
+                { method: "POST", signal },
+                CaptionResolveResponseSchema,
+              );
+              segments = await downloadYouTubeCaptions(
+                captionSource.captionUrl,
+                signal,
+              );
+              language = captionSource.language;
+              acquisition = "youtube_signed_captions";
+              console.info("YouTube signed captions acquired", {
+                sourceVideoId: imported.video.sourceVideoId,
+                segmentCount: segments.length,
+                elapsedMs: Date.now() - captionStartedAt,
+              });
+            } catch (captionError) {
+              if (signal.aborted) throw captionError;
+              console.warn("YouTube signed captions failed", {
+                sourceVideoId: imported.video.sourceVideoId,
+                errorName:
+                  captionError instanceof Error
+                    ? captionError.name
+                    : "UnknownError",
+                errorMessage:
+                  captionError instanceof Error
+                    ? captionError.message
+                    : "Caption download failed",
+              });
+            }
           }
-        } else {
-          segments = [];
+          if (!segments.length && imported.captions.browserLookupAvailable) {
+            try {
+              const captionStartedAt = Date.now();
+              setStage("preparing_audio");
+              setProgress(0.35);
+              const transcript = await downloadBrowserYouTubeTranscript(
+                imported.video.sourceVideoId,
+                signal,
+              );
+              segments = transcript.segments;
+              language = transcript.language;
+              acquisition = "youtube_text_provider";
+              console.info("YouTube browser transcript acquired", {
+                sourceVideoId: imported.video.sourceVideoId,
+                segmentCount: segments.length,
+                elapsedMs: Date.now() - captionStartedAt,
+              });
+            } catch (captionError) {
+              if (signal.aborted) throw captionError;
+              console.warn(
+                "YouTube browser transcript failed; using audio fallback",
+                {
+                  sourceVideoId: imported.video.sourceVideoId,
+                  errorName:
+                    captionError instanceof Error
+                      ? captionError.name
+                      : "UnknownError",
+                  errorMessage:
+                    captionError instanceof Error
+                      ? captionError.message
+                      : "Caption download failed",
+                },
+              );
+            }
+          }
+          if (segments.length) {
+            setProgress(1);
+          }
         }
       }
       if (!segments.length) {
@@ -201,6 +250,7 @@ export default function GenerationScreen() {
         language = result.language;
         segments = result.segments;
         origin = "device_whisper";
+        acquisition = "device_whisper";
       }
       if (signal.aborted) throw new TranscriptionPausedError();
       setStage("creating_questions");
@@ -216,6 +266,7 @@ export default function GenerationScreen() {
             videoId: imported.video.id,
             language,
             origin,
+            acquisition,
             segments,
             quizLanguage: params.quizLanguage,
             sessionLength: params.sessionLength,

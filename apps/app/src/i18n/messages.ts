@@ -111,7 +111,8 @@ export const messages = {
     notFoundBody:
       "That page does not exist. Head home to start or continue a video quest.",
     videoReady: "Video ready",
-    sourceCaptions: "Captions found — no model download needed.",
+    sourceCaptions:
+      "Captions will be checked in this browser — no extension needed.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
     modelSize: "Speech model · about 45 MB",
@@ -147,7 +148,7 @@ export const messages = {
     cancelGenerationFailed: "Could not cancel quiz creation. Please try again.",
     tryAgain: "Try again",
     privateTranscription:
-      "ClipQuest checks YouTube captions first. If none exist, audio is streamed without caching and transcribed on this device. Only transcript text is stored.",
+      "ClipQuest downloads caption text in this browser first. If none exists, audio is streamed without caching and transcribed on this device. Only transcript text is stored.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube or bilibili link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -295,7 +296,7 @@ export const messages = {
     notFoundTitle: "这个学习任务走丢了",
     notFoundBody: "该页面不存在。返回首页开始或继续视频学习任务。",
     videoReady: "视频已准备好",
-    sourceCaptions: "已找到字幕，无需下载模型。",
+    sourceCaptions: "将在此浏览器中检查字幕，无需安装扩展。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
     modelSize: "语音模型 · 约 45 MB",
     removeModelConfirm: "已从此设备删除语音模型。",
@@ -328,7 +329,7 @@ export const messages = {
     cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
     privateTranscription:
-      "ClipQuest 会先检查 YouTube 字幕；没有字幕时才无缓存地传输音频并在此设备转写。只存储转写文本。",
+      "ClipQuest 会先在此浏览器中下载字幕文本；没有字幕时才无缓存地传输音频并在此设备转写。只存储转写文本。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 或哔哩哔哩链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",
