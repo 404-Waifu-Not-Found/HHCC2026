@@ -2798,6 +2798,7 @@ export type AttemptAnswerRequest = z.infer<typeof AttemptAnswerRequestSchema>;
 
 export const AttemptAnswerResponseSchema = z.object({
   correct: z.boolean(),
+  correctAnswer: AnswerValueSchema.nullable(),
   explanation: z.string().min(1),
   evidenceSegmentIds: z.array(z.string()),
   nextQuestion: PublicQuestionSchema.nullable(),

@@ -488,6 +488,13 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   let reservationCommitted = false;
   try {
     const grade = await gradeAnswer(c.env, attempt, question, input.answer);
+    const correctAnswer = question.correct_answer_json
+      ? parseStoredJson(
+          question.correct_answer_json,
+          AnswerValueSchema,
+          "correct answer",
+        )
+      : null;
     // Freeze one coherent generation snapshot before any answer write. A
     // concurrent append may become visible on the next poll, but can never turn
     // this committed answer into a generation-state error response.
@@ -531,6 +538,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       return c.json(
         AttemptAnswerResponseSchema.parse({
           correct: false,
+          correctAnswer,
           explanation: grade.feedback,
           evidenceSegmentIds: parseQuestionEvidence(question),
           nextQuestion: toPublicQuestion(
@@ -586,6 +594,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       return c.json(
         AttemptAnswerResponseSchema.parse({
           correct: grade.correct,
+          correctAnswer,
           explanation: grade.feedback,
           evidenceSegmentIds: parseQuestionEvidence(question),
           nextQuestion: null,
@@ -648,6 +657,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     return c.json(
       AttemptAnswerResponseSchema.parse({
         correct: grade.correct,
+        correctAnswer,
         explanation: grade.feedback,
         evidenceSegmentIds: parseQuestionEvidence(question),
         nextQuestion: nextQuestion

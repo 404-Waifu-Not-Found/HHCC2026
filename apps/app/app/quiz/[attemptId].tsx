@@ -91,8 +91,13 @@ type Answer = number | boolean | number[] | string;
 function learnerFeedbackDetail(
   feedback: AttemptAnswerResponse,
   localGrade: import("@clipquest/contracts").LocalAnswerGrade | undefined,
+  correctAnswer: string | undefined,
   translate: (
-    key: "answerReason" | "answerMarkedCorrect" | "answerMarkedIncorrect",
+    key:
+      | "answerReason"
+      | "answerMarkedCorrect"
+      | "answerMarkedIncorrect"
+      | "correctAnswer",
   ) => string,
 ): string {
   const localDecisionMatches =
@@ -103,7 +108,30 @@ function learnerFeedbackDetail(
   const verdict = feedback.correct
     ? translate("answerMarkedCorrect")
     : translate("answerMarkedIncorrect");
-  return `${translate("answerReason")}: ${reason}\n\n${verdict}`;
+  const answerDetail =
+    !feedback.correct && correctAnswer
+      ? `\n\n${translate("correctAnswer")}: ${correctAnswer}`
+      : "";
+  return `${translate("answerReason")}: ${reason}${answerDetail}\n\n${verdict}`;
+}
+
+function presentCorrectAnswer(
+  question: PublicQuestion,
+  answer: Answer | null,
+  translate: (key: "true" | "false") => string,
+): string | undefined {
+  if (answer === null) return undefined;
+  if (question.type === "multiple_choice" && typeof answer === "number")
+    return question.options?.[answer];
+  if (question.type === "true_false" && typeof answer === "boolean")
+    return translate(answer ? "true" : "false");
+  if (question.type === "ordering" && Array.isArray(answer))
+    return answer
+      .map((itemIndex, index) => `${index + 1}. ${question.items?.[itemIndex] ?? ""}`)
+      .join("\n");
+  if (question.type === "short_answer" && typeof answer === "string")
+    return answer;
+  return undefined;
 }
 
 export default function QuizScreen() {
@@ -945,7 +973,14 @@ export default function QuizScreen() {
       status={feedback.correct ? "correct" : "incorrect"}
       title={feedback.correct ? t("correct") : t("incorrect")}
       detail={presentQuizText(
-        learnerFeedbackDetail(feedback, localGrade, (key) => t(key)),
+        learnerFeedbackDetail(
+          feedback,
+          localGrade,
+          presentCorrectAnswer(question, feedback.correctAnswer, (key) =>
+            t(key),
+          ),
+          (key) => t(key),
+        ),
       )}
       action={
         <PrimaryButton onPress={next}>
