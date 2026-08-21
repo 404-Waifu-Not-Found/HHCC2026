@@ -1065,7 +1065,12 @@ function repairContextForCandidate(candidate, reasonCode) {
           cluster: boundedString(claim.cluster, 200),
         }
       : undefined;
-  if (reasonCode === "source_framing_invalid") {
+  if (
+    reasonCode === "source_framing_invalid" ||
+    reasonCode === "course_logistics_invalid" ||
+    reasonCode === "low_pedagogical_value" ||
+    reasonCode === "true_false_fact_invalid"
+  ) {
     return {
       concept: boundedString(candidate?.concept, 200),
       objectiveCategory: boundedString(candidate?.objectiveCategory, 80),
@@ -3876,7 +3881,7 @@ function repairGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
     mc_question_answer_mismatch:
       "Preserve the complete supported relationship. If evidence applies to lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relation in answerText. Do not bind a pronoun to an unqualified concept.",
     true_false_fact_invalid:
-      "Return one concise self-contained supportedFact contained in evidenceQuote. Do not mutate it or return a truth value.",
+      "Discard the invalid candidate, then choose a different central taught fact from the eligible evidence. Return one concise self-contained supportedFact contained in evidenceQuote. It must describe a transferable concept or mechanism, not the episode, production, presenter, studio, or recording. Do not mutate it or return a truth value.",
     short_atomic_invalid:
       "Use atomic_term only for one uniquely supported term. Put that complete term in answer and only true terminology aliases in aliases.",
     short_proposition_invalid:

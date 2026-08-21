@@ -629,6 +629,40 @@ test("v5.8 resolves a concise supported fact from a longer evidence window", () 
   assert.match(question?.explanation ?? "", /statement is accurate/iu);
 });
 
+test("v5.8 excludes production credits from instructional evidence", () => {
+  const transcript = [
+    "Cytokines activate B and T cells before the adaptive response expands.",
+    "This episode was filmed in the Doctor Cheryl C. Kinney Crash Course Studio.",
+    "MHC I proteins present short amino-acid chains made from proteins inside a cell.",
+  ].join(" ");
+  const selection = buildConceptFirstInstructionalSelection(transcript, {
+    topicHint: "Immune System",
+  });
+  assert.ok(selection.excerpts.length >= 1);
+  assert.ok(
+    selection.excerpts.every(
+      (excerpt) => !/episode|filmed|crash course studio/iu.test(excerpt),
+    ),
+  );
+  assert.equal(
+    questionConceptFailure({
+      concept: "immune response coordination",
+      question:
+        "This episode was filmed in the Doctor Cheryl C. Kinney Crash Course Studio.",
+      explanation: "The episode was produced in that studio.",
+      supportedFact:
+        "This episode was filmed in the Doctor Cheryl C. Kinney Crash Course Studio.",
+      claim: {
+        subject: "this episode",
+        relation: "was filmed in",
+        value: "the Doctor Cheryl C. Kinney Crash Course Studio",
+        cluster: "immune response coordination",
+      },
+    }),
+    "course_logistics_invalid",
+  );
+});
+
 test("source framing is removed without rewriting the concept question", () => {
   assert.equal(
     stripQuestionSourceFraming(
