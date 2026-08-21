@@ -391,7 +391,7 @@ Then:
 5. Pin **ClipQuest Local AI**, open its popup, enter the DeepSeek key, and choose **Save & test**.
 6. Reload the ClipQuest page and choose **Check again** if the install gate is still open.
 
-The distributable archive is written to `apps/extension/dist/clipquest-captions-extension.zip` and is also served by the built website at `/clipquest-captions-extension.zip`.
+The distributable archive is written to `apps/extension/dist/clipquest-captions-extension.zip`, copied to the tracked release asset at `apps/app/public/clipquest-captions-extension.zip`, and served by the built website at `/clipquest-captions-extension.zip`. The tracked archive ensures the current unpacked-extension package is present in a fresh checkout as well as in the deployed Worker assets.
 
 ### Local Worker variables
 
