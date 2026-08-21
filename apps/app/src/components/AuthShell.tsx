@@ -18,11 +18,13 @@ export function AuthShell({
   subtitle,
   children,
   footer,
+  cornerAction,
   variant = "form",
 }: PropsWithChildren<{
   title: string;
   subtitle?: string;
   footer?: ReactNode;
+  cornerAction?: ReactNode;
   variant?: AuthShellVariant;
 }>) {
   const { t, theme } = useSettings();
@@ -59,7 +61,7 @@ export function AuthShell({
     </View>
   );
 
-  return (
+  const screen = (
     <Screen
       contentWidth={splitDesktop ? "full" : welcome ? "wide" : "auth"}
       centered
@@ -173,14 +175,30 @@ export function AuthShell({
               </View>
             )}
             {formColumn}
+            {cornerAction && !desktop ? (
+              <View style={styles.cornerActionInline}>{cornerAction}</View>
+            ) : null}
           </>
         )}
       </View>
     </Screen>
   );
+
+  return (
+    <View style={[styles.shell, { backgroundColor: theme.background }]}>
+      {screen}
+      {cornerAction && desktop ? (
+        <View style={styles.cornerActionDesktop}>{cornerAction}</View>
+      ) : null}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    flex: 1,
+    position: "relative",
+  },
   page: {
     width: "100%",
     alignItems: "stretch",
@@ -327,5 +345,16 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: spacing[5],
+  },
+  cornerActionDesktop: {
+    position: "absolute",
+    right: spacing[8],
+    bottom: spacing[8],
+    zIndex: 2,
+    alignItems: "flex-end",
+  },
+  cornerActionInline: {
+    alignItems: "flex-end",
+    marginTop: spacing[1],
   },
 });

@@ -71,26 +71,26 @@ export default function SignUpScreen() {
       title={t("signUp")}
       subtitle={t("authCrossDevice")}
       footer={
-        <View style={styles.footer}>
-          <View style={styles.accountFooter}>
-            <Text style={[styles.footerText, { color: theme.textMuted }]}>
-              {t("alreadyHaveAccount")}
-            </Text>
-            <Link
-              href="/(auth)/sign-in"
-              style={[styles.link, styles.footerLink, { color: theme.text }]}
-            >
-              {t("signIn")}
-            </Link>
-          </View>
+        <View style={styles.accountFooter}>
+          <Text style={[styles.footerText, { color: theme.textMuted }]}>
+            {t("alreadyHaveAccount")}
+          </Text>
           <Link
-            testID="try-without-account-link"
-            href="/(auth)/welcome"
-            style={[styles.tryLink, { color: theme.primary }]}
+            href="/(auth)/sign-in"
+            style={[styles.link, styles.footerLink, { color: theme.text }]}
           >
-            {t("tryWithoutAccount")}
+            {t("signIn")}
           </Link>
         </View>
+      }
+      cornerAction={
+        <Link
+          testID="try-without-account-link"
+          href="/(auth)/welcome"
+          style={[styles.tryLink, { color: theme.primary }]}
+        >
+          {t("tryWithoutAccount")}
+        </Link>
       }
     >
       <AppTextInput
@@ -242,10 +242,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,
-  },
-  footer: {
-    alignItems: "stretch",
-    gap: spacing[1],
   },
   accountFooter: {
     flexDirection: "row",

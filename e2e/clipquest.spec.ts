@@ -365,21 +365,19 @@ test("unauthenticated entry defaults to sign-in and sign-up links to welcome", a
   );
   await expect(trialLink).toBeVisible();
 
-  const rightAlignment = await page.evaluate(() => {
+  const cornerAlignment = await page.evaluate(() => {
     const trial = document.querySelector<HTMLElement>(
       '[data-testid="try-without-account-link"]',
     );
-    const input = document.querySelector<HTMLInputElement>(
-      'input[aria-label="Username"]',
-    );
-    if (!trial || !input?.parentElement)
-      throw new Error("Missing sign-up trial link");
+    if (!trial) throw new Error("Missing sign-up trial link");
+    const rect = trial.getBoundingClientRect();
     return {
-      trialRight: trial.getBoundingClientRect().right,
-      fieldRight: input.parentElement.getBoundingClientRect().right,
+      rightGap: window.innerWidth - rect.right,
+      bottomGap: window.innerHeight - rect.bottom,
     };
   });
-  expect(rightAlignment.trialRight).toBeCloseTo(rightAlignment.fieldRight, 0);
+  expect(cornerAlignment.rightGap).toBeCloseTo(32, 0);
+  expect(cornerAlignment.bottomGap).toBeCloseTo(32, 0);
 
   await trialLink.click();
   await expect(page).toHaveURL(/\/welcome$/);
@@ -389,7 +387,23 @@ test("unauthenticated entry defaults to sign-in and sign-up links to welcome", a
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/sign-up");
-  await expect(page.getByTestId("try-without-account-link")).toBeVisible();
+  const mobileTrialLink = page.getByTestId("try-without-account-link");
+  await expect(mobileTrialLink).toBeVisible();
+  const mobileAlignment = await page.evaluate(() => {
+    const trial = document.querySelector<HTMLElement>(
+      '[data-testid="try-without-account-link"]',
+    );
+    const input = document.querySelector<HTMLInputElement>(
+      'input[aria-label="Username"]',
+    );
+    if (!trial || !input?.parentElement)
+      throw new Error("Missing mobile sign-up controls");
+    return {
+      trialRight: trial.getBoundingClientRect().right,
+      fieldRight: input.parentElement.getBoundingClientRect().right,
+    };
+  });
+  expect(mobileAlignment.trialRight).toBeCloseTo(mobileAlignment.fieldRight, 0);
   const mobileOverflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth >
