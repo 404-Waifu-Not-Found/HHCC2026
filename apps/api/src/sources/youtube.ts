@@ -7,6 +7,7 @@ import { parseYouTubeId } from "./url";
 const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const YOUTUBE_AUDIO_CLIENT = "IOS" as const;
 const MAX_TIMED_TEXT_BYTES = 8 * 1024 * 1024;
+const MAX_TRANSCRIPT_FALLBACK_BYTES = 8 * 1024 * 1024;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
 
@@ -28,6 +29,13 @@ type YouTubeTimedTextEvent = {
   tStartMs?: unknown;
   dDurationMs?: unknown;
   segs?: unknown;
+};
+
+type YouTubeTranscriptFallback = {
+  title: string;
+  durationSeconds: number;
+  languageCode: string;
+  segments: TranscriptSegment[];
 };
 
 class YouTubeCaptionLoadError extends Error {
@@ -125,7 +133,12 @@ export function parseYouTubePlayerResponse(value: unknown): YouTubeInspectionDat
     ? thumbnailContainer.thumbnails.flatMap((thumbnail) => {
         const record = asRecord(thumbnail);
         if (typeof record?.url !== "string") return [];
-        return [{ url: record.url, ...(typeof record.width === "number" ? { width: record.width } : {}) }];
+        return [
+          {
+            url: record.url,
+            ...(typeof record.width === "number" ? { width: record.width } : {}),
+          },
+        ];
       })
     : [];
   const captions = asRecord(response?.captions);
@@ -193,7 +206,10 @@ async function fetchYouTubeOEmbed(sourceVideoId: string): Promise<YouTubeInspect
   oembedUrl.searchParams.set("format", "json");
   let response: Response;
   try {
-    response = await fetch(oembedUrl, { headers: { Accept: "application/json" }, redirect: "error" });
+    response = await fetch(oembedUrl, {
+      headers: { Accept: "application/json" },
+      redirect: "error",
+    });
   } catch {
     throw new YouTubeMetadataLoadError("oembed_fetch_failed");
   }
@@ -224,10 +240,103 @@ async function fetchYouTubeOEmbed(sourceVideoId: string): Promise<YouTubeInspect
   };
 }
 
+function parseClock(value: string): number | null {
+  const parts = value.split(":").map((part) => Number.parseInt(part, 10));
+  if (parts.some((part) => !Number.isFinite(part)) || parts.length < 2 || parts.length > 3) return null;
+  const [hours, minutes, seconds] = parts.length === 3 ? parts : [0, parts[0], parts[1]];
+  if (hours === undefined || minutes === undefined || seconds === undefined || minutes > 59 || seconds > 59) {
+    return null;
+  }
+  return hours * 3_600 + minutes * 60 + seconds;
+}
+
+export function parseYouTubeTranscriptMarkdown(
+  sourceVideoId: string,
+  markdown: string,
+): YouTubeTranscriptFallback | null {
+  const title =
+    markdown
+      .match(/^# Transcript:\s*(.+)$/m)?.[1]
+      ?.trim()
+      .slice(0, 500) ?? "";
+  const source = markdown.match(/^Source video:\s*(\S+)$/m)?.[1];
+  const durationValue = markdown.match(/^Language:.*?\bDuration:\s*([0-9:]+)/m)?.[1];
+  const transcriptStart = markdown.indexOf("## Transcript");
+  if (!title || !source || transcriptStart < 0) return null;
+
+  let sourceUrl: URL;
+  try {
+    sourceUrl = new URL(source);
+  } catch {
+    return null;
+  }
+  if (parseYouTubeId(sourceUrl) !== sourceVideoId) return null;
+
+  const entries: Array<{ startMs: number; text: string }> = [];
+  const body = markdown.slice(transcriptStart + "## Transcript".length);
+  const timestampPattern =
+    /\[(\d{1,3}:[0-5]\d(?::[0-5]\d)?)\]\s*([\s\S]*?)(?=\n+\[\d{1,3}:[0-5]\d(?::[0-5]\d)?\]|\s*$)/g;
+  for (const match of body.matchAll(timestampPattern)) {
+    const seconds = match[1] ? parseClock(match[1]) : null;
+    const text = match[2]?.replace(/\s+/g, " ").trim() ?? "";
+    if (seconds === null || !text) continue;
+    entries.push({ startMs: seconds * 1_000, text });
+  }
+  if (entries.length === 0) return null;
+
+  const declaredDuration = durationValue ? parseClock(durationValue) : null;
+  const durationSeconds = Math.max(declaredDuration ?? 0, Math.ceil(entries.at(-1)!.startMs / 1_000));
+  const segments = entries.map((entry, index) => {
+    const nextStartMs = entries[index + 1]?.startMs;
+    const declaredEndMs = durationSeconds * 1_000;
+    const fallbackEndMs = entry.startMs + 30_000;
+    const endMs = Math.max(
+      entry.startMs + 1,
+      nextStartMs ?? (declaredEndMs > entry.startMs ? declaredEndMs : fallbackEndMs),
+    );
+    return {
+      id: `yt-fallback-${index + 1}`,
+      startMs: entry.startMs,
+      endMs,
+      text: entry.text,
+    };
+  });
+
+  return { title, durationSeconds, languageCode: "en", segments };
+}
+
+export async function loadYouTubeTranscriptFallback(sourceVideoId: string): Promise<YouTubeTranscriptFallback> {
+  const fallbackUrl = new URL(`https://youtube-transcript.ai/transcript/${encodeURIComponent(sourceVideoId)}.txt`);
+  fallbackUrl.searchParams.set("lang", "en");
+  let response: Response;
+  try {
+    response = await fetch(fallbackUrl, {
+      headers: { Accept: "text/markdown,text/plain;q=0.9" },
+      redirect: "error",
+    });
+  } catch {
+    throw new YouTubeCaptionLoadError("fallback_fetch_failed");
+  }
+  if (!response.ok) throw new YouTubeCaptionLoadError(`fallback_http_${response.status}`);
+  const declaredLength = Number.parseInt(response.headers.get("content-length") ?? "", 10);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_TRANSCRIPT_FALLBACK_BYTES) {
+    throw new YouTubeCaptionLoadError("fallback_oversize");
+  }
+  const body = await response.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_TRANSCRIPT_FALLBACK_BYTES) {
+    throw new YouTubeCaptionLoadError("fallback_oversize");
+  }
+  const parsed = parseYouTubeTranscriptMarkdown(sourceVideoId, body);
+  if (!parsed) throw new YouTubeCaptionLoadError("fallback_invalid");
+  return parsed;
+}
+
 async function inspectWithInnerTube(sourceVideoId: string): Promise<YouTubeInspectionData | null> {
   try {
     const client = await createYouTubeClient(false);
-    const info = await client.getBasicInfo(sourceVideoId, { client: YOUTUBE_INFO_CLIENT });
+    const info = await client.getBasicInfo(sourceVideoId, {
+      client: YOUTUBE_INFO_CLIENT,
+    });
     const title = info.basic_info.title?.trim();
     if (!title) return null;
     return {
@@ -286,7 +395,14 @@ export function parseYouTubeTimedText(value: unknown): TranscriptSegment[] {
       .replace(/\s+/g, " ")
       .trim();
     if (!text) return [];
-    return [{ index, startMs, durationMs: toFiniteMilliseconds(event.dDurationMs), text }];
+    return [
+      {
+        index,
+        startMs,
+        durationMs: toFiniteMilliseconds(event.dDurationMs),
+        text,
+      },
+    ];
   });
 
   return parsed.map((event, index) => {
@@ -296,7 +412,12 @@ export function parseYouTubeTimedText(value: unknown): TranscriptSegment[] {
       event.startMs + 1,
       durationEndMs ?? (nextStartMs && nextStartMs > event.startMs ? nextStartMs : event.startMs + 1_000),
     );
-    return { id: `yt-${event.index + 1}`, startMs: event.startMs, endMs, text: event.text };
+    return {
+      id: `yt-${event.index + 1}`,
+      startMs: event.startMs,
+      endMs,
+      text: event.text,
+    };
   });
 }
 
@@ -361,6 +482,7 @@ export class YouTubeAdapter implements SourceAdapter {
     const sourceVideoId = parseYouTubeId(url);
     try {
       let inspected = await inspectWithInnerTube(sourceVideoId);
+      let transcriptFallback: YouTubeTranscriptFallback | null = null;
       let watchPageInspection: YouTubeInspectionData | null = null;
       let watchPageFailureReason: string | null = null;
       if (!inspected || inspected.tracks.length === 0) {
@@ -368,9 +490,26 @@ export class YouTubeAdapter implements SourceAdapter {
           watchPageInspection = await fetchYouTubeWatchPage(sourceVideoId);
           inspected = mergeYouTubeInspection(inspected, watchPageInspection);
         } catch (error) {
-          watchPageFailureReason =
-            error instanceof YouTubeMetadataLoadError ? error.reason : "watch_unexpected_error";
+          watchPageFailureReason = error instanceof YouTubeMetadataLoadError ? error.reason : "watch_unexpected_error";
           // A usable InnerTube response is sufficient when the public watch page is temporarily unavailable.
+        }
+      }
+      if (!inspected || inspected.tracks.length === 0) {
+        try {
+          transcriptFallback = await loadYouTubeTranscriptFallback(sourceVideoId);
+          inspected ??= {
+            title: transcriptFallback.title,
+            durationSeconds: transcriptFallback.durationSeconds,
+            thumbnails: [
+              {
+                url: `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
+                width: 480,
+              },
+            ],
+            tracks: [],
+          };
+        } catch {
+          // Metadata-only fallbacks can still allow on-device transcription when captions are unavailable.
         }
       }
       if (!inspected) {
@@ -380,16 +519,15 @@ export class YouTubeAdapter implements SourceAdapter {
           console.warn("YouTube metadata fallbacks were exhausted", {
             sourceVideoId,
             watchPageFailureReason,
-            oembedFailureReason:
-              error instanceof YouTubeMetadataLoadError ? error.reason : "oembed_unexpected_error",
+            oembedFailureReason: error instanceof YouTubeMetadataLoadError ? error.reason : "oembed_unexpected_error",
           });
           throw new Error("YouTube returned incomplete video metadata.");
         }
       }
 
-      let preferredCaptionSegments: TranscriptSegment[] | undefined;
+      let preferredCaptionSegments: TranscriptSegment[] | undefined = transcriptFallback?.segments;
       let preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
-      if (preferredTrack) {
+      if (preferredTrack && !preferredCaptionSegments) {
         try {
           preferredCaptionSegments = await loadYouTubeCaptionSegments(preferredTrack);
         } catch (error) {
@@ -411,6 +549,12 @@ export class YouTubeAdapter implements SourceAdapter {
                     ? error.reason
                     : "unexpected_error",
             });
+            try {
+              transcriptFallback ??= await loadYouTubeTranscriptFallback(sourceVideoId);
+              preferredCaptionSegments = transcriptFallback.segments;
+            } catch {
+              // The client can still fall back to on-device transcription.
+            }
           }
         }
       }
@@ -419,22 +563,36 @@ export class YouTubeAdapter implements SourceAdapter {
         label: track.label || track.language_code,
         isAutoGenerated: track.kind === "asr",
       }));
+      if (transcriptFallback && !captionTracks.some((track) => track.language === transcriptFallback.languageCode)) {
+        captionTracks.push({
+          language: transcriptFallback.languageCode,
+          label: "English transcript",
+          isAutoGenerated: false,
+        });
+      }
 
       return {
         source: "youtube",
         sourceVideoId,
         canonicalUrl: `https://www.youtube.com/watch?v=${sourceVideoId}`,
         title: inspected.title,
-        thumbnailUrl:
-          getBestThumbnail(inspected.thumbnails) || `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
+        thumbnailUrl: getBestThumbnail(inspected.thumbnails) || `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
         durationSeconds: inspected.durationSeconds,
-        sourceLanguage: preferredTrack?.language_code ?? inspected.tracks[0]?.language_code ?? null,
+        sourceLanguage:
+          preferredTrack?.language_code ??
+          transcriptFallback?.languageCode ??
+          inspected.tracks[0]?.language_code ??
+          null,
         captionTracks,
         ...(preferredCaptionSegments?.length ? { preferredCaptionSegments } : {}),
       };
     } catch (error) {
       console.error("YouTube inspection failed", error);
-      throw new ApiError(502, "youtube_unavailable", "YouTube could not provide this video right now. Try again shortly.");
+      throw new ApiError(
+        502,
+        "youtube_unavailable",
+        "YouTube could not provide this video right now. Try again shortly.",
+      );
     }
   }
 

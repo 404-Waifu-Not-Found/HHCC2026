@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   extractYouTubePlayerResponse,
   loadYouTubeCaptionSegments,
+  loadYouTubeTranscriptFallback,
   parseYouTubePlayerResponse,
+  parseYouTubeTranscriptMarkdown,
   parseYouTubeTimedText,
   selectPreferredYouTubeCaptionTrack,
 } from "../src/sources/youtube";
@@ -17,7 +19,9 @@ describe("YouTube timed text", () => {
       videoDetails: {
         title: "Neural {networks}",
         lengthSeconds: "1120",
-        thumbnail: { thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }] },
+        thumbnail: {
+          thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }],
+        },
       },
       captions: {
         playerCaptionsTracklistRenderer: {
@@ -50,7 +54,11 @@ describe("YouTube timed text", () => {
     expect(
       parseYouTubeTimedText({
         events: [
-          { tStartMs: 100, dDurationMs: 450, segs: [{ utf8: "Hello" }, { utf8: "   world" }] },
+          {
+            tStartMs: 100,
+            dDurationMs: 450,
+            segs: [{ utf8: "Hello" }, { utf8: "   world" }],
+          },
           { tStartMs: "700", segs: [{ utf8: "Next\nline" }] },
           { tStartMs: 900, segs: [{ acAsrConf: 0 }] },
         ],
@@ -63,20 +71,38 @@ describe("YouTube timed text", () => {
 
   it("prefers manual English, then Chinese, before unrelated or generated tracks", () => {
     const tracks = [
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "fr" },
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "en", kind: "asr" as const },
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "zh-Hans" },
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "en-GB" },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "fr",
+      },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "en",
+        kind: "asr" as const,
+      },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "zh-Hans",
+      },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "en-GB",
+      },
     ];
     expect(selectPreferredYouTubeCaptionTrack(tracks)).toBe(tracks[3]);
   });
 
   it("loads json3 only from an HTTPS YouTube host", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ events: [{ tStartMs: 0, dDurationMs: 500, segs: [{ utf8: "Caption" }] }] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          events: [{ tStartMs: 0, dDurationMs: 500, segs: [{ utf8: "Caption" }] }],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -98,5 +124,73 @@ describe("YouTube timed text", () => {
       }),
     ).rejects.toThrow("YouTube captions could not be loaded");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("parses a bounded timestamped transcript fallback for the requested video", () => {
+    const markdown = `# Transcript: AP Biology Photosynthesis
+
+Source video: https://www.youtube.com/watch?v=Le7KOX91w7U
+Language: English · Duration: 3:41 · Words: 574
+
+## Transcript
+[0:00] Light energy drives the light-dependent reactions.
+
+[0:30] Water is split to replace chlorophyll's electrons.
+
+[1:04] A proton gradient powers ATP synthase.`;
+
+    expect(parseYouTubeTranscriptMarkdown("Le7KOX91w7U", markdown)).toEqual({
+      title: "AP Biology Photosynthesis",
+      durationSeconds: 221,
+      languageCode: "en",
+      segments: [
+        {
+          id: "yt-fallback-1",
+          startMs: 0,
+          endMs: 30_000,
+          text: "Light energy drives the light-dependent reactions.",
+        },
+        {
+          id: "yt-fallback-2",
+          startMs: 30_000,
+          endMs: 64_000,
+          text: "Water is split to replace chlorophyll's electrons.",
+        },
+        {
+          id: "yt-fallback-3",
+          startMs: 64_000,
+          endMs: 221_000,
+          text: "A proton gradient powers ATP synthase.",
+        },
+      ],
+    });
+    expect(parseYouTubeTranscriptMarkdown("different-id", markdown)).toBeNull();
+  });
+
+  it("loads the transcript fallback without sending user data", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        `# Transcript: AP Biology Photosynthesis
+
+Source video: https://www.youtube.com/watch?v=Le7KOX91w7U
+Language: English · Duration: 0:30
+
+## Transcript
+[0:00] Photosynthesis begins when pigments absorb light.`,
+        { status: 200, headers: { "content-type": "text/markdown" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadYouTubeTranscriptFallback("Le7KOX91w7U")).resolves.toMatchObject({
+      title: "AP Biology Photosynthesis",
+      durationSeconds: 30,
+      languageCode: "en",
+      segments: [{ text: "Photosynthesis begins when pigments absorb light." }],
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL("https://youtube-transcript.ai/transcript/Le7KOX91w7U.txt?lang=en"),
+      expect.objectContaining({ redirect: "error" }),
+    );
   });
 });

@@ -66,6 +66,14 @@ const BILIBILI_HEADERS = {
   "User-Agent": "Mozilla/5.0 ClipQuest/1.0",
 };
 
+async function readJson(response: Response): Promise<unknown | null> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 async function getView(sourceId: string) {
   const query = sourceId.toLowerCase().startsWith("av")
     ? `aid=${encodeURIComponent(sourceId.slice(2))}`
@@ -73,7 +81,7 @@ async function getView(sourceId: string) {
   const response = await fetch(`https://api.bilibili.com/x/web-interface/view?${query}`, {
     headers: BILIBILI_HEADERS,
   });
-  const parsed = ViewResponseSchema.safeParse(await response.json());
+  const parsed = ViewResponseSchema.safeParse(await readJson(response));
   if (!response.ok || !parsed.success || parsed.data.code !== 0) {
     throw new ApiError(502, "bilibili_unavailable", "bilibili could not provide this video right now.");
   }
@@ -88,7 +96,7 @@ export class BilibiliAdapter implements SourceAdapter {
       `https://api.bilibili.com/x/player/v2?bvid=${encodeURIComponent(view.bvid)}&cid=${view.cid}`,
       { headers: BILIBILI_HEADERS },
     );
-    const player = PlayerResponseSchema.safeParse(await playerResponse.json());
+    const player = PlayerResponseSchema.safeParse(await readJson(playerResponse));
     const subtitles = player.success ? (player.data.data.subtitle?.subtitles ?? []) : [];
 
     let preferredCaptionSegments: SourceVideo["preferredCaptionSegments"];
@@ -98,8 +106,10 @@ export class BilibiliAdapter implements SourceAdapter {
         const subtitleUrl = preferred.subtitle_url.startsWith("//")
           ? `https:${preferred.subtitle_url}`
           : preferred.subtitle_url;
-        const subtitleResponse = await fetch(subtitleUrl, { headers: BILIBILI_HEADERS });
-        const parsed = SubtitleResponseSchema.safeParse(await subtitleResponse.json());
+        const subtitleResponse = await fetch(subtitleUrl, {
+          headers: BILIBILI_HEADERS,
+        });
+        const parsed = SubtitleResponseSchema.safeParse(await readJson(subtitleResponse));
         if (parsed.success) {
           preferredCaptionSegments = parsed.data.body.map((item, index) => ({
             id: `bili-${index + 1}`,
@@ -136,7 +146,7 @@ export class BilibiliAdapter implements SourceAdapter {
       `https://api.bilibili.com/x/player/playurl?bvid=${encodeURIComponent(view.bvid)}&cid=${view.cid}&fnval=16&qn=64`,
       { headers: BILIBILI_HEADERS },
     );
-    const play = PlayUrlResponseSchema.safeParse(await playResponse.json());
+    const play = PlayUrlResponseSchema.safeParse(await readJson(playResponse));
     if (!play.success || play.data.code !== 0) {
       throw new ApiError(502, "audio_stream_unavailable", "The bilibili audio stream could not be prepared.");
     }
@@ -158,15 +168,20 @@ export class BilibiliAdapter implements SourceAdapter {
       body: mediaResponse.body,
       contentType: mediaResponse.headers.get("content-type") ?? "audio/mp4",
       ...(mediaResponse.headers.get("content-length")
-        ? { contentLength: mediaResponse.headers.get("content-length") ?? undefined }
+        ? {
+            contentLength: mediaResponse.headers.get("content-length") ?? undefined,
+          }
         : {}),
       ...(mediaResponse.headers.get("accept-ranges")
-        ? { acceptRanges: mediaResponse.headers.get("accept-ranges") ?? undefined }
+        ? {
+            acceptRanges: mediaResponse.headers.get("accept-ranges") ?? undefined,
+          }
         : {}),
       ...(mediaResponse.headers.get("content-range")
-        ? { contentRange: mediaResponse.headers.get("content-range") ?? undefined }
+        ? {
+            contentRange: mediaResponse.headers.get("content-range") ?? undefined,
+          }
         : {}),
     };
   }
 }
-
