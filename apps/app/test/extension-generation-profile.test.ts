@@ -218,6 +218,7 @@ describe("extension generation profile compatibility", () => {
     expect(quiz).toContain(
       "ensureProgressiveAttemptRecovery(attemptId, { force: true })",
     );
+    expect(quiz).toContain("current.retryAvailable === next.retryAvailable");
   });
 
   it("keeps first-question admission independent from call telemetry", () => {

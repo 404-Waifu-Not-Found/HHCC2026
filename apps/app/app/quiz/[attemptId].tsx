@@ -165,7 +165,8 @@ export default function QuizScreen() {
         current?.state === next.state &&
         current.availableQuestions === next.availableQuestions &&
         current.totalQuestions === next.totalQuestions &&
-        current.reasonCode === next.reasonCode
+        current.reasonCode === next.reasonCode &&
+        current.retryAvailable === next.retryAvailable
           ? current
           : next,
       ),
