@@ -131,15 +131,25 @@ export async function pollWorkerAssetShells({
 export async function retryWorkerAssetProbe(
   options,
   {
-    attempts = 21,
+    // Cloudflare usually converges in seconds, but production QA observed a
+    // staged 0% version taking nearly three minutes to become overrideable.
+    // Keep the wait bounded while allowing five minutes of control-plane lag.
+    attempts = 101,
     delayMs = 3_000,
     probe = probeWorkerAssetShells,
     sleep = (milliseconds) =>
       new Promise((resolve) => setTimeout(resolve, milliseconds)),
+    report = ({ attempt, total }) => {
+      if (attempt === 1 || attempt % 10 === 0) {
+        process.stdout.write(
+          `Waiting for Worker version convergence (${attempt}/${total})...\n`,
+        );
+      }
+    },
   } = {},
 ) {
-  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 60) {
-    throw new Error("Probe attempts must be an integer from 1 through 60.");
+  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 120) {
+    throw new Error("Probe attempts must be an integer from 1 through 120.");
   }
   if (!Number.isFinite(delayMs) || delayMs < 0 || delayMs > 10_000) {
     throw new Error("Probe delay must be between 0 and 10000 milliseconds.");
@@ -151,7 +161,10 @@ export async function retryWorkerAssetProbe(
       return await probe(options);
     } catch (error) {
       lastError = error;
-      if (attempt < attempts) await sleep(delayMs);
+      if (attempt < attempts) {
+        report({ attempt, total: attempts });
+        await sleep(delayMs);
+      }
     }
   }
   throw lastError;

@@ -78,6 +78,7 @@ test("waits through bounded version-override propagation", async () => {
         assert.equal(milliseconds, 3_000);
         sleeps += 1;
       },
+      report: () => {},
     },
   );
 
@@ -86,4 +87,20 @@ test("waits through bounded version-override propagation", async () => {
   });
   assert.equal(probeCalls, 7);
   assert.equal(sleeps, 6);
+});
+
+test("allows a bounded five-minute convergence budget", async () => {
+  await assert.rejects(
+    retryWorkerAssetProbe(
+      {},
+      {
+        attempts: 121,
+        delayMs: 0,
+        probe: async () => ({}),
+        sleep: async () => {},
+        report: () => {},
+      },
+    ),
+    /1 through 120/u,
+  );
 });
