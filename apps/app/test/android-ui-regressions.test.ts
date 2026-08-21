@@ -99,4 +99,15 @@ describe("Android UI regressions", () => {
     expect(home).toContain("styles.cardStackItem");
     expect(home).toContain("compact={compact}");
   });
+
+  it("keeps card navigation and export as separate native controls", () => {
+    const videoCard = source("src/components/VideoCard.tsx");
+
+    expect(videoCard).toContain('accessibilityRole="button"');
+    expect(videoCard).toContain("styles.main");
+    expect(videoCard).toContain("styles.actionRow");
+    expect(videoCard).toContain("accessibilityLabel={");
+    expect(videoCard).toContain("card.cheatSheet.status");
+    expect(videoCard).not.toContain("event.stopPropagation()");
+  });
 });
