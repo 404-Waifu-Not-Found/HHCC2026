@@ -3,6 +3,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { z } from "zod";
 import { createAuth } from "./auth";
 import { failGeneration, prepareGenerationRetry, processGeneration } from "./generation/processor";
+import { publicAssetShell } from "./lib/asset-shell";
 import { ApiError, errorResponse } from "./lib/errors";
 import { clearExpiredRateLimits } from "./lib/rate-limit";
 import { authenticated, type ApiBindings } from "./middleware/authenticated";
@@ -61,6 +62,21 @@ app.use("*", async (c, next) => {
   });
   headers.forEach((value, key) => response.headers.set(key, value));
   c.res = response;
+});
+
+app.use("*", async (c, next) => {
+  if (c.req.method === "GET" || c.req.method === "HEAD") {
+    const shellPath = publicAssetShell(c.req.path);
+    if (shellPath) {
+      const assetUrl = new URL(c.req.url);
+      assetUrl.pathname = shellPath;
+      c.res = await c.env.ASSETS.fetch(
+        new Request(assetUrl.toString(), { method: c.req.method, headers: c.req.raw.headers }),
+      );
+      return;
+    }
+  }
+  await next();
 });
 
 app.get("/health", (c) => {
