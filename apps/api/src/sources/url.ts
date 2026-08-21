@@ -37,7 +37,10 @@ async function normalizeSourceUrlWithRedirectLimit(raw: string, redirectCount: n
 }
 
 export function parseYouTubeId(url: URL): string {
-  const id = url.hostname === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0] : url.searchParams.get("v");
+  const pathId = url.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)/)?.[1];
+  const id = url.hostname === "youtu.be"
+    ? url.pathname.split("/").filter(Boolean)[0]
+    : url.searchParams.get("v") ?? pathId;
   if (!id || !/^[a-zA-Z0-9_-]{6,20}$/.test(id)) {
     throw new ApiError(422, "invalid_youtube_link", "This YouTube link does not contain a valid video ID.");
   }

@@ -40,6 +40,9 @@ describe("source video IDs", () => {
   it("parses standard and short YouTube links", () => {
     expect(parseYouTubeId(new URL("https://youtube.com/watch?v=dQw4w9WgXcQ"))).toBe("dQw4w9WgXcQ");
     expect(parseYouTubeId(new URL("https://youtu.be/dQw4w9WgXcQ"))).toBe("dQw4w9WgXcQ");
+    expect(parseYouTubeId(new URL("https://youtube.com/shorts/dQw4w9WgXcQ"))).toBe("dQw4w9WgXcQ");
+    expect(parseYouTubeId(new URL("https://youtube.com/live/dQw4w9WgXcQ"))).toBe("dQw4w9WgXcQ");
+    expect(parseYouTubeId(new URL("https://youtube.com/embed/dQw4w9WgXcQ"))).toBe("dQw4w9WgXcQ");
   });
 
   it("parses BV and av bilibili IDs", () => {
