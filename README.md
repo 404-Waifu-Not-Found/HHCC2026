@@ -15,18 +15,11 @@
 </p>
 
 <p align="center">
-  <img alt="Expo" src="https://img.shields.io/badge/Expo-4856D8?style=for-the-badge&logo=expo&logoColor=white" />
-  <img alt="React Native" src="https://img.shields.io/badge/React_Native-5968E8?style=for-the-badge&logo=react&logoColor=white" />
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6171F3?style=for-the-badge&logo=typescript&logoColor=white" />
-  <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare_Workers-FF8A3D?style=for-the-badge&logo=cloudflareworkers&logoColor=white" />
-</p>
-
-<p align="center">
-  <img alt="DeepSeek" src="https://img.shields.io/badge/DeepSeek-4856D8?style=for-the-badge" />
-  <img alt="SQLite D1" src="https://img.shields.io/badge/Cloudflare_D1-16A88A?style=for-the-badge&logo=sqlite&logoColor=white" />
-  <img alt="Vitest" src="https://img.shields.io/badge/Vitest-F4B942?style=for-the-badge&logo=vitest&logoColor=20263A" />
-  <img alt="Playwright" src="https://img.shields.io/badge/Playwright-16A88A?style=for-the-badge&logo=playwright&logoColor=white" />
-  <img alt="Apache 2.0" src="https://img.shields.io/badge/License-Apache_2.0-4856D8?style=for-the-badge" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=20232A" />
+  <img alt="Swift" src="https://img.shields.io/badge/Swift-F05138?style=for-the-badge&logo=swift&logoColor=white" />
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" />
+  <img alt="SQL" src="https://img.shields.io/badge/SQL-336791?style=for-the-badge&logoColor=white" />
 </p>
 
 <p align="center">
