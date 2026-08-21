@@ -620,7 +620,12 @@ export class YouTubeAdapter implements SourceAdapter {
   ): Promise<import("./types").AudioStream> {
     const startedAt = Date.now();
     try {
-      const client = await createYouTubeClient(true);
+      // Progressive Android formats carry a usable direct URL and do not need
+      // the player JavaScript. Keeping that client separate avoids the
+      // player-decipher path that can fail in the Workers runtime, while the
+      // compact iOS audio profile retains player retrieval when it is needed.
+      const progressiveClient = await createYouTubeClient(false);
+      const signedAudioClient = await createYouTubeClient(true);
       const headers = new Headers({
         Accept: "*/*",
         "Cache-Control": "no-store",
@@ -647,7 +652,11 @@ export class YouTubeAdapter implements SourceAdapter {
           // Resolve the signed format again on every retry. Reusing the URL
           // is the common cause of a repeat 403/503 after a transient edge
           // failure.
-          const format = await client.getStreamingData(sourceVideoId, {
+          const formatClient =
+            formatRequest.type === "video+audio"
+              ? progressiveClient
+              : signedAudioClient;
+          const format = await formatClient.getStreamingData(sourceVideoId, {
             client: formatRequest.client,
             type: formatRequest.type,
             quality: "bestefficiency",
