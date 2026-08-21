@@ -12,6 +12,7 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  multipleChoiceOptionMatchesQuestionKind,
   multipleChoiceQuestionAnswerIsCoherent,
   questionConceptFailure,
   questionMatchesQuizLanguage,
@@ -216,7 +217,7 @@ function conceptFirstQuestionSchemaForType(type, id) {
         answerText: {
           type: "string",
           description:
-            "The complete supported answer. When the evidence is already in the quiz language, copy answerSpan exactly; otherwise translate it faithfully while preserving all qualifiers.",
+            "The complete supported answer. When the evidence is already in the quiz language, copy answerSpan exactly except that one obvious one-character caption spelling or plural error may be corrected without changing any word's meaning or qualifier; otherwise translate it faithfully while preserving all qualifiers.",
         },
         distractors: {
           type: "array",
@@ -644,7 +645,7 @@ function generationMessagesV58(input, isTransientRetry) {
     );
   const typeRules =
     type === "multiple_choice"
-      ? "Choose evidenceQuote first by copying one concise contiguous span from the eligible evidence. Then copy one unique contiguous answerSpan character-for-character from evidenceQuote; do not paraphrase, summarize, change morphology, or drop punctuation inside it. answerSpan must itself be a complete grammatical answer to the exact question: never select a transition, scene-setting phrase, exception, example, or concessive fragment such as 'even without catastrophic events'. Never select figurative weave, tapestry, strand, link, unravel, or jacket wording as an answer; if the focus offers no literal complete answer, choose a different supported claim in the focus. If the evidence is already in the selected quiz language, answerText must be exactly identical to answerSpan. Otherwise translate answerSpan faithfully. Only after fixing that answer, write a direct question which the complete answerText answers grammatically and uniquely. A How-can question requires a cause, condition, or mechanism, not a phrase that merely repeats what can be absent. In English the question must begin with an allowlisted direct interrogative or imperative from the system instruction. Return distractors as exactly three concise strings in the selected quiz language, with no objects, reasons, labels, or extra fields. Each distractor must express a distinct misconception. answerText and every distractor must form a coherent answer to the question. Preserve every causal, comparative, quantitative, and directional qualifier: if evidence supports only lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relationship in answerText. Do not use a pronoun whose antecedent changes the scope of the evidence. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally."
+      ? "Choose evidenceQuote first by copying one concise contiguous span from the eligible evidence. Then copy one unique contiguous answerSpan character-for-character from evidenceQuote; do not paraphrase, summarize, change morphology, or drop punctuation inside it. answerSpan must itself be a complete grammatical answer to the exact question: never select a transition, scene-setting phrase, exception, example, or concessive fragment such as 'even without catastrophic events'. Never select figurative weave, tapestry, strand, link, unravel, or jacket wording as an answer; if the focus offers no literal complete answer, choose a different supported claim in the focus. If the evidence is already in the selected quiz language, answerText must equal answerSpan except that one obvious one-character caption spelling or plural error may be corrected; never change a concept, direction, comparison, quantity, or qualifier. Otherwise translate answerSpan faithfully. Only after fixing that answer, write a direct question which the complete answerText answers grammatically and uniquely. A How-can question requires a cause, condition, or mechanism, not a phrase that merely repeats what can be absent. Any How-does/How-do question using affect, contribute, support, strengthen, influence, impact, help, enable, determine, relate, depend, or secure requires answerText and every distractor to state an actual outcome, relationship, or mechanism; a component list or descriptive fragment is invalid. In English the question must begin with an allowlisted direct interrogative or imperative from the system instruction. Return distractors as exactly three concise strings in the selected quiz language, with no objects, reasons, labels, or extra fields. Each distractor must express a distinct misconception. answerText and every distractor must form a coherent answer to the question. Preserve every causal, comparative, quantitative, and directional qualifier: if evidence supports only lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relationship in answerText. Do not use a pronoun whose antecedent changes the scope of the evidence. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally."
       : type === "true_false"
         ? "Return one direct supportedFact contained in evidenceQuote. Do not choose truth polarity, mutate the statement, or return an answer boolean; ClipQuest constructs a safe true or false item locally."
         : "Choose exactly one shortAnswerMode. Use atomic_term for a single term or name, proposition for a concise explanatory claim with 1-3 independent requiredIdeas, enumeration for 2-8 indispensable requiredItems, and formula only with canonical formulaTokens. Do not manufacture paraphrase lists; ClipQuest derives safe variants locally.";
@@ -1709,6 +1710,21 @@ function validateQuiz(quiz, input) {
           validationFailure(
             `Question ${index + 1} drops a directional qualifier or changes the subject of its supported answer.`,
             "mc_question_answer_mismatch",
+          );
+        }
+        if (
+          input.conceptFirstV58Mode &&
+          candidateChoices.some(
+            (choice) =>
+              !multipleChoiceOptionMatchesQuestionKind(
+                question.question,
+                choice,
+              ),
+          )
+        ) {
+          validationFailure(
+            `Question ${index + 1} contains an answer choice that does not supply the outcome, relationship, or mechanism requested by its stem.`,
+            "mc_answer_kind_mismatch",
           );
         }
         if (
@@ -3728,7 +3744,7 @@ function repairGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
     mc_distractor_equivalent:
       "Replace only equivalent distractors. None may be an alias, algebraic equivalent, or defensible restatement of answerSpan.",
     mc_answer_kind_mismatch:
-      "Make answerSpan answer the exact wh-kind requested by the question; rewrite the question directly if its requested kind is ambiguous.",
+      "Make answerSpan and every distractor answer the exact wh-kind requested by the question; rewrite the question directly if its requested kind is ambiguous. A How-does/How-do contribution, effect, relationship, dependency, or security question requires an actual outcome or mechanism, not a component list or descriptive fragment.",
     mc_question_answer_mismatch:
       "Preserve the complete supported relationship. If evidence applies to lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relation in answerText. Do not bind a pronoun to an unqualified concept.",
     true_false_fact_invalid:
@@ -3744,7 +3760,7 @@ function repairGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
     question_tautology_invalid:
       "Replace the candidate with a question that requires understanding; the answer must not merely repeat a phrase already supplied in the stem.",
     question_answer_kind_mismatch:
-      "Rewrite the question and answer so the answer supplies the requested factor, cause, condition, mechanism, process, method, term, concept, or quantity. For a How-can question, return the actual cause, condition, or mechanism; a concessive phrase such as 'even without ...' merely repeats the stem and is not an answer.",
+      "Rewrite the question and answer so the answer supplies the requested factor, cause, condition, mechanism, process, method, term, concept, or quantity. For a How-can question, return the actual cause, condition, or mechanism; a concessive phrase such as 'even without ...' merely repeats the stem and is not an answer. For How-does/How-do contribution, effect, relationship, dependency, or security questions, state the actual outcome or mechanism rather than only naming components or copying a descriptive fragment.",
     quiz_language_mismatch:
       "Keep the supported objective and private evidence fields, but rewrite every learner-visible field entirely in the selected quiz language. For multiple choice, translate answerText and all distractors; keep evidenceQuote and answerSpan as exact private source evidence.",
   };

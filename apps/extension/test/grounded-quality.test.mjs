@@ -13,6 +13,7 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  multipleChoiceOptionMatchesQuestionKind,
   multipleChoiceQuestionAnswerIsCoherent,
   questionConceptFailure,
   questionMatchesQuizLanguage,
@@ -135,6 +136,72 @@ test("v5.8 preserves directional scope between a relationship stem and its answe
     ),
     true,
   );
+});
+
+test("v5.8 requires How-does choices to state an outcome or mechanism", () => {
+  for (const [question, answer] of [
+    [
+      "How does the presence of interconnected species within an ecosystem contribute to its resilience?",
+      "each packed with interconnected species",
+    ],
+    [
+      "How does biodiversity contribute to an ecosystem's strength in the face of change?",
+      "Biodiversity is built out of ecosystem, species, and genetic diversity.",
+    ],
+  ]) {
+    assert.equal(
+      multipleChoiceOptionMatchesQuestionKind(question, answer),
+      false,
+    );
+    assert.equal(
+      questionConceptFailure({
+        concept: "ecosystem resilience",
+        question,
+        answerText: answer,
+        explanation: "Biodiversity supports resilience.",
+      }),
+      "question_answer_kind_mismatch",
+    );
+  }
+
+  for (const [question, answer] of [
+    [
+      "How does genetic diversity affect a species' vulnerability to environmental changes?",
+      "Species with less genetic diversity are much more vulnerable to environmental change.",
+    ],
+    [
+      "How do many organisms in a reef depend on coral?",
+      "Coral provides shelter, breeding grounds, and microhabitats.",
+    ],
+    [
+      "How does periodic position relate to recurring chemical properties?",
+      "Elements in the same group share similar chemical properties.",
+    ],
+  ]) {
+    assert.equal(
+      multipleChoiceOptionMatchesQuestionKind(question, answer),
+      true,
+    );
+  }
+});
+
+test("v5.8 corrects only bounded caption spelling in a grounded answer", () => {
+  const evidence =
+    "A keystone organism is one that many others depend on for their suvival.";
+  const candidate = {
+    evidenceQuote: evidence,
+    answerSpan: "one that many others depend on for their suvival",
+    answerText: "one that many others depend on for their survival",
+    distractors: [
+      "one that is always the most abundant",
+      "one that lives without other organisms",
+      "one that appears only after a disturbance",
+    ],
+  };
+  assert.deepEqual(groundedMultipleChoiceCandidate(candidate, evidence), {
+    correctAnswer: candidate.answerText,
+    distractors: candidate.distractors,
+  });
 });
 
 test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () => {

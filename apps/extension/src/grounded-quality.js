@@ -293,6 +293,33 @@ const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
 const HOW_CAN_QUESTION_PATTERN = /^\s*how\s+(?:can|could|may|might)\b/iu;
 const CONCESSIVE_NON_ANSWER_PATTERN =
   /^\s*(?:(?:it|they|this|that)\s+(?:can|could|may|might)\s+)?even\s+(?:without|despite|when|if)\b/iu;
+const HOW_OUTCOME_QUESTION_PATTERN =
+  /^\s*how\s+(?:does|do|did|can|could|will|would)\b.{0,220}\b(?:affect|contribute(?:s)?(?:\s+to)?|support|strengthen|weaken|protect|promote|improve|reduce|increase|decrease|influence|impact|help|enable|allow|cause|determine|relate|depend|secure)\b/iu;
+const OUTCOME_ANSWER_PATTERN =
+  /\b(?:by|because|through|thereby|so that|allow(?:s|ed|ing)?|enable(?:s|d|ing)?|help(?:s|ed|ing)?|support(?:s|ed|ing)?|stabili[sz](?:e|es|ed|ing)|strengthen(?:s|ed|ing)?|weaken(?:s|ed|ing)?|increase(?:s|d|ing)?|decrease(?:s|d|ing)?|reduce(?:s|d|ing)?|prevent(?:s|ed|ing)?|protect(?:s|ed|ing)?|provide(?:s|d|ing)?|create(?:s|d|ing)?|distribut(?:e|es|ed|ing)|maintain(?:s|ed|ing)?|cause(?:s|d|ing)?|lead(?:s|ing)?\s+to|result(?:s|ed|ing)?\s+in|make(?:s|ing)?|affect(?:s|ed|ing)?|influenc(?:e|es|ed|ing)|promot(?:e|es|ed|ing)|facilitat(?:e|es|ed|ing)|ensure(?:s|d|ing)?|depend(?:s|ed|ing)?|share(?:s|d|ing)?|correspond(?:s|ed|ing)?|relat(?:e|es|ed|ing)|associate(?:s|d|ing)?|determin(?:e|es|ed|ing)|change(?:s|d|ing)?|rise(?:s|n)?|fall(?:s|en)?|encrypt(?:s|ed|ing)?|decrypt(?:s|ed|ing)?|authenticat(?:e|es|ed|ing)|verif(?:y|ies|ied|ying)|sign(?:s|ed|ing)?)\b/iu;
+const OUTCOME_RELATION_PATTERN =
+  /\b(?:is|are|become(?:s)?|remain(?:s)?)\b.{0,100}\b(?:more|less|higher|lower|greater|smaller|larger|increased|decreased|reduced|vulnerable|resilient|stable|unstable|likely|unlikely|similar|different|dependent|independent)\b/iu;
+const CJK_OUTCOME_ANSWER_PATTERN =
+  /(?:通过|因为|因此|从而|使得?|导致|促进|支持|增强|减弱|提高|降低|减少|防止|保护|提供|产生|分配|维持|依赖|共享|对应|相关|决定|改变|上升|下降|加密|解密|验证)/u;
+
+/**
+ * Require an answer to supply the outcome, relationship, or mechanism promised
+ * by an explicit How-does/How-do question. Merely naming components or copying
+ * a descriptive fragment is not an answer to a causal/contribution stem.
+ */
+export function multipleChoiceOptionMatchesQuestionKind(question, answer) {
+  const prompt = String(question ?? "").trim();
+  const choice = String(answer ?? "").trim();
+  if (!prompt || !choice || !HOW_OUTCOME_QUESTION_PATTERN.test(prompt)) {
+    return true;
+  }
+  if (formulaFingerprint(choice)) return true;
+  return (
+    OUTCOME_ANSWER_PATTERN.test(choice) ||
+    OUTCOME_RELATION_PATTERN.test(choice) ||
+    CJK_OUTCOME_ANSWER_PATTERN.test(choice)
+  );
+}
 
 const NUMERIC_RECALL_QUESTION_PATTERN =
   /^\s*(?:(?:what (?:percentage|percent|number|count|frequency|duration|amount|value|cost|price)|how (?:many|often|long|much))\b|(?:多少|几次|多久|百分之几|占比多少|价值多少|价格多少|成本多少))/iu;
@@ -391,6 +418,9 @@ export function questionConceptFailure(candidate) {
     HOW_CAN_QUESTION_PATTERN.test(question) &&
     CONCESSIVE_NON_ANSWER_PATTERN.test(directAnswerSource)
   ) {
+    return "question_answer_kind_mismatch";
+  }
+  if (!multipleChoiceOptionMatchesQuestionKind(question, directAnswerSource)) {
     return "question_answer_kind_mismatch";
   }
   return null;
@@ -942,6 +972,9 @@ export function multipleChoiceQuestionAnswerIsCoherent(
 ) {
   const normalizedQuestion = normalizeGroundedText(question);
   const normalizedAnswer = normalizeGroundedText(answer);
+  if (!multipleChoiceOptionMatchesQuestionKind(question, answer)) {
+    return false;
+  }
   if (
     !normalizedQuestion ||
     !normalizedAnswer ||
@@ -1039,6 +1072,61 @@ function isVerifiedContradiction(source, replacement) {
   return (
     withoutNumber(normalizedSource) === withoutNumber(normalizedReplacement)
   );
+}
+
+function isOneSurfaceEditApart(left, right) {
+  if (left === right) return true;
+  if (Math.abs(left.length - right.length) > 1) return false;
+  const [shorter, longer] =
+    left.length <= right.length ? [left, right] : [right, left];
+  let shortIndex = 0;
+  let longIndex = 0;
+  let edits = 0;
+  while (shortIndex < shorter.length && longIndex < longer.length) {
+    if (shorter[shortIndex] === longer[longIndex]) {
+      shortIndex += 1;
+      longIndex += 1;
+      continue;
+    }
+    edits += 1;
+    if (edits > 1) return false;
+    if (shorter.length === longer.length) shortIndex += 1;
+    longIndex += 1;
+  }
+  if (longIndex < longer.length || shortIndex < shorter.length) edits += 1;
+  return edits <= 1;
+}
+
+function isSafeCaptionSurfaceCorrection(source, replacement) {
+  const sourceTokens = normalizeGroundedText(source)
+    .split(/\s+/u)
+    .filter(Boolean);
+  const replacementTokens = normalizeGroundedText(replacement)
+    .split(/\s+/u)
+    .filter(Boolean);
+  if (
+    !sourceTokens.length ||
+    sourceTokens.length !== replacementTokens.length
+  ) {
+    return false;
+  }
+  const differences = [];
+  for (let index = 0; index < sourceTokens.length; index += 1) {
+    if (sourceTokens[index] !== replacementTokens[index]) {
+      differences.push([sourceTokens[index], replacementTokens[index]]);
+    }
+  }
+  if (!differences.length || differences.length > 2) return false;
+  return differences.every(([from, to]) => {
+    if (
+      DIRECTIONAL_SCOPE_TOKENS.has(from) ||
+      DIRECTIONAL_SCOPE_TOKENS.has(to) ||
+      isVerifiedContradiction(from, to)
+    ) {
+      return false;
+    }
+    return isOneSurfaceEditApart(from, to);
+  });
 }
 
 export function applyVerifiedMutation(supportedStatement, mutation) {
@@ -1257,6 +1345,12 @@ export function groundedMultipleChoiceCandidate(
     learnerAnswerIsGrounded
       ? requestedAnswerSpan
       : null);
+  const safeLearnerSurfaceCorrection =
+    quizLanguage === "en" &&
+    exactRequestedAnswerSpan &&
+    learnerAnswerIsGrounded &&
+    learnerAnswerIsUniquelyGrounded &&
+    isSafeCaptionSurfaceCorrection(exactRequestedAnswerSpan, learnerAnswer);
   if (
     !groundedAnswer ||
     !learnerAnswer ||
@@ -1282,7 +1376,11 @@ export function groundedMultipleChoiceCandidate(
   const storedAnswer =
     quizLanguage === "zh-CN"
       ? learnerAnswer
-      : (exactRequestedAnswerSpan ?? exactLearnerAnswerSpan ?? groundedAnswer);
+      : safeLearnerSurfaceCorrection
+        ? learnerAnswer
+        : (exactRequestedAnswerSpan ??
+          exactLearnerAnswerSpan ??
+          groundedAnswer);
   return {
     correctAnswer: storedAnswer,
     distractors: distractors.map((entry) => entry.text.trim()),

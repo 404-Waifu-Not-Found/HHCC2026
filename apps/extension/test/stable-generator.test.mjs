@@ -983,10 +983,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
     assert.match(request.task, /Final learner-copy gate/u);
     assert.doesNotMatch(request.task, /Mandatory slot plan/u);
     if (request.type === "multiple_choice") {
-      assert.match(
-        request.task,
-        /answerText must be exactly identical to answerSpan/u,
-      );
+      assert.match(request.task, /answerText must equal answerSpan except/u);
       assert.match(
         request.task,
         /do not paraphrase, summarize, change morphology/u,
@@ -1341,6 +1338,51 @@ test("v5.8 repairs the production how-can non-answer and figurative scaffolding"
   assert.doesNotMatch(
     JSON.stringify(result.quiz.questions[0]),
     /even without|cataclysmic|cut too many links|unravel/iu,
+  );
+});
+
+test("v5.8 repairs How-does component lists before storing the singleton", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        const question = value.questions[0];
+        question.concept = "biodiversity and ecosystem resilience";
+        question.question =
+          "How does biodiversity contribute to ecosystem resilience?";
+        question.answerSpan =
+          "Biodiversity includes ecosystem, species, and genetic diversity";
+        question.answerText = question.answerSpan;
+        question.evidenceQuote = `${question.answerSpan}. ${task.focusExcerpt}`;
+        question.explanation = "These three components define biodiversity.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(calls[1]?.outcome, "question_answer_kind_mismatch");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "answer_repair");
+  assert.notEqual(
+    result.quiz.questions[0].answer,
+    "Biodiversity includes ecosystem, species, and genetic diversity",
   );
 });
 
