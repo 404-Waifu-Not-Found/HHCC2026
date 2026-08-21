@@ -131,6 +131,18 @@ export function getOrStartProgressiveRecoveryTask(
   return task;
 }
 
+/**
+ * A learner-triggered retry must be able to replace a stale background
+ * recovery task. Removing the task before aborting prevents the next retry
+ * from deduplicating onto a promise that can no longer make progress.
+ */
+export function cancelProgressiveRecoveryTask(key: string): void {
+  const task = recoveryTasks.get(key);
+  if (!task) return;
+  recoveryTasks.delete(key);
+  task.cancel();
+}
+
 export function publishAttemptGeneration(
   attemptId: string,
   quizId: string,

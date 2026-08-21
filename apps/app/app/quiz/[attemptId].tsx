@@ -56,6 +56,7 @@ import {
 } from "../../src/lib/quiz-order";
 import { ensureProgressiveAttemptRecovery } from "../../src/generation/progressive-continuation";
 import {
+  cancelProgressiveRecoveryTask,
   hasActiveProgressiveGenerationForAttempt,
   publishAttemptGeneration,
   subscribeToAttemptGeneration,
@@ -345,6 +346,7 @@ export default function QuizScreen() {
   }, [applyResume, attemptId]);
 
   const retryGeneration = useCallback(() => {
+    cancelProgressiveRecoveryTask(attemptId);
     recoveryAttemptedRef.current = false;
     setError(undefined);
     void ensureProgressiveAttemptRecovery(attemptId, { force: true }).catch(
