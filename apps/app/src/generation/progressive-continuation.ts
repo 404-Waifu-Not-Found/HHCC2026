@@ -195,7 +195,10 @@ async function runAutomaticRecovery(
       GenerationClaimResponseSchema,
     );
   } catch (error) {
-    if (isLeaseConflict(error)) return;
+    // Background polling treats a lease conflict as expected contention. A
+    // learner-triggered retry must surface it instead of appearing to do
+    // nothing, so the UI can explain that another tab is still recovering.
+    if (isLeaseConflict(error) && !options.force) return;
     throw error;
   }
 

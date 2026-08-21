@@ -213,6 +213,7 @@ describe("extension generation profile compatibility", () => {
     expect(recovery).toContain(
       "(persistedRecoveryExhausted && !options.force)",
     );
+    expect(recovery).toContain("isLeaseConflict(error) && !options.force");
     expect(recovery).toContain("options.force");
     expect(quiz).toContain(
       "ensureProgressiveAttemptRecovery(attemptId, { force: true })",
