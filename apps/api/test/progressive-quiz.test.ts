@@ -322,5 +322,24 @@ describe("progressive short-answer grading", () => {
         }),
       ).toBe(true);
     });
+
+    it("falls back to semantic grading when only the reference parses as a formula", () => {
+      expect(
+        gradeProgressiveShortAnswer({
+          answer:
+            "d/dx[f(x) ± g(x)] = f'(x) ± g'(x). Thus d/dx(x+x) = 1+1 = 2.",
+          requiredIdeas: [
+            "State that d/dx [f(x) ± g(x)] = f'(x) ± g'(x)",
+            "Derivative of x is 1",
+            "Apply to x+x to get 2",
+          ],
+          acceptableAlternatives: [
+            "The sum and difference rule says the derivative of f(x) ± g(x) equals f'(x) ± g'(x). For y = x + x, the derivative is 1 + 1 = 2.",
+            "d/dx (f(x)+g(x)) = f'(x)+g'(x) and d/dx (f(x)-g(x)) = f'(x)-g'(x); for x+x, derivative = 2.",
+            "The derivative of a sum/difference is the sum/difference of the derivatives, so y' = 1+1 = 2.",
+          ],
+        }),
+      ).toBe(true);
+    });
   });
 });

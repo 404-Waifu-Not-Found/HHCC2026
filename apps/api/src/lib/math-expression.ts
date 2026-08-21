@@ -66,7 +66,12 @@ export function compareFormulaAnswer(
   if (references.length === 0) return "not_formula";
 
   const learner = extractFormulaCandidate(learnerAnswer);
-  if (!learner) return "mismatch";
+  // A structural mismatch is definitive only when both sides contain a
+  // significant parsed formula. Compact combined notation such as `f ± g`
+  // deliberately remains outside this parser and must continue through the
+  // multilingual semantic rubric instead of being rejected merely because a
+  // stored alternative used separate `+` and `-` equations.
+  if (!learner) return "not_formula";
   return references.some(
     (reference) => reference.fingerprint === learner.fingerprint,
   )
