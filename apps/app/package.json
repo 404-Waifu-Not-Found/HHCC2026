@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --exclude 'scripts/**/*.test.mjs' && node --test scripts/verify-web-assets.test.mjs",
     "native:prebuild": "expo prebuild",
+    "eas-build-post-install": "npm run build -w @clipquest/contracts",
     "android:internal": "eas build --platform android --profile internal",
     "ios:development": "eas build --platform ios --profile development"
   },
@@ -72,6 +73,7 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "babel-preset-expo": "~57.0.1",
+    "eas-cli": "^22.0.0",
     "react-refresh": "^0.14.2",
     "sharp": "^0.35.3",
     "vitest": "3.2.7"
