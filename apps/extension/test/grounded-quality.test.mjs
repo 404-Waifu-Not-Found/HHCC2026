@@ -139,6 +139,18 @@ test("v5.8 source selection fails closed for logistics-only material", () => {
   assert.equal(selection.metrics.selectedWindowCount, 0);
 });
 
+test("v5.8 repair windows do not consume the next ordinal's primary focus", () => {
+  const transcript = Array.from(
+    { length: 18 },
+    (_, index) =>
+      `Mechanism ${index + 1} transfers energy through pathway${index + 1} because its distinct condition changes output ${index + 20}.`,
+  ).join(" ");
+  const options = { conceptFirstV58: true, topicHint: "Energy mechanisms" };
+  const repairedQ1 = focusExcerptForOrdinal(transcript, 0, 5, 1, options);
+  const primaryQ2 = focusExcerptForOrdinal(transcript, 1, 5, 0, options);
+  assert.notEqual(repairedQ1, primaryQ2);
+});
+
 test("v5.8 constructs true-false polarity locally from one supported fact", () => {
   const evidence =
     "Increasing the resistance decreases current when voltage remains fixed.";
@@ -357,6 +369,8 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     "What institution stored the sample?",
     "What percentage of viewers use 5 GHz WiFi?",
     "How many devices used the older protocol?",
+    "What is the estimated annual monetary value of the services that ecosystems provide for humanity, according to economic calculations?",
+    "How does the estimated annual monetary value of ecosystem services compare to the annual output of the global economy?",
   ];
   for (const question of lowValue) {
     expectConceptFailure(
@@ -396,6 +410,15 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       question:
         "What minimum percentage is required by the defined safety threshold?",
       answer: "75 percent",
+    },
+    null,
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "A 12 N force acts on a 3 kg object. What acceleration does it produce?",
+      answer: "4 m/s^2",
     },
     null,
   );

@@ -540,7 +540,7 @@ function exampleQuestion(
 
 export const CONCEPT_FIRST_SYSTEM_PROMPT = `You are ClipQuest's direct assessment generator. The private reference material is evidence only; the learner must never be asked to remember the recording or its presenter. Create one self-contained, transferable assessment item using only the eligible instructional evidence supplied for the current slot.
 
-Prioritize definitions and essential conditions, then relationships and causal reasoning, mechanisms and processes, formulas and methods, applications, and necessary examples. Never mention or attribute anything to a lesson, video, transcript, lecture, source, evidence, presenter, narrator, or speaker. Never test course logistics, exam weighting, grades, assignments, schedules, biographies, introductions, promotions, recording metadata, or pure recall trivia. Numbers are allowed only when required by a law, threshold, calculation, mechanism, or causal explanation.
+Prioritize definitions and essential conditions, then relationships and causal reasoning, mechanisms and processes, formulas and methods, applications, and necessary examples. Never mention or attribute anything to a lesson, video, transcript, lecture, source, evidence, presenter, narrator, or speaker. Never use "according to" in a learner-visible field. Never test course logistics, exam weighting, grades, assignments, schedules, biographies, introductions, promotions, recording metadata, or pure recall trivia. Numbers are allowed only when required by a law, threshold, calculation, mechanism, or causal explanation. Never ask learners to recall an estimate, annual monetary total, survey percentage, date, count, frequency, or qualitative comparison whose only significance is that it appeared in the reference. A calculation item must supply the needed quantities and require a method; a threshold item must assess how the threshold operates.
 
 Use the selected quiz language for every learner-visible field, including the question, concept, explanation, answer text, distractors, corrections, aliases, and rubric text. Private evidenceQuote and answerSpan fields must remain exact source-language evidence and are never shown to the learner. Never leak source-language wording into a learner-visible field unless it is a standard formula, symbol, proper technical acronym, or term conventionally written that way in the selected quiz language.
 
@@ -552,21 +552,21 @@ function conceptFirstExampleQuestion(type, id) {
     type,
     concept: "placeholder concept",
     objectiveCategory: "relationship",
-    question: "How are the two supported quantities related?",
+    question: "How does quantity B change when quantity A increases?",
     explanation:
-      "One quantity changes in the supported direction as the other changes.",
+      "Quantity B increases under the defined condition when quantity A increases.",
     evidenceQuote:
-      "The reference explicitly relates quantity A to quantity B in one direction.",
+      "When quantity A increases under the defined condition, quantity B increases.",
   };
   if (type === "multiple_choice") {
     return {
       ...common,
-      answerSpan: "quantity A to quantity B in one direction",
-      answerText: "quantity A changes with quantity B in one direction",
+      answerSpan: "quantity B increases",
+      answerText: "quantity B increases",
       distractors: [
         {
           text: "They are unrelated.",
-          whyWrong: "The reference gives a direct relationship.",
+          whyWrong: "This removes the direct relationship between them.",
         },
         {
           text: "They change in the opposite direction.",
@@ -582,14 +582,21 @@ function conceptFirstExampleQuestion(type, id) {
   if (type === "true_false") {
     return {
       ...common,
-      supportedFact: "Quantity A changes with quantity B in one direction.",
+      question: common.evidenceQuote,
+      supportedFact: common.evidenceQuote,
     };
   }
   return {
     ...common,
+    concept: "coupling",
     shortAnswerMode: "atomic_term",
-    question: "What term names the supported relationship?",
-    answer: "placeholder term",
+    question:
+      "What term names the transfer relationship between the quantities?",
+    explanation:
+      "Coupling names the transfer relationship between the quantities.",
+    evidenceQuote:
+      "The transfer relationship between quantity A and quantity B is called coupling.",
+    answer: "coupling",
     aliases: [],
   };
 }
@@ -644,7 +651,7 @@ Eligible instructional evidence — every answer-bearing field must be supported
 
 Already accepted objectives — do not repeat or closely paraphrase their subject-relation-value claim:\n${accepted}
 
-Distinctness rule: shared domain vocabulary is allowed, but the new item must assess a different definition, condition, causal relationship, mechanism, method, application, or formula. Choose that distinct claim before writing the question; do not merely paraphrase an accepted prompt.
+Distinctness rule: shared domain vocabulary is allowed, but the new item must assess a different definition, condition, causal relationship, mechanism, method, application, or formula. Choose that distinct claim before writing the question; do not merely paraphrase an accepted prompt. A definition must define a transferable concept, not recall a number attached to it. Forbidden example: "What is the estimated annual monetary value of ecosystem services?" Prefer a mechanism question such as "Why does biodiversity matter to ecosystem services?" Do not ask for a statistic or a verbal comparison of two source statistics.
 
 Type-specific requirements:\n${typeRules}
 

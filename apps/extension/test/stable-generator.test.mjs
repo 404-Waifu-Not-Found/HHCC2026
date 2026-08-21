@@ -956,6 +956,18 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
       /direct assessment generator/u,
     );
     assert.match(
+      request.body.messages[0].content,
+      /Never ask learners to recall an estimate/u,
+    );
+    assert.match(
+      request.body.messages[2].content,
+      /estimated annual monetary value of ecosystem services/u,
+    );
+    assert.doesNotMatch(
+      request.body.messages[2].content,
+      /The reference gives a direct relationship/u,
+    );
+    assert.match(
       request.body.messages[1].content,
       /Private reference material — never mention this source/u,
     );
@@ -1002,6 +1014,54 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
         question.rubricV2?.mode === "atomic_term",
     ),
   );
+});
+
+test("v5.8 rejects presentation statistics before storage and repairs only that ordinal", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        value.questions[0].concept = "ecosystem services monetary value";
+        value.questions[0].question =
+          "What is the estimated annual monetary value of the services that ecosystems provide for humanity, according to economic calculations?";
+        value.questions[0].answerText = "$46 trillion per year";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(
+    httpCalls,
+    6,
+    JSON.stringify(
+      calls
+        .filter((event) => event.lifecycleState === "completed")
+        .map((event) => ({
+          ordinal: event.startIndex,
+          classification: event.classification,
+          outcome: event.outcome,
+        })),
+    ),
+  );
+  assert.equal(calls[1]?.outcome, "low_pedagogical_value");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "content_repair");
+  assert.doesNotMatch(result.quiz.questions[0].question, /monetary value/iu);
 });
 
 test("v5.8 repairs learner-visible source-language leakage before storing a question", async (context) => {
