@@ -43,11 +43,11 @@ The current [ten-video production report](../qa-results/live-production-quiz-gen
 
 This table is a dated observation, not a substitute for checking the live service before the next release.
 
-## Current web and Android source candidate
+## Current web and native source candidate
 
-The current supported contract uses extension `0.8.19`, result protocol `10`, capability `question-stream-v7`, pipeline `9`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, progressive import `v8`, and generation profile `prompt_first_auto_v5_12` when assigned. Chrome 0.8.17 remains accepted. Android 0.2.0 consumes the same engine and reports `android_app` client metadata; web reports `chrome_extension`.
+The assigned new-bank contract uses extension `0.8.30`, result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, progressive import `v4`, and generation profile `stable_non_thinking_v5_2`. Android and iOS 0.2.0 consume the same local engine and report native client metadata; web reports `chrome_extension`.
 
-The checked-in rollout keeps v5.12 disabled and v5.11 enabled. `/health` reports the supported contract and effective default separately; `/api/local-ai/profile` is authoritative for a learner. Protocol 10 accepts every well-formed, gradeable singleton immediately and retries only transport/service failures or unusable storage/grading structures. Existing banks preserve their original prompt, validator, telemetry, client integrity, and continuation behavior without metadata mixing.
+The checked-in rollout enables v5.2 and disables v5.3, v5.4, and v5.9-v5.12. `/health` reports supported metadata and the effective default separately; `/api/local-ai/profile` is authoritative for a learner. A fresh bank makes one non-thinking DeepSeek request for the exact 5/10/15 count, buffers and validates the complete JSON response, uploads only after validation, and opens the attempt only when the bank is ready. It performs no generation retry and creates no fallback content. Existing completed banks preserve their original prompt, validator, telemetry, and client-integrity metadata.
 
 The same release adds backward-compatible Android client metadata, push-token unregister behavior, safe Android generation status, and a certificate-gated App Links endpoint. No D1 migration is required. Worker deployment, extension installation, EAS signing, physical-device acceptance, and real-video matrices remain separate release actions.
 
@@ -174,19 +174,17 @@ Do not distribute a locally debug-signed Gradle artifact. See [Android private b
 
 ## Generation rollout gate
 
-Do not enable `QUIZ_V5_12_ROLLOUT` merely because extension 0.8.19 is installed or `/health` advertises prompt v5.12. Source-level regression tests are necessary but do not clear the canary or production gate. Before canary or general enablement:
+Do not treat extension installation, a successful local test, or `/health` alone as proof that single-call generation works for real learners. Before declaring the v5.2 assignment accepted:
 
-1. Deploy one immutable pushed Worker/app candidate with v5.12 still disabled, install its matching extension-0.8.19 ZIP, and record the exact Worker version, Git SHA, and extension checksum.
-2. Verify that the authenticated `/api/local-ai/profile` still assigns the intended fallback profile before canary. Then set `QUIZ_V5_12_ROLLOUT=canary`, add only the `unoxyrich` user ID, and prove that one newly persisted bank uses `prompt_first_auto_v5_12`, prompt v5.12, validator v5.3, protocol 10, pipeline 9, and progressive import v8.
-3. Run at least 100 complete healthy banks across 5/10/15 lengths, all question-type combinations, English/CJK, short/long captions, formula-heavy lessons, and manual/automatic captions.
-4. Require at least 99% healthy first-pass completion, 100% eligible completion without learner recovery actions, zero new `manual_continuation` rows, exact HTTP-call/event reconciliation, no shortened completion, and no accepted-question replacement.
-5. Run the immutable canary artifact across ten different real YouTube videos and complete every planned learner question on the original bank; do not replace a failed attempt and count the replacement as success.
-6. Require question 1 before the remaining bank, 10/10 first-attempt completion, truthful structural/transport retry totals, current v5.12 metadata on every new bank, no source framing, logistics trivia, low-value recall, duplicate objectives, grading corruption, or stalled recovery.
-7. Revisit a recoverable legacy failed bank or reproduce Run 8's q12-q13 failure; require automatic completion of the same bank without replacing its accepted prefix.
-8. Confirm the page bridge, native API traffic, and Worker requests contain no API key, captions, transcript, generation instructions, private evidence, or raw DeepSeek response.
-9. Set `QUIZ_V5_12_ROLLOUT=enabled` only after every benchmark and canary gate passes, then repeat a fresh generally enabled real-client matrix before declaring the profile public-ready.
+1. Deploy one immutable pushed Worker/app candidate, install its matching extension-0.8.30 ZIP, and record the exact Worker version, Git SHA, and extension checksum.
+2. Verify that authenticated `/api/local-ai/profile` assigns `stable_non_thinking_v5_2` with extension minimum 0.8.30.
+3. Run complete 5/10/15 banks across every question-type combination, English/CJK, short/long captions, formulas, and manual/automatic caption tracks.
+4. Require exactly one DeepSeek HTTP request and one complete call event per successful bank, zero generation retries, the full requested count before navigation, and no shortened completion or fallback content.
+5. Run the immutable artifact across ten different real YouTube videos and answer every planned learner question on the original bank; do not replace a failed bank and count the replacement as success.
+6. Audit question grounding, true/false polarity, answer-to-prompt consistency, duplicate objectives, fragmentary answers, unsupported absolute wording, and soft short-answer grading.
+7. Confirm the page bridge, native API traffic, and Worker requests contain no API key, captions, transcript, generation instructions, or raw DeepSeek response.
 
-If a canary gate fails, restore the rollout variable to the prior profile without rolling back the additive D1 migrations. Retain safe call-event evidence for diagnosis.
+If a gate fails, disable `QUIZ_V5_2_ROLLOUT` or replace the candidate; do not silently re-enable a multi-call profile or add generated fallback questions. Retain privacy-safe call-event evidence for diagnosis.
 
 ## Reporting rules
 

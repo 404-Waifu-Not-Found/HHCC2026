@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   countCaptionWords,
+  estimatedCompleteBankDurationMs,
   estimatedFirstQuestionDurationMs,
   firstQuestionEtaBreakdown,
   firstQuestionRetryRemainingMs,
+  linearJourneyProgress,
   updateFirstQuestionRetryEtaPhase,
 } from "../src/generation/eta";
 
@@ -118,6 +120,31 @@ describe("first-question ETA", () => {
     expect(JSON.stringify(breakdown)).not.toMatch(
       /transcript|prompt|sourceText|captionText/i,
     );
+  });
+});
+
+describe("complete-bank journey", () => {
+  it("uses a duration fixed entirely by the pre-generation quiz plan", () => {
+    expect(
+      estimatedCompleteBankDurationMs({
+        questionCount: 10,
+        questionTypes: ["multiple_choice", "true_false"],
+      }),
+    ).toBe(45_000);
+    expect(
+      estimatedCompleteBankDurationMs({
+        questionCount: 10,
+        questionTypes: ["multiple_choice", "short_answer"],
+      }),
+    ).toBe(53_000);
+  });
+
+  it("moves equal distances over equal time intervals without stage jumps", () => {
+    const samples = [0, 10_000, 20_000, 30_000].map((elapsedMs) =>
+      linearJourneyProgress(elapsedMs, 40_000, 0.96),
+    );
+    expect(samples).toEqual([0, 0.24, 0.48, 0.72]);
+    expect(linearJourneyProgress(80_000, 40_000, 0.96)).toBe(0.96);
   });
 });
 

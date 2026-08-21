@@ -35,13 +35,13 @@ Historical 2026-08-11 baseline:
 
 This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 migration ledger, the installed extension, and one newly persisted bank before treating it as current.
 
-## Current web-generation source candidate
+## Current web and native generation candidate
 
-The current supported source contract is extension `0.8.19`, result protocol `10`, capability `question-stream-v7`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, pipeline `9`, progressive import `v8`, and profile `prompt_first_auto_v5_12` when assigned. Android 0.2.0 consumes the same shared engine. The checked-in rollout keeps v5.12 disabled and v5.11 enabled, so the authenticated profile—not this supported-version list—is authoritative for a new bank.
+Extension `0.8.30` and native app `0.2.0` share the caption-only local engine. The checked-in rollout assigns `stable_non_thinking_v5_2`: result protocol `6`, capability `question-stream-v2`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, pipeline `9`, and progressive import `v4`. One non-thinking DeepSeek request must return the complete bank; the client validates every question before upload, opens only when the bank is ready, and performs no model retry or fallback generation.
 
-Automated regression coverage retains legacy recovery and grading behavior while adding exact prompt-fingerprint/request-body checks, one-character streaming, local MC mapping, model-authored polarity, all four short-answer modes, structural-only retry classification, immutable accepted prefixes, and protocol-10 call lifecycle reconciliation.
+Automated coverage proves one request on success and failure, exact requested/accepted call accounting, fixed-speed progress mapping, whole-bank admission, mixed question types, option mapping, True/False answers, short-answer rubrics, and an explicit completion-screen PDF download action.
 
-The newest v5.12 profile is intentionally disabled by default. A commit, push, Worker deployment, matching extension installation, profile assignment, direct benchmark, and real-client matrices must each be verified independently before public rollout. Android additionally requires EAS signing, FCM/App Links configuration, and physical-device acceptance.
+A commit, push, Worker deployment, matching extension installation, authenticated profile check, direct benchmark, and real-client matrices remain distinct evidence. Android additionally requires EAS signing, FCM/App Links configuration, and physical-device acceptance.
 
 ## QA and calibration
 

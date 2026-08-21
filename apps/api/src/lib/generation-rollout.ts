@@ -178,7 +178,7 @@ export function quizGenerationProfile(
     stable
       ? {
           generationProfile: "stable_non_thinking_v5_2",
-          minimumExtensionVersion: "0.8.2",
+          minimumExtensionVersion: "0.8.30",
           requiredCapability: STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         }
       : {

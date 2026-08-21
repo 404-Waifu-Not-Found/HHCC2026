@@ -125,4 +125,15 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain('accessibilityRole="text"');
     expect(videoCard).not.toContain("onPress={() => undefined}");
   });
+
+  it("keeps an explicit PDF action on the quiz completion screen", () => {
+    const quiz = readFileSync(
+      resolve(appRoot, "app/quiz/[attemptId].tsx"),
+      "utf8",
+    );
+    expect(quiz).toContain('testID="download-cheat-sheet-pdf"');
+    expect(quiz).toContain('t("downloadPdf")');
+    expect(quiz).toContain('t("preparingPdf")');
+    expect(quiz).toContain('t("retryPdf")');
+  });
 });

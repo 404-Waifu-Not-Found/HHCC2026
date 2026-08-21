@@ -3861,18 +3861,19 @@ function generationMessages(input, isTransientRetry) {
   const requestPurpose = isTransientRetry
     ? "an automatic retry for"
     : "the primary request for";
-  const focusExcerpt =
-    input.focusExcerpt ??
-    focusExcerptForOrdinal(
-      input.plainText,
-      input.questionOffset,
-      input.totalQuestionCount,
-      0,
-      {
-        strict: input.strictConceptMode === true,
-        topicHint: input.title,
-      },
-    );
+  const focusExcerpt = input.singleCallFullBankMode
+    ? input.plainText
+    : (input.focusExcerpt ??
+      focusExcerptForOrdinal(
+        input.plainText,
+        input.questionOffset,
+        input.totalQuestionCount,
+        0,
+        {
+          strict: input.strictConceptMode === true,
+          topicHint: input.title,
+        },
+      ));
   const groundedInstructions = input.groundedMode
     ? `Every question must include sourceEvidence copied exactly from the primary source focus and a structured claim describing that evidence. Never cite material outside the primary focus. For multiple choice, correctAnswer must be an exact phrase contained in sourceEvidence. Each distractor must contain text and a specific whyWrong explanation; equivalent wording, algebraic identities, and another defensible answer are forbidden. For true/false, never return an answer boolean. Copy sourceEvidence into supportedStatement. For mode=supported, question must equal supportedStatement and mutation must be null. For mode=mutated, change exactly one occurrence using mutation.sourceValue and mutation.replacementValue; question must equal the locally reproducible mutation. Prefer the requested polarity, but use supported mode whenever a safe mutation is unavailable.`
     : "";
@@ -3890,9 +3891,11 @@ function generationMessages(input, isTransientRetry) {
   const qualityExamples = input.strictConceptMode
     ? `Quality examples (content guidance only): BAD: "According to the lesson, what conditions define continuity?" GOOD: "What conditions must hold for a function to be continuous at a point?" BAD: "Where did Mendeleev apply to university?" GOOD: "How does periodic position relate to recurring chemical properties?" BAD: "What percentage of the exam covers limits?" GOOD: "How do limits determine whether a function is continuous?"`
     : "";
-  const referenceMessage = input.strictConceptMode
-    ? `Topic hint — never test this label: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nPrivate reference material — never mention this source:\n${input.plainText}`
-    : `Lesson title: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nComplete plain-text lesson transcript:\n${input.plainText}`;
+  const referenceMessage = input.singleCallFullBankMode
+    ? `Lesson title: ${input.title}\nQuiz language: ${input.quizLanguage}`
+    : input.strictConceptMode
+      ? `Topic hint — never test this label: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nPrivate reference material — never mention this source:\n${input.plainText}`
+      : `Lesson title: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nComplete plain-text lesson transcript:\n${input.plainText}`;
   const focusLabel = input.strictConceptMode
     ? "Eligible instructional evidence; only this excerpt may ground the learner-facing content"
     : "Primary source focus for this slot; use only instructional claims copied from this excerpt";
@@ -7626,6 +7629,137 @@ export async function generateQuizFromPlainText(
       previousOutcome: input.continuation?.previousOutcome,
       lastChunkAt,
     });
+  }
+
+  if (stableV52Mode) {
+    const fullBankInput = {
+      ...input,
+      legacyMode: false,
+      singleCallFullBankMode: true,
+      questionCount: input.questionCount,
+      totalQuestionCount: input.questionCount,
+      questionOffset: 0,
+      questionTypePlan: [...input.questionTypePlan],
+      trueFalseAnswerPlan: [...input.trueFalseAnswerPlan],
+      acceptedQuestions: [],
+    };
+    const callStartedAt = Date.now();
+    let result;
+    let failure;
+    onProgress("creating_questions", 0.2, {
+      attempt: 1,
+      maxAttempts: 1,
+      status: "generating",
+    });
+    totals.aiCalls = 1;
+    try {
+      result = await callDeepSeekJson(
+        fullBankInput,
+        apiKey,
+        signal,
+        false,
+        () => undefined,
+      );
+      result.quiz = validateQuiz(result.quiz, fullBankInput);
+    } catch (error) {
+      failure =
+        error instanceof GenerationFailure
+          ? error
+          : new GenerationFailure(
+              error instanceof Error
+                ? error.message
+                : "The generated quiz was invalid.",
+              "schema_invalid",
+            );
+    }
+
+    if (failure) {
+      await onCall({
+        generationSessionId: input.generationSessionId,
+        callIndex,
+        startIndex: 0,
+        requestedCount: input.questionCount,
+        acceptedCount: 0,
+        classification: "primary",
+        outcome: failure.reasonCode,
+        retryDelayMs: 0,
+        elapsedMs: Math.max(0, Date.now() - callStartedAt),
+        usageComplete: false,
+      });
+      throw failure;
+    }
+
+    totals.inputTokens = result.usage.inputTokens;
+    totals.outputTokens = result.usage.outputTokens;
+    totals.reasoningTokens = result.usage.reasoningTokens;
+    for (let index = 0; index < result.quiz.questions.length; index += 1) {
+      const question = randomizeQuestionAtPosition(
+        result.quiz.questions[index],
+        answerPositionByQuestion.get(index),
+      );
+      acceptedQuestions.push(question);
+      await onChunk({
+        ...metadata,
+        title: quizTitle,
+        startIndex: index,
+        totalQuestions: input.questionCount,
+        question,
+        metrics: {
+          aiCalls: index === 0 ? 1 : 0,
+          retryCount: 0,
+          inputTokens:
+            index === 0 && result.usage.usageComplete
+              ? result.usage.inputTokens
+              : 0,
+          outputTokens:
+            index === 0 && result.usage.usageComplete
+              ? result.usage.outputTokens
+              : 0,
+          reasoningTokens:
+            index === 0 && result.usage.usageComplete
+              ? result.usage.reasoningTokens
+              : 0,
+          elapsedMs: index === 0 ? Math.max(1, Date.now() - callStartedAt) : 1,
+        },
+      });
+      const complete = index + 1 === input.questionCount;
+      onProgress(
+        complete ? "finalizing_questions" : "creating_questions",
+        complete ? 1 : 0.2 + ((index + 1) / input.questionCount) * 0.72,
+        {
+          attempt: 1,
+          maxAttempts: 1,
+          status: complete ? "complete" : "generating",
+        },
+      );
+    }
+    await onCall({
+      generationSessionId: input.generationSessionId,
+      callIndex,
+      startIndex: 0,
+      requestedCount: input.questionCount,
+      acceptedCount: input.questionCount,
+      classification: "primary",
+      outcome: "complete",
+      retryDelayMs: 0,
+      elapsedMs: Math.max(0, Date.now() - callStartedAt),
+      ...(result.usage.usageComplete
+        ? {
+            inputTokens: result.usage.inputTokens,
+            outputTokens: result.usage.outputTokens,
+            reasoningTokens: result.usage.reasoningTokens,
+          }
+        : {}),
+      usageComplete: result.usage.usageComplete,
+    });
+    return {
+      ...metadata,
+      quiz: { title: quizTitle, questions: acceptedQuestions },
+      metrics: {
+        ...totals,
+        elapsedMs: Math.max(1, Date.now() - startedAt),
+      },
+    };
   }
 
   while (acceptedQuestions.length < input.questionCount) {

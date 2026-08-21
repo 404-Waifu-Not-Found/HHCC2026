@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
   isCompatibleClipQuestExtensionVersion,
   supportsQuestionStream,
 } from "../src/transcription/extension-compat";
@@ -22,13 +23,19 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("keeps v0.8.2 and stream v2 available only for the v5.2 compatibility profile", () => {
+  it("requires v0.8.30 and stream v2 for the single-call v5.2 profile", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.1",
-        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+        "0.8.29",
+        MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.30",
+        MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(true);
     expect(
       supportsQuestionStream(
         ["question-stream-v1"],
@@ -64,7 +71,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.26 and stream v7 for current automatic prompt-first generation", () => {
+  it("requires v0.8.30 and stream v7 for the current extension", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -121,7 +128,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(false);
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.26",
+        "0.8.30",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(true);
@@ -245,7 +252,7 @@ describe("extension generation profile compatibility", () => {
     );
   });
 
-  it("keeps first-question admission independent from call telemetry", () => {
+  it("keeps ready-bank admission independent from call telemetry", () => {
     const source = readFileSync(
       resolve(
         dirname(fileURLToPath(import.meta.url)),
@@ -267,8 +274,10 @@ describe("extension generation profile compatibility", () => {
     );
     expect(source).toContain(").catch(() => undefined);");
     expect(source).toContain(
-      "if (!attemptId) await startAttempt(response.quizId)",
+      'rolloutProfile.generationProfile !== "stable_non_thinking_v5_2"',
     );
+    expect(source).toContain('response.generation.state === "ready"');
+    expect(source).toContain("await startAttempt(response.quizId);");
     const admissionBlock = source.slice(
       source.indexOf("lastProgressKey = undefined"),
       source.indexOf("void questionIngestion.catch"),

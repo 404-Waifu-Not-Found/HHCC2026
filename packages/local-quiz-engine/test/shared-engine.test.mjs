@@ -140,3 +140,146 @@ test("rejects a delimiter-free oversized SSE frame", async () => {
   );
   assert.equal(fetchCalls, 1);
 });
+
+function stableFullBankInput(fetchImpl) {
+  return {
+    title: "Photosynthesis",
+    quizLanguage: "en",
+    questionCount: 5,
+    questionTypes: ["true_false"],
+    jobId: "22222222-2222-4222-8222-222222222222",
+    generationId: "33333333-3333-4333-8333-333333333333",
+    generationSessionId: "44444444-4444-4444-8444-444444444444",
+    recoverySessionId: "55555555-5555-4555-8555-555555555555",
+    generationProfile: "stable_non_thinking_v5_2",
+    transcriptFingerprint: "c".repeat(64),
+    plainText:
+      "Photosynthesis converts light energy into chemical energy. Chlorophyll absorbs light. Carbon dioxide and water help produce glucose and oxygen. Plant cells perform this process in chloroplasts. Oxygen is released as a product. ".repeat(
+        4,
+      ),
+    disableStreaming: true,
+    fetchImpl,
+  };
+}
+
+function completeStableBankResponse() {
+  const facts = [
+    [
+      "Photosynthesis converts light energy into chemical energy.",
+      "It stores captured light energy as chemical energy.",
+    ],
+    [
+      "Chlorophyll absorbs light during photosynthesis.",
+      "Chlorophyll is the light-absorbing pigment in this process.",
+    ],
+    [
+      "Carbon dioxide is used to produce glucose.",
+      "Carbon dioxide contributes material used to make glucose.",
+    ],
+    [
+      "Plant cells perform photosynthesis in chloroplasts.",
+      "Chloroplasts are the organelles where this process occurs.",
+    ],
+    [
+      "Oxygen is released as a product of photosynthesis.",
+      "The process produces and releases oxygen.",
+    ],
+  ];
+  const questions = facts.map(([question, correction], index) => ({
+    id: `q${index + 1}`,
+    type: "true_false",
+    concept: `photosynthesis concept ${index + 1}`,
+    question,
+    explanation: correction,
+    answer: true,
+    correction,
+  }));
+  return JSON.stringify({
+    choices: [
+      {
+        finish_reason: "stop",
+        message: { content: JSON.stringify({ questions }) },
+      },
+    ],
+    usage: {
+      prompt_tokens: 900,
+      completion_tokens: 600,
+      reasoning_tokens: 0,
+    },
+  });
+}
+
+test("stable v5.2 requests, validates, and publishes a complete bank in one call", async () => {
+  let fetchCalls = 0;
+  let requestBody;
+  const chunks = [];
+  const calls = [];
+  const result = await shared.generateQuizFromPlainText(
+    stableFullBankInput(async (_url, init) => {
+      fetchCalls += 1;
+      requestBody = JSON.parse(init.body);
+      return new Response(completeStableBankResponse(), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+    "private-test-key",
+    () => undefined,
+    undefined,
+    async (chunk) => chunks.push(chunk),
+    async (call) => calls.push(call),
+  );
+
+  assert.equal(fetchCalls, 1);
+  assert.equal(requestBody.thinking.type, "disabled");
+  assert.match(requestBody.messages.at(-1).content, /Create exactly 5/);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.startIndex),
+    [0, 1, 2, 3, 4],
+  );
+  assert.deepEqual(calls, [
+    {
+      generationSessionId: "44444444-4444-4444-8444-444444444444",
+      callIndex: 0,
+      startIndex: 0,
+      requestedCount: 5,
+      acceptedCount: 5,
+      classification: "primary",
+      outcome: "complete",
+      retryDelayMs: 0,
+      elapsedMs: calls[0].elapsedMs,
+      inputTokens: 900,
+      outputTokens: 600,
+      reasoningTokens: 0,
+      usageComplete: true,
+    },
+  ]);
+  assert.equal(result.metrics.aiCalls, 1);
+  assert.equal(result.metrics.retryCount, 0);
+});
+
+test("stable v5.2 never retries a failed full-bank call", async () => {
+  let fetchCalls = 0;
+  const calls = [];
+  await assert.rejects(
+    shared.generateQuizFromPlainText(
+      stableFullBankInput(async () => {
+        fetchCalls += 1;
+        return new Response('{"error":"busy"}', { status: 503 });
+      }),
+      "private-test-key",
+      () => undefined,
+      undefined,
+      () => undefined,
+      async (call) => calls.push(call),
+    ),
+    /temporarily unavailable/,
+  );
+  assert.equal(fetchCalls, 1);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].requestedCount, 5);
+  assert.equal(calls[0].acceptedCount, 0);
+  assert.equal(calls[0].retryDelayMs, 0);
+  assert.equal(calls[0].outcome, "transient_http");
+});

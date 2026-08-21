@@ -746,6 +746,14 @@ export default function QuizScreen() {
           </View>
           <MotionView preset="rise" delay={176} style={styles.completeActions}>
             <PrimaryButton
+              testID="download-cheat-sheet-pdf"
+              accessibilityLabel={
+                cheatSheetStatus === "failed" && !localCheatSheetReady
+                  ? t("retryPdf")
+                  : cheatSheetId || localCheatSheetReady
+                    ? t("downloadPdf")
+                    : t("preparingPdf")
+              }
               variant="secondary"
               disabled={
                 cheatSheetStatus === "preparing" ||
@@ -787,10 +795,10 @@ export default function QuizScreen() {
               }}
             >
               {cheatSheetStatus === "failed" && !localCheatSheetReady
-                ? t("retryNotes")
+                ? t("retryPdf")
                 : cheatSheetId || localCheatSheetReady
-                  ? t("exportNotes")
-                  : t("preparingNotes")}
+                  ? t("downloadPdf")
+                  : t("preparingPdf")}
             </PrimaryButton>
             <PrimaryButton
               trailingIcon={

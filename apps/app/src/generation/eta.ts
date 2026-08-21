@@ -2,6 +2,11 @@ import type { QuizQuestionType, TranscriptSegment } from "@clipquest/contracts";
 
 export type SupportedQuestionCount = 5 | 10 | 15;
 
+export type CompleteBankEtaInput = {
+  questionCount: SupportedQuestionCount;
+  questionTypes: readonly QuizQuestionType[];
+};
+
 export type FirstQuestionEtaInput = {
   captionWordCount?: number;
   videoDurationSeconds?: number;
@@ -47,6 +52,12 @@ const MAX_FOCUS_WINDOW_WORD_COUNT = 800;
 const MIN_FIRST_QUESTION_ETA_MS = 15_000;
 const MAX_FIRST_QUESTION_ETA_MS = 35_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
+
+const COMPLETE_BANK_BASE_MS: Record<SupportedQuestionCount, number> = {
+  5: 28_000,
+  10: 42_000,
+  15: 56_000,
+};
 
 const FIRST_QUESTION_TYPE_ADJUSTMENT_MS: Record<QuizQuestionType, number> = {
   true_false: 0,
@@ -115,6 +126,35 @@ export function estimatedFirstQuestionDurationMs(
   input: FirstQuestionEtaInput,
 ): number {
   return firstQuestionEtaBreakdown(input).estimatedDurationMs;
+}
+
+/**
+ * Estimates one complete non-thinking JSON-bank request. The value depends
+ * only on choices made before generation starts, so the progress clock never
+ * changes speed after caption metadata arrives.
+ */
+export function estimatedCompleteBankDurationMs(
+  input: CompleteBankEtaInput,
+): number {
+  const selected = new Set(input.questionTypes);
+  const shortAnswerAdjustmentMs = selected.has("short_answer") ? 8_000 : 0;
+  const mixedTypeAdjustmentMs = selected.size > 1 ? 3_000 : 0;
+  return (
+    COMPLETE_BANK_BASE_MS[input.questionCount] +
+    shortAnswerAdjustmentMs +
+    mixedTypeAdjustmentMs
+  );
+}
+
+/** Maps one elapsed-time clock to a constant-speed visual fill. */
+export function linearJourneyProgress(
+  elapsedMs: number,
+  durationMs: number,
+  limit = 0.99,
+): number {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return 0;
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return limit;
+  return Math.min(limit, (elapsedMs / durationMs) * limit);
 }
 
 /**

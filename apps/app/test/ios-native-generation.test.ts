@@ -34,7 +34,7 @@ describe("iOS native generation", () => {
     expect(generation).toContain("CAPTIONS_REQUIRED_MESSAGE");
     expect(generation).not.toContain('"/api/media/resolve"');
     expect(generation).not.toContain("transcribeLocally");
-    expect(generation).toContain('"Question 1 unavailable"');
+    expect(generation).toContain('"Quiz unavailable"');
     expect(creation).toContain('Platform.OS !== "web" && generationId');
     expect(creation).toContain("captionsUnavailable || captionsFailed");
     expect(creation).not.toContain("captionStatus");
