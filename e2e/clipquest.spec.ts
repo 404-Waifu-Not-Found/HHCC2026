@@ -417,55 +417,67 @@ test.beforeEach(async ({ page }) => {
             );
           }
         };
-        postQuestion(questions[generatedStartIndex], generatedStartIndex);
-        const completionDelay = Number(
-          window.sessionStorage.getItem(
-            "clipquest:e2e-generation-completion-delay-ms",
-          ) ?? "1200",
-        );
-        window.setTimeout(() => {
-          window.sessionStorage.setItem(
-            "clipquest:e2e-second-question-sent",
-            "1",
+        const dispatchQuestions = () => {
+          postQuestion(questions[generatedStartIndex], generatedStartIndex);
+          const completionDelay = Number(
+            window.sessionStorage.getItem(
+              "clipquest:e2e-generation-completion-delay-ms",
+            ) ?? "1200",
           );
-          questions
-            .slice(generatedStartIndex + 1)
-            .forEach((question, index) =>
-              postQuestion(question, generatedStartIndex + index + 1),
+          window.setTimeout(() => {
+            window.sessionStorage.setItem(
+              "clipquest:e2e-second-question-sent",
+              "1",
             );
-          window.postMessage(
-            {
-              channel: "clipquest:captions:v1",
-              source: "clipquest-extension",
-              type: "generation-result",
-              requestId: event.data.requestId,
-              response: {
-                ok: true,
-                result: {
-                  ...metadata,
-                  ...(generatedStartIndex > 0
-                    ? {
-                        title: "Local concept quiz",
-                        generatedStartIndex,
-                        totalQuestions: questionCount,
-                      }
-                    : {
-                        quiz: { title: "Local concept quiz", questions },
-                      }),
-                  metrics: {
-                    aiCalls: 1,
-                    retryCount: 0,
-                    inputTokens: 100,
-                    outputTokens: 200,
-                    reasoningTokens: 0,
-                    elapsedMs: 1000,
+            questions
+              .slice(generatedStartIndex + 1)
+              .forEach((question, index) =>
+                postQuestion(question, generatedStartIndex + index + 1),
+              );
+            window.postMessage(
+              {
+                channel: "clipquest:captions:v1",
+                source: "clipquest-extension",
+                type: "generation-result",
+                requestId: event.data.requestId,
+                response: {
+                  ok: true,
+                  result: {
+                    ...metadata,
+                    ...(generatedStartIndex > 0
+                      ? {
+                          title: "Local concept quiz",
+                          generatedStartIndex,
+                          totalQuestions: questionCount,
+                        }
+                      : {
+                          quiz: { title: "Local concept quiz", questions },
+                        }),
+                    metrics: {
+                      aiCalls: 1,
+                      retryCount: 0,
+                      inputTokens: 100,
+                      outputTokens: 200,
+                      reasoningTokens: 0,
+                      elapsedMs: 1000,
+                    },
                   },
                 },
               },
-            },
-            window.location.origin,
-          );
-        }, completionDelay);
+              window.location.origin,
+            );
+          }, completionDelay);
+        };
+        const firstQuestionDelay = Number(
+          window.sessionStorage.getItem(
+            "clipquest:e2e-first-question-delay-ms",
+          ) ?? "0",
+        );
+        if (firstQuestionDelay > 0) {
+          window.setTimeout(dispatchQuestions, firstQuestionDelay);
+        } else {
+          dispatchQuestions();
+        }
       }
       if (
         event.data.type === "extract" ||
@@ -1207,9 +1219,21 @@ test("desktop learning journey and visual states", async ({ page }) => {
     sessionLength: "medium",
     plannedCount: 10,
   });
+  await page.evaluate(() =>
+    window.sessionStorage.setItem(
+      "clipquest:e2e-first-question-delay-ms",
+      "2000",
+    ),
+  );
   await page.goto(
     `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=medium`,
   );
+  await expect(page.getByText("Ready-to-start ETA")).toBeVisible();
+  await expect(page.getByText("Quiz creation stopped")).toHaveCount(0);
+  await expect(
+    page.getByText("Sign in again before creating a quiz."),
+  ).toHaveCount(0);
+  await capture(page, "desktop-processing");
   await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
@@ -1298,9 +1322,21 @@ test("mobile link, processing, lesson feedback, and completion", async ({
     sessionLength: "medium",
     plannedCount: 10,
   });
+  await page.evaluate(() =>
+    window.sessionStorage.setItem(
+      "clipquest:e2e-first-question-delay-ms",
+      "2000",
+    ),
+  );
   await page.goto(
     `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=medium`,
   );
+  await expect(page.getByText("Ready-to-start ETA")).toBeVisible();
+  await expect(page.getByText("Quiz creation stopped")).toHaveCount(0);
+  await expect(
+    page.getByText("Sign in again before creating a quiz."),
+  ).toHaveCount(0);
+  await capture(page, "mobile-processing");
   await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),

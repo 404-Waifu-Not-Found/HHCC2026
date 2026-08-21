@@ -117,7 +117,7 @@ export default function GenerationScreen() {
     questionTypes?: string;
   }>();
   const { locale, t, theme } = useSettings();
-  const { data: session } = useAppSession();
+  const { data: session, isPending: sessionPending } = useAppSession();
   const { width } = useWindowDimensions();
   const [stage, setStage] = useState<GenerationStage>("getting_video");
   const [error, setError] = useState<string>();
@@ -832,6 +832,7 @@ export default function GenerationScreen() {
   );
 
   useEffect(() => {
+    if (sessionPending) return;
     taskKeyRef.current = taskKey;
     const task = getOrStartProgressiveGenerationTask(taskKey, execute);
     const unsubscribe = task.subscribe((snapshot) => {
@@ -872,7 +873,14 @@ export default function GenerationScreen() {
       active = false;
       unsubscribe();
     };
-  }, [execute, params.generationId, setEstimatedProgress, t, taskKey]);
+  }, [
+    execute,
+    params.generationId,
+    sessionPending,
+    setEstimatedProgress,
+    t,
+    taskKey,
+  ]);
 
   useEffect(() => {
     if (!configurationRequired) return;
