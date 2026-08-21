@@ -19,8 +19,10 @@ import { Surface } from "../../src/components/Surface";
 import { authClient, useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { clearPendingVideoHandoffs } from "../../src/state/pending-video-handoff";
+import { clearAccountCreationState } from "../../src/state/creation";
 import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
 import { removeLocalGenerationCredential } from "../../src/generation/local-generation-client";
+import { clearNativeGenerationOutboxes } from "../../src/generation/android-generation-outbox";
 import {
   disableReviewReminders,
   enableReviewReminders,
@@ -70,16 +72,17 @@ export default function SettingsScreen() {
     setBusy("signout");
     setError(undefined);
     try {
-      if (session?.user.id) {
-        await disableReviewReminders(session.user.id);
-      }
+      const userId = session?.user.id;
+      if (userId) await disableReviewReminders(userId).catch(() => undefined);
       const result = await authClient.signOut();
       if (result.error)
         throw new Error(result.error.message ?? t("signOutFailed"));
-      if (session?.user.id) {
-        await removeLocalGenerationCredential(session.user.id);
-      }
-      await clearPendingVideoHandoffs();
+      await Promise.allSettled([
+        userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
+        userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
+        userId ? clearAccountCreationState(userId) : Promise.resolve(),
+        clearPendingVideoHandoffs(),
+      ]);
       router.replace("/(auth)/sign-in");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signOutFailed"));
@@ -93,16 +96,17 @@ export default function SettingsScreen() {
     setBusy("delete");
     setError(undefined);
     try {
-      if (session?.user.id) {
-        await disableReviewReminders(session.user.id);
-      }
+      const userId = session?.user.id;
+      if (userId) await disableReviewReminders(userId).catch(() => undefined);
       const result = await authClient.deleteUser({ password: deletePassword });
       if (result.error)
         throw new Error(result.error.message ?? t("deleteAccountFailed"));
-      if (session?.user.id) {
-        await removeLocalGenerationCredential(session.user.id);
-      }
-      await clearPendingVideoHandoffs();
+      await Promise.allSettled([
+        userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
+        userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
+        userId ? clearAccountCreationState(userId) : Promise.resolve(),
+        clearPendingVideoHandoffs(),
+      ]);
       router.replace("/(auth)/sign-in");
     } catch (cause) {
       setError(

@@ -72,9 +72,9 @@ export default function CreateQuestScreen() {
   >();
 
   useEffect(() => {
-    if (!videoId) return;
+    if (!videoId || !session?.user.id) return;
     void Promise.all([
-      loadImportedVideo(videoId),
+      loadImportedVideo(session.user.id, videoId),
       loadQuestPreferences(videoId),
     ]).then(([value, preferences]) => {
       if (value) {
@@ -83,16 +83,16 @@ export default function CreateQuestScreen() {
         setQuestionTypes(preferences.questionTypes);
       } else setError(t("videoSetupExpired"));
     });
-  }, [t, videoId]);
+  }, [session?.user.id, t, videoId]);
 
   useEffect(() => {
-    if (!generationId || !videoId) return;
+    if (!generationId || !videoId || !session?.user.id) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const syncPrework = async () => {
       const [record, latestVideo] = await Promise.all([
         loadGenerationRecord(generationId),
-        loadImportedVideo(videoId),
+        loadImportedVideo(session.user.id, videoId),
       ]);
       if (!active) return;
       setPreworkStatus(record?.preworkStatus);
@@ -108,7 +108,7 @@ export default function CreateQuestScreen() {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [generationId, videoId]);
+  }, [generationId, session?.user.id, videoId]);
 
   if (!video && !error) {
     return (

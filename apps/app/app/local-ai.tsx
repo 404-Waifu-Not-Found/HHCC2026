@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../src/components/AppTextInput";
+import { IconButton } from "../src/components/IconButton";
 import { PrimaryButton } from "../src/components/PrimaryButton";
 import { Screen } from "../src/components/Screen";
 import { Surface } from "../src/components/Surface";
@@ -96,9 +97,15 @@ export default function LocalAiSettingsScreen() {
   return (
     <Screen contentWidth="auth">
       <View style={styles.header}>
-        <PrimaryButton variant="ghost" onPress={() => router.back()}>
-          {copy.back}
-        </PrimaryButton>
+        <IconButton
+          icon="back"
+          label={copy.back}
+          onPress={() =>
+            router.canGoBack()
+              ? router.back()
+              : router.replace("/(tabs)/settings" as never)
+          }
+        />
         <Text style={[styles.title, { color: theme.text }]}>{copy.title}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
           {copy.subtitle}

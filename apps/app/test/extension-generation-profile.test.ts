@@ -217,6 +217,6 @@ describe("extension generation profile compatibility", () => {
     expect(source).toContain(
       "/api/videos/${encodeURIComponent(continuation.videoId)}/recovery",
     );
-    expect(source).toContain("saveImportedVideo(imported)");
+    expect(source).toContain("saveImportedVideo(session.user.id, imported)");
   });
 });

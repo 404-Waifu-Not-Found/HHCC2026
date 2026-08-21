@@ -17,7 +17,14 @@ import {
 } from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const keyFor = (videoId: string) => `clipquest:creation:${videoId}`;
+const LEGACY_CREATION_PREFIX = "clipquest:creation:";
+const CREATION_PREFIX = "clipquest:creation:v3:";
+const LEGACY_TRANSCRIPT_CHECKPOINT_PREFIX =
+  "clipquest:transcript-checkpoint:";
+const TRANSCRIPT_CHECKPOINT_PREFIX = "clipquest:transcript-checkpoint:v2:";
+const accountPart = (userId: string) => encodeURIComponent(userId);
+const keyFor = (userId: string, videoId: string) =>
+  `${CREATION_PREFIX}${accountPart(userId)}:${encodeURIComponent(videoId)}`;
 const generationKeyFor = (videoId: string) => `clipquest:generation:${videoId}`;
 const generationV2KeyFor = (generationId: string) =>
   `clipquest:generation:v2:${generationId}`;
@@ -47,77 +54,98 @@ export type StoredGeneration = {
   preworkStatus?: "running" | "ready" | "unavailable" | "failed";
 };
 
-type ImportedVideoCacheV2 = {
-  version: 2;
+type ImportedVideoCacheV3 = {
+  version: 3;
+  ownerUserId: string;
   cachedAt: number;
   expiresAt: number;
   value: VideoImportResponse;
 };
 
 export async function saveImportedVideo(
+  ownerUserId: string,
   value: VideoImportResponse,
 ): Promise<void> {
   const parsed = VideoImportResponseSchema.parse(value);
   const cachedAt = Date.now();
-  const cache: ImportedVideoCacheV2 = {
-    version: 2,
+  const cache: ImportedVideoCacheV3 = {
+    version: 3,
+    ownerUserId,
     cachedAt,
     expiresAt: cachedAt + TRANSCRIPT_CACHE_TTL_MS,
     value: parsed,
   };
-  await AsyncStorage.setItem(keyFor(parsed.video.id), JSON.stringify(cache));
+  await AsyncStorage.removeItem(`${LEGACY_CREATION_PREFIX}${parsed.video.id}`);
+  await AsyncStorage.setItem(
+    keyFor(ownerUserId, parsed.video.id),
+    JSON.stringify(cache),
+  );
 }
 
 export async function loadImportedVideo(
+  ownerUserId: string,
   videoId: string,
 ): Promise<VideoImportResponse | null> {
-  const value = await AsyncStorage.getItem(keyFor(videoId));
+  await AsyncStorage.removeItem(`${LEGACY_CREATION_PREFIX}${videoId}`);
+  const storageKey = keyFor(ownerUserId, videoId);
+  const value = await AsyncStorage.getItem(storageKey);
   if (!value) return null;
   try {
     const parsedValue = JSON.parse(value) as
-      | ImportedVideoCacheV2
+      | ImportedVideoCacheV3
       | (Partial<VideoImportResponse> & {
           video?: Partial<VideoImportResponse["video"]>;
           captions?: Partial<VideoImportResponse["captions"]>;
         });
     if (
       "version" in parsedValue &&
-      parsedValue.version === 2 &&
+      parsedValue.version === 3 &&
       "value" in parsedValue
     ) {
       if (
+        parsedValue.ownerUserId !== ownerUserId ||
         !Number.isFinite(parsedValue.expiresAt) ||
         parsedValue.expiresAt <= Date.now()
       ) {
-        await AsyncStorage.removeItem(keyFor(videoId));
+        await AsyncStorage.removeItem(storageKey);
         return null;
       }
       return VideoImportResponseSchema.parse(parsedValue.value);
     }
-    const stored = parsedValue as Partial<VideoImportResponse> & {
-      video?: Partial<VideoImportResponse["video"]>;
-      captions?: Partial<VideoImportResponse["captions"]>;
-    };
-    const hasCaptions = Boolean(stored.captions?.preferredSegments?.length);
-    return VideoImportResponseSchema.parse({
-      ...stored,
-      transcriptionMode:
-        stored.transcriptionMode ?? (hasCaptions ? "captions" : "device_media"),
-      capture:
-        stored.capture ??
-        ({
-          expectedDurationSeconds: stored.video?.durationSeconds ?? 0,
-          requiresUserGesture: false,
-        } satisfies VideoImportResponse["capture"]),
-    });
+    await AsyncStorage.removeItem(storageKey);
+    return null;
   } catch {
-    await AsyncStorage.removeItem(keyFor(videoId));
+    await AsyncStorage.removeItem(storageKey);
     return null;
   }
 }
 
-export async function clearImportedVideo(videoId: string): Promise<void> {
-  await AsyncStorage.multiRemove([keyFor(videoId), preferencesKeyFor(videoId)]);
+export async function clearImportedVideo(
+  ownerUserId: string,
+  videoId: string,
+): Promise<void> {
+  await AsyncStorage.multiRemove([
+    keyFor(ownerUserId, videoId),
+    preferencesKeyFor(videoId),
+  ]);
+}
+
+export async function clearAccountCreationState(
+  ownerUserId: string,
+): Promise<void> {
+  const keys = await AsyncStorage.getAllKeys();
+  const accountCreationPrefix = `${CREATION_PREFIX}${accountPart(ownerUserId)}:`;
+  const accountCheckpointPrefix = `${TRANSCRIPT_CHECKPOINT_PREFIX}${accountPart(ownerUserId)}:`;
+  const removable = keys.filter(
+    (candidate) =>
+      candidate.startsWith(accountCreationPrefix) ||
+      candidate.startsWith(accountCheckpointPrefix) ||
+      (candidate.startsWith(LEGACY_CREATION_PREFIX) &&
+        !candidate.startsWith(CREATION_PREFIX)) ||
+      (candidate.startsWith(LEGACY_TRANSCRIPT_CHECKPOINT_PREFIX) &&
+        !candidate.startsWith(TRANSCRIPT_CHECKPOINT_PREFIX)),
+  );
+  if (removable.length > 0) await AsyncStorage.multiRemove(removable);
 }
 
 export async function saveQuestPreferences(

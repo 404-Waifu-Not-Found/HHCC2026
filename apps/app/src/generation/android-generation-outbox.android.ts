@@ -6,8 +6,9 @@ import {
 } from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const PREFIX = "clipquest:android-generation-outbox:v1:";
-const MAX_ENTRIES = 48;
+const PREFIX = "clipquest:native-generation-outbox:v2:";
+const LEGACY_PREFIX = "clipquest:android-generation-outbox:v1:";
+const MAX_ENTRIES = 128;
 const MAX_AGE_MS = 24 * 60 * 60 * 1_000;
 
 type Entry =
@@ -18,12 +19,25 @@ type StoredOutbox = { updatedAt: number; entries: Entry[] };
 
 let writeQueue = Promise.resolve();
 
-function key(generationId: string): string {
-  return `${PREFIX}${generationId}`;
+function accountPrefix(userId: string): string {
+  return `${PREFIX}${encodeURIComponent(userId)}:`;
 }
 
-async function read(generationId: string): Promise<StoredOutbox> {
-  const raw = await AsyncStorage.getItem(key(generationId));
+function key(userId: string, generationId: string): string {
+  return `${accountPrefix(userId)}${encodeURIComponent(generationId)}`;
+}
+
+async function discardAmbiguousLegacyOutbox(generationId: string) {
+  await AsyncStorage.removeItem(`${LEGACY_PREFIX}${generationId}`);
+}
+
+async function read(
+  userId: string,
+  generationId: string,
+): Promise<StoredOutbox> {
+  await discardAmbiguousLegacyOutbox(generationId);
+  const storageKey = key(userId, generationId);
+  const raw = await AsyncStorage.getItem(storageKey);
   if (!raw) return { updatedAt: Date.now(), entries: [] };
   try {
     const candidate = JSON.parse(raw) as Partial<StoredOutbox>;
@@ -32,7 +46,7 @@ async function read(generationId: string): Promise<StoredOutbox> {
       Date.now() - candidate.updatedAt > MAX_AGE_MS ||
       !Array.isArray(candidate.entries)
     ) {
-      await AsyncStorage.removeItem(key(generationId));
+      await AsyncStorage.removeItem(storageKey);
       return { updatedAt: Date.now(), entries: [] };
     }
     const entries = candidate.entries.flatMap((entry): Entry[] => {
@@ -57,32 +71,35 @@ async function read(generationId: string): Promise<StoredOutbox> {
     });
     return { updatedAt: candidate.updatedAt, entries };
   } catch {
-    await AsyncStorage.removeItem(key(generationId));
+    await AsyncStorage.removeItem(storageKey);
     return { updatedAt: Date.now(), entries: [] };
   }
 }
 
 function mutate(
+  userId: string,
   generationId: string,
   operation: (outbox: StoredOutbox) => StoredOutbox,
 ): Promise<void> {
   const run = writeQueue.then(async () => {
-    const next = operation(await read(generationId));
+    const storageKey = key(userId, generationId);
+    const next = operation(await read(userId, generationId));
     if (next.entries.length === 0) {
-      await AsyncStorage.removeItem(key(generationId));
+      await AsyncStorage.removeItem(storageKey);
       return;
     }
-    await AsyncStorage.setItem(key(generationId), JSON.stringify(next));
+    await AsyncStorage.setItem(storageKey, JSON.stringify(next));
   });
   writeQueue = run.catch(() => undefined);
   return run;
 }
 
 export function appendAndroidGenerationOutboxEntry(
+  userId: string,
   generationId: string,
   entry: Entry,
 ): Promise<void> {
-  return mutate(generationId, (outbox) => ({
+  return mutate(userId, generationId, (outbox) => ({
     updatedAt: Date.now(),
     entries: [
       ...outbox.entries.filter((candidate) => candidate.id !== entry.id),
@@ -92,22 +109,24 @@ export function appendAndroidGenerationOutboxEntry(
 }
 
 export function removeAndroidGenerationOutboxEntry(
+  userId: string,
   generationId: string,
   entryId: string,
 ): Promise<void> {
-  return mutate(generationId, (outbox) => ({
+  return mutate(userId, generationId, (outbox) => ({
     updatedAt: Date.now(),
     entries: outbox.entries.filter((entry) => entry.id !== entryId),
   }));
 }
 
 export async function replayAndroidGenerationOutbox(
+  userId: string,
   generationId: string,
   onQuestion: (value: LocalConceptQuizQuestionChunk) => void | Promise<void>,
   onCall: (value: LocalGenerationCallEvent) => void | Promise<void>,
 ): Promise<{ questions: number; calls: number }> {
   await writeQueue;
-  const outbox = await read(generationId);
+  const outbox = await read(userId, generationId);
   let questions = 0;
   let calls = 0;
   for (const entry of outbox.entries) {
@@ -118,7 +137,20 @@ export async function replayAndroidGenerationOutbox(
       await onCall(entry.value);
       calls += 1;
     }
-    await removeAndroidGenerationOutboxEntry(generationId, entry.id);
+    await removeAndroidGenerationOutboxEntry(userId, generationId, entry.id);
   }
   return { questions, calls };
+}
+
+export async function clearNativeGenerationOutboxes(
+  userId: string,
+): Promise<void> {
+  await writeQueue;
+  const keys = await AsyncStorage.getAllKeys();
+  const ownedPrefix = accountPrefix(userId);
+  const removable = keys.filter(
+    (candidate) =>
+      candidate.startsWith(ownedPrefix) || candidate.startsWith(LEGACY_PREFIX),
+  );
+  if (removable.length > 0) await AsyncStorage.multiRemove(removable);
 }

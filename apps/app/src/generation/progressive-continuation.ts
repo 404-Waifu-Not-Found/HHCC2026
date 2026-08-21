@@ -170,7 +170,7 @@ async function runAutomaticRecovery(
     publishAttemptGeneration(attemptId, status.quizId, preparing.generation);
   }
 
-  let imported = await loadImportedVideo(continuation.videoId);
+  let imported = await loadImportedVideo(session.user.id, continuation.videoId);
   if (!imported) {
     try {
       imported = await apiRequest(
@@ -178,7 +178,7 @@ async function runAutomaticRecovery(
         { signal },
         VideoImportResponseSchema,
       );
-      await saveImportedVideo(imported);
+      await saveImportedVideo(session.user.id, imported);
     } catch (error) {
       const terminal =
         error instanceof ClientApiError && error.code === "video_not_found";
@@ -228,6 +228,7 @@ async function runAutomaticRecovery(
   let transcript;
   try {
     transcript = await acquireContinuationTranscript(
+      session.user.id,
       imported,
       signal,
       continuation.quizLanguage,
@@ -760,6 +761,7 @@ async function matchingGenerationRecord(
 }
 
 async function acquireContinuationTranscript(
+  ownerUserId: string,
   imported: NonNullable<Awaited<ReturnType<typeof loadImportedVideo>>>,
   signal: AbortSignal,
   preferredLanguage: string,
@@ -793,6 +795,7 @@ async function acquireContinuationTranscript(
     MediaResolveResponseSchema,
   );
   const result = await transcribeLocally({
+    ownerUserId,
     videoId: imported.video.id,
     mediaUrl: media.mediaUrl,
     durationSeconds: imported.video.durationSeconds,

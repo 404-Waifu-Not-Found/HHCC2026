@@ -13,6 +13,7 @@ import { acquireTextTranscript } from "../transcription/acquire-text-transcript"
 export async function preGenerateImportedQuiz(
   imported: VideoImportResponse,
   input: {
+    ownerUserId: string;
     generationId: string;
     quizLanguage: AppLanguage;
     questionTypes: QuizQuestionType[];
@@ -33,7 +34,7 @@ export async function preGenerateImportedQuiz(
       });
       return;
     }
-    await saveImportedVideo({
+    await saveImportedVideo(input.ownerUserId, {
       ...imported,
       video: {
         ...imported.video,

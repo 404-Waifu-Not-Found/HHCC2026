@@ -23,9 +23,11 @@ import {
 } from "../src/providers/SettingsProvider";
 import { ExtensionInstallGate } from "../src/components/ExtensionInstallGate";
 import { removeLocalGenerationCredential } from "../src/generation/local-generation-client";
+import { clearNativeGenerationOutboxes } from "../src/generation/android-generation-outbox";
 import { pauseAllProgressiveGenerationTasks } from "../src/generation/progressive-coordinator";
 import { useAppSession } from "../src/lib/auth-client";
 import { clearReviewReminderDeviceState } from "../src/notifications/review-reminders";
+import { clearAccountCreationState } from "../src/state/creation";
 import { nativeRouteForUrl } from "../src/navigation/native-deep-links";
 
 const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
@@ -139,6 +141,8 @@ function NativeAccountBoundary() {
         await Promise.allSettled([
           removeLocalGenerationCredential(previousUserId),
           clearReviewReminderDeviceState(previousUserId),
+          clearNativeGenerationOutboxes(previousUserId),
+          clearAccountCreationState(previousUserId),
         ]);
       }
       if (currentUserId) {

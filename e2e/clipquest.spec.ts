@@ -962,7 +962,7 @@ test("legacy retry-required quizzes recover automatically from the authoritative
   scenario.progressiveTotal = 5;
   scenario.progressiveState = "retry_required";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   await seed(page, `clipquest:generation:${VIDEO_ID}`, {
     idempotencyKey: "99999999-9999-4999-8999-999999999999",
     quizLanguage: "en",
@@ -1016,7 +1016,7 @@ test("a reloaded legacy quiz reclaims and recovers without learner action", asyn
   scenario.progressiveTotal = 5;
   scenario.progressiveState = "retry_required";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   await seed(page, `clipquest:generation:${VIDEO_ID}`, {
     idempotencyKey: "91919191-9191-4191-8191-919191919191",
     quizLanguage: "en",
@@ -1052,7 +1052,7 @@ test("the streaming indicator stays inside each gutter and above the quiz footer
 }) => {
   const scenario = await installMocks(page);
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   const generationId = await seedGenerationRecord(page, {
     sessionLength: "short",
     plannedCount: 5,
@@ -1135,7 +1135,7 @@ test("a cold thumbnail retries without shifting the create page", async ({
   scenario.thumbnailMode = "fail-once";
   scenario.thumbnailFailureTag = "cold";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+  await seedImportedVideo(page, {
     ...importedVideo,
     video: {
       ...importedVideo.video,
@@ -1172,7 +1172,7 @@ test("a permanent thumbnail failure keeps quiz setup usable", async ({
   scenario.thumbnailMode = "failed";
   scenario.thumbnailFailureTag = "permanent";
   await page.goto("/");
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+  await seedImportedVideo(page, {
     ...importedVideo,
     video: {
       ...importedVideo.video,
@@ -1242,7 +1242,7 @@ test("desktop learning journey and visual states", async ({ page }) => {
   expect(homeVisuals.hasOverflow).toBe(false);
   await capture(page, "desktop-link-import");
 
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   await page.goto(`/create/${VIDEO_ID}`);
   await expect(
     page.getByRole("heading", { name: "Video ready" }),
@@ -1351,7 +1351,7 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
   await capture(page, "mobile-link-import");
 
-  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seedImportedVideo(page, importedVideo);
   const generationId = await seedGenerationRecord(page, {
     sessionLength: "medium",
     plannedCount: 10,
@@ -2342,6 +2342,25 @@ async function seed(page: Page, key: string, value: unknown): Promise<void> {
     ({ storageKey, storedValue }) =>
       window.localStorage.setItem(storageKey, JSON.stringify(storedValue)),
     { storageKey: key, storedValue: value },
+  );
+}
+
+async function seedImportedVideo(
+  page: Page,
+  value: typeof importedVideo,
+): Promise<void> {
+  const timestamp = Date.now();
+  const ownerUserId = sessionFixture().user.id;
+  await seed(
+    page,
+    `clipquest:creation:v3:${encodeURIComponent(ownerUserId)}:${encodeURIComponent(value.video.id)}`,
+    {
+      version: 3,
+      ownerUserId,
+      cachedAt: timestamp,
+      expiresAt: timestamp + 24 * 60 * 60 * 1_000,
+      value,
+    },
   );
 }
 

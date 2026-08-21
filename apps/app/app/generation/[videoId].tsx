@@ -434,7 +434,7 @@ export default function GenerationScreen() {
         generationProfile: rolloutProfile.generationProfile,
       });
       const recoverySessionId = Crypto.randomUUID();
-      const imported = await loadImportedVideo(params.videoId);
+      const imported = await loadImportedVideo(session.user.id, params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
       setVideoDurationSeconds(imported.video.durationSeconds || undefined);
       setCaptionWordCount(
@@ -480,6 +480,7 @@ export default function GenerationScreen() {
           MediaResolveResponseSchema,
         );
         const result = await transcribeLocally({
+          ownerUserId: session.user.id,
           videoId: imported.video.id,
           mediaUrl: media.mediaUrl,
           durationSeconds: imported.video.durationSeconds,

@@ -102,13 +102,13 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
           client: iosClientMetadata(),
         });
         const id = `question:${chunk.startIndex}`;
-        await appendAndroidGenerationOutboxEntry(generationId, {
+        await appendAndroidGenerationOutboxEntry(userId, generationId, {
           id,
           kind: "question",
           value: chunk,
         });
         await onQuestion(chunk);
-        await removeAndroidGenerationOutboxEntry(generationId, id);
+        await removeAndroidGenerationOutboxEntry(userId, generationId, id);
       },
       async (value) => {
         const event = LocalGenerationCallEventSchema.parse({
@@ -116,13 +116,13 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
           client: iosClientMetadata(),
         });
         const id = `call:${event.generationSessionId}:${event.callIndex}:${"lifecycleState" in event ? event.lifecycleState : "completed"}`;
-        await appendAndroidGenerationOutboxEntry(generationId, {
+        await appendAndroidGenerationOutboxEntry(userId, generationId, {
           id,
           kind: "call",
           value: event,
         });
         await onCall(event);
-        await removeAndroidGenerationOutboxEntry(generationId, id);
+        await removeAndroidGenerationOutboxEntry(userId, generationId, id);
       },
       {
         fetch: expoFetch as unknown as typeof globalThis.fetch,
@@ -148,7 +148,17 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
   }
 };
 
-export const flushLocalGenerationOutbox = replayAndroidGenerationOutbox;
+export const flushLocalGenerationOutbox: import("./local-generation-client.types").FlushLocalGenerationOutbox =
+  async (generationId, onQuestion, onCall) => {
+    const userId = await signedInUserId();
+    if (!userId) return { questions: 0, calls: 0 };
+    return replayAndroidGenerationOutbox(
+      userId,
+      generationId,
+      onQuestion,
+      onCall,
+    );
+  };
 
 export async function detectLocalGenerationClient(): Promise<LocalGenerationClientStatus> {
   const userId = await signedInUserId();
