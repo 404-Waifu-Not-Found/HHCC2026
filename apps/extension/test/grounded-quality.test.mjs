@@ -627,6 +627,29 @@ test("v5.8 constructs true-false polarity locally from one supported fact", () =
   assert.equal(trueQuestion?.question, evidence);
 });
 
+test("v5.8 never flips a planned false item back to true", () => {
+  const evidence =
+    "A subunit vaccine is made from one antigen that triggers an immune response.";
+  const question = constructConceptFirstTrueFalseQuestion(
+    { evidenceQuote: evidence, supportedFact: evidence },
+    evidence,
+    false,
+  );
+  assert.equal(question?.answer, false);
+  assert.match(question?.question ?? "", /not made (?:of|from)/iu);
+
+  const immutable =
+    "Cytokines coordinate communication between immune cells during a response.";
+  assert.equal(
+    constructConceptFirstTrueFalseQuestion(
+      { evidenceQuote: immutable, supportedFact: immutable },
+      immutable,
+      false,
+    ),
+    null,
+  );
+});
+
 test("v5.8 resolves a concise supported fact from a longer evidence window", () => {
   const evidence =
     "Cytokines coordinate immune communication. They activate B and T cells before the adaptive response expands.";

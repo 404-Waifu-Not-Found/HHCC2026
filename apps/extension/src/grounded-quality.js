@@ -1222,6 +1222,39 @@ const CONTRADICTORY_REPLACEMENTS = new Map([
   ["minimum", "maximum"],
   ["always", "never"],
   ["never", "always"],
+  ["through", "without"],
+  ["does", "does not"],
+  ["do", "do not"],
+  ["is", "is not"],
+  ["are", "are not"],
+  ["can", "cannot"],
+  ["contains", "does not contain"],
+  ["include", "exclude"],
+  ["includes", "excludes"],
+  ["made of", "not made of"],
+  ["transfers", "does not transfer"],
+  ["carries", "does not carry"],
+  ["triggers", "does not trigger"],
+  ["produces", "does not produce"],
+  ["removes", "does not remove"],
+  ["stores", "does not store"],
+  ["releases", "does not release"],
+  ["absorbs", "does not absorb"],
+  ["converts", "does not convert"],
+  ["supports", "does not support"],
+  ["prevents", "does not prevent"],
+  ["protects", "does not protect"],
+  ["traps", "does not trap"],
+  ["strengthens", "does not strengthen"],
+  ["coordinates", "does not coordinate"],
+  ["lowers", "does not lower"],
+  ["limits", "does not limit"],
+  ["repairs", "does not repair"],
+  ["changes", "does not change"],
+  ["routes", "does not route"],
+  ["relays", "does not relay"],
+  ["connects", "does not connect"],
+  ["causes", "does not cause"],
 ]);
 
 function isVerifiedContradiction(source, replacement) {
@@ -1513,6 +1546,11 @@ export function constructConceptFirstTrueFalseQuestion(
         mutationKind: "local_allowlisted",
       };
     }
+    // The hidden polarity plan is authoritative. Falling back to a true item
+    // here made a balanced True/False bank silently become all-true. Ask for a
+    // different supported fact instead; the retry remains scoped to this
+    // ordinal and accepted questions stay immutable.
+    return null;
   }
   return {
     question: resolvedSupported,
