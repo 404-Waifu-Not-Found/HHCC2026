@@ -10,6 +10,7 @@ import {
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
+import { Image } from "expo-image";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   useCallback,
@@ -150,6 +151,9 @@ export default function HomeScreen() {
           VideoImportResponseSchema,
         );
         const idempotencyKey = Crypto.randomUUID();
+        void Image.prefetch(imported.video.thumbnailUrl, "memory-disk").catch(
+          () => false,
+        );
         await Promise.all([
           saveImportedVideo(imported),
           saveQuestPreferences(imported.video.id, {

@@ -125,6 +125,8 @@ export const messages = {
     notFoundBody:
       "That page does not exist. Head home to start or continue a video quest.",
     videoReady: "Video ready",
+    thumbnailUnavailable: "The thumbnail is taking longer than expected.",
+    retryThumbnail: "Reload thumbnail",
     sourceCaptions: "Complete source captions are ready.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
@@ -340,6 +342,8 @@ export const messages = {
     notFoundTitle: "这个学习任务走丢了",
     notFoundBody: "该页面不存在。返回首页开始或继续视频学习任务。",
     videoReady: "视频已准备好",
+    thumbnailUnavailable: "缩略图加载时间比预期更长。",
+    retryThumbnail: "重新加载缩略图",
     sourceCaptions: "完整的来源字幕已准备好。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
     extensionRequiredTitle: "安装 Chrome 扩展",

@@ -6,7 +6,6 @@ import {
   type VideoImportResponse,
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -21,6 +20,7 @@ import {
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
+import { ReliableThumbnail } from "../../src/components/ReliableThumbnail";
 import { Screen } from "../../src/components/Screen";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { Surface } from "../../src/components/Surface";
@@ -168,10 +168,12 @@ export default function CreateQuestScreen() {
         <MotionView preset="rise" delay={44}>
           <Surface elevated padded={false} style={styles.previewSurface}>
             <View style={[styles.preview, compact && styles.previewCompact]}>
-              <Image
+              <ReliableThumbnail
+                testID="create-video-thumbnail"
                 accessibilityLabel={video.video.title}
-                source={{ uri: video.video.thumbnailUrl }}
-                contentFit="cover"
+                uri={video.video.thumbnailUrl}
+                recyclingKey={video.video.id}
+                presentation="preview"
                 style={[styles.thumbnail, compact && styles.thumbnailCompact]}
               />
               <View style={styles.previewCopy}>
@@ -427,7 +429,6 @@ const styles = StyleSheet.create({
     flex: 0.95,
     minWidth: 0,
     aspectRatio: 16 / 10,
-    backgroundColor: "#CBD2DE",
   },
   thumbnailCompact: { width: "100%", flex: 0, aspectRatio: 16 / 9 },
   previewCopy: {

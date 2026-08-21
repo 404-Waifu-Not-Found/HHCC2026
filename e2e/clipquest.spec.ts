@@ -25,6 +25,9 @@ type Scenario = {
   completedAttempt: boolean;
   generationMode: "stable" | "failed";
   importMode: "success" | "unavailable";
+  thumbnailMode: "stable" | "fail-once" | "failed";
+  thumbnailFailureTag?: string;
+  thumbnailRequestCount: number;
   extensionCaptionImport: boolean;
   requestedPaths: string[];
   quizImportBodies: unknown[];
@@ -523,6 +526,71 @@ test("YouTube quick open lands on Home and starts one import automatically", asy
   ).toHaveLength(1);
 });
 
+test("a cold thumbnail retries without shifting the create page", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.thumbnailMode = "fail-once";
+  scenario.thumbnailFailureTag = "cold";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+    ...importedVideo,
+    video: {
+      ...importedVideo.video,
+      thumbnailUrl: `${THUMBNAIL_URL}?thumbnail_case=cold`,
+    },
+  });
+
+  await page.goto(`/create/${VIDEO_ID}`);
+  const thumbnail = page.getByTestId("create-video-thumbnail");
+  await expect(thumbnail).toBeVisible();
+  const loadingBounds = await thumbnail.boundingBox();
+
+  await expect
+    .poll(() => scenario.thumbnailRequestCount, { timeout: 5_000 })
+    .toBe(2);
+  await expect(
+    page.getByTestId("create-video-thumbnail-placeholder"),
+  ).toBeHidden();
+
+  const loadedBounds = await thumbnail.boundingBox();
+  expect(loadingBounds).not.toBeNull();
+  expect(loadedBounds).not.toBeNull();
+  expect(loadedBounds?.width).toBeCloseTo(loadingBounds?.width ?? 0, 0);
+  expect(loadedBounds?.height).toBeCloseTo(loadingBounds?.height ?? 0, 0);
+  await expect(
+    page.getByRole("button", { name: "Create my quiz" }),
+  ).toBeEnabled();
+});
+
+test("a permanent thumbnail failure keeps quiz setup usable", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.thumbnailMode = "failed";
+  scenario.thumbnailFailureTag = "permanent";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+    ...importedVideo,
+    video: {
+      ...importedVideo.video,
+      thumbnailUrl: `${THUMBNAIL_URL}?thumbnail_case=permanent`,
+    },
+  });
+
+  await page.goto(`/create/${VIDEO_ID}`);
+  await expect(page.getByTestId("create-video-thumbnail-retry")).toBeVisible({
+    timeout: 7_000,
+  });
+  expect(scenario.thumbnailRequestCount).toBe(4);
+  await expect(
+    page.getByText("The thumbnail is taking longer than expected."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create my quiz" }),
+  ).toBeEnabled();
+});
+
 test("desktop learning journey and visual states", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1024 });
   const scenario = await installMocks(page);
@@ -932,6 +1000,8 @@ async function installMocks(page: Page): Promise<Scenario> {
     completedAttempt: false,
     generationMode: "stable",
     importMode: "success",
+    thumbnailMode: "stable",
+    thumbnailRequestCount: 0,
     extensionCaptionImport: false,
     requestedPaths: [],
     quizImportBodies: [],
@@ -939,7 +1009,25 @@ async function installMocks(page: Page): Promise<Scenario> {
     question: baseQuestion,
   };
 
-  await page.route("**/test-thumbnail.svg", async (route) => {
+  await page.route("**/test-thumbnail.svg*", async (route) => {
+    const thumbnailUrl = new URL(route.request().url());
+    const targeted = scenario.thumbnailFailureTag
+      ? thumbnailUrl.searchParams.get("thumbnail_case") ===
+        scenario.thumbnailFailureTag
+      : true;
+    if (targeted) scenario.thumbnailRequestCount += 1;
+    if (
+      targeted &&
+      (scenario.thumbnailMode === "failed" ||
+        (scenario.thumbnailMode === "fail-once" &&
+          scenario.thumbnailRequestCount === 1))
+    ) {
+      await route.fulfill({
+        status: 503,
+        headers: { "Cache-Control": "no-store", "Retry-After": "1" },
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "image/svg+xml",
