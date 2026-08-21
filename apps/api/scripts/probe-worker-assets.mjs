@@ -103,8 +103,11 @@ export async function pollWorkerAssetShells({
   versionId,
   requireAffinity,
   offsetsSeconds,
+  startedAt = Date.now(),
 }) {
-  const startedAt = Date.now();
+  if (!Number.isFinite(startedAt) || startedAt < 0) {
+    throw new Error("Probe start time must be a non-negative timestamp.");
+  }
   const results = [];
   for (const offsetSeconds of offsetsSeconds) {
     await waitUntil(startedAt + offsetSeconds * 1_000);

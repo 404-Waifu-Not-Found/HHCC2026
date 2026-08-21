@@ -161,13 +161,30 @@ try {
     apiRoot,
   );
   evidence.steps.push({ name: "promotion", ok: true });
+  const promotedAt = Date.now();
 
-  const productionProbes = await pollWorkerAssetShells({
+  const initialProductionProbe = await retryWorkerAssetProbe({
     origin: productionOrigin,
     versionId: newVersion,
     requireAffinity: true,
-    offsetsSeconds: [0, 120, 300, 600],
   });
+  process.stdout.write(
+    `Asset probe +0s: ${initialProductionProbe.shells} shells and ${initialProductionProbe.bundles} entry bundles passed.\n`,
+  );
+  const productionProbes = [
+    {
+      offsetSeconds: 0,
+      checkedAt: new Date().toISOString(),
+      ...initialProductionProbe,
+    },
+    ...(await pollWorkerAssetShells({
+      origin: productionOrigin,
+      versionId: newVersion,
+      requireAffinity: true,
+      offsetsSeconds: [120, 300, 600],
+      startedAt: promotedAt,
+    })),
+  ];
   evidence.steps.push({
     name: "post_promotion_probes",
     ok: true,
