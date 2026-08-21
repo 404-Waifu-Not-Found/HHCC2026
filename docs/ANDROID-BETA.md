@@ -75,10 +75,12 @@ npx expo prebuild --platform android --clean
 npx expo export --platform android --clear
 ```
 
-Then use JDK 17 from `apps/app/android`:
+Then use JDK 17 from `apps/app/android`. Set `JAVA_HOME` explicitly when the
+machine's default Java is newer; the current Android Gradle, CMake, and SDK
+toolchain is not supported on JDK 25:
 
 ```bash
-./gradlew generateCodegenArtifactsFromSchema :app:assembleRelease
+JAVA_HOME=/path/to/jdk-17 ./gradlew generateCodegenArtifactsFromSchema :app:assembleRelease
 ```
 
 This local Gradle artifact is only a device-test build unless a real release signing configuration is supplied. The authoritative beta is the EAS-managed APK.
