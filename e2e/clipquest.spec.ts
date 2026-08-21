@@ -17,7 +17,9 @@ const NEXT_QUESTION_ID = "77777777-7777-4777-8777-777777777777";
 const JOB_ID = "88888888-8888-4888-8888-888888888888";
 const THUMBNAIL_URL = `${BASE_URL}/test-thumbnail.svg`;
 const SCREENSHOT_DIR =
-  process.env.CLIPQUEST_SCREENSHOT_DIR ?? "docs/screenshots/final";
+  process.env.CLIPQUEST_SCREENSHOT_DIR ?? "test-results/product-screenshots";
+const DETERMINISTIC_SCREENSHOTS =
+  process.env.CLIPQUEST_DETERMINISTIC_SCREENSHOTS === "1";
 const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
 const GENERATION_ID = "abababab-abab-4bab-8bab-abababababab";
 const GENERATION_SESSION_ID = "bcbcbcbc-bcbc-4bcb-8bcb-bcbcbcbcbcbc";
@@ -167,7 +169,22 @@ const savedCard = {
 };
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript((deterministicScreenshots) => {
+    if (deterministicScreenshots) {
+      Object.defineProperty(window.crypto, "getRandomValues", {
+        configurable: true,
+        value: <T extends ArrayBufferView | null>(array: T): T => {
+          if (!array) return array;
+          const bytes = new Uint8Array(
+            array.buffer,
+            array.byteOffset,
+            array.byteLength,
+          );
+          bytes.fill(0);
+          return array;
+        },
+      });
+    }
     if (window.sessionStorage.getItem("clipquest:e2e-preserve-theme") !== "1") {
       window.localStorage.setItem(
         "clipquest:settings:v1",
@@ -516,7 +533,7 @@ test.beforeEach(async ({ page }) => {
         );
       }
     });
-  });
+  }, DETERMINISTIC_SCREENSHOTS);
 });
 
 test("sign-in splits on desktop and collapses cleanly on mobile", async ({
@@ -2416,6 +2433,23 @@ function boxesOverlap(
 }
 
 async function capture(page: Page, name: string): Promise<void> {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(
+      [...document.images]
+        .filter((image) => !image.complete)
+        .map(
+          (image) =>
+            new Promise<void>((resolve) => {
+              image.addEventListener("load", () => resolve(), { once: true });
+              image.addEventListener("error", () => resolve(), { once: true });
+            }),
+        ),
+    );
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  });
   await page.screenshot({
     path: `${SCREENSHOT_DIR}/${name}.png`,
     fullPage: true,

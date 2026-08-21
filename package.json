@@ -18,6 +18,7 @@
     "format": "prettier --write apps/app/app apps/app/src/admin apps/app/src/components apps/app/src/motion apps/app/src/i18n/messages.ts apps/app/src/lib/auth-client.ts apps/app/src/theme/tokens.ts apps/app/test/motion-system.test.ts apps/app/scripts/generate-motion-doc.mjs apps/extension/src apps/extension/test apps/extension/scripts apps/extension/manifest.json apps/extension/package.json apps/api/src/admin apps/api/src/middleware/admin.ts apps/api/src/routes/admin.ts packages/contracts/src/admin.ts packages/contracts/test/contracts.test.ts e2e README.md docs/*.md playwright.config.ts eslint.config.js",
     "format:check": "prettier --check apps/app/app apps/app/src/admin apps/app/src/components apps/app/src/motion apps/app/src/i18n/messages.ts apps/app/src/lib/auth-client.ts apps/app/src/theme/tokens.ts apps/app/test/motion-system.test.ts apps/app/scripts/generate-motion-doc.mjs apps/extension/src apps/extension/test apps/extension/scripts apps/extension/manifest.json apps/extension/package.json apps/api/src/admin apps/api/src/middleware/admin.ts apps/api/src/routes/admin.ts packages/contracts/src/admin.ts packages/contracts/test/contracts.test.ts e2e README.md docs/*.md playwright.config.ts eslint.config.js",
     "test:e2e": "playwright test",
+    "test:e2e:update-screenshots": "CLIPQUEST_SCREENSHOT_DIR=docs/screenshots/final CLIPQUEST_DETERMINISTIC_SCREENSHOTS=1 playwright test",
     "cf:types": "npm run cf:types -w @clipquest/api",
     "cf:dry-run": "npm run deploy:dry -w @clipquest/api",
     "cf:deploy": "npm run deploy -w @clipquest/api",
