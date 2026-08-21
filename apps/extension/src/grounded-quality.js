@@ -992,10 +992,14 @@ export function constructConceptFirstTrueFalseQuestion(
   const supported = String(
     candidate?.supportedFact ?? candidate?.supportedStatement ?? "",
   ).trim();
+  const groundingSource = evidenceAppearsInText(evidence, focusExcerpt)
+    ? evidence
+    : focusExcerpt;
   if (
-    !evidenceAppearsInText(evidence, focusExcerpt) ||
     !supported ||
-    !normalizeGroundedText(evidence).includes(normalizeGroundedText(supported))
+    !normalizeGroundedText(groundingSource).includes(
+      normalizeGroundedText(supported),
+    )
   ) {
     return null;
   }
@@ -1031,13 +1035,22 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
   const learnerAnswer = String(
     candidate?.answerText ?? candidate?.correctAnswer ?? "",
   ).trim();
+  // The model's private evidence quote is a useful hint, but it is not a
+  // grading-sensitive value. If it paraphrases the selected excerpt, resolve
+  // the answer span against the authoritative local focus instead of spending
+  // another model request merely to reproduce punctuation or sentence bounds.
+  // A candidate is still rejected unless one unique answer span is present in
+  // the eligible evidence.
+  const groundingSource = evidenceAppearsInText(evidence, focusExcerpt)
+    ? evidence
+    : focusExcerpt;
   const exactRequestedAnswerSpan = resolveUniqueEvidenceAnswerSpan(
     requestedAnswerSpan,
-    evidence,
+    groundingSource,
   );
   const exactLearnerAnswerSpan = resolveUniqueEvidenceAnswerSpan(
     learnerAnswer,
-    evidence,
+    groundingSource,
   );
   const answerRepresentationsAgree =
     Boolean(exactRequestedAnswerSpan || exactLearnerAnswerSpan) ||
@@ -1054,17 +1067,16 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
     exactRequestedAnswerSpan ??
     exactLearnerAnswerSpan ??
     (answerRepresentationsAgree &&
-    answerSupportedByEvidence(requestedAnswerSpan, evidence) &&
-    answerSupportedByEvidence(learnerAnswer, evidence)
+    answerSupportedByEvidence(requestedAnswerSpan, groundingSource) &&
+    answerSupportedByEvidence(learnerAnswer, groundingSource)
       ? requestedAnswerSpan
       : null);
   if (
-    !evidenceAppearsInText(evidence, focusExcerpt) ||
     !correctAnswer ||
     !learnerAnswer ||
     !answerRepresentationsAgree ||
     (!exactRequestedAnswerSpan &&
-      !answerSupportedByEvidence(learnerAnswer, evidence)) ||
+      !answerSupportedByEvidence(learnerAnswer, groundingSource)) ||
     !Array.isArray(candidate?.distractors) ||
     candidate.distractors.length !== 3
   ) {

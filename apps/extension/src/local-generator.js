@@ -1280,11 +1280,17 @@ function answerContainsRequiredItem(answer, item) {
   );
 }
 
-function conceptFirstShortAnswerCandidate(question) {
+function conceptFirstShortAnswerCandidate(question, focusExcerpt) {
   const mode = question.shortAnswerMode;
   const answer = String(question.answer ?? "")
     .normalize("NFC")
     .trim();
+  const groundingSource = evidenceAppearsInText(
+    question.sourceEvidence,
+    focusExcerpt,
+  )
+    ? question.sourceEvidence
+    : focusExcerpt;
   if (!nonEmptyString(answer, 1_000)) {
     validationFailure(
       "The short answer is missing.",
@@ -1307,7 +1313,7 @@ function conceptFirstShortAnswerCandidate(question) {
     ]).filter((alias) => normalize(alias) !== normalize(answer));
     if (
       aliases.length > 8 ||
-      !answerSupportedByEvidence(answer, question.sourceEvidence)
+      !answerSupportedByEvidence(answer, groundingSource)
     ) {
       validationFailure(
         "The atomic answer is not uniquely supported by its instructional evidence.",
@@ -1393,7 +1399,7 @@ function conceptFirstShortAnswerCandidate(question) {
     if (
       !serializedFormula ||
       normalizedFormulaText(answer) !== serializedFormula ||
-      !answerSupportedByEvidence(answer, question.sourceEvidence)
+      !answerSupportedByEvidence(answer, groundingSource)
     ) {
       validationFailure(
         "The formula answer is not structurally supported.",
@@ -1595,10 +1601,31 @@ function validateQuiz(quiz, input) {
       );
     }
     if (input.groundedMode) {
+      if (!validGroundedClaim(question)) {
+        validationFailure(
+          `Question ${index + 1} does not contain a usable grounded claim.`,
+          "schema_invalid",
+        );
+      }
       if (
-        !validGroundedClaim(question) ||
         !nonEmptyString(question.sourceEvidence, 700) ||
-        !evidenceAppearsInText(question.sourceEvidence, input.focusExcerpt) ||
+        (!input.conceptFirstV58Mode &&
+          !evidenceAppearsInText(question.sourceEvidence, input.focusExcerpt))
+      ) {
+        validationFailure(
+          `Question ${index + 1} is not grounded in its assigned instructional focus.`,
+          input.conceptFirstV58Mode
+            ? question.type === "multiple_choice"
+              ? "mc_evidence_span_invalid"
+              : question.type === "true_false"
+                ? "true_false_fact_invalid"
+                : question.shortAnswerMode === "formula"
+                  ? "short_formula_invalid"
+                  : "short_atomic_invalid"
+            : "duplicate_question",
+        );
+      }
+      if (
         candidateDuplicatesAccepted(
           question,
           accepted,
@@ -1791,7 +1818,7 @@ function validateQuiz(quiz, input) {
     }
     if (question.type === "short_answer") {
       if (input.conceptFirstV58Mode) {
-        return conceptFirstShortAnswerCandidate(question);
+        return conceptFirstShortAnswerCandidate(question, input.focusExcerpt);
       }
       if (
         input.strictConceptMode &&
