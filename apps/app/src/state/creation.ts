@@ -259,6 +259,16 @@ export async function loadGenerationRecord(
   }
 }
 
+export function generationRecordForOwnerAndVideo(
+  record: GenerationRecord | null,
+  ownerUserId: string,
+  videoId: string,
+): GenerationRecord | null {
+  return record?.ownerUserId === ownerUserId && record.videoId === videoId
+    ? record
+    : null;
+}
+
 export async function updateGenerationRecord(
   generationId: string,
   update: GenerationRecordUpdate,

@@ -28,6 +28,7 @@ import { Surface } from "../../src/components/Surface";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { useAppSession } from "../../src/lib/auth-client";
 import {
+  generationRecordForOwnerAndVideo,
   loadGenerationRecord,
   loadImportedVideo,
   loadQuestPreferences,
@@ -95,11 +96,16 @@ export default function CreateQuestScreen() {
         loadImportedVideo(session.user.id, videoId),
       ]);
       if (!active) return;
-      setPreworkStatus(record?.preworkStatus);
-      if (record?.preworkStatus === "ready" && latestVideo) {
+      const matchingRecord = generationRecordForOwnerAndVideo(
+        record,
+        session.user.id,
+        videoId,
+      );
+      setPreworkStatus(matchingRecord?.preworkStatus);
+      if (matchingRecord?.preworkStatus === "ready" && latestVideo) {
         setVideo(latestVideo);
       }
-      if (record?.preworkStatus === "running") {
+      if (matchingRecord?.preworkStatus === "running") {
         timer = setTimeout(() => void syncPrework(), 500);
       }
     };
@@ -180,9 +186,11 @@ export default function CreateQuestScreen() {
       quizLanguage,
       questionTypes,
     });
-    const existing = generationId
-      ? await loadGenerationRecord(generationId)
-      : null;
+    const existing = generationRecordForOwnerAndVideo(
+      generationId ? await loadGenerationRecord(generationId) : null,
+      session.user.id,
+      video.video.id,
+    );
     const nextGenerationId = existing?.generationId ?? Crypto.randomUUID();
     const plannedCount =
       sessionLength === "short" ? 5 : sessionLength === "medium" ? 10 : 15;

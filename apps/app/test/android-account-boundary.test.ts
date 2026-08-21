@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { createSerialTaskQueue } from "../src/lib/serial-task-queue";
 
 const root = resolve(import.meta.dirname, "..");
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
@@ -51,5 +52,40 @@ describe("native account storage boundary", () => {
     expect(prework).toContain("controller.signal.aborted");
     expect(prework).toContain("activeTask?.controller !== controller");
     expect(prework).toContain("clearImportedVideo");
+  });
+
+  it("serializes account-boundary effects before they update the marker", () => {
+    const layout = source("app/_layout.tsx");
+
+    expect(layout).toContain("createSerialTaskQueue()");
+    expect(layout).toContain("nativeAccountBoundaryQueue.enqueue");
+    expect(layout).toMatch(
+      /const currentUserId = session\?\.user\.id \?\? null;[\s\S]+nativeAccountBoundaryQueue\.enqueue[\s\S]+AsyncStorage\.setItem\(OBSERVED_NATIVE_USER_KEY, currentUserId\)/,
+    );
+  });
+
+  it("preserves every queued account transition in submission order", async () => {
+    const queue = createSerialTaskQueue();
+    const order: string[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    const first = queue.enqueue(async () => {
+      order.push("account-a-start");
+      await firstGate;
+      order.push("account-a-finish");
+    });
+    const second = queue.enqueue(() => {
+      order.push("account-b");
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(order).toEqual(["account-a-start"]);
+
+    releaseFirst();
+    await Promise.all([first, second]);
+    expect(order).toEqual(["account-a-start", "account-a-finish", "account-b"]);
   });
 });

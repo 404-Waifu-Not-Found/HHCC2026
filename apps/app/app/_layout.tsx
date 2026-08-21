@@ -30,6 +30,7 @@ import { clearReviewReminderDeviceState } from "../src/notifications/review-remi
 import { clearAccountCreationState } from "../src/state/creation";
 import { cancelPreGenerationForAccount } from "../src/generation/prework";
 import { nativeRouteForUrl } from "../src/navigation/native-deep-links";
+import { createSerialTaskQueue } from "../src/lib/serial-task-queue";
 
 const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
 
@@ -128,13 +129,14 @@ function NativeDeepLinkBoundary() {
 }
 
 const OBSERVED_NATIVE_USER_KEY = "clipquest:native-local-ai-user:v1";
+const nativeAccountBoundaryQueue = createSerialTaskQueue();
 
 function NativeAccountBoundary() {
   const { data: session, isPending } = useAppSession();
   useEffect(() => {
     if (Platform.OS === "web" || isPending) return;
-    void (async () => {
-      const currentUserId = session?.user.id ?? null;
+    const currentUserId = session?.user.id ?? null;
+    void nativeAccountBoundaryQueue.enqueue(async () => {
       const previousUserId = await AsyncStorage.getItem(
         OBSERVED_NATIVE_USER_KEY,
       );
@@ -152,7 +154,7 @@ function NativeAccountBoundary() {
       } else {
         await AsyncStorage.removeItem(OBSERVED_NATIVE_USER_KEY);
       }
-    })();
+    });
   }, [isPending, session?.user.id]);
   return null;
 }
