@@ -165,6 +165,15 @@ None. No new runtime UI library was needed.
 | `npm run test:e2e` | Passed: 5 Playwright journeys in approximately 1.1 minutes |
 | Chrome Computer Use | Signed-out URL input and enabled submit verified; continued to ClipQuest sign-up with no Google/YouTube control |
 
+## Production deployment update — 2026-07-31
+
+- Rotated `DEEPSEEK_API_KEY`, `RESEND_API_KEY`, `BETTER_AUTH_SECRET`, and `YOUTUBE_CREDENTIALS_ENCRYPTION_KEY` from the supplied environment file through Wrangler stdin. No value was printed, added to a command argument, written to a temporary file, or committed.
+- Deployed the rebuilt Worker and static web assets to the configured `clipquest.ccwu.cc` custom domain.
+- Cloudflare production version: `9ed676ed-1f30-44fc-ae35-1d6a5bcab9dc`.
+- The hourly schedule and `clipquest-generation` producer/consumer were deployed successfully.
+- Post-deploy `/health` returned HTTP 200 with authentication, generation, email, and YouTube credential encryption configured; YouTube demo history remained disabled.
+- Post-deploy `/welcome` returned HTTP 200 as HTML and contained the ClipQuest application shell.
+
 The Playwright API layer is deliberately contract-shaped and mocked, so it can deterministically cover all visual and failure states without writing production data. It verified:
 
 - YouTube and bilibili success paths
