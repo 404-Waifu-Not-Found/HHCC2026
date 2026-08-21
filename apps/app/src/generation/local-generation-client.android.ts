@@ -133,6 +133,11 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
       {
         fetch: expoFetch as unknown as typeof globalThis.fetch,
         crypto: nativeCrypto,
+        // Android's native fetch bridge can leave an SSE body open without
+        // delivering the first chunk. Use the bounded JSON envelope on this
+        // platform so the AI-generated bank either arrives or times out as a
+        // normal request; no fallback generator is introduced.
+        disableStreaming: true,
       },
     );
     return LocalConceptQuizGenerationResultSchema.parse({

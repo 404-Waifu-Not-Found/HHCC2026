@@ -52,12 +52,19 @@ describe("Android UI regressions", () => {
   it("does not claim native captions are ready while prework is pending", () => {
     const creation = source("app/create/[videoId].tsx");
     const generation = source("app/generation/[videoId].tsx");
+    const localClient = source(
+      "src/generation/local-generation-client.android.ts",
+    );
 
     expect(creation).toContain('nativeCaptionState === "running"');
     expect(creation).toContain('t("sourceCaptionsPreparing")');
-    expect(creation).toContain("loading={captionsPending || localAiPending}");
+    expect(creation).toContain("loading={captionsPending}");
+    expect(creation).toContain(
+      "The local-client probe is diagnostic. It may wait on native",
+    );
     expect(generation).toContain('"privateTranscriptionAndroid"');
     expect(generation).toContain('label: t("checkingCaptions")');
+    expect(localClient).toContain("disableStreaming: true");
   });
 
   it("never calls browser focus listeners from a native quiz", () => {

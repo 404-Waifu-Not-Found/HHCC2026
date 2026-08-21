@@ -31,6 +31,8 @@ export type LocalQuizEngineAdapters = {
     getRandomValues<T extends ArrayBufferView>(values: T): T;
     randomUUID(): string;
   };
+  /** Request one bounded JSON response instead of an SSE stream. */
+  disableStreaming?: boolean;
 };
 
 export const LOCAL_GENERATION_RETRY_POLICY: {
