@@ -788,6 +788,28 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     },
     null,
   );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "ecosystem resilience",
+      objectiveCategory: "mechanism",
+      question:
+        "How does biodiversity influence an ecosystem's ability to withstand change?",
+      answerText: "The answer, to a large extent, is biodiversity.",
+    },
+    "question_answer_kind_mismatch",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "ecosystem resilience",
+      objectiveCategory: "relationship",
+      question:
+        "What factor largely determines whether an ecosystem is strong or weak in the face of change?",
+      answerText: "biodiversity",
+    },
+    null,
+  );
 
   for (const answer of [
     "Every link provides stability to the next",

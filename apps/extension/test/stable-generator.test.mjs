@@ -6,6 +6,7 @@ import {
   boundedRetryDelayMilliseconds,
   buildQuestionTypePlanFromSeed,
   buildTrueFalseAnswerPlanFromSeed,
+  CONCEPT_FIRST_SYSTEM_PROMPT,
   generateQuizFromPlainText,
   normalizeGeneratedQuestion,
   serializeFormulaTokens,
@@ -925,8 +926,9 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
     return conceptFirstResponse(init.body);
   };
 
+  const input = conceptFirstInput();
   const result = await generateQuizFromPlainText(
-    conceptFirstInput(),
+    input,
     "sk-local-test",
     () => undefined,
     undefined,
@@ -975,9 +977,36 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
       request.body.messages[2].content,
       /The reference gives a direct relationship/u,
     );
-    assert.match(
+    assert.match(request.body.messages[1].content, /Context boundary/iu);
+    assert.doesNotMatch(
       request.body.messages[1].content,
       /Private reference material — never mention this source/u,
+    );
+    assert.doesNotMatch(
+      request.body.messages[1].content,
+      /pathway\d+/iu,
+      "v5.8 never sends the complete transcript in its stable prefix",
+    );
+    assert.match(request.task, /Preferred objective category/iu);
+    assert.match(request.task, /never invent a mechanism/iu);
+    if (request.type === "multiple_choice") {
+      assert.match(
+        request.task,
+        /If answerText is only a term, name, noun phrase, or factor/iu,
+      );
+    }
+    const unsentTranscriptSentence = input.plainText
+      .split(/(?<=[.!?。！？])\s+/u)
+      .find((sentence) => !request.focusExcerpt.includes(sentence));
+    assert.ok(
+      unsentTranscriptSentence,
+      "fixture contains transcript material outside the selected focus",
+    );
+    assert.ok(
+      !request.body.messages.some((message) =>
+        message.content.includes(unsentTranscriptSentence),
+      ),
+      "v5.8 sends only the locally selected evidence window",
     );
     assert.match(request.task, /Exact JSON schema/u);
     assert.match(request.task, /Final learner-copy gate/u);
@@ -1006,7 +1035,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
   assert.deepEqual(
     [...new Set(requests.map((request) => request.body.messages[1].content))],
     [requests[0].body.messages[1].content],
-    "the private-reference prefix remains byte-identical for prefix caching",
+    "the context-boundary prefix remains byte-identical",
   );
   assert.notEqual(
     requests[0].body.messages[2].content,
@@ -1073,6 +1102,47 @@ test("v5.8 does not retry source wording confined to private MC validation aids"
           event.classification === "primary" && event.outcome === "complete",
       ),
   );
+});
+
+test("v5.8 rejects a pre-release continuation with a different prompt fingerprint before dispatch", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async () => {
+    httpCalls += 1;
+    throw new Error("The mismatched continuation must not dispatch.");
+  };
+  await assert.rejects(
+    () =>
+      generateQuizFromPlainText(
+        {
+          ...conceptFirstInput(),
+          continuation: {
+            startIndex: 1,
+            resultProtocolVersion: 9,
+            promptVersion: "quiz-local-json-stream-v5.8",
+            validatorVersion: "validator-local-progressive-v4.7",
+            promptFingerprint: "0".repeat(64),
+            generationProfile: "concept_first_auto_v5_8",
+            acceptedQuestions: [
+              {
+                id: "q1",
+                type: "multiple_choice",
+                concept: "Stored concept",
+                question: "Which pathway carries energy?",
+              },
+            ],
+          },
+        },
+        "sk-local-test",
+      ),
+    (error) =>
+      error?.reasonCode === "local_state_conflict" &&
+      /different concept-first prompt fingerprint/iu.test(error.message),
+  );
+  assert.equal(httpCalls, 0);
 });
 
 test("v5.8 resolves grading-sensitive values against the local focus when a private evidence quote is paraphrased", async (context) => {
@@ -1197,6 +1267,9 @@ test("v5.8 repairs a relationship answer that drops its directional qualifier", 
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
     validatorVersion: "validator-local-progressive-v4.7",
+    promptFingerprint: createHash("sha256")
+      .update(CONCEPT_FIRST_SYSTEM_PROMPT)
+      .digest("hex"),
     generationProfile: "concept_first_auto_v5_8",
     questionPlan: {
       seed: "a".repeat(64),
