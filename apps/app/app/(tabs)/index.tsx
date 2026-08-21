@@ -498,7 +498,7 @@ export default function HomeScreen() {
                             ? () => void open(card)
                             : card.cheatSheet.sheetId
                               ? () =>
-                                  void exportCheatSheet(
+                                  exportCheatSheet(
                                     card.cheatSheet.sheetId!,
                                     card.title,
                                   )

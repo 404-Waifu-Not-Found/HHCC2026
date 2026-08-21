@@ -36,6 +36,13 @@ export function VideoCard({
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const horizontal = !compact && width >= 720;
+  // Home's compact carousel should read as a deliberate single-card surface
+  // on phones, not a desktop-width card with a distracting clipped sliver.
+  // Library rows use `fill`, so their responsive list geometry stays intact.
+  const compactCardWidth =
+    compact && !fill && width < 720
+      ? Math.min(360, Math.max(280, width - spacing[8]))
+      : undefined;
   const actionLabel =
     card.action === "continue"
       ? t("continue")
@@ -57,6 +64,7 @@ export function VideoCard({
       style={({ pressed, hovered }) => [
         styles.card,
         fill && styles.fill,
+        compactCardWidth ? { width: compactCardWidth } : undefined,
         horizontal && styles.horizontal,
         {
           backgroundColor: theme.surface,

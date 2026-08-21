@@ -144,15 +144,23 @@ cheatSheetsRouter.post("/", async (c) => {
       timestamp,
     )
     .run();
+  // Concurrent completion effects can both upload the same deterministic
+  // artifact. D1 keeps the first row id on conflict, so return the canonical
+  // row rather than an id that may not have been stored.
+  const canonical = await c.env.DB.prepare(
+    "SELECT id, updated_at FROM cheat_sheets WHERE user_id = ? AND video_id = ? AND quiz_id = ? AND source_revision = ?",
+  )
+    .bind(user.id, input.videoId, input.quizId, input.sourceRevision)
+    .first<{ id: string; updated_at: number }>();
   return c.json(
     CheatSheetResponseSchema.parse({
-      id,
+      id: canonical?.id ?? id,
       videoId: input.videoId,
       quizId: input.quizId,
       sourceRevision: input.sourceRevision,
       status: "ready",
       document,
-      updatedAt: timestamp,
+      updatedAt: canonical?.updated_at ?? timestamp,
     }),
   );
 });

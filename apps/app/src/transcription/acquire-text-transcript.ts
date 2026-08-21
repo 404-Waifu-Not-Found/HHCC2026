@@ -29,6 +29,84 @@ export type AcquiredTextTranscript = {
     | "youtube_text_provider";
 };
 
+type SharedTranscriptRequest = {
+  controller: AbortController;
+  promise: Promise<AcquiredTextTranscript | null>;
+  consumers: number;
+  settled: boolean;
+};
+
+// Prework and the generation route can start for the same imported video at
+// nearly the same time. Keep one authoritative caption acquisition in flight
+// for that source so the extension is not asked twice and a late provider
+// cannot race the already-selected transcript. The cache is intentionally
+// in-memory and short-lived; persisted captions remain account-scoped in the
+// existing creation state.
+const activeTranscriptRequests = new Map<string, SharedTranscriptRequest>();
+
+function transcriptRequestKey(
+  imported: VideoImportResponse,
+  preferredLanguage?: string | null,
+): string {
+  return [
+    imported.video.source,
+    imported.video.id,
+    imported.video.sourceVideoId,
+    normalizeTranscriptLanguage(
+      preferredLanguage ?? imported.video.sourceLanguage,
+    ),
+  ].join(":");
+}
+
+function abortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new DOMException("The transcript request was cancelled.", "AbortError");
+}
+
+async function consumeSharedTranscript(
+  request: SharedTranscriptRequest,
+  signal: AbortSignal,
+): Promise<AcquiredTextTranscript | null> {
+  request.consumers += 1;
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    request.consumers = Math.max(0, request.consumers - 1);
+    if (request.consumers === 0 && !request.settled) {
+      request.controller.abort(
+        new Error("No active transcript consumer remains."),
+      );
+    }
+  };
+  if (signal.aborted) {
+    release();
+    throw abortReason(signal);
+  }
+  return new Promise<AcquiredTextTranscript | null>((resolve, reject) => {
+    const onAbort = () => {
+      cleanup();
+      release();
+      reject(abortReason(signal));
+    };
+    const cleanup = () => signal.removeEventListener("abort", onAbort);
+    signal.addEventListener("abort", onAbort, { once: true });
+    request.promise.then(
+      (value) => {
+        cleanup();
+        release();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        release();
+        reject(error);
+      },
+    );
+  });
+}
+
 export async function acquireTextTranscript(
   imported: VideoImportResponse,
   signal: AbortSignal,
@@ -66,6 +144,41 @@ export async function acquireTextTranscript(
     };
   }
   if (imported.video.source !== "youtube") return null;
+
+  const key = transcriptRequestKey(imported, preferredLanguage);
+  let shared = activeTranscriptRequests.get(key);
+  if (!shared) {
+    const controller = new AbortController();
+    let created!: SharedTranscriptRequest;
+    const promise = acquireTextTranscriptOnce(
+      imported,
+      controller.signal,
+      onProgress,
+      preferredLanguage,
+    ).finally(() => {
+      created.settled = true;
+      if (activeTranscriptRequests.get(key) === created) {
+        activeTranscriptRequests.delete(key);
+      }
+    });
+    created = {
+      controller,
+      promise,
+      consumers: 0,
+      settled: false,
+    };
+    shared = created;
+    activeTranscriptRequests.set(key, created);
+  }
+  return consumeSharedTranscript(shared, signal);
+}
+
+async function acquireTextTranscriptOnce(
+  imported: VideoImportResponse,
+  signal: AbortSignal,
+  onProgress?: (progress: number) => void,
+  preferredLanguage?: string | null,
+): Promise<AcquiredTextTranscript | null> {
 
   if (Platform.OS === "web") {
     try {

@@ -329,6 +329,12 @@ const CONCESSIVE_NON_ANSWER_PATTERN =
   /^\s*(?:(?:it|they|this|that)\s+(?:can|could|may|might)\s+)?even\s+(?:without|despite|when|if)\b/iu;
 const MALFORMED_WH_ACTION_STEM_PATTERN =
   /^\s*what\s+(?:condition|factor|cause|process|method)\s+(?:do|does|did|can|could|will|would)\b.{0,160}\b(?:provide|support|affect|influence|enable|allow)\b/iu;
+// A learner should be assessed on the concept itself, not on how a presenter
+// characterized it. Keep this bounded: technical uses such as “the enzyme is
+// described as catalytic” are still allowed unless the stem makes the
+// presentation wording the condition being tested.
+const PRESENTATION_CHARACTERIZATION_PATTERN =
+  /\b(?:when|if)\s+(?:it|this|that|the\s+[^?]{1,90})\s+(?:is|was|are|were)\s+(?:described|presented|framed|characterized|referred\s+to)\b|\b(?:described|presented|framed|characterized|referred\s+to)\s+as\s+(?:motivated|important|central|useful|helpful|interesting|effective|valuable|necessary|key|significant)\b/iu;
 const PLURAL_HOW_SINGULAR_PRONOUN_PATTERN =
   /^\s*how\s+(?:do|can|could|may|might)\b/iu;
 const NAMED_CASE_RECALL_PATTERN =
@@ -579,6 +585,9 @@ export function questionConceptFailure(candidate) {
     return "course_logistics_invalid";
   }
   if (EXTERNAL_AUTHORITY_QUESTION_PATTERN.test(question)) {
+    return "source_framing_invalid";
+  }
+  if (PRESENTATION_CHARACTERIZATION_PATTERN.test(question)) {
     return "source_framing_invalid";
   }
   if (

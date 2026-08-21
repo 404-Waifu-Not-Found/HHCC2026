@@ -5339,6 +5339,7 @@ function validateQuiz(quiz, input) {
         question,
         input.focusExcerpt,
         input.promptFirstPrimaryClaims?.[index],
+        input.promptFirstV512Mode === true,
       );
       if (qualityFailure) {
         validationFailure(
@@ -5759,16 +5760,48 @@ function promptFirstV512ExactlyDuplicatesAccepted(question, acceptedQuestions) {
   });
 }
 
-function promptFirstLearnerQualityFailure(
+export function promptFirstLearnerQualityFailure(
   question,
   focusExcerpt,
   primaryClaim,
+  enforceSourceGrounding = false,
 ) {
   const prompt = normalize(question.question ?? "");
   const rawTarget = String(promptFirstGradingTarget(question) ?? "");
   const target = normalize(rawTarget);
   const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
   if (!prompt || !target) return null;
+
+  // Prompt-first output does not carry a client-visible sourceEvidence field,
+  // so enforce the same direct-concept boundary here before accepting it.
+  // This catches presentation wording such as “when it is described as
+  // motivated” instead of spending another grading retry on a malformed stem.
+  if (
+    /\b(?:when|if)\s+(?:it|this|that|the\s+[^?]{1,90})\s+(?:is|was|are|were)\s+(?:described|presented|framed|characterized|referred\s+to)\b|\b(?:described|presented|framed|characterized|referred\s+to)\s+as\s+(?:motivated|important|central|useful|helpful|interesting|effective|valuable|necessary|key|significant)\b/iu.test(
+      `${prompt} ${target}`,
+    )
+  ) {
+    return "source_framing_invalid";
+  }
+
+  // The assigned primary claim is the authoritative grounding window for a
+  // singleton. A generated item with almost no meaningful token overlap is a
+  // topic switch (for example, package-tracking frequency inside a binary
+  // image lesson), not a learner answer problem. Reject only when both the
+  // claim and the wider selected excerpt fail to support the item so valid
+  // paraphrases and translated terms remain eligible.
+  const learnerText = `${question.concept ?? ""} ${prompt} ${rawTarget}`;
+  const primary = String(primaryClaim ?? "").trim();
+  const broadEvidence = String(focusExcerpt ?? "").trim();
+  const targetIsFormula = Boolean(formulaFingerprint(rawTarget));
+  if (enforceSourceGrounding && primary && broadEvidence && !targetIsFormula) {
+    const primaryOverlap = promptFirstEvidenceOverlap(learnerText, primary);
+    const targetOverlap = promptFirstEvidenceOverlap(rawTarget, primary);
+    const broadOverlap = promptFirstEvidenceOverlap(learnerText, broadEvidence);
+    if (primaryOverlap < 0.14 && targetOverlap < 0.22 && broadOverlap < 0.1) {
+      return "source_grounding_invalid";
+    }
+  }
 
   // Repeated concepts are acceptable, but a false item may not simply restate
   // the supported true claim with a false polarity. Require a real contrast.
@@ -5934,6 +5967,7 @@ function validatePromptFirstQuiz(quiz, input) {
     question,
     input.focusExcerpt,
     input.promptFirstPrimaryClaim,
+    input.promptFirstV512Mode === true,
   );
   if (qualityFailure) {
     validationFailure(
@@ -8217,6 +8251,7 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "rubric_invalid",
       "question_tautology_invalid",
       "quiz_language_mismatch",
+      "source_grounding_invalid",
     ].includes(reasonCode)
   ) {
     return "content_repair";
@@ -8269,6 +8304,8 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
   const targetedGuidance = {
     source_framing_invalid:
       'Use the repair-context objective and private evidence to rewrite the same supported objective as a direct, self-contained assessment. No learner-visible field may mention or attribute anything to a lesson, source, reference, evidence, excerpt, video, lecture, transcript, presenter, narrator, or speaker. Do not use the words "mentioned", "listed", "stated", "discussed", "shown", "described", or "provided" to refer to presentation memory. State the conceptual explanation directly.',
+    source_grounding_invalid:
+      "Discard the topic-switched candidate and write one direct question about the assigned primary claim and its nearby instructional evidence. Keep the requested type and grading target grounded in that claim; do not introduce a different domain, unrelated example, or outside fact.",
     course_logistics_invalid:
       "Discard the administrative candidate. Choose a different supported definition, relationship, mechanism, method, formula, causal explanation, or application from the eligible instructional evidence.",
     low_pedagogical_value:

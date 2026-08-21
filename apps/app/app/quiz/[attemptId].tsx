@@ -155,6 +155,7 @@ export default function QuizScreen() {
   const cheatSheetContextRef = useRef<
     { videoId: string; quizId: string } | undefined
   >(undefined);
+  const cheatSheetSyncRef = useRef<Promise<void> | undefined>(undefined);
   const recoveryAttemptedRef = useRef(false);
 
   const updateGeneration = useCallback(
@@ -289,13 +290,28 @@ export default function QuizScreen() {
   }
 
   async function syncCheatSheet() {
+    if (cheatSheetId) return;
+    if (cheatSheetSyncRef.current) {
+      await cheatSheetSyncRef.current;
+      return;
+    }
     const pending = pendingCheatSheetRef.current;
     if (!pending) return;
+    const task = (async () => {
+      try {
+        const uploaded = await uploadCheatSheet(pending);
+        setCheatSheetId(uploaded.id);
+      } catch {
+        setCheatSheetStatus("failed");
+      }
+    })();
+    cheatSheetSyncRef.current = task;
     try {
-      const uploaded = await uploadCheatSheet(pending);
-      setCheatSheetId(uploaded.id);
-    } catch {
-      setCheatSheetStatus("failed");
+      await task;
+    } finally {
+      if (cheatSheetSyncRef.current === task) {
+        cheatSheetSyncRef.current = undefined;
+      }
     }
   }
 
@@ -736,18 +752,7 @@ export default function QuizScreen() {
                   cheatSheetStatus !== "failed")
               }
               onPress={() => {
-                if (cheatSheetId)
-                  void exportCheatSheet(cheatSheetId, cheatSheetTitle).catch(
-                    (cause) => {
-                      setCheatSheetStatus("failed");
-                      setError(
-                        cause instanceof Error
-                          ? cause.message
-                          : "The cheat sheet could not be exported.",
-                      );
-                    },
-                  );
-                else if (pendingCheatSheetRef.current)
+                if (pendingCheatSheetRef.current)
                   void exportCheatSheetPdf(
                     pendingCheatSheetRef.current.pdf,
                     cheatSheetTitle,
@@ -759,6 +764,17 @@ export default function QuizScreen() {
                         : "The cheat sheet could not be exported.",
                     );
                   });
+                else if (cheatSheetId)
+                  void exportCheatSheet(cheatSheetId, cheatSheetTitle).catch(
+                    (cause) => {
+                      setCheatSheetStatus("failed");
+                      setError(
+                        cause instanceof Error
+                          ? cause.message
+                          : "The cheat sheet could not be exported.",
+                      );
+                    },
+                  );
                 else if (cheatSheetContextRef.current) {
                   setCheatSheetStatus("preparing");
                   void prepareCheatSheet(
