@@ -8,6 +8,7 @@ import {
   type GenerationRecord,
   type GenerationRecordV2,
   type GenerationRecordV3,
+  type GenerationRecordV4,
   type LocalGenerationProfile,
   type LocalQuestionPlan,
   type QuizQuestionType,
@@ -191,7 +192,7 @@ export async function loadGenerationRecord(
 
 export async function updateGenerationRecord(
   generationId: string,
-  update: Partial<GenerationRecordV2> | Partial<GenerationRecordV3>,
+  update: GenerationRecordUpdate,
 ): Promise<GenerationRecord | null> {
   const current = await loadGenerationRecord(generationId);
   if (!current) return null;
@@ -203,6 +204,21 @@ export async function updateGenerationRecord(
     updatedAt: Date.now(),
   } as GenerationRecord);
 }
+
+type GenerationRecordVariant =
+  GenerationRecordV2 | GenerationRecordV3 | GenerationRecordV4;
+type KeysOfUnion<T> = T extends T ? keyof T : never;
+type ValueOfUnion<T, Key extends PropertyKey> = T extends T
+  ? Key extends keyof T
+    ? T[Key]
+    : never
+  : never;
+export type GenerationRecordUpdate = {
+  [Key in KeysOfUnion<GenerationRecordVariant>]?: ValueOfUnion<
+    GenerationRecordVariant,
+    Key
+  >;
+};
 
 export function generationRecordHasLiveHeartbeat(
   record: GenerationRecord,

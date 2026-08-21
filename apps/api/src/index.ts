@@ -126,7 +126,7 @@ app.get("/health", (c) => {
     pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
-    generationProfile: "stable_auto_recovery_v5_3",
+    generationProfile: "evidence_grounded_auto_v5_4",
     rolloutMode: quizGenerationRolloutMode(c.env),
     worker: publicWorkerVersion(c.env),
     versionAffinity: {

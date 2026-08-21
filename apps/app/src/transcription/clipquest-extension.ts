@@ -1,5 +1,6 @@
 import {
   AutomaticRetryKindSchema,
+  AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   GenerationStageSchema,
   GenerationFailureCodeSchema,
   LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -22,6 +23,7 @@ import {
 import { Platform } from "react-native";
 import {
   MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
   isCompatibleClipQuestExtensionVersion,
@@ -220,7 +222,7 @@ function isGenerationProgressMessage(
     (message.maxAttempts === undefined ||
       (Number.isInteger(message.maxAttempts) &&
         message.maxAttempts >= 1 &&
-        message.maxAttempts <= 12)) &&
+        message.maxAttempts <= 24)) &&
     (message.status === undefined ||
       ["generating", "retrying", "complete"].includes(message.status)) &&
     (message.retryDelayMs === undefined ||
@@ -525,17 +527,21 @@ export async function requestExtensionLocalQuiz(
 ): Promise<LocalConceptQuizGenerationResult> {
   const context = LocalQuizContextSchema.parse(rawContext);
   const minimumExtensionVersion =
-    context.generationProfile === "stable_auto_recovery_v5_3"
+    context.generationProfile === "evidence_grounded_auto_v5_4"
       ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
-      : context.generationProfile === "stable_non_thinking_v5_2"
-        ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
-        : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
+      : context.generationProfile === "stable_auto_recovery_v5_3"
+        ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
+        : context.generationProfile === "stable_non_thinking_v5_2"
+          ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
+          : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
   const requiredCapability =
-    context.generationProfile === "stable_auto_recovery_v5_3"
+    context.generationProfile === "evidence_grounded_auto_v5_4"
       ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-      : context.generationProfile === "stable_non_thinking_v5_2"
-        ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-        : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
+      : context.generationProfile === "stable_auto_recovery_v5_3"
+        ? AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+        : context.generationProfile === "stable_non_thinking_v5_2"
+          ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+          : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
     throw new Error("ClipQuest Local AI is not installed.");

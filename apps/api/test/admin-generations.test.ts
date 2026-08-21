@@ -199,6 +199,11 @@ function createDatabase(): SqliteD1Adapter {
       "INSERT INTO d1_migrations VALUES (18, '0018_automatic_generation_recovery.sql', '2026-08-10')",
     )
     .run();
+  sqlite
+    .prepare(
+      "INSERT INTO d1_migrations VALUES (19, '0019_grounded_generation_telemetry.sql', '2026-08-11')",
+    )
+    .run();
 
   insertGeneration(sqlite, {
     id: "33333333-3333-4333-8333-333333333331",
@@ -417,7 +422,7 @@ describe("admin progressive generation visibility", () => {
       },
     });
     expect(body.database.migration).toBe(
-      "0018_automatic_generation_recovery.sql",
+      "0019_grounded_generation_telemetry.sql",
     );
     expect(body.worker).toEqual({
       versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",

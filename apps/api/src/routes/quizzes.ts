@@ -47,6 +47,13 @@ const QuestionTypeSchema = z.enum([
 ]);
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
+
+function isAutomaticGenerationProfile(profile: string | undefined): boolean {
+  return (
+    profile === "stable_auto_recovery_v5_3" ||
+    profile === "evidence_grounded_auto_v5_4"
+  );
+}
 const QuestionRowSchema = z.object({
   id: z.string().uuid(),
   quiz_id: z.string().uuid(),
@@ -729,7 +736,8 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
   const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
   const generationState = await attemptGenerationState(c.env.DB, attempt);
   const summary = generationState.snapshot.summary;
-  const automatic = summary?.generationProfile === "stable_auto_recovery_v5_3";
+  const automatic = isAutomaticGenerationProfile(summary?.generationProfile);
+  const timestamp = now();
   if (
     !summary ||
     generationState.snapshot.qualityStatus !== "generating" ||
@@ -745,6 +753,18 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
   }
   if (
     automatic &&
+    generationState.generation.state === "cooldown" &&
+    summary.nextRecoveryAt &&
+    summary.nextRecoveryAt > timestamp
+  ) {
+    throw new ApiError(
+      409,
+      "generation_cooldown_active",
+      "Automatic generation is cooling down before its next recovery cycle.",
+    );
+  }
+  if (
+    automatic &&
     (!input.recoverySessionId ||
       input.generationSessionId !== summary.generationSessionId)
   ) {
@@ -755,7 +775,6 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
     );
   }
 
-  const timestamp = now();
   const existing = await c.env.DB.prepare(
     "SELECT generation_session_id, recovery_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
   )
@@ -796,6 +815,7 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
     ordinalAttempt: undefined,
     retryKind: undefined,
     retryDelayMs: undefined,
+    nextRecoveryAt: undefined,
     stateChangedAt:
       summary.generationState === (automatic ? "recovering" : "retry_required")
         ? summary.stateChangedAt
@@ -969,8 +989,9 @@ function readyGeneration(total: number): AttemptGenerationAvailability {
 }
 
 function claimForSnapshot(snapshot: ProgressiveGenerationSnapshot) {
-  const automatic =
-    snapshot.summary?.generationProfile === "stable_auto_recovery_v5_3";
+  const automatic = isAutomaticGenerationProfile(
+    snapshot.summary?.generationProfile,
+  );
   if (
     snapshot.availability?.state === "ready" ||
     snapshot.availability?.state === "generation_failed" ||

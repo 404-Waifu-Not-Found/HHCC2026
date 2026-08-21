@@ -69,6 +69,7 @@ describe("admin contracts", () => {
             generating: 1,
             retrying: 2,
             recovering: 0,
+            cooldown: 0,
             retryRequired: 3,
             actionRequired: 0,
             generationFailed: 0,

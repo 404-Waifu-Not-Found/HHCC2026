@@ -43,6 +43,10 @@ import {
   getOrStartProgressiveGenerationTask,
   type ProgressiveGenerationTaskContext,
 } from "../../src/generation/progressive-coordinator";
+import {
+  groundedRecoveryCooldownMs,
+  groundedRecoveryIsExhausted,
+} from "../../src/generation/automatic-recovery-policy";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
@@ -86,6 +90,17 @@ type JourneyStep = {
 
 const JOURNEY_TICK_MS = 100;
 const LINEAR_PROGRESS_LIMIT = 0.99;
+
+function isAutomaticGenerationProfile(profile: string | undefined): boolean {
+  return (
+    profile === "stable_auto_recovery_v5_3" ||
+    profile === "evidence_grounded_auto_v5_4"
+  );
+}
+
+function isGroundedGenerationProfile(profile: string | undefined): boolean {
+  return profile === "evidence_grounded_auto_v5_4";
+}
 
 export default function GenerationScreen() {
   const params = useLocalSearchParams<{
@@ -265,11 +280,14 @@ export default function GenerationScreen() {
             latestGeneration?.availableQuestions ??
             generationRecord.acceptedCount,
           state: nextState,
-          ...(generationRecord.version === 3 &&
+          ...((generationRecord.version === 3 ||
+            generationRecord.version === 4) &&
           (nextState === "action_required" || nextState === "generation_failed")
             ? { reasonCode: latestGeneration?.reasonCode }
             : {}),
-          ...(generationRecord.version === 3 && nextState !== "retrying"
+          ...((generationRecord.version === 3 ||
+            generationRecord.version === 4) &&
+          nextState !== "retrying"
             ? {
                 retryOrdinal: undefined,
                 ordinalAttempt: undefined,
@@ -405,7 +423,7 @@ export default function GenerationScreen() {
         jobId: idempotencyKey,
         generationId: generationRecord.generationId,
         generationSessionId: generationRecord.generationSessionId,
-        ...(rolloutProfile.generationProfile === "stable_auto_recovery_v5_3"
+        ...(isAutomaticGenerationProfile(rolloutProfile.generationProfile)
           ? { recoverySessionId }
           : {}),
         generationProfile: rolloutProfile.generationProfile,
@@ -442,11 +460,12 @@ export default function GenerationScreen() {
             generationRecord.nextCallIndex,
             event.callIndex + 1,
           ),
-          ...(generationRecord.version === 3 &&
+          ...((generationRecord.version === 3 ||
+            generationRecord.version === 4) &&
           event.classification === "automatic_retry"
             ? {
                 automaticRetryCount: Math.min(
-                  12,
+                  generationRecord.version === 4 ? 48 : 12,
                   generationRecord.automaticRetryCount + 1,
                 ),
               }
@@ -503,14 +522,16 @@ export default function GenerationScreen() {
                 ExtensionQuizProgressiveImportResponseSchema,
               );
           if (
-            rolloutProfile.generationProfile === "stable_auto_recovery_v5_3" &&
+            isAutomaticGenerationProfile(rolloutProfile.generationProfile) &&
             generationRecord.version === 2
           ) {
             if (!chunk.questionPlan) {
               throw new Error("The automatic question plan is missing.");
             }
-            const upgraded = await saveGenerationRecord({
-              version: 3,
+            const grounded = isGroundedGenerationProfile(
+              rolloutProfile.generationProfile,
+            );
+            const commonRecord = {
               generationId: generationRecord.generationId,
               generationSessionId: generationRecord.generationSessionId,
               recoverySessionId,
@@ -522,14 +543,10 @@ export default function GenerationScreen() {
               sessionLength: generationRecord.sessionLength,
               watched: generationRecord.watched,
               questionPlan: chunk.questionPlan,
-              generationProfile: "stable_auto_recovery_v5_3",
               quizId: response.quizId,
               acceptedCount: response.generation.availableQuestions,
               plannedCount: response.generation.totalQuestions,
-              state:
-                response.generation.state === "retry_required"
-                  ? "recovering"
-                  : response.generation.state,
+              state: "generating" as const,
               nextCallIndex: generationRecord.nextCallIndex,
               ordinalAttempts: {},
               automaticRetryCount: 0,
@@ -538,7 +555,19 @@ export default function GenerationScreen() {
               preworkStatus: generationRecord.preworkStatus,
               createdAt: generationRecord.createdAt,
               updatedAt: Date.now(),
-            });
+            };
+            const upgraded = grounded
+              ? await saveGenerationRecord({
+                  ...commonRecord,
+                  version: 4,
+                  generationProfile: "evidence_grounded_auto_v5_4",
+                  recoveryCycle: 0,
+                })
+              : await saveGenerationRecord({
+                  ...commonRecord,
+                  version: 3,
+                  generationProfile: "stable_auto_recovery_v5_3",
+                });
             generationRecord = upgraded;
           }
           await publishStoredState(response);
@@ -565,7 +594,7 @@ export default function GenerationScreen() {
         ingestion = ingestion.then(async () => {
           if (!progressiveQuizId) return;
           if (
-            rolloutProfile.generationProfile === "stable_auto_recovery_v5_3" &&
+            isAutomaticGenerationProfile(rolloutProfile.generationProfile) &&
             (!detail.retryOrdinal ||
               !detail.ordinalAttempt ||
               !detail.retryKind)
@@ -578,7 +607,7 @@ export default function GenerationScreen() {
               method: "PATCH",
               headers: { "Idempotency-Key": idempotencyKey },
               body: jsonBody(
-                rolloutProfile.generationProfile === "stable_auto_recovery_v5_3"
+                isAutomaticGenerationProfile(rolloutProfile.generationProfile)
                   ? {
                       state: "retrying",
                       retryOrdinal: detail.retryOrdinal,
@@ -593,9 +622,7 @@ export default function GenerationScreen() {
             },
             ExtensionQuizProgressiveImportResponseSchema,
           );
-          if (
-            rolloutProfile.generationProfile === "stable_auto_recovery_v5_3"
-          ) {
+          if (isAutomaticGenerationProfile(rolloutProfile.generationProfile)) {
             await persistRecord({
               state: "retrying",
               retryOrdinal: detail.retryOrdinal,
@@ -613,7 +640,7 @@ export default function GenerationScreen() {
       );
       const serverHeartbeat = setInterval(() => {
         if (
-          rolloutProfile.generationProfile !== "stable_auto_recovery_v5_3" ||
+          !isAutomaticGenerationProfile(rolloutProfile.generationProfile) ||
           !attemptId ||
           !progressiveQuizId
         ) {
@@ -668,14 +695,35 @@ export default function GenerationScreen() {
           cause instanceof LocalGenerationRequestError
             ? cause.reasonCode
             : "local_state_conflict";
-        const automatic =
-          rolloutProfile.generationProfile === "stable_auto_recovery_v5_3";
+        const automatic = isAutomaticGenerationProfile(
+          rolloutProfile.generationProfile,
+        );
+        const grounded = isGroundedGenerationProfile(
+          rolloutProfile.generationProfile,
+        );
+        const groundedExhausted =
+          grounded &&
+          groundedRecoveryIsExhausted({
+            reasonCode,
+            record: generationRecord,
+          });
         const terminalState = automatic
           ? reasonCode === "credential_required" ||
             reasonCode === "billing_required"
             ? "action_required"
-            : "generation_failed"
+            : grounded && !groundedExhausted
+              ? "cooldown"
+              : "generation_failed"
           : "retry_required";
+        const nextRecoveryAt =
+          terminalState === "cooldown"
+            ? Date.now() +
+              groundedRecoveryCooldownMs(
+                generationRecord.version === 4
+                  ? generationRecord.recoveryCycle
+                  : 0,
+              )
+            : undefined;
         if (!progressiveQuizId) {
           if (!automatic) {
             await persistRecord({ state: "retry_required" }).catch(
@@ -693,6 +741,9 @@ export default function GenerationScreen() {
               state: terminalState,
               reasonCode,
               ...(automatic ? { recoverySessionId } : {}),
+              ...(nextRecoveryAt
+                ? { nextRecoveryAt: new Date(nextRecoveryAt).toISOString() }
+                : {}),
             }),
           },
           ExtensionQuizProgressiveImportResponseSchema,
@@ -703,6 +754,7 @@ export default function GenerationScreen() {
           await persistRecord({
             state: terminalState,
             ...(automatic ? { reasonCode } : {}),
+            ...(nextRecoveryAt ? { nextRecoveryAt } : {}),
           }).catch(() => undefined);
         }
         if (!attemptId) throw cause;

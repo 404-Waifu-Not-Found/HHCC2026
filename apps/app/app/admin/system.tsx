@@ -140,6 +140,11 @@ export default function AdminSystemScreen() {
                     tone="secondary"
                   />
                   <StatTile
+                    value={String(data.generation.states.cooldown)}
+                    label={copy.cooldown}
+                    tone="secondary"
+                  />
+                  <StatTile
                     value={String(data.generation.states.ready)}
                     label={copy.ready}
                     tone="success"

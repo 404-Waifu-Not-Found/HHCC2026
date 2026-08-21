@@ -230,6 +230,7 @@ function createDatabase(
       retry_kind TEXT,
       ordinal_attempt INTEGER,
       recovery_session_id TEXT,
+      purpose TEXT,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (
@@ -293,6 +294,22 @@ function createAutomaticDatabase(
       RECOVERY_SESSION_ID,
       timestamp,
     );
+  return db;
+}
+
+function createGroundedDatabase(timestamp = Date.now()) {
+  const db = createAutomaticDatabase("generating", timestamp);
+  const grounded = {
+    ...automaticSummary("generating", timestamp),
+    importVersion: "extension-progressive-import-v6",
+    resultProtocolVersion: 8,
+    promptVersion: "quiz-local-json-stream-v5.4",
+    validatorVersion: "validator-local-progressive-v4.3",
+    generationProfile: "evidence_grounded_auto_v5_4",
+  };
+  db.sqlite
+    .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+    .run(JSON.stringify(grounded), QUIZ_ID);
   return db;
 }
 
@@ -392,6 +409,16 @@ function automaticCallEvent(
     reasoningTokens: 0,
     usageComplete: true,
     ...overrides,
+  };
+}
+
+function groundedCallEvent(
+  overrides: Parameters<typeof automaticCallEvent>[0] = {},
+) {
+  return {
+    ...automaticCallEvent(overrides),
+    protocolVersion: 8 as const,
+    purpose: "generation" as const,
   };
 }
 
@@ -602,6 +629,127 @@ describe("protocol-7 automatic recovery call events", () => {
       generationState: "recovering",
     });
     expect(JSON.parse(stored.quality_summary_json).reasonCode).toBeUndefined();
+  });
+});
+
+describe("protocol-8 evidence-grounded call events", () => {
+  it("keeps v5.3 isolated, stores purpose, and materializes authoritative totals", async () => {
+    const db = createGroundedDatabase();
+    const { app, env } = testApp(db);
+    expect((await putCall(app, env, groundedCallEvent())).status).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          groundedCallEvent({
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "schema_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    for (const [callIndex, ordinalAttempt] of [
+      [2, 2],
+      [3, 3],
+    ] as const) {
+      expect(
+        (
+          await putCall(
+            app,
+            env,
+            groundedCallEvent({
+              callIndex,
+              startIndex: 1,
+              ordinalAttempt,
+              acceptedCount: 0,
+              classification: "automatic_retry",
+              retryKind: "content_repair",
+              outcome: "schema_invalid",
+            }),
+          )
+        ).status,
+      ).toBe(201);
+    }
+
+    const exhausted = await putCall(
+      app,
+      env,
+      groundedCallEvent({
+        callIndex: 4,
+        startIndex: 1,
+        ordinalAttempt: 4,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+        outcome: "schema_invalid",
+      }),
+    );
+    expect(exhausted.status).toBe(409);
+    expect(await exhausted.json()).toMatchObject({
+      error: { code: "automatic_retry_ordinal_budget_exceeded" },
+    });
+
+    const events = db.sqlite
+      .prepare(
+        "SELECT protocol_version, purpose FROM quiz_generation_call_events ORDER BY call_index",
+      )
+      .all() as Array<{ protocol_version: number; purpose: string }>;
+    expect(events).toHaveLength(4);
+    expect(events.every((event) => event.protocol_version === 8)).toBe(true);
+    expect(events.every((event) => event.purpose === "generation")).toBe(true);
+    const stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      aiCalls: 4,
+      retryCount: 2,
+      inputTokens: 400,
+      outputTokens: 80,
+      elapsedMs: 8_000,
+    });
+  });
+
+  it("stores a bounded cooldown and releases the recovery lease", async () => {
+    const db = createGroundedDatabase();
+    const { app, env } = testApp(db);
+    const nextRecoveryAt = new Date(Date.now() + 30_000).toISOString();
+    const response = await app.request(
+      `/imports/${QUIZ_ID}/progress`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": IMPORT_KEY,
+        },
+        body: JSON.stringify({
+          state: "cooldown",
+          reasonCode: "schema_invalid",
+          recoverySessionId: RECOVERY_SESSION_ID,
+          nextRecoveryAt,
+        }),
+      },
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      generation: { state: "cooldown", nextRecoveryAt },
+    });
+    const stored = db.sqlite
+      .prepare(
+        "SELECT quality_summary_json, lease_expires_at FROM quiz_banks JOIN quiz_generation_claims ON quiz_generation_claims.quiz_id = quiz_banks.id WHERE quiz_banks.id = ?",
+      )
+      .get(QUIZ_ID) as {
+      quality_summary_json: string;
+      lease_expires_at: number;
+    };
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      generationState: "cooldown",
+      nextRecoveryAt: Date.parse(nextRecoveryAt),
+    });
+    expect(stored.lease_expires_at).toBeLessThanOrEqual(Date.now());
   });
 });
 

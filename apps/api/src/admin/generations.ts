@@ -15,6 +15,7 @@ export type AdminGenerationCounts = {
   generating: number;
   retrying: number;
   recovering: number;
+  cooldown: number;
   retryRequired: number;
   actionRequired: number;
   generationFailed: number;
@@ -46,6 +47,7 @@ const GenerationCountsRowSchema = z.object({
   generating: z.coerce.number().int().nonnegative(),
   retrying: z.coerce.number().int().nonnegative(),
   recovering: z.coerce.number().int().nonnegative(),
+  cooldown: z.coerce.number().int().nonnegative(),
   retry_required: z.coerce.number().int().nonnegative(),
   action_required: z.coerce.number().int().nonnegative(),
   generation_failed: z.coerce.number().int().nonnegative(),
@@ -65,6 +67,7 @@ const STATE_EXPRESSION =
   "json_extract(q.quality_summary_json, '$.generationState')";
 const PROFILE_EXPRESSION =
   "COALESCE(json_extract(q.quality_summary_json, '$.generationProfile'), 'legacy_reasoning_v5_1')";
+const AUTOMATIC_PROFILE_EXPRESSION = `${PROFILE_EXPRESSION} IN ('stable_auto_recovery_v5_3', 'evidence_grounded_auto_v5_4')`;
 const LAST_PROGRESS_EXPRESSION = `MAX(
   COALESCE(CAST(json_extract(q.quality_summary_json, '$.lastQuestionAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
   COALESCE(CAST(json_extract(q.quality_summary_json, '$.stateChangedAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
@@ -220,8 +223,9 @@ export async function readAdminGenerationCounts(
       `SELECT
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'generating' AND ${LAST_PROGRESS_EXPRESSION} >= ? THEN 1 ELSE 0 END) AS generating,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'retrying' AND ${LAST_PROGRESS_EXPRESSION} >= ? THEN 1 ELSE 0 END) AS retrying,
-        SUM(CASE WHEN ${STATE_EXPRESSION} = 'recovering' OR (${PROFILE_EXPRESSION} = 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS recovering,
-        SUM(CASE WHEN ${STATE_EXPRESSION} = 'retry_required' OR (${PROFILE_EXPRESSION} != 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS retry_required,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'recovering' OR (${AUTOMATIC_PROFILE_EXPRESSION} AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS recovering,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'cooldown' THEN 1 ELSE 0 END) AS cooldown,
+        SUM(CASE WHEN ${STATE_EXPRESSION} = 'retry_required' OR (NOT (${AUTOMATIC_PROFILE_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?) THEN 1 ELSE 0 END) AS retry_required,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'action_required' THEN 1 ELSE 0 END) AS action_required,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'generation_failed' THEN 1 ELSE 0 END) AS generation_failed,
         SUM(CASE WHEN ${STATE_EXPRESSION} = 'ready' THEN 1 ELSE 0 END) AS ready
@@ -236,6 +240,7 @@ export async function readAdminGenerationCounts(
       generating: 0,
       retrying: 0,
       recovering: 0,
+      cooldown: 0,
       retry_required: 0,
       action_required: 0,
       generation_failed: 0,
@@ -253,6 +258,7 @@ export async function readAdminGenerationCounts(
     generating: parsed.data.generating,
     retrying: parsed.data.retrying,
     recovering: parsed.data.recovering,
+    cooldown: parsed.data.cooldown,
     retryRequired: parsed.data.retry_required,
     actionRequired: parsed.data.action_required,
     generationFailed: parsed.data.generation_failed,
@@ -280,7 +286,7 @@ export async function readRecentGenerationFailures(
        WHERE ${validProgressiveGenerationWhere()}
          AND (
            ${STATE_EXPRESSION} IN ('retry_required', 'action_required', 'generation_failed')
-           OR (${PROFILE_EXPRESSION} != 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?)
+           OR (NOT (${AUTOMATIC_PROFILE_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?)
          )
        ORDER BY ${LAST_PROGRESS_EXPRESSION} DESC
        LIMIT ?`,
@@ -338,17 +344,19 @@ function generationFilterClause(
   }
   if (filters.state === "retry_required") {
     where.push(
-      `(${STATE_EXPRESSION} = 'retry_required' OR (${PROFILE_EXPRESSION} != 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
+      `(${STATE_EXPRESSION} = 'retry_required' OR (NOT (${AUTOMATIC_PROFILE_EXPRESSION}) AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
     );
     values.push(stalledBefore);
   } else if (filters.state === "recovering") {
     where.push(
-      `(${STATE_EXPRESSION} = 'recovering' OR (${PROFILE_EXPRESSION} = 'stable_auto_recovery_v5_3' AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
+      `(${STATE_EXPRESSION} = 'recovering' OR (${AUTOMATIC_PROFILE_EXPRESSION} AND ${STATE_EXPRESSION} IN ('generating', 'retrying') AND ${LAST_PROGRESS_EXPRESSION} < ?))`,
     );
     values.push(stalledBefore);
   } else if (filters.state === "generating" || filters.state === "retrying") {
     where.push(`${STATE_EXPRESSION} = ? AND ${LAST_PROGRESS_EXPRESSION} >= ?`);
     values.push(filters.state, stalledBefore);
+  } else if (filters.state === "cooldown") {
+    where.push(`${STATE_EXPRESSION} = 'cooldown'`);
   } else if (filters.state === "ready") {
     where.push(`${STATE_EXPRESSION} = 'ready'`);
   } else if (
@@ -383,7 +391,7 @@ function validProgressiveGenerationWhere(): string {
     )
     AND (
       (${STATE_EXPRESSION} = 'ready' AND q.quality_status = 'passed')
-      OR (${STATE_EXPRESSION} IN ('generating', 'retrying', 'recovering', 'retry_required', 'action_required', 'generation_failed') AND q.quality_status = 'generating')
+      OR (${STATE_EXPRESSION} IN ('generating', 'retrying', 'recovering', 'cooldown', 'retry_required', 'action_required', 'generation_failed') AND q.quality_status = 'generating')
     )`;
 }
 

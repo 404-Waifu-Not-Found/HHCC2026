@@ -139,7 +139,8 @@ adminRouter.get(
           activeJobs:
             generationCounts.generating +
             generationCounts.retrying +
-            generationCounts.recovering,
+            generationCounts.recovering +
+            generationCounts.cooldown,
           failedJobs:
             generationCounts.retryRequired +
             generationCounts.actionRequired +
@@ -475,7 +476,8 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
     running:
       generationCounts.generating +
       generationCounts.retrying +
-      generationCounts.recovering,
+      generationCounts.recovering +
+      generationCounts.cooldown,
     complete: generationCounts.ready,
     failed:
       generationCounts.retryRequired +

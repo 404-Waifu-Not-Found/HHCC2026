@@ -110,6 +110,7 @@ export const ProgressiveQuizSummarySchema = z
       "generating",
       "retrying",
       "recovering",
+      "cooldown",
       "retry_required",
       "action_required",
       "generation_failed",
@@ -117,7 +118,7 @@ export const ProgressiveQuizSummarySchema = z
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
     retryOrdinal: z.number().int().min(1).max(15).optional(),
-    ordinalAttempt: z.number().int().min(1).max(12).optional(),
+    ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: z
       .enum([
         "transport",
@@ -130,6 +131,7 @@ export const ProgressiveQuizSummarySchema = z
       ])
       .optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
+    nextRecoveryAt: z.number().int().positive().optional(),
     requestedQuestionTypes: QuizQuestionTypesSchema,
     plannedQuestionTypes: z
       .array(z.enum(["multiple_choice", "true_false", "short_answer"]))
@@ -220,6 +222,7 @@ export const ProgressiveQuizSummarySchema = z
     if (
       value.reasonCode &&
       value.generationState !== "retry_required" &&
+      value.generationState !== "cooldown" &&
       value.generationState !== "action_required" &&
       value.generationState !== "generation_failed"
     ) {
@@ -230,7 +233,8 @@ export const ProgressiveQuizSummarySchema = z
       });
     }
     const automaticProfile =
-      value.generationProfile === "stable_auto_recovery_v5_3";
+      value.generationProfile === "stable_auto_recovery_v5_3" ||
+      value.generationProfile === "evidence_grounded_auto_v5_4";
     if (
       automaticProfile &&
       (value.generationState === "action_required" ||
@@ -272,6 +276,17 @@ export const ProgressiveQuizSummarySchema = z
           "Only retrying automatic summaries may include retry metadata.",
       });
     }
+    if (
+      automaticProfile &&
+      (value.generationState === "cooldown") !==
+        (value.nextRecoveryAt !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["nextRecoveryAt"],
+        message: "Automatic cooldown requires exactly one recovery time.",
+      });
+    }
     if (value.plannedQuestionTypes.length !== value.plannedCount) {
       context.addIssue({
         code: "custom",
@@ -279,33 +294,45 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
+    const grounded = value.promptVersion === "quiz-local-json-stream-v5.4";
     const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
-    const metadataMatches = automatic
-      ? value.resultProtocolVersion === 7 &&
-        value.importVersion === "extension-progressive-import-v5" &&
+    const metadataMatches = grounded
+      ? value.resultProtocolVersion === 8 &&
+        value.importVersion === "extension-progressive-import-v6" &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.2" &&
-        value.generationProfile === "stable_auto_recovery_v5_3" &&
+        value.validatorVersion === "validator-local-progressive-v4.3" &&
+        value.generationProfile === "evidence_grounded_auto_v5_4" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
         Boolean(value.recoverySessionId) &&
         Boolean(value.questionPlanSeed) &&
         value.telemetryAvailable
-      : stable
-        ? value.resultProtocolVersion === 6 &&
-          value.importVersion === "extension-progressive-import-v4" &&
+      : automatic
+        ? value.resultProtocolVersion === 7 &&
+          value.importVersion === "extension-progressive-import-v5" &&
           value.reasoningEffort === "none" &&
-          value.validatorVersion === "validator-local-progressive-v4.1" &&
-          value.generationProfile === "stable_non_thinking_v5_2" &&
+          value.validatorVersion === "validator-local-progressive-v4.2" &&
+          value.generationProfile === "stable_auto_recovery_v5_3" &&
           Boolean(value.generationId) &&
+          Boolean(value.generationSessionId) &&
+          Boolean(value.recoverySessionId) &&
           Boolean(value.questionPlanSeed) &&
           value.telemetryAvailable
-        : value.resultProtocolVersion === 5 &&
-          value.importVersion === "extension-progressive-import-v3" &&
-          value.reasoningEffort === "high" &&
-          value.validatorVersion === "validator-local-progressive-v4.0" &&
-          value.generationProfile === "legacy_reasoning_v5_1";
+        : stable
+          ? value.resultProtocolVersion === 6 &&
+            value.importVersion === "extension-progressive-import-v4" &&
+            value.reasoningEffort === "none" &&
+            value.validatorVersion === "validator-local-progressive-v4.1" &&
+            value.generationProfile === "stable_non_thinking_v5_2" &&
+            Boolean(value.generationId) &&
+            Boolean(value.questionPlanSeed) &&
+            value.telemetryAvailable
+          : value.resultProtocolVersion === 5 &&
+            value.importVersion === "extension-progressive-import-v3" &&
+            value.reasoningEffort === "high" &&
+            value.validatorVersion === "validator-local-progressive-v4.0" &&
+            value.generationProfile === "legacy_reasoning_v5_1";
     if (!metadataMatches) {
       context.addIssue({
         code: "custom",
@@ -420,7 +447,7 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
     .positive()
     .nullable()
     .default(null),
-  next_ordinal_attempt: z.coerce.number().int().min(1).max(12).default(1),
+  next_ordinal_attempt: z.coerce.number().int().min(1).max(24).default(1),
   next_retry_kind: z
     .enum([
       "transport",
@@ -542,12 +569,12 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       SELECT MAX(event.ordinal_attempt) + 1
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
-        AND event.protocol_version = 7
+        AND event.protocol_version IN (7, 8)
         AND event.start_ordinal = (
           SELECT COUNT(*) FROM questions stored_question
           WHERE stored_question.quiz_id = qb.id
         )
-    ), 1), 12) AS next_ordinal_attempt
+    ), 1), 24) AS next_ordinal_attempt
     ,(
       SELECT CASE
         WHEN event.outcome_code IN ('transient_http', 'network_interrupted', 'timeout') THEN 'transport'
@@ -561,7 +588,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       END
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
-        AND event.protocol_version = 7
+        AND event.protocol_version IN (7, 8)
         AND event.start_ordinal = (
           SELECT COUNT(*) FROM questions stored_question
           WHERE stored_question.quiz_id = qb.id
@@ -676,7 +703,9 @@ export async function readProgressiveGenerationSnapshot(
     row.data.quality_status,
     row.data.authoritative_count,
   );
-  const automatic = summary.generationProfile === "stable_auto_recovery_v5_3";
+  const automatic =
+    summary.generationProfile === "stable_auto_recovery_v5_3" ||
+    summary.generationProfile === "evidence_grounded_auto_v5_4";
   const stalled =
     (availability.state === "generating" ||
       availability.state === "retrying" ||
@@ -738,6 +767,10 @@ export function acceptedQuestionSummary(question: LocalConceptQuizQuestion) {
     type: question.type,
     concept: question.concept,
     question: question.question,
+    ...(question.claimKey ? { claimKey: question.claimKey } : {}),
+    ...(question.conceptCluster
+      ? { conceptCluster: question.conceptCluster }
+      : {}),
   });
 }
 
@@ -804,6 +837,9 @@ export function generationAvailability(
       : {}),
     ...(!ready && summary.recoverySessionId
       ? { recoverySessionId: summary.recoverySessionId }
+      : {}),
+    ...(!ready && summary.nextRecoveryAt
+      ? { nextRecoveryAt: new Date(summary.nextRecoveryAt).toISOString() }
       : {}),
   });
 }

@@ -4,6 +4,7 @@ import {
   ExtensionQuizProgressiveImportResponseSchema,
   GenerationClaimResponseSchema,
   MediaResolveResponseSchema,
+  VideoImportResponseSchema,
   createTranscriptCompleteness,
   type AutomaticRetryKind,
   type GenerationFailureCode,
@@ -24,6 +25,7 @@ import {
   loadGenerationRecordForAttempt,
   loadImportedVideo,
   clearGenerationRecord,
+  saveImportedVideo,
   saveGenerationRecord,
   startGenerationRecordHeartbeat,
   updateGenerationRecord,
@@ -39,8 +41,19 @@ import {
   getOrStartProgressiveRecoveryTask,
   publishAttemptGeneration,
 } from "./progressive-coordinator";
+import {
+  groundedRecoveryCooldownMs,
+  groundedRecoveryIsExhausted,
+} from "./automatic-recovery-policy";
 
 const RECOVERY_HEARTBEAT_MS = 10_000;
+
+function automaticProfile(profile: string | undefined): boolean {
+  return (
+    profile === "stable_auto_recovery_v5_3" ||
+    profile === "evidence_grounded_auto_v5_4"
+  );
+}
 
 export function ensureProgressiveAttemptRecovery(
   attemptId: string,
@@ -63,8 +76,16 @@ async function runAutomaticRecovery(
     return;
   }
   const continuation = status.continuation;
-  const automatic =
-    continuation.generationProfile === "stable_auto_recovery_v5_3";
+  const automatic = automaticProfile(continuation.generationProfile);
+  const grounded =
+    continuation.generationProfile === "evidence_grounded_auto_v5_4";
+  if (
+    status.generation.state === "cooldown" &&
+    status.generation.nextRecoveryAt &&
+    Date.parse(status.generation.nextRecoveryAt) > Date.now()
+  ) {
+    return;
+  }
   if (status.generation.state === "action_required" && !automatic) return;
   if (status.generation.state === "retry_required" && automatic) {
     throw new Error("Automatic banks cannot enter manual continuation state.");
@@ -102,16 +123,35 @@ async function runAutomaticRecovery(
     throw error;
   }
 
-  const imported = await loadImportedVideo(continuation.videoId);
+  let imported = await loadImportedVideo(continuation.videoId);
   if (!imported) {
-    const failed = await stopGeneration(status.quizId, claimKey, {
-      state: "generation_failed",
-      reasonCode: "source_unavailable",
-    }).catch(() => undefined);
-    if (failed) {
-      publishAttemptGeneration(attemptId, status.quizId, failed.generation);
+    try {
+      imported = await apiRequest(
+        `/api/videos/${encodeURIComponent(continuation.videoId)}/recovery`,
+        { signal },
+        VideoImportResponseSchema,
+      );
+      await saveImportedVideo(imported);
+    } catch (error) {
+      const terminal =
+        error instanceof ClientApiError && error.code === "video_not_found";
+      const state = grounded && !terminal ? "cooldown" : "generation_failed";
+      const nextRecoveryAt =
+        state === "cooldown"
+          ? Date.now() + groundedRecoveryCooldownMs(0)
+          : undefined;
+      const stopped = await stopGeneration(status.quizId, claimKey, {
+        state,
+        reasonCode: "source_unavailable",
+        ...(nextRecoveryAt
+          ? { nextRecoveryAt: new Date(nextRecoveryAt).toISOString() }
+          : {}),
+      }).catch(() => undefined);
+      if (stopped) {
+        publishAttemptGeneration(attemptId, status.quizId, stopped.generation);
+      }
+      return;
     }
-    return;
   }
 
   const generationId = continuation.generationId ?? Crypto.randomUUID();
@@ -152,8 +192,7 @@ async function runAutomaticRecovery(
       if (!continuation.questionPlan || !recoverySessionId) {
         throw new Error("The automatic question plan is missing.");
       }
-      stored = await saveGenerationRecord({
-        version: 3,
+      const commonRecord = {
         generationId,
         generationSessionId,
         recoverySessionId,
@@ -165,12 +204,11 @@ async function runAutomaticRecovery(
         sessionLength: continuation.sessionLength,
         watched: continuation.watched,
         questionPlan: continuation.questionPlan,
-        generationProfile: "stable_auto_recovery_v5_3",
         quizId: status.quizId,
         attemptId,
         acceptedCount: status.generation.availableQuestions,
         plannedCount: status.generation.totalQuestions,
-        state: "recovering",
+        state: "recovering" as const,
         nextCallIndex: continuation.nextCallIndex ?? 0,
         ordinalAttempts: {
           [String(status.generation.availableQuestions + 1)]:
@@ -180,7 +218,22 @@ async function runAutomaticRecovery(
         activeRecoveryStartedAt: timestamp,
         createdAt: stored?.createdAt ?? timestamp,
         updatedAt: timestamp,
-      });
+      };
+      stored = grounded
+        ? await saveGenerationRecord({
+            ...commonRecord,
+            version: 4,
+            generationProfile: "evidence_grounded_auto_v5_4",
+            recoveryCycle:
+              stored?.version === 4
+                ? Math.min(24, stored.recoveryCycle + 1)
+                : 1,
+          })
+        : await saveGenerationRecord({
+            ...commonRecord,
+            version: 3,
+            generationProfile: "stable_auto_recovery_v5_3",
+          });
     } else {
       stored = await saveGenerationRecord({
         version: 2,
@@ -251,7 +304,10 @@ async function runAutomaticRecovery(
   let ingestion = Promise.resolve();
   let lastProgressState = "recovering";
   let automaticRetryCount =
-    stored?.version === 3 ? stored.automaticRetryCount : 0;
+    stored?.version === 3 || stored?.version === 4
+      ? stored.automaticRetryCount
+      : 0;
+  let latestOrdinalAttempt = continuation.nextOrdinalAttempt ?? 1;
   const stopLocalHeartbeat = startGenerationRecordHeartbeat(generationId);
 
   const enqueueCall = (event: LocalGenerationCallEvent) => {
@@ -267,7 +323,10 @@ async function runAutomaticRecovery(
         ExtensionQuizGenerationCallEventResponseSchema,
       );
       if (event.classification === "automatic_retry") {
-        automaticRetryCount = Math.min(12, automaticRetryCount + 1);
+        automaticRetryCount = Math.min(
+          grounded ? 48 : 12,
+          automaticRetryCount + 1,
+        );
       }
       await updateGenerationRecord(generationId, {
         nextCallIndex: event.callIndex + 1,
@@ -294,6 +353,9 @@ async function runAutomaticRecovery(
           return;
         }
         lastProgressState = nextState;
+        if (detail.ordinalAttempt) {
+          latestOrdinalAttempt = detail.ordinalAttempt;
+        }
         ingestion = ingestion.then(async () => {
           const response = await updateProgress(
             status.quizId,
@@ -369,13 +431,33 @@ async function runAutomaticRecovery(
       error instanceof LocalGenerationRequestError
         ? error.reasonCode
         : "local_state_conflict";
+    const groundedExhausted =
+      grounded &&
+      groundedRecoveryIsExhausted({
+        reasonCode,
+        record: stored,
+        automaticRetryCount,
+        ordinalAttempt: latestOrdinalAttempt,
+      });
     const state =
       reasonCode === "credential_required" || reasonCode === "billing_required"
         ? "action_required"
-        : "generation_failed";
+        : grounded && !groundedExhausted
+          ? "cooldown"
+          : "generation_failed";
+    const nextRecoveryAt =
+      state === "cooldown"
+        ? Date.now() +
+          groundedRecoveryCooldownMs(
+            stored?.version === 4 ? stored.recoveryCycle : 0,
+          )
+        : undefined;
     const failed = await stopGeneration(status.quizId, claimKey, {
       state,
       reasonCode,
+      ...(nextRecoveryAt
+        ? { nextRecoveryAt: new Date(nextRecoveryAt).toISOString() }
+        : {}),
     }).catch(() => undefined);
     await updateGenerationRecord(
       generationId,
@@ -387,6 +469,7 @@ async function runAutomaticRecovery(
             ordinalAttempt: undefined,
             retryKind: undefined,
             retryDelayMs: undefined,
+            ...(nextRecoveryAt ? { nextRecoveryAt } : {}),
           }
         : { state: "retry_required" },
     ).catch(() => undefined);
@@ -519,6 +602,7 @@ function updateProgress(
       | "generating"
       | "retrying"
       | "recovering"
+      | "cooldown"
       | "action_required"
       | "generation_failed";
     reasonCode?: GenerationFailureCode;
@@ -527,6 +611,7 @@ function updateProgress(
     retryKind?: AutomaticRetryKind;
     retryDelayMs?: number;
     recoverySessionId?: string;
+    nextRecoveryAt?: string;
   },
   signal?: AbortSignal,
 ) {
@@ -546,8 +631,9 @@ function stopGeneration(
   quizId: string,
   idempotencyKey: string | undefined,
   progress: {
-    state: "action_required" | "generation_failed";
+    state: "action_required" | "generation_failed" | "cooldown";
     reasonCode: GenerationFailureCode;
+    nextRecoveryAt?: string;
   },
 ) {
   if (!idempotencyKey) throw new Error("The generation key is unavailable.");

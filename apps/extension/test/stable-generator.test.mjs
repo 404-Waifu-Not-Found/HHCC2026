@@ -30,6 +30,7 @@ function stableInput(
     generationSessionId: IDS.session,
     recoverySessionId: IDS.recovery,
     jobId: IDS.job,
+    generationProfile: "stable_auto_recovery_v5_3",
     transcriptFingerprint: "1234abcd",
     plainText:
       "This complete lesson transcript explains supported concepts, examples, applications, and careful reasoning. ".repeat(
@@ -38,16 +39,28 @@ function stableInput(
   };
 }
 
+function groundedInput(questionCount = 5, questionTypes = ["multiple_choice"]) {
+  return {
+    ...stableInput(questionCount, questionTypes),
+    generationProfile: "evidence_grounded_auto_v5_4",
+    plainText: Array.from(
+      { length: 20 },
+      (_, index) =>
+        `Instructional claim ${index + 1} explains that supported value ${index + 1} is ${(index + 1) * 3} units because the measured relationship is explicit.`,
+    ).join(" "),
+  };
+}
+
 function taskFromRequest(request) {
   const body = typeof request === "string" ? JSON.parse(request) : request;
   const task = body.messages.at(-1).content;
   const planText = task.match(
-    /Mandatory slot plan:\n([\s\S]*?)\n\nAlready accepted questions/,
+    /Mandatory slot plan:\n([\s\S]*?)\n\n(?:Primary source focus|Already accepted questions)/,
   )?.[1];
   assert.ok(planText, "request contains a bounded slot plan");
   const slots = planText.split("\n").map((line) => {
     const match = line.match(
-      /^q(\d+): (multiple_choice|true_false|short_answer)(?:, answer=(true|false))?$/,
+      /^q(\d+): (multiple_choice|true_false|short_answer)(?:, (?:answer|preferred_answer)=(true|false))?$/,
     );
     assert.ok(match, `valid slot line: ${line}`);
     return {
@@ -56,7 +69,70 @@ function taskFromRequest(request) {
       polarity: match[3] === undefined ? undefined : match[3] === "true",
     };
   });
-  return { body, task, slots };
+  const focusExcerpt = task.match(
+    /Primary source focus for this slot; use only instructional claims copied from this excerpt:\n([\s\S]*?)\n\nAlready accepted questions/,
+  )?.[1];
+  return { body, task, slots, focusExcerpt };
+}
+
+function groundedQuestionForSlot(slot, focusExcerpt) {
+  const evidenceSentences = String(focusExcerpt)
+    .split(/(?<=[.!?])\s+/u)
+    .filter(Boolean);
+  const evidence = evidenceSentences[slot.ordinal % evidenceSentences.length];
+  assert.ok(evidence, "grounded task contains a usable evidence sentence");
+  const correctAnswer = evidence.match(
+    /supported value \d+ is \d+ units/iu,
+  )?.[0];
+  assert.ok(correctAnswer, "grounded evidence contains an exact answer phrase");
+  const prompts = [
+    `What exact supported value is reported for instructional claim ${slot.ordinal}?`,
+    `How many units does instructional claim ${slot.ordinal} report?`,
+    `Select the measurement explicitly tied to instructional claim ${slot.ordinal}.`,
+    `Which numerical result appears in the evidence for instructional claim ${slot.ordinal}?`,
+    `Name the measured quantity stated by instructional claim ${slot.ordinal}.`,
+  ];
+  const common = {
+    id: `q${slot.ordinal}`,
+    type: slot.type,
+    concept: `Grounded measurement ${slot.ordinal}`,
+    explanation: `The source evidence explicitly states ${correctAnswer}.`,
+    sourceEvidence: evidence,
+    claim: {
+      subject: `instructional claim ${slot.ordinal}`,
+      relation: "reports",
+      value: correctAnswer,
+      cluster: `grounded measurement ${slot.ordinal}`,
+    },
+  };
+  if (slot.type === "true_false") {
+    return {
+      ...common,
+      question: evidence,
+      supportedStatement: evidence,
+      mode: "supported",
+      mutation: null,
+    };
+  }
+  if (slot.type === "short_answer") {
+    return {
+      ...common,
+      question: prompts[(slot.ordinal - 1) % prompts.length],
+      answer: correctAnswer,
+      rubricIdeas: [correctAnswer],
+      acceptableAnswers: [],
+    };
+  }
+  return {
+    ...common,
+    question: prompts[(slot.ordinal - 1) % prompts.length],
+    correctAnswer,
+    distractors: [1, 2, 3].map((offset) => ({
+      text: `${Number(correctAnswer.match(/\d+(?= units)/u)?.[0]) + offset} units for claim ${slot.ordinal}`,
+      whyWrong:
+        "This value is not the exact measurement stated in the evidence.",
+    })),
+  };
 }
 
 function questionForSlot(slot, automaticMode = true) {
@@ -109,10 +185,14 @@ function questionForSlot(slot, automaticMode = true) {
     };
   }
   if (slot.type === "true_false") {
+    const answer =
+      typeof slot.polarity === "boolean"
+        ? slot.polarity
+        : slot.ordinal % 2 === 0;
     return {
       ...common,
-      answer: slot.polarity,
-      correction: slot.polarity
+      answer,
+      correction: answer
         ? "The statement is accurate as written."
         : `The corrected statement for concept ${slot.ordinal} is supported.`,
     };
@@ -174,12 +254,17 @@ function responseForRequest(request, mutate = (value) => value) {
   const automaticMode = task.body.messages[0].content.includes(
     "return one correctAnswer",
   );
+  const groundedMode = task.body.messages[0].content.includes(
+    "sourceEvidence copied exactly",
+  );
   return completionResponse(
     mutate(
       {
         title: "A model title that must be ignored",
         questions: task.slots.map((slot) =>
-          questionForSlot(slot, automaticMode),
+          groundedMode
+            ? groundedQuestionForSlot(slot, task.focusExcerpt)
+            : questionForSlot(slot, automaticMode),
         ),
       },
       task,
@@ -388,6 +473,115 @@ test("v5.3 uses singleton primary calls and local answer mapping", async (contex
   );
 });
 
+test("v5.4 streams evidence-grounded singleton calls with protocol 8 telemetry", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => responseForRequest(init.body);
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.protocolVersion, 8);
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.4");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.3");
+  assert.equal(result.importVersion, "extension-progressive-import-v6");
+  assert.equal(result.generationProfile, "evidence_grounded_auto_v5_4");
+  assert.equal(calls.length, 5);
+  assert.ok(
+    calls.every(
+      (event) => event.protocolVersion === 8 && event.purpose === "generation",
+    ),
+  );
+  assert.ok(
+    result.quiz.questions.every(
+      (question) => question.claimKey && question.conceptCluster,
+    ),
+  );
+});
+
+test("v5.4 validates grounded true-false and short-answer singletons", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => responseForRequest(init.body);
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5, ["true_false", "short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    result.quiz.questions
+      .filter((question) => question.type === "true_false")
+      .every(
+        (question) =>
+          question.answer === true &&
+          question.correction === "The statement is accurate as written.",
+      ),
+  );
+  assert.ok(
+    result.quiz.questions
+      .filter((question) => question.type === "short_answer")
+      .every((question) => question.answer.includes("supported value")),
+  );
+});
+
+test("v5.4 grants content repair budgets independently to each ordinal", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const attempts = new Map();
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = taskFromRequest(init.body);
+    const ordinal = task.slots[0].ordinal;
+    const attempt = (attempts.get(ordinal) ?? 0) + 1;
+    attempts.set(ordinal, attempt);
+    return responseForRequest(init.body, (value) => {
+      if ((ordinal === 1 && attempt <= 2) || (ordinal === 2 && attempt === 1)) {
+        value.questions[0].distractors[0].text =
+          value.questions[0].correctAnswer;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(attempts.get(1), 3);
+  assert.equal(attempts.get(2), 2);
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    3,
+  );
+  assert.deepEqual(
+    calls
+      .filter((event) => event.classification === "automatic_retry")
+      .map((event) => event.retryKind),
+    ["answer_repair", "answer_repair", "answer_repair"],
+  );
+});
+
 test("question one is emitted from one-character SSE before its response resolves", async (context) => {
   const originalFetch = globalThis.fetch;
   let firstStream;
@@ -404,7 +598,11 @@ test("question one is emitted from one-character SSE before its response resolve
   globalThis.fetch = async (_url, init) => {
     fetchCount += 1;
     const task = taskFromRequest(init.body);
-    const value = { questions: task.slots.map(questionForSlot) };
+    const value = {
+      questions: task.slots.map((slot) =>
+        groundedQuestionForSlot(slot, task.focusExcerpt),
+      ),
+    };
     if (fetchCount === 1) {
       firstStream = oneCharacterSseResponse(value, {
         pauseAfterQuestion: true,
@@ -416,7 +614,7 @@ test("question one is emitted from one-character SSE before its response resolve
 
   let settled = false;
   const generation = generateQuizFromPlainText(
-    stableInput(5, ["multiple_choice"]),
+    groundedInput(5),
     "sk-local-test",
     () => undefined,
     undefined,

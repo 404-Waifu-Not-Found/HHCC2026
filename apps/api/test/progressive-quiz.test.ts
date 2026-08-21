@@ -10,6 +10,7 @@ import {
   readProgressiveGenerationSnapshot,
   tryProgressiveQuizSummary,
 } from "../src/lib/progressive-quiz";
+import { formulaFingerprint } from "../src/lib/math-expression";
 
 const questionTypes = [
   "multiple_choice",
@@ -302,6 +303,12 @@ describe("progressive short-answer grading", () => {
       expect(
         gradeProgressiveShortAnswer({ answer, ...quotientRuleRubric }),
       ).toBe(false);
+    });
+
+    it("keeps endpoint evaluation order significant", () => {
+      expect(formulaFingerprint("(f(b)-f(a))/(b-a)")).not.toBe(
+        formulaFingerprint("(f(a)-f(b))/(b-a)"),
+      );
     });
 
     it("accepts the equivalent product-of-fractions wording seen in production", () => {

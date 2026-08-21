@@ -1,18 +1,33 @@
 import { captionsToPlainText } from "./caption-text.js";
+import {
+  answerSupportedByEvidence,
+  candidateDuplicatesAccepted,
+  choicesLikelyEquivalent,
+  claimKeyForCandidate,
+  conceptClusterForCandidate,
+  evidenceAppearsInText,
+  focusExcerptForOrdinal,
+  groundedMultipleChoiceCandidate,
+  groundedTrueFalseQuestion,
+} from "./grounded-quality.js";
+import { formulaFingerprint } from "./math-expression.js";
 
 const MODEL = "deepseek-v4-flash";
-const PROTOCOL_VERSION = 7;
+const PROTOCOL_VERSION = 8;
 const PIPELINE_VERSION = 9;
-const PROMPT_VERSION = "quiz-local-json-stream-v5.3";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.2";
-const IMPORT_VERSION = "extension-progressive-import-v5";
-const GENERATION_PROFILE = "stable_auto_recovery_v5_3";
+const PROMPT_VERSION = "quiz-local-json-stream-v5.4";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.3";
+const IMPORT_VERSION = "extension-progressive-import-v6";
+const GENERATION_PROFILE = "evidence_grounded_auto_v5_4";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
+const AUTOMATIC_REQUEST_TIMEOUT_MS = 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
 const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 4;
 const MAX_CONTENT_RETRIES_PER_ORDINAL = 2;
-const MAX_AUTOMATIC_RETRIES = 12;
+const MAX_V5_3_AUTOMATIC_RETRIES = 12;
+const MAX_V5_4_AUTOMATIC_RETRIES = 48;
+const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 12;
 const MAX_ACTIVE_RECOVERY_MS = 15 * 60 * 1_000;
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
 const SUPPORTED_QUESTION_TYPES = [
@@ -115,7 +130,26 @@ function formulaTokenSchema() {
   };
 }
 
-function questionSchemaForType(type, id, automaticMode = false) {
+function groundedClaimSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["subject", "relation", "value", "cluster"],
+    properties: {
+      subject: { type: "string" },
+      relation: { type: "string" },
+      value: { type: "string" },
+      cluster: { type: "string" },
+    },
+  };
+}
+
+function questionSchemaForType(
+  type,
+  id,
+  automaticMode = false,
+  groundedMode = false,
+) {
   const properties = {
     id: { const: id },
     type: { const: type },
@@ -124,6 +158,11 @@ function questionSchemaForType(type, id, automaticMode = false) {
     explanation: { type: "string" },
   };
   const required = ["id", "type", "concept", "question", "explanation"];
+  if (groundedMode) {
+    properties.sourceEvidence = { type: "string" };
+    properties.claim = groundedClaimSchema();
+    required.push("sourceEvidence", "claim");
+  }
   if (type === "multiple_choice") {
     Object.assign(
       properties,
@@ -134,7 +173,17 @@ function questionSchemaForType(type, id, automaticMode = false) {
               type: "array",
               minItems: 3,
               maxItems: 3,
-              items: { type: "string" },
+              items: groundedMode
+                ? {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["text", "whyWrong"],
+                    properties: {
+                      text: { type: "string" },
+                      whyWrong: { type: "string" },
+                    },
+                  }
+                : { type: "string" },
             },
           }
         : {
@@ -154,11 +203,33 @@ function questionSchemaForType(type, id, automaticMode = false) {
       required.push("choices", "answerIndex", "answer");
     }
   } else if (type === "true_false") {
-    Object.assign(properties, {
-      answer: { type: "boolean" },
-      correction: { type: "string" },
-    });
-    required.push("answer", "correction");
+    if (groundedMode) {
+      Object.assign(properties, {
+        supportedStatement: { type: "string" },
+        mode: { enum: ["supported", "mutated"] },
+        mutation: {
+          anyOf: [
+            { type: "null" },
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["sourceValue", "replacementValue"],
+              properties: {
+                sourceValue: { type: "string" },
+                replacementValue: { type: "string" },
+              },
+            },
+          ],
+        },
+      });
+      required.push("supportedStatement", "mode", "mutation");
+    } else {
+      Object.assign(properties, {
+        answer: { type: "boolean" },
+        correction: { type: "string" },
+      });
+      required.push("answer", "correction");
+    }
   } else {
     Object.assign(properties, {
       answer: { type: "string" },
@@ -200,6 +271,7 @@ function quizResponseSchema(input) {
             type,
             `q${input.questionOffset + index + 1}`,
             input.automaticMode,
+            input.groundedMode,
           ),
         ),
         items: false,
@@ -208,20 +280,53 @@ function quizResponseSchema(input) {
   };
 }
 
-function exampleQuestion(type, id, polarity, automaticMode = false) {
+function exampleQuestion(
+  type,
+  id,
+  polarity,
+  automaticMode = false,
+  groundedMode = false,
+) {
   const common = {
     id,
     type,
     concept: "lesson concept",
     question: "A self-contained question grounded in the lesson?",
     explanation: "A concise lesson-grounded explanation.",
+    ...(groundedMode
+      ? {
+          sourceEvidence:
+            "The lesson explicitly states that the supported value is 12 units.",
+          claim: {
+            subject: "supported value",
+            relation: "equals",
+            value: "12 units",
+            cluster: "supported measurement",
+          },
+        }
+      : {}),
   };
   if (type === "multiple_choice") {
     if (automaticMode) {
       return {
         ...common,
-        correctAnswer: "supported answer",
-        distractors: ["distractor A", "distractor B", "distractor C"],
+        correctAnswer: groundedMode ? "12 units" : "supported answer",
+        distractors: groundedMode
+          ? [
+              {
+                text: "distractor A",
+                whyWrong: "It changes the supported value.",
+              },
+              {
+                text: "distractor B",
+                whyWrong: "It names a different result.",
+              },
+              {
+                text: "distractor C",
+                whyWrong: "It contradicts the evidence.",
+              },
+            ]
+          : ["distractor A", "distractor B", "distractor C"],
       };
     }
     return {
@@ -237,10 +342,20 @@ function exampleQuestion(type, id, polarity, automaticMode = false) {
     };
   }
   if (type === "true_false") {
+    if (groundedMode) {
+      return {
+        ...common,
+        question: common.sourceEvidence,
+        supportedStatement: common.sourceEvidence,
+        mode: "supported",
+        mutation: null,
+      };
+    }
+    const exampleAnswer = typeof polarity === "boolean" ? polarity : true;
     return {
       ...common,
-      answer: polarity,
-      correction: polarity
+      answer: exampleAnswer,
+      correction: exampleAnswer
         ? "The statement is accurate as written."
         : "The corrected lesson-grounded statement.",
     };
@@ -257,15 +372,15 @@ function generationMessages(input, isTransientRetry) {
   const slotPlan = input.questionTypePlan
     .map((type, index) => {
       const id = `q${input.questionOffset + index + 1}`;
-      const polarity = input.trueFalseAnswerPlan[index];
-      return `${id}: ${type}${typeof polarity === "boolean" ? `, answer=${polarity}` : ""}`;
+      const preferredPolarity = input.trueFalseAnswerPlan[index];
+      return `${id}: ${type}${typeof preferredPolarity === "boolean" ? `, preferred_answer=${preferredPolarity}` : ""}`;
     })
     .join("\n");
   const accepted = input.acceptedQuestions.length
     ? input.acceptedQuestions
         .map(
           (question) =>
-            `${question.id}: ${question.type}; ${question.concept}; ${question.question}`,
+            `${question.id}: ${question.type}; cluster=${question.conceptCluster ?? question.concept}; claim=${question.claimKey ?? "legacy"}; ${question.question}`,
         )
         .join("\n")
     : "none";
@@ -276,18 +391,29 @@ function generationMessages(input, isTransientRetry) {
         `q${input.questionOffset + index + 1}`,
         input.trueFalseAnswerPlan[index],
         input.automaticMode,
+        input.groundedMode,
       ),
     ),
   };
   const requestPurpose = isTransientRetry
     ? "an automatic repair request for"
     : "the primary request for";
+  const focusExcerpt =
+    input.focusExcerpt ??
+    focusExcerptForOrdinal(
+      input.plainText,
+      input.questionOffset,
+      input.totalQuestionCount,
+    );
+  const groundedInstructions = input.groundedMode
+    ? `Every question must include sourceEvidence copied exactly from the primary source focus and a structured claim describing that evidence. Never cite material outside the primary focus. For multiple choice, correctAnswer must be an exact phrase contained in sourceEvidence. Each distractor must contain text and a specific whyWrong explanation; equivalent wording, algebraic identities, and another defensible answer are forbidden. For true/false, never return an answer boolean. Copy sourceEvidence into supportedStatement. For mode=supported, question must equal supportedStatement and mutation must be null. For mode=mutated, change exactly one occurrence using mutation.sourceValue and mutation.replacementValue; question must equal the locally reproducible mutation. Prefer the requested polarity, but use supported mode whenever a safe mutation is unavailable.`
+    : "";
   return [
     {
       role: "system",
       content: `You create rigorous quizzes from a supplied lesson transcript. Use only claims explicitly supported by that transcript. Ignore greetings, promotions, jokes, repeated filler, and transcription noise. Never infer unseen visuals or add outside facts. Questions must be self-contained, specific, pedagogically useful, and must not mention captions, timestamps, or the video.
 
-Return JSON only: one JSON object containing a questions array. Finish each question object before starting the next. ${input.automaticMode ? "For multiple choice, return one correctAnswer and exactly three unique distractors; ClipQuest assigns the stored choice order and answer index locally." : "Multiple-choice questions need four unique plausible choices, exactly one supported answer, and answer must equal choices[answerIndex]."} True/false questions need the assigned polarity and a correction or confirmation. Short answers need a complete answer, every required rubric idea, and optional equivalent answers. A formula answer must be a standalone canonical formula. For a formula question, also return formulaTokens: a bounded ordered token list using identifier, number, operator, left_paren, right_paren, comma, and prime; its locally serialized expression must exactly match answer after Unicode operator normalization. Use explicit * and ^ operators and parenthesize both sides of division, for example (f(b)-f(a))/(b-a). Put notation variants only in acceptableAnswers. Omit formulaTokens for prose answers. Never include fields for another question type.`,
+Return JSON only: one JSON object containing a questions array. Finish each question object before starting the next. ${input.automaticMode ? "For multiple choice, return one correctAnswer and exactly three unique distractors; ClipQuest assigns the stored choice order and answer index locally." : "Multiple-choice questions need four unique plausible choices, exactly one supported answer, and answer must equal choices[answerIndex]."} ${input.groundedMode ? groundedInstructions : "For true/false, write a statement first, then set answer to its transcript-supported truth value; never force a false answer onto a true statement or a true answer onto a false statement. Treat preferred_answer as a diversity target: when false is preferred, change one explicit factual detail so the statement is clearly false and provide the correct detail in correction. If a safe supported transformation is not possible, return a true statement with answer=true instead. Include a correction or confirmation."} Short answers need a complete answer, every required rubric idea, and optional equivalent answers. A formula answer must be a standalone canonical formula. For a formula question, also return formulaTokens: a bounded ordered token list using identifier, number, operator, left_paren, right_paren, comma, and prime; its locally serialized expression must exactly match answer after Unicode operator normalization. Use explicit * and ^ operators and parenthesize both sides of division, for example (f(b)-f(a))/(b-a). Put notation variants only in acceptableAnswers. Omit formulaTokens for prose answers. Never include fields for another question type.`,
     },
     {
       role: "user",
@@ -297,7 +423,7 @@ Return JSON only: one JSON object containing a questions array. Finish each ques
       role: "user",
       content: `Create exactly ${input.questionCount} consecutive questions for this JSON task. This is ${requestPurpose} position q${input.questionOffset + 1} of ${input.totalQuestionCount}.${input.repairGuidance ? ` Repair requirement: ${input.repairGuidance}` : ""}
 
-Mandatory slot plan:\n${slotPlan}\n\nAlready accepted questions; do not repeat or closely paraphrase their prompts:\n${accepted}\n\nExact JSON schema:\n${JSON.stringify(quizResponseSchema(input))}\n\nValid shape example:\n${JSON.stringify(example)}\n\nBegin with {\"questions\":[ and return no Markdown or prose.`,
+Mandatory slot plan:\n${slotPlan}\n\nPrimary source focus for this slot; use only instructional claims copied from this excerpt:\n${focusExcerpt}\n\nAlready accepted questions; do not repeat their claim, concept cluster, or closely paraphrase their prompts:\n${accepted}\n\nExact JSON schema:\n${JSON.stringify(quizResponseSchema(input))}\n\nValid shape example:\n${JSON.stringify(example)}\n\nBegin with {\"questions\":[ and return no Markdown or prose.`,
     },
   ];
 }
@@ -327,7 +453,7 @@ function normalizeFormulaTokens(value) {
 
 export function normalizeGeneratedQuestion(
   rawQuestion,
-  { expectedId, automaticMode = false } = {},
+  { expectedId, automaticMode = false, groundedMode = false } = {},
 ) {
   if (
     !rawQuestion ||
@@ -343,6 +469,22 @@ export function normalizeGeneratedQuestion(
     concept: cleanString(rawQuestion.concept),
     question: cleanString(rawQuestion.question),
     explanation: cleanString(rawQuestion.explanation),
+    ...(groundedMode
+      ? {
+          sourceEvidence: cleanString(rawQuestion.sourceEvidence),
+          claim:
+            rawQuestion.claim &&
+            typeof rawQuestion.claim === "object" &&
+            !Array.isArray(rawQuestion.claim)
+              ? {
+                  subject: cleanString(rawQuestion.claim.subject),
+                  relation: cleanString(rawQuestion.claim.relation),
+                  value: cleanString(rawQuestion.claim.value),
+                  cluster: cleanString(rawQuestion.claim.cluster),
+                }
+              : rawQuestion.claim,
+        }
+      : {}),
   };
   if (type === "multiple_choice") {
     if (automaticMode) {
@@ -360,7 +502,16 @@ export function normalizeGeneratedQuestion(
         cleanString(rawQuestion.correctAnswer) ??
         (legacyMatches.length === 1 ? legacyMatches[0] : undefined);
       const distractors = Array.isArray(rawQuestion.distractors)
-        ? cleanStringArray(rawQuestion.distractors)
+        ? groundedMode
+          ? rawQuestion.distractors.map((entry) =>
+              entry && typeof entry === "object" && !Array.isArray(entry)
+                ? {
+                    text: cleanString(entry.text),
+                    whyWrong: cleanString(entry.whyWrong),
+                  }
+                : entry,
+            )
+          : cleanStringArray(rawQuestion.distractors)
         : Array.isArray(legacyChoices) && correctAnswer
           ? legacyChoices.filter(
               (choice) => normalize(choice) !== normalize(correctAnswer),
@@ -386,6 +537,26 @@ export function normalizeGeneratedQuestion(
     return { ...common, choices, answerIndex, answer };
   }
   if (type === "true_false") {
+    if (groundedMode) {
+      return {
+        ...common,
+        supportedStatement: cleanString(rawQuestion.supportedStatement),
+        mode: cleanString(rawQuestion.mode),
+        mutation:
+          rawQuestion.mutation === null
+            ? null
+            : rawQuestion.mutation &&
+                typeof rawQuestion.mutation === "object" &&
+                !Array.isArray(rawQuestion.mutation)
+              ? {
+                  sourceValue: cleanString(rawQuestion.mutation.sourceValue),
+                  replacementValue: cleanString(
+                    rawQuestion.mutation.replacementValue,
+                  ),
+                }
+              : rawQuestion.mutation,
+      };
+    }
     let answer = rawQuestion.answer;
     if (typeof answer === "string" && /^(true|false)$/i.test(answer)) {
       answer = answer.toLocaleLowerCase("en-US") === "true";
@@ -434,6 +605,51 @@ function promptSimilarity(left, right) {
     if (rightShingles.has(shingle)) intersection += 1;
   }
   return union.size ? intersection / union.size : 0;
+}
+
+function validGroundedClaim(question) {
+  return (
+    question?.claim &&
+    typeof question.claim === "object" &&
+    !Array.isArray(question.claim) &&
+    nonEmptyString(question.claim.subject, 200) &&
+    nonEmptyString(question.claim.relation, 200) &&
+    nonEmptyString(question.claim.value, 500) &&
+    nonEmptyString(question.claim.cluster, 200)
+  );
+}
+
+function choicesAreUnambiguous(
+  choices,
+  correctAnswer,
+  checkDistractorPairs = false,
+) {
+  for (let leftIndex = 0; leftIndex < choices.length; leftIndex += 1) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < choices.length;
+      rightIndex += 1
+    ) {
+      const left = choices[leftIndex];
+      const right = choices[rightIndex];
+      if (
+        !checkDistractorPairs &&
+        left !== correctAnswer &&
+        right !== correctAnswer
+      ) {
+        continue;
+      }
+      const leftFormula = formulaFingerprint(left);
+      const rightFormula = formulaFingerprint(right);
+      if (
+        (leftFormula && rightFormula && leftFormula === rightFormula) ||
+        choicesLikelyEquivalent(left, right)
+      ) {
+        return false;
+      }
+    }
+  }
+  return choices.includes(correctAnswer);
 }
 
 function hasBalancedDelimiters(value) {
@@ -560,6 +776,7 @@ function validateQuiz(quiz, input) {
     const question = normalizeGeneratedQuestion(rawQuestion, {
       expectedId,
       automaticMode: input.automaticMode,
+      groundedMode: input.groundedMode,
     });
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       validationFailure(`Question ${index + 1} is not a JSON object.`);
@@ -584,6 +801,23 @@ function validateQuiz(quiz, input) {
         `Question ${index + 1} contains an invalid required field.`,
       );
     }
+    if (input.groundedMode) {
+      if (
+        !validGroundedClaim(question) ||
+        !nonEmptyString(question.sourceEvidence, 700) ||
+        !evidenceAppearsInText(question.sourceEvidence, input.focusExcerpt) ||
+        candidateDuplicatesAccepted(
+          question,
+          accepted,
+          input.totalQuestionCount,
+        )
+      ) {
+        validationFailure(
+          `Question ${index + 1} is not grounded in a distinct instructional claim.`,
+          "duplicate_question",
+        );
+      }
+    }
     if (
       prompts.some(
         (prompt) => promptSimilarity(prompt, question.question) >= 0.9,
@@ -598,25 +832,48 @@ function validateQuiz(quiz, input) {
     prompts.push(question.question);
     if (question.type === "multiple_choice") {
       if (input.automaticMode) {
+        const grounded = input.groundedMode
+          ? groundedMultipleChoiceCandidate(question, input.focusExcerpt)
+          : null;
+        const correctAnswer = grounded?.correctAnswer ?? question.correctAnswer;
+        const distractors = grounded?.distractors ?? question.distractors;
         const candidateChoices = [
-          question.correctAnswer,
-          ...(Array.isArray(question.distractors) ? question.distractors : []),
+          correctAnswer,
+          ...(Array.isArray(distractors) ? distractors : []),
         ];
         if (
-          !nonEmptyString(question.correctAnswer, 500) ||
-          !Array.isArray(question.distractors) ||
-          question.distractors.length !== 3 ||
+          (input.groundedMode && !grounded) ||
+          !nonEmptyString(correctAnswer, 500) ||
+          !Array.isArray(distractors) ||
+          distractors.length !== 3 ||
           candidateChoices.some((choice) => !nonEmptyString(choice, 500)) ||
-          new Set(candidateChoices.map(normalize)).size !== 4
+          new Set(candidateChoices.map(normalize)).size !== 4 ||
+          !choicesAreUnambiguous(
+            candidateChoices,
+            correctAnswer,
+            input.groundedMode,
+          )
         ) {
           validationFailure(
             `Question ${index + 1} must have one unambiguous correct answer and three unique distractors.`,
             "answer_mapping_invalid",
           );
         }
-        const { correctAnswer, distractors, ...storedQuestion } = question;
+        const {
+          correctAnswer: _correctAnswer,
+          distractors: _distractors,
+          sourceEvidence: _sourceEvidence,
+          claim: _claim,
+          ...storedQuestion
+        } = question;
         return {
           ...storedQuestion,
+          ...(input.groundedMode
+            ? {
+                claimKey: claimKeyForCandidate(question),
+                conceptCluster: conceptClusterForCandidate(question),
+              }
+            : {}),
           choices: candidateChoices,
           answerIndex: 0,
           answer: correctAnswer,
@@ -645,9 +902,31 @@ function validateQuiz(quiz, input) {
         );
       }
     } else if (question.type === "true_false") {
+      if (input.groundedMode) {
+        const grounded = groundedTrueFalseQuestion(
+          question,
+          input.focusExcerpt,
+        );
+        if (!grounded) {
+          validationFailure(
+            `Question ${index + 1} has an unverifiable true/false transformation.`,
+            "answer_mapping_invalid",
+          );
+        }
+        return {
+          id: question.id,
+          type: question.type,
+          concept: question.concept,
+          question: grounded.question,
+          explanation: grounded.explanation,
+          answer: grounded.answer,
+          correction: grounded.correction,
+          claimKey: claimKeyForCandidate(question),
+          conceptCluster: conceptClusterForCandidate(question),
+        };
+      }
       if (
         typeof question.answer !== "boolean" ||
-        question.answer !== input.trueFalseAnswerPlan[index] ||
         !nonEmptyString(question.correction, 700)
       ) {
         validationFailure(
@@ -672,6 +951,18 @@ function validateQuiz(quiz, input) {
       );
     }
     if (question.type === "short_answer") {
+      if (
+        input.groundedMode &&
+        (!answerSupportedByEvidence(question.answer, question.sourceEvidence) ||
+          question.rubricIdeas.some(
+            (idea) => !answerSupportedByEvidence(idea, question.sourceEvidence),
+          ))
+      ) {
+        validationFailure(
+          `Question ${index + 1} has an answer or rubric unsupported by its evidence.`,
+          "answer_mapping_invalid",
+        );
+      }
       const formulaRequired = requiresCanonicalFormula(question);
       const serializedFormula = serializeFormulaTokens(question.formulaTokens);
       if (
@@ -684,10 +975,32 @@ function validateQuiz(quiz, input) {
           `Question ${index + 1} has an invalid or conflicting formula token structure.`,
         );
       }
-      const { formulaTokens: _formulaTokens, ...storedQuestion } = question;
+      const {
+        formulaTokens: _formulaTokens,
+        sourceEvidence: _sourceEvidence,
+        claim: _claim,
+        ...storedQuestion
+      } = question;
       return serializedFormula
-        ? { ...storedQuestion, answer: serializedFormula }
-        : storedQuestion;
+        ? {
+            ...storedQuestion,
+            ...(input.groundedMode
+              ? {
+                  claimKey: claimKeyForCandidate(question),
+                  conceptCluster: conceptClusterForCandidate(question),
+                }
+              : {}),
+            answer: serializedFormula,
+          }
+        : {
+            ...storedQuestion,
+            ...(input.groundedMode
+              ? {
+                  claimKey: claimKeyForCandidate(question),
+                  conceptCluster: conceptClusterForCandidate(question),
+                }
+              : {}),
+          };
     }
     return question;
   });
@@ -1172,7 +1485,10 @@ async function callDeepSeekJson(
       externalSignal?.reason ?? new Error("Local generation was cancelled."),
     );
   externalSignal?.addEventListener("abort", abortFromCaller, { once: true });
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const requestTimeoutMs = input.legacyMode
+    ? REQUEST_TIMEOUT_MS
+    : AUTOMATIC_REQUEST_TIMEOUT_MS;
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
   const startedAt = Date.now();
   try {
     const response = await fetch("https://api.deepseek.com/chat/completions", {
@@ -1272,7 +1588,7 @@ async function callDeepSeekJson(
         );
       }
       throw new GenerationFailure(
-        "DeepSeek took longer than 15 minutes.",
+        `DeepSeek took longer than ${Math.round(requestTimeoutMs / 1_000)} seconds.`,
         "timeout",
         { transient: true },
       );
@@ -1395,7 +1711,14 @@ export async function generateQuizFromPlainText(
     !legacyMode &&
     (rawInput?.generationProfile === "stable_non_thinking_v5_2" ||
       input.continuation?.promptVersion === "quiz-local-json-stream-v5.2");
+  const automaticV53Mode =
+    !legacyMode &&
+    !stableV52Mode &&
+    (rawInput?.generationProfile === "stable_auto_recovery_v5_3" ||
+      input.continuation?.promptVersion === "quiz-local-json-stream-v5.3");
   const automaticMode = !legacyMode && !stableV52Mode;
+  const groundedMode = automaticMode && !automaticV53Mode;
+  input.groundedMode = groundedMode;
   const selectedTypes = validateQuestionTypes(input.questionTypes);
   let questionPlan;
   if (input.continuation?.questionPlan) {
@@ -1514,20 +1837,35 @@ export async function generateQuizFromPlainText(
           generationId: input.generationId,
           questionPlan,
         }
-      : {
-          protocolVersion: PROTOCOL_VERSION,
-          pipelineVersion: PIPELINE_VERSION,
-          model: MODEL,
-          reasoningEffort: "none",
-          promptVersion: PROMPT_VERSION,
-          validatorVersion: VALIDATOR_VERSION,
-          importVersion: IMPORT_VERSION,
-          generationProfile: GENERATION_PROFILE,
-          generationId: input.generationId,
-          generationSessionId: input.generationSessionId,
-          recoverySessionId: input.recoverySessionId,
-          questionPlan,
-        };
+      : automaticV53Mode
+        ? {
+            protocolVersion: 7,
+            pipelineVersion: PIPELINE_VERSION,
+            model: MODEL,
+            reasoningEffort: "none",
+            promptVersion: "quiz-local-json-stream-v5.3",
+            validatorVersion: "validator-local-progressive-v4.2",
+            importVersion: "extension-progressive-import-v5",
+            generationProfile: "stable_auto_recovery_v5_3",
+            generationId: input.generationId,
+            generationSessionId: input.generationSessionId,
+            recoverySessionId: input.recoverySessionId,
+            questionPlan,
+          }
+        : {
+            protocolVersion: PROTOCOL_VERSION,
+            pipelineVersion: PIPELINE_VERSION,
+            model: MODEL,
+            reasoningEffort: "none",
+            promptVersion: PROMPT_VERSION,
+            validatorVersion: VALIDATOR_VERSION,
+            importVersion: IMPORT_VERSION,
+            generationProfile: GENERATION_PROFILE,
+            generationId: input.generationId,
+            generationSessionId: input.generationSessionId,
+            recoverySessionId: input.recoverySessionId,
+            questionPlan,
+          };
 
   if (automaticMode) {
     return generateAutomaticQuiz({
@@ -1838,6 +2176,11 @@ async function generateAutomaticQuiz({
   let ordinalAttempt = initialOrdinalAttempt;
   let retryKind = ordinalAttempt > 1 ? initialRetryKind : undefined;
   let automaticRetryCount = initialAutomaticRetryCount;
+  let cycleAutomaticRetryCount = 0;
+  const cycleRetriesByOrdinalAndClass = new Map();
+  const totalAutomaticRetryLimit = input.groundedMode
+    ? MAX_V5_4_AUTOMATIC_RETRIES
+    : MAX_V5_3_AUTOMATIC_RETRIES;
   let lastChunkAt = initialLastChunkAt;
 
   while (acceptedQuestions.length < input.questionCount) {
@@ -1851,13 +2194,23 @@ async function generateAutomaticQuiz({
     const classification = ordinalAttempt > 1 ? "automatic_retry" : "primary";
     const callRetryKind = retryKind;
     if (classification === "automatic_retry") {
-      if (!retryKind || automaticRetryCount >= MAX_AUTOMATIC_RETRIES) {
+      if (
+        !retryKind ||
+        automaticRetryCount >= totalAutomaticRetryLimit ||
+        cycleAutomaticRetryCount >= MAX_HOT_RETRIES_PER_RECOVERY_CYCLE
+      ) {
         throw new GenerationFailure(
           "Automatic generation reached its retry budget.",
           "recovery_budget_exhausted",
         );
       }
       automaticRetryCount += 1;
+      cycleAutomaticRetryCount += 1;
+      const retryBudgetKey = `${questionOffset}:${retryBudgetClass(callRetryKind)}`;
+      cycleRetriesByOrdinalAndClass.set(
+        retryBudgetKey,
+        (cycleRetriesByOrdinalAndClass.get(retryBudgetKey) ?? 0) + 1,
+      );
       totals.retryCount += 1;
     }
     const chunkInput = {
@@ -1876,15 +2229,23 @@ async function generateAutomaticQuiz({
         questionOffset + 1,
       ),
       acceptedQuestions: [...acceptedQuestions],
-      repairGuidance: repairGuidanceFor(callRetryKind),
+      repairGuidance: repairGuidanceFor(callRetryKind, acceptedQuestions),
+      focusExcerpt: focusExcerptForOrdinal(
+        input.plainText,
+        questionOffset,
+        input.questionCount,
+        Math.max(0, ordinalAttempt - 1),
+      ),
     };
-    const maximumRetries = retryLimitForKind(retryKind);
+    const maximumAttempts = input.groundedMode
+      ? 24
+      : retryLimitForKind(retryKind) + 1;
     onProgress(
       "creating_questions",
       0.2 + (questionOffset / input.questionCount) * 0.72,
       {
         attempt: ordinalAttempt,
-        maxAttempts: maximumRetries + 1,
+        maxAttempts: maximumAttempts,
         status:
           classification === "automatic_retry" ? "retrying" : "generating",
         ...(classification === "automatic_retry"
@@ -1983,10 +2344,15 @@ async function generateAutomaticQuiz({
           nextKind === "transport"
             ? MAX_TRANSPORT_RETRIES_PER_ORDINAL
             : MAX_CONTENT_RETRIES_PER_ORDINAL;
+        const retryBudgetKey = `${questionOffset}:${retryBudgetClass(nextKind)}`;
+        const ordinalClassRetries =
+          cycleRetriesByOrdinalAndClass.get(retryBudgetKey) ?? 0;
         const canRetry =
           nextKind &&
-          retryNumber <= limit &&
-          automaticRetryCount < MAX_AUTOMATIC_RETRIES &&
+          ordinalClassRetries < limit &&
+          cycleAutomaticRetryCount < MAX_HOT_RETRIES_PER_RECOVERY_CYCLE &&
+          automaticRetryCount < totalAutomaticRetryLimit &&
+          (!input.groundedMode || ordinalAttempt < 24) &&
           Date.now() - startedAt < MAX_ACTIVE_RECOVERY_MS;
         if (canRetry) {
           nextRetryKind = nextKind;
@@ -2008,7 +2374,10 @@ async function generateAutomaticQuiz({
     }
 
     await onCall({
-      protocolVersion: PROTOCOL_VERSION,
+      protocolVersion: metadata.protocolVersion,
+      ...(metadata.protocolVersion === PROTOCOL_VERSION
+        ? { purpose: "generation" }
+        : {}),
       generationSessionId: input.generationSessionId,
       recoverySessionId: input.recoverySessionId,
       callIndex,
@@ -2060,7 +2429,9 @@ async function generateAutomaticQuiz({
       0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
       {
         attempt: ordinalAttempt,
-        maxAttempts: retryLimitForKind(nextRetryKind) + 1,
+        maxAttempts: input.groundedMode
+          ? 24
+          : retryLimitForKind(nextRetryKind) + 1,
         status: "retrying",
         retryOrdinal: questionOffset + 1,
         ordinalAttempt,
@@ -2117,7 +2488,18 @@ function retryLimitForKind(retryKind) {
     : MAX_CONTENT_RETRIES_PER_ORDINAL;
 }
 
-function repairGuidanceFor(retryKind) {
+function retryBudgetClass(retryKind) {
+  return retryKind === "transport" || retryKind === "automatic_resume"
+    ? "transport"
+    : "content";
+}
+
+function repairGuidanceFor(retryKind, acceptedQuestions = []) {
+  const usedConcepts = acceptedQuestions
+    .map((question) => question.concept)
+    .filter((value) => typeof value === "string" && value.trim())
+    .slice(-12)
+    .join("; ");
   const guidance = {
     transport: "Repeat the same singleton JSON task exactly.",
     empty_content: "Return the required non-empty JSON object immediately.",
@@ -2125,8 +2507,7 @@ function repairGuidanceFor(retryKind) {
       "Keep every field concise and close the singleton JSON object.",
     content_repair:
       "Follow the exact singleton type schema and required fields.",
-    duplicate_repair:
-      "Use a different supported concept and do not paraphrase any accepted prompt.",
+    duplicate_repair: `Use a different supported claim from this slot's focus excerpt and do not paraphrase any accepted prompt.${usedConcepts ? ` Do not reuse these concepts: ${usedConcepts}.` : ""}`,
     answer_repair:
       "Make the correct answer and distractors distinct and unambiguous.",
     automatic_resume: "Resume only this first missing singleton question.",
