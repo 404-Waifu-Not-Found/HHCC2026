@@ -29,6 +29,7 @@ import {
   readRecentGenerationFailures,
 } from "../admin/generations";
 import { ApiError } from "../lib/errors";
+import { quizGenerationRolloutMode } from "../lib/generation-rollout";
 import { now } from "../lib/ids";
 import { parseJson } from "../lib/validation";
 import { publicWorkerVersion } from "../lib/worker-version";
@@ -493,6 +494,7 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
         pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
         promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
         validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+        rolloutMode: quizGenerationRolloutMode(c.env),
         states: generationCounts,
       },
       worker: publicWorkerVersion(c.env),

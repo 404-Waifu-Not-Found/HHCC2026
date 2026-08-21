@@ -139,6 +139,31 @@ function createDatabase(): SqliteD1Adapter {
       name TEXT NOT NULL,
       applied_at TEXT NOT NULL
     );
+    CREATE TABLE quiz_generation_call_events (
+      quiz_id TEXT NOT NULL,
+      generation_session_id TEXT NOT NULL,
+      call_index INTEGER NOT NULL,
+      start_ordinal INTEGER NOT NULL,
+      requested_count INTEGER NOT NULL,
+      accepted_count INTEGER NOT NULL,
+      classification TEXT NOT NULL,
+      outcome_code TEXT NOT NULL,
+      retry_delay_ms INTEGER NOT NULL,
+      elapsed_ms INTEGER NOT NULL,
+      input_tokens INTEGER,
+      output_tokens INTEGER,
+      reasoning_tokens INTEGER,
+      usage_complete INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (quiz_id, generation_session_id, call_index)
+    );
+    CREATE TABLE quiz_generation_claims (
+      quiz_id TEXT PRIMARY KEY,
+      generation_session_id TEXT NOT NULL,
+      claim_key TEXT NOT NULL,
+      lease_expires_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `);
   sqlite
     .prepare("INSERT INTO user VALUES (?, 'Morgan Operator', ?, ?)")
@@ -156,6 +181,11 @@ function createDatabase(): SqliteD1Adapter {
   sqlite
     .prepare(
       "INSERT INTO d1_migrations VALUES (16, '0016_progressive_quiz_streaming.sql', '2026-08-10')",
+    )
+    .run();
+  sqlite
+    .prepare(
+      "INSERT INTO d1_migrations VALUES (17, '0017_quiz_generation_call_events.sql', '2026-08-10')",
     )
     .run();
 
@@ -183,6 +213,46 @@ function createDatabase(): SqliteD1Adapter {
     acceptedCount: 5,
     lastProgressAt: NOW - 5_000,
   });
+  const insertCall = sqlite.prepare(
+    `INSERT INTO quiz_generation_call_events
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const telemetryQuizId = "33333333-3333-4333-8333-333333333332";
+  const telemetrySessionId = "44444444-4444-4444-8444-444444444444";
+  insertCall.run(
+    telemetryQuizId,
+    telemetrySessionId,
+    0,
+    0,
+    1,
+    1,
+    "primary",
+    "complete",
+    0,
+    4_000,
+    100,
+    20,
+    0,
+    1,
+    NOW - 25_000,
+  );
+  insertCall.run(
+    telemetryQuizId,
+    telemetrySessionId,
+    1,
+    1,
+    2,
+    1,
+    "primary",
+    "schema_invalid",
+    0,
+    2_000,
+    null,
+    null,
+    null,
+    0,
+    NOW - 20_000,
+  );
   return new SqliteD1Adapter(sqlite);
 }
 
@@ -269,6 +339,25 @@ describe("admin progressive generation visibility", () => {
         "retry_required",
       ]);
       expect(body.generations.some((item) => item.stalled === true)).toBe(true);
+      const authoritative = body.generations.find(
+        (item) => item.quizId === "33333333-3333-4333-8333-333333333332",
+      );
+      expect(authoritative).toMatchObject({
+        telemetrySource: "authoritative_calls",
+        primaryCalls: 2,
+        automaticRetries: 0,
+        manualContinuations: 0,
+        partialCalls: 1,
+        firstQuestionLatencyMs: 4_000,
+        outcomeCounts: { complete: 1, schema_invalid: 1 },
+        tokenUsage: {
+          inputTokens: 100,
+          outputTokens: 20,
+          completeCalls: 1,
+          unknownCalls: 1,
+          complete: false,
+        },
+      });
       expect(JSON.stringify(body)).not.toMatch(
         /transcript|prompt|answer|rubric|api.?key|errorMessage/i,
       );
@@ -307,7 +396,9 @@ describe("admin progressive generation visibility", () => {
       extensionRequired: true,
       states: { generating: 1, retrying: 0, retryRequired: 2, ready: 1 },
     });
-    expect(body.database.migration).toBe("0016_progressive_quiz_streaming.sql");
+    expect(body.database.migration).toBe(
+      "0017_quiz_generation_call_events.sql",
+    );
     expect(body.worker).toEqual({
       versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",
       versionTag: "test-sha",

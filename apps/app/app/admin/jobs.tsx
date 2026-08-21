@@ -113,13 +113,53 @@ export default function AdminJobsScreen() {
                   icon: "model",
                 },
                 {
-                  label: copy.aiCalls,
-                  value: String(generation.aiCalls),
+                  label: copy.primaryCalls,
+                  value: String(generation.primaryCalls),
                   icon: "processing",
                 },
                 {
-                  label: copy.retries,
-                  value: String(generation.retryCount),
+                  label: copy.automaticRetries,
+                  value: String(generation.automaticRetries),
+                  icon: "time",
+                },
+                {
+                  label: copy.manualContinuations,
+                  value: String(generation.manualContinuations),
+                  icon: "refresh",
+                },
+                {
+                  label: copy.partialCalls,
+                  value: String(generation.partialCalls),
+                  icon: "processing",
+                },
+                {
+                  label: copy.firstQuestionLatency,
+                  value: formatDuration(generation.firstQuestionLatencyMs),
+                  icon: "time",
+                },
+                {
+                  label: copy.tokenUsage,
+                  value: formatTokenUsage(generation),
+                  icon: "model",
+                },
+                {
+                  label: copy.telemetrySource,
+                  value:
+                    generation.telemetrySource === "authoritative_calls"
+                      ? copy.authoritativeTelemetry
+                      : copy.legacyTelemetry,
+                  icon: "database",
+                },
+                {
+                  label: copy.lastQuestion,
+                  value: formatDate(generation.lastQuestionAt, locale),
+                  icon: "checklist",
+                },
+                {
+                  label: copy.lastCall,
+                  value: generation.lastAttemptAt
+                    ? formatDate(generation.lastAttemptAt, locale)
+                    : "—",
                   icon: "time",
                 },
                 {
@@ -140,6 +180,11 @@ export default function AdminJobsScreen() {
                 {generation.reasonCode
                   ? ` · ${generation.reasonCode.replaceAll("_", " ")}`
                   : ""}
+              </Text>
+            ) : null}
+            {Object.keys(generation.outcomeCounts).length ? (
+              <Text style={[styles.note, { color: theme.textMuted }]}>
+                {copy.outcomes}: {formatOutcomeCounts(generation.outcomeCounts)}
               </Text>
             ) : null}
           </AdminRecord>
@@ -178,6 +223,25 @@ function formatDate(value: string, locale: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatDuration(value: number | null): string {
+  if (value === null) return "—";
+  if (value < 1_000) return `${value} ms`;
+  return `${(value / 1_000).toFixed(value < 10_000 ? 1 : 0)} s`;
+}
+
+function formatTokenUsage(generation: AdminGeneration): string {
+  const usage = generation.tokenUsage;
+  const total = usage.inputTokens + usage.outputTokens + usage.reasoningTokens;
+  return `${total.toLocaleString()} · ${usage.completeCalls}/${usage.completeCalls + usage.unknownCalls} complete`;
+}
+
+function formatOutcomeCounts(outcomes: Record<string, number>): string {
+  return Object.entries(outcomes)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([outcome, count]) => `${outcome.replaceAll("_", " ")} ${count}`)
+    .join(" · ");
 }
 
 const styles = StyleSheet.create({

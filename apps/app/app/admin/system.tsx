@@ -169,6 +169,11 @@ export default function AdminSystemScreen() {
                     value={data.generation.validatorVersion}
                   />
                   <SystemDetail
+                    icon="processing"
+                    label={copy.generationRollout}
+                    value={data.generation.rolloutMode}
+                  />
+                  <SystemDetail
                     icon="system"
                     label={copy.workerVersion}
                     value={

@@ -57,8 +57,11 @@ const RecentGenerationFailureRowSchema = z.object({
 
 const STATE_EXPRESSION =
   "json_extract(q.quality_summary_json, '$.generationState')";
-const LAST_PROGRESS_EXPRESSION =
-  "CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER)";
+const LAST_PROGRESS_EXPRESSION = `MAX(
+  COALESCE(CAST(json_extract(q.quality_summary_json, '$.lastQuestionAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
+  COALESCE(CAST(json_extract(q.quality_summary_json, '$.stateChangedAt') AS INTEGER), CAST(json_extract(q.quality_summary_json, '$.lastProgressAt') AS INTEGER), 0),
+  COALESCE((SELECT MAX(event.created_at) FROM quiz_generation_call_events event WHERE event.quiz_id = q.id), 0)
+)`;
 
 export async function readAdminGenerationPage(
   db: D1Database,
@@ -121,6 +124,19 @@ export function adminGenerationFromSnapshot(
       "A progressive generation record is not internally valid.",
     );
   }
+  const telemetry = snapshot.telemetry;
+  const authoritative = telemetry.available;
+  const callCount = authoritative
+    ? telemetry.callCount
+    : snapshot.summary.aiCalls;
+  const automaticRetries = authoritative
+    ? telemetry.automaticRetries
+    : snapshot.summary.retryCount;
+  const lastActivityAt = Math.max(
+    snapshot.summary.lastQuestionAt,
+    snapshot.summary.stateChangedAt,
+    telemetry.lastAttemptAt ?? 0,
+  );
   return AdminGenerationSchema.parse({
     quizId: snapshot.quizId,
     state: snapshot.availability.state,
@@ -130,12 +146,47 @@ export function adminGenerationFromSnapshot(
       snapshot.availability.availableQuestions /
       snapshot.availability.totalQuestions,
     requestedQuestionTypes: snapshot.summary.requestedQuestionTypes,
-    aiCalls: snapshot.summary.aiCalls,
-    retryCount: snapshot.summary.retryCount,
-    elapsedMs: snapshot.summary.elapsedMs,
+    aiCalls: callCount,
+    retryCount: automaticRetries,
+    elapsedMs: authoritative ? telemetry.elapsedMs : snapshot.summary.elapsedMs,
+    telemetrySource: authoritative ? "authoritative_calls" : "legacy_summary",
+    primaryCalls: authoritative
+      ? telemetry.primaryCalls
+      : Math.max(0, snapshot.summary.aiCalls - snapshot.summary.retryCount),
+    automaticRetries,
+    manualContinuations: authoritative ? telemetry.manualContinuations : 0,
+    partialCalls: authoritative ? telemetry.partialCalls : 0,
+    outcomeCounts: authoritative ? telemetry.outcomeCounts : {},
+    tokenUsage: {
+      inputTokens: authoritative
+        ? telemetry.inputTokens
+        : snapshot.summary.inputTokens,
+      outputTokens: authoritative
+        ? telemetry.outputTokens
+        : snapshot.summary.outputTokens,
+      reasoningTokens: authoritative
+        ? telemetry.reasoningTokens
+        : snapshot.summary.reasoningTokens,
+      completeCalls: authoritative ? telemetry.completeUsageCalls : 0,
+      unknownCalls: authoritative
+        ? telemetry.callCount - telemetry.completeUsageCalls
+        : snapshot.summary.aiCalls,
+      complete:
+        authoritative &&
+        telemetry.callCount > 0 &&
+        telemetry.completeUsageCalls === telemetry.callCount,
+    },
+    firstQuestionLatencyMs: authoritative
+      ? telemetry.firstQuestionLatencyMs
+      : null,
     reasonCode: snapshot.availability.reasonCode ?? null,
     stalled: snapshot.stalled,
-    lastProgressAt: toIso(snapshot.summary.lastProgressAt),
+    lastProgressAt: toIso(lastActivityAt),
+    lastQuestionAt: toIso(snapshot.summary.lastQuestionAt),
+    lastAttemptAt: telemetry.lastAttemptAt
+      ? toIso(telemetry.lastAttemptAt)
+      : null,
+    stateChangedAt: toIso(snapshot.summary.stateChangedAt),
     createdAt: toIso(seed.created_at),
     owner: {
       id: seed.owner_id,
