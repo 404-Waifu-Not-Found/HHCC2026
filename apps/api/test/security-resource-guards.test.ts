@@ -17,6 +17,7 @@ import {
   ANSWER_RESERVATION_SQL,
   ANSWER_RESERVATION_TTL_MS,
 } from "../src/routes/quizzes";
+import { safeErrorName } from "../src/lib/safe-error";
 
 const pushSource = await readFile(
   new URL("../src/routes/push.ts", import.meta.url),
@@ -46,6 +47,28 @@ const validationSource = await readFile(
   new URL("../src/lib/validation.ts", import.meta.url),
   "utf8",
 );
+const aiServicesSource = await readFile(
+  new URL("../src/lib/ai-services.ts", import.meta.url),
+  "utf8",
+);
+const emailSource = await readFile(
+  new URL("../src/lib/email.ts", import.meta.url),
+  "utf8",
+);
+const librarySource = await readFile(
+  new URL("../src/routes/library.ts", import.meta.url),
+  "utf8",
+);
+const workerErrorSources = await Promise.all(
+  [
+    "../src/routes/youtube.ts",
+    "../src/sources/youtube.ts",
+    "../src/lib/crypto.ts",
+    "../src/lib/errors.ts",
+    "../src/lib/thumbnail.ts",
+    "../src/lib/validation.ts",
+  ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
+);
 const libraryOpenSource = await readFile(
   new URL("../../app/src/hooks/useOpenVideoCard.ts", import.meta.url),
   "utf8",
@@ -56,6 +79,35 @@ const securityMigration = await readFile(
 );
 
 describe("security resource guards", () => {
+  it("keeps learner answers and transcript evidence out of Worker AI helpers", () => {
+    expect(aiServicesSource).not.toContain("gradeWrittenAnswer");
+    expect(aiServicesSource).not.toContain("TranscriptSegment");
+    expect(aiServicesSource).not.toContain("learnerAnswer");
+    expect(aiServicesSource).not.toContain("requiredIdeas");
+  });
+
+  it("keeps raw upstream bodies and exception objects out of Worker logs", () => {
+    expect(emailSource).not.toContain("readBoundedResponseText");
+    expect(emailSource).not.toMatch(/body\.slice/);
+    for (const source of workerErrorSources) {
+      expect(source).not.toMatch(
+        /console\.(?:error|warn)\([^)]*,\s*error\s*\)/s,
+      );
+    }
+    expect(safeErrorName(new TypeError("private diagnostic"))).toBe(
+      "TypeError",
+    );
+    expect(safeErrorName({ name: "SecretError" })).toBe("UnknownError");
+  });
+
+  it("does not serialize malformed Library row contents into Worker logs", () => {
+    expect(librarySource).not.toContain(
+      'console.error("Invalid library rows", parsed.error)',
+    );
+    expect(librarySource).toContain('event: "invalid_rows"');
+    expect(librarySource).toContain("issueCount: parsed.error.issues.length");
+  });
+
   it("bounds push-token persistence and selects due reviews before tokens", () => {
     expect(pushSource).toContain("MAX_DEVICE_TOKENS_PER_USER");
     expect(pushSource).toContain("isValidExpoPushToken");

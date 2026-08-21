@@ -28,8 +28,13 @@ import { pauseAllProgressiveGenerationTasks } from "../src/generation/progressiv
 import { useAppSession } from "../src/lib/auth-client";
 import { clearReviewReminderDeviceState } from "../src/notifications/review-reminders";
 import { clearAccountCreationState } from "../src/state/creation";
+import { clearAccountAttemptState } from "../src/state/attempt";
 import { cancelPreGenerationForAccount } from "../src/generation/prework";
-import { nativeRouteForUrl } from "../src/navigation/native-deep-links";
+import {
+  createRecentNativeEventGate,
+  nativeRouteForUrl,
+} from "../src/navigation/native-deep-links";
+import { createSerialTaskQueue } from "../src/lib/serial-task-queue";
 
 const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
 
@@ -54,29 +59,48 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === "web") return;
+    let active = true;
     let subscription: { remove(): void } | undefined;
-    void import("expo-notifications").then((Notifications) => {
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowBanner: true,
-          shouldShowList: true,
-          shouldPlaySound: false,
-          shouldSetBadge: false,
-        }),
-      });
-      const openResponse = (
-        response: import("expo-notifications").NotificationResponse,
-      ) => {
-        const route = response.notification.request.content.data?.route;
-        if (route === "/library") router.push("/(tabs)/library" as never);
-      };
-      subscription =
-        Notifications.addNotificationResponseReceivedListener(openResponse);
-      void Notifications.getLastNotificationResponseAsync().then((response) => {
-        if (response) openResponse(response);
-      });
-    });
-    return () => subscription?.remove();
+    const shouldHandle = createRecentNativeEventGate();
+    void import("expo-notifications")
+      .then((Notifications) => {
+        if (!active) return;
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowBanner: true,
+            shouldShowList: true,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+          }),
+        });
+        const openResponse = (
+          response: import("expo-notifications").NotificationResponse,
+        ) => {
+          if (!active) return;
+          const route = response.notification.request.content.data?.route;
+          const identifier = response.notification.request.identifier;
+          if (
+            route === "/library" &&
+            shouldHandle(`notification:${identifier}:${route}`)
+          ) {
+            router.push("/(tabs)/library" as never);
+          }
+        };
+        subscription =
+          Notifications.addNotificationResponseReceivedListener(openResponse);
+        void Notifications.getLastNotificationResponseAsync()
+          .then(async (response) => {
+            if (!active || !response) return;
+            openResponse(response);
+            await Notifications.clearLastNotificationResponseAsync();
+          })
+          .catch(() => undefined);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      subscription?.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -105,20 +129,21 @@ function NativeDeepLinkBoundary() {
   useEffect(() => {
     if (Platform.OS === "web") return;
     let active = true;
-    let lastUrl: string | undefined;
+    const shouldHandle = createRecentNativeEventGate();
     const open = (url: string) => {
-      if (!active || url === lastUrl) return;
+      if (!active || !shouldHandle(url)) return;
       const route = nativeRouteForUrl(url);
       if (!route) return;
-      lastUrl = url;
       router.replace(route as never);
     };
     const subscription = Linking.addEventListener("url", ({ url }) =>
       open(url),
     );
-    void Linking.getInitialURL().then((url) => {
-      if (url) open(url);
-    });
+    void Linking.getInitialURL()
+      .then((url) => {
+        if (url) open(url);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
       subscription.remove();
@@ -128,23 +153,28 @@ function NativeDeepLinkBoundary() {
 }
 
 const OBSERVED_NATIVE_USER_KEY = "clipquest:native-local-ai-user:v1";
+const nativeAccountBoundaryQueue = createSerialTaskQueue();
 
 function NativeAccountBoundary() {
   const { data: session, isPending } = useAppSession();
   useEffect(() => {
     if (Platform.OS === "web" || isPending) return;
-    void (async () => {
-      const currentUserId = session?.user.id ?? null;
+    const currentUserId = session?.user.id ?? null;
+    void nativeAccountBoundaryQueue.enqueue(async () => {
       const previousUserId = await AsyncStorage.getItem(
         OBSERVED_NATIVE_USER_KEY,
       );
       if (previousUserId && previousUserId !== currentUserId) {
         cancelPreGenerationForAccount(previousUserId);
+        // The API key is the only credential in the local cleanup set. Do not
+        // advance the observed-account marker until its deletion succeeds, so
+        // a later mount can retry instead of permanently forgetting the debt.
+        await removeLocalGenerationCredential(previousUserId);
         await Promise.allSettled([
-          removeLocalGenerationCredential(previousUserId),
           clearReviewReminderDeviceState(previousUserId),
           clearNativeGenerationOutboxes(previousUserId),
           clearAccountCreationState(previousUserId),
+          clearAccountAttemptState(previousUserId),
         ]);
       }
       if (currentUserId) {
@@ -152,7 +182,7 @@ function NativeAccountBoundary() {
       } else {
         await AsyncStorage.removeItem(OBSERVED_NATIVE_USER_KEY);
       }
-    })();
+    });
   }, [isPending, session?.user.id]);
   return null;
 }

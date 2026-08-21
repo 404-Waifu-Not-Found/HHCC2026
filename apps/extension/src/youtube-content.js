@@ -5,6 +5,7 @@
   globalThis.__clipQuestYouTubeExtractorInstalled = true;
 
   const core = globalThis.ClipQuestCaptionCore;
+  const boundedResponse = globalThis.ClipQuestBoundedResponse;
   const REQUEST_EVENT = "clipquest:youtube:tracks-request:v1";
   const RESPONSE_EVENT = "clipquest:youtube:tracks-response:v1";
   const TRANSCRIPT_WORDS =
@@ -85,20 +86,18 @@
       throw new Error("YouTube returned an unsafe caption URL.");
     }
     url.searchParams.set("fmt", "json3");
-    const response = await fetch(url, {
-      cache: "no-store",
-      credentials: "include",
-      headers: { Accept: "application/json, text/xml;q=0.8" },
-    });
+    const { response, text: body } = await boundedResponse.fetchBoundedText(
+      url,
+      {
+        cache: "no-store",
+        credentials: "include",
+        headers: { Accept: "application/json, text/xml;q=0.8" },
+      },
+      { maxBytes: core.MAX_CAPTION_BYTES, timeoutMs: 15_000 },
+    );
     if (!response.ok) {
       throw new Error(`YouTube caption download failed (${response.status}).`);
     }
-    const declaredLength = Number(response.headers.get("content-length") ?? 0);
-    if (declaredLength > core.MAX_CAPTION_BYTES) {
-      throw new Error("YouTube captions exceeded the safe size limit.");
-    }
-    const body = await response.text();
-    core.assertPayloadSize(body);
     let segments = [];
     try {
       segments = core.parseJson3(JSON.parse(body));

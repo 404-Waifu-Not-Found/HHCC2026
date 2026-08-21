@@ -206,30 +206,76 @@ export function parseBrowserTranscript(
   return { language, segments, sourceSegmentCount: rawSegments.length };
 }
 
-async function fetchBrowserTranscript(
-  videoId: string,
+async function fetchBoundedCaptionText(
+  url: string,
   signal: AbortSignal,
-): Promise<Response> {
+  options: {
+    accept: string;
+    timeoutMs: number;
+    timeoutMessage: string;
+    validateResponse(response: Response): void;
+  },
+): Promise<string> {
   const controller = new AbortController();
-  const abort = () => controller.abort(signal.reason);
-  signal.addEventListener("abort", abort, { once: true });
+  const abort = () =>
+    controller.abort(
+      signal.reason ?? new DOMException("Aborted", "AbortError"),
+    );
+  if (signal.aborted) abort();
+  else signal.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(
-    () => controller.abort(new Error("Transcript lookup timed out.")),
-    TRANSCRIPT_PROVIDER_TIMEOUT_MS,
+    () => controller.abort(new Error(options.timeoutMessage)),
+    options.timeoutMs,
   );
   try {
-    return await fetch(
-      `${TRANSCRIPT_PROVIDER_ORIGIN}/transcript/${encodeURIComponent(videoId)}.txt`,
-      {
-        signal: controller.signal,
-        cache: "no-store",
-        credentials: "omit",
-        headers: { Accept: "text/markdown, text/plain;q=0.9" },
-      },
-    );
+    const response = await fetch(url, {
+      signal: controller.signal,
+      cache: "no-store",
+      credentials: "omit",
+      headers: { Accept: options.accept },
+    });
+    try {
+      options.validateResponse(response);
+    } catch (error) {
+      await response.body?.cancel().catch(() => undefined);
+      throw error;
+    }
+    return await readBoundedCaptionResponseText(response);
   } finally {
     clearTimeout(timeout);
     signal.removeEventListener("abort", abort);
+  }
+}
+
+export async function readBoundedCaptionResponseText(
+  response: Response,
+  maximumBytes = MAX_CAPTION_BYTES,
+): Promise<string> {
+  const declaredLength = Number(response.headers.get("content-length") ?? 0);
+  if (declaredLength > maximumBytes) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error("YouTube captions exceeded the safe size limit.");
+  }
+  if (!response.body) return "";
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let receivedBytes = 0;
+  let body = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      receivedBytes += value.byteLength;
+      if (receivedBytes > maximumBytes) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error("YouTube captions exceeded the safe size limit.");
+      }
+      body += decoder.decode(value, { stream: true });
+    }
+    return body + decoder.decode();
+  } finally {
+    reader.releaseLock();
   }
 }
 
@@ -243,32 +289,34 @@ export async function downloadBrowserYouTubeTranscript(
   let lastError: unknown;
   for (let attempt = 1; attempt <= TRANSCRIPT_PROVIDER_ATTEMPTS; attempt += 1) {
     try {
-      const response = await fetchBrowserTranscript(videoId, signal);
-      if (!response.ok) {
-        throw new Error(
-          `Browser transcript lookup failed (${response.status}).`,
-        );
-      }
-      const contentType = response.headers.get("content-type")?.toLowerCase();
-      if (
-        contentType &&
-        !contentType.startsWith("text/plain") &&
-        !contentType.startsWith("text/markdown")
-      ) {
-        throw new Error(
-          "The transcript provider returned an unsafe content type.",
-        );
-      }
-      const declaredLength = Number(
-        response.headers.get("content-length") ?? 0,
+      const body = await fetchBoundedCaptionText(
+        `${TRANSCRIPT_PROVIDER_ORIGIN}/transcript/${encodeURIComponent(videoId)}.txt`,
+        signal,
+        {
+          accept: "text/markdown, text/plain;q=0.9",
+          timeoutMs: TRANSCRIPT_PROVIDER_TIMEOUT_MS,
+          timeoutMessage: "Transcript lookup timed out.",
+          validateResponse(response) {
+            if (!response.ok) {
+              throw new Error(
+                `Browser transcript lookup failed (${response.status}).`,
+              );
+            }
+            const contentType = response.headers
+              .get("content-type")
+              ?.toLowerCase();
+            if (
+              contentType &&
+              !contentType.startsWith("text/plain") &&
+              !contentType.startsWith("text/markdown")
+            ) {
+              throw new Error(
+                "The transcript provider returned an unsafe content type.",
+              );
+            }
+          },
+        },
       );
-      if (declaredLength > MAX_CAPTION_BYTES) {
-        throw new Error("YouTube captions exceeded the safe size limit.");
-      }
-      const body = await response.text();
-      if (new TextEncoder().encode(body).byteLength > MAX_CAPTION_BYTES) {
-        throw new Error("YouTube captions exceeded the safe size limit.");
-      }
       return parseBrowserTranscript(body, videoId);
     } catch (error) {
       if (signal.aborted) throw error;
@@ -294,23 +342,18 @@ export async function downloadYouTubeCaptions(
   ) {
     throw new Error("YouTube returned an invalid caption source.");
   }
-  const response = await fetch(url, {
-    signal,
-    cache: "no-store",
-    credentials: "omit",
-    headers: { Accept: "application/json" },
+  const body = await fetchBoundedCaptionText(url.href, signal, {
+    accept: "application/json",
+    timeoutMs: 15_000,
+    timeoutMessage: "YouTube caption download timed out.",
+    validateResponse(response) {
+      if (!response.ok) {
+        throw new Error(
+          `YouTube caption download failed (${response.status}).`,
+        );
+      }
+    },
   });
-  if (!response.ok) {
-    throw new Error(`YouTube caption download failed (${response.status}).`);
-  }
-  const declaredLength = Number(response.headers.get("content-length") ?? 0);
-  if (declaredLength > MAX_CAPTION_BYTES) {
-    throw new Error("YouTube captions exceeded the safe size limit.");
-  }
-  const body = await response.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_CAPTION_BYTES) {
-    throw new Error("YouTube captions exceeded the safe size limit.");
-  }
   const document = parseYouTubeTimedTextDocument(
     JSON.parse(body) as TimedTextPayload,
   );

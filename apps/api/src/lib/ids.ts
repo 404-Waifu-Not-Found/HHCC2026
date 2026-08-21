@@ -5,4 +5,3 @@ export function createId(): string {
 export function now(): number {
   return Date.now();
 }
-

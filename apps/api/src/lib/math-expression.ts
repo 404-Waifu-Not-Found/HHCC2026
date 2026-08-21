@@ -19,7 +19,7 @@ type MathToken = (
 type MathNode =
   | { kind: "atom"; value: string }
   | { kind: "negate"; value: MathNode }
-  | { kind: "add"; terms: Array<{ sign: 1 | -1; value: MathNode }> }
+  | { kind: "add"; terms: { sign: 1 | -1; value: MathNode }[] }
   | { kind: "multiply"; factors: MathNode[] }
   | { kind: "divide"; numerator: MathNode; denominator: MathNode }
   | { kind: "call"; callee: MathNode; argument: MathNode }
@@ -295,7 +295,7 @@ class MathParser {
   private parseAdd(): MathNode | null {
     const first = this.parseMultiply();
     if (!first) return null;
-    const terms: Array<{ sign: 1 | -1; value: MathNode }> = [
+    const terms: { sign: 1 | -1; value: MathNode }[] = [
       { sign: 1, value: first },
     ];
     while (this.peek("plus") || this.peek("minus")) {
@@ -519,7 +519,7 @@ function canonicalExpression(node: MathNode): string {
 function flattenSignedTerms(
   node: MathNode,
   sign: 1 | -1,
-): Array<{ sign: 1 | -1; value: MathNode }> {
+): { sign: 1 | -1; value: MathNode }[] {
   if (node.kind === "negate") {
     return flattenSignedTerms(node.value, sign === 1 ? -1 : 1);
   }

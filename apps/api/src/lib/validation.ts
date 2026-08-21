@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import type { ZodType } from "zod";
 import { ApiError } from "./errors";
+import { safeErrorName } from "./safe-error";
 
 const DEFAULT_MAX_JSON_BYTES = 1_048_576;
 
@@ -84,7 +85,14 @@ export function parseStoredJson<T>(
     if (!parsed.success) throw parsed.error;
     return parsed.data;
   } catch (error) {
-    console.error(`Invalid stored JSON for ${label}`, error);
+    console.error(
+      JSON.stringify({
+        scope: "stored_json",
+        event: "invalid",
+        label,
+        errorName: safeErrorName(error),
+      }),
+    );
     throw new ApiError(500, "corrupt_data", `${label} could not be read.`);
   }
 }

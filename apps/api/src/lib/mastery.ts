@@ -15,7 +15,8 @@ export function calculateMastery(
   input: { mode: "learn" | "review"; score: number; timestamp: number },
 ): MasterySnapshot {
   const bestScore = Math.max(current.bestScore ?? 0, input.score);
-  if (current.state === "mastered") return { ...current, bestScore, nextReviewAt: null };
+  if (current.state === "mastered")
+    return { ...current, bestScore, nextReviewAt: null };
 
   if (input.score >= 80 && !current.initialPassedAt) {
     return {

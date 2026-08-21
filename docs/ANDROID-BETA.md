@@ -46,7 +46,9 @@ Verified HTTPS App Links cover password reset, email verification, Library, and 
 
 iOS uses the same HTTPS reset and verification routes through Associated Domains. `/.well-known/apple-app-site-association` remains unavailable until `IOS_APP_LINKS_TEAM_ID` contains the Apple Developer Team ID used to sign `cc.ccwu.clipquest`. Password-reset emails always use the HTTPS origin; the app rejects custom-scheme password-reset links so an unrelated app cannot claim a security-sensitive callback.
 
-Caption and generation recovery state is account-scoped. Ambiguous pre-upgrade caches and outboxes are deleted rather than migrated, and sign-out, account deletion, or an authenticated-user change clears only that account's current private state plus unowned legacy records.
+Caption, generation recovery, and per-video quiz preferences are account-scoped. Ambiguous pre-upgrade caches, preferences, and outboxes are deleted rather than migrated. Sign-out, account deletion, or an authenticated-user change first cancels in-flight caption preparation, then clears only that account's current private state plus unowned legacy records so late work cannot restore a departing account's transcript cache.
+
+The caption-only Android beta never downloads video audio. The dormant native transcription implementation retained for iOS/future work nevertheless enforces the same 180 MiB hard media ceiling as the web path, cancels an oversized transfer, verifies the completed file size, and deletes partial files before decoding.
 
 ## Mathematics and notifications
 

@@ -2336,7 +2336,7 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
 
 function assertGroundedQuestionIdentity(
   question: LocalConceptQuizQuestion,
-  accepted: Array<{ claimKey?: string }>,
+  accepted: { claimKey?: string }[],
 ): void {
   const claimKey = question.claimKey
     ?.normalize("NFKC")
@@ -2419,7 +2419,7 @@ type QuestionQualityFlag =
 
 export function questionQualityFlags(
   question: LocalConceptQuizQuestion,
-  accepted: Array<{ concept: string }>,
+  accepted: { concept: string }[],
 ): QuestionQualityFlag[] {
   const flags: QuestionQualityFlag[] = [];
   const difficulty = structuralDifficulty(question);

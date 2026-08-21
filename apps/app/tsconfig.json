@@ -4,7 +4,6 @@
     "allowJs": true,
     "noUncheckedIndexedAccess": true,
     "strict": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     },

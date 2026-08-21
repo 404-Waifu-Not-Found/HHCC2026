@@ -138,6 +138,5 @@ const styles = StyleSheet.create({
   actionCompact: {
     width: "100%",
     minWidth: 0,
-    paddingLeft: 62,
   },
 });

@@ -67,7 +67,13 @@ libraryRouter.get("/", async (c) => {
     .all();
   const parsed = z.array(LibraryRowSchema).safeParse(result.results);
   if (!parsed.success) {
-    console.error("Invalid library rows", parsed.error);
+    console.error(
+      JSON.stringify({
+        scope: "library",
+        event: "invalid_rows",
+        issueCount: parsed.error.issues.length,
+      }),
+    );
     return c.json(
       LibraryResponseSchema.parse({
         dueReviews: [],

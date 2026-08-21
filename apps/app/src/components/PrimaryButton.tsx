@@ -5,10 +5,18 @@ import {
   Platform,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { borders, controls, motion, radii, typography } from "../theme/tokens";
+import {
+  borders,
+  breakpoints,
+  controls,
+  motion,
+  radii,
+  typography,
+} from "../theme/tokens";
 import { MotionPressable, MotionView } from "../motion/Motion";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -67,6 +75,8 @@ export function PrimaryButton({
   testID,
 }: Props) {
   const { theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const mobile = width < breakpoints.tablet;
   const [focused, setFocused] = useState(false);
   const unavailable = disabled || loading;
 
@@ -109,7 +119,13 @@ export function PrimaryButton({
   }
 
   return (
-    <View style={[styles.slot, compact && styles.slotCompact]}>
+    <View
+      style={[
+        styles.slot,
+        mobile && styles.slotMobile,
+        compact && styles.slotCompact,
+      ]}
+    >
       <MotionPressable
         testID={testID}
         accessibilityRole="button"
@@ -128,6 +144,7 @@ export function PrimaryButton({
         onBlur={() => setFocused(false)}
         style={({ pressed, hovered }) => [
           styles.button,
+          mobile && styles.buttonMobile,
           compact && styles.buttonCompact,
           {
             backgroundColor: colors.background,
@@ -176,6 +193,9 @@ const styles = StyleSheet.create({
   slot: {
     minHeight: controls.buttonHeightDesktop + borders.tactileDepth,
   },
+  slotMobile: {
+    minHeight: controls.buttonHeight + borders.tactileDepth,
+  },
   slotCompact: {
     minHeight: controls.iconTarget + borders.tactileDepth,
   },
@@ -186,6 +206,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     alignItems: "center",
     justifyContent: "center",
+  },
+  buttonMobile: {
+    minHeight: controls.buttonHeight,
+    paddingHorizontal: 18,
   },
   buttonCompact: {
     minHeight: controls.iconTarget,

@@ -9,6 +9,10 @@ import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { parseJson } from "../lib/validation";
+import {
+  fetchWithTimeout,
+  readBoundedResponseJson,
+} from "../lib/outbound-response";
 import type { ApiBindings } from "../middleware/authenticated";
 import type { AppEnv } from "../types";
 
@@ -16,6 +20,7 @@ export const pushRouter = new Hono<ApiBindings>();
 
 export const MAX_DEVICE_TOKENS_PER_USER = 5;
 const PUSH_REGISTRATIONS_PER_MINUTE = 10;
+const PUSH_RESPONSE_MAX_BYTES = 256 * 1024;
 
 export const DEVICE_TOKEN_UPSERT_SQL = `
   INSERT INTO device_tokens
@@ -150,7 +155,7 @@ type DueReviewRow = {
 };
 
 export function classifyExpoPushTickets(
-  deliveries: Array<Pick<DueReviewRow, "review_id" | "token">>,
+  deliveries: Pick<DueReviewRow, "review_id" | "token">[],
   tickets: unknown,
 ): { deliveredReviewIds: string[]; invalidTokens: string[] } | null {
   if (!Array.isArray(tickets) || tickets.length !== deliveries.length) {
@@ -200,21 +205,32 @@ export async function sendDueReviewNotifications(env: AppEnv): Promise<void> {
         : `Come back and lock in what you learned from “${row.title}.”`,
     data: { videoId: row.video_id, route: "/library" },
   }));
-  const response = await fetch("https://exp.host/--/api/v2/push/send", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Accept-Encoding": "gzip, deflate",
-      "Content-Type": "application/json",
+  const response = await fetchWithTimeout(
+    "https://exp.host/--/api/v2/push/send",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(messages),
     },
-    body: JSON.stringify(messages),
-  });
+    15_000,
+  ).catch(() => null);
+  if (!response) {
+    console.error("Expo push request timed out or failed");
+    return;
+  }
   if (!response.ok) {
     console.error("Expo push request failed", response.status);
     return;
   }
 
-  const payload = (await response.json().catch(() => null)) as {
+  const payload = (await readBoundedResponseJson(
+    response,
+    PUSH_RESPONSE_MAX_BYTES,
+  ).catch(() => null)) as {
     data?: unknown;
   } | null;
   const classified = classifyExpoPushTickets(deliveries, payload?.data);

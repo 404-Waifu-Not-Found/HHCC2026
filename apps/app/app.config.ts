@@ -86,6 +86,7 @@ const config: ExpoConfig = {
     ],
     "./plugins/withXcode26ExpoModulesCoreConcurrencyFix",
     "./plugins/withAndroidShareIntent",
+    "./plugins/withAndroidReleaseSigningGuard",
     [
       "expo-splash-screen",
       {

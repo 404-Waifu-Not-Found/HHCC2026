@@ -54,6 +54,4 @@ export async function configureLocalGenerationCredential(
 
 export async function removeLocalGenerationCredential(
   _userId: string,
-): Promise<void> {
-  openClipQuestExtensionSettings();
-}
+): Promise<void> {}

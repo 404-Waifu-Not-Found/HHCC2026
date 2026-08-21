@@ -20,6 +20,7 @@ import { authClient, useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { clearPendingVideoHandoffs } from "../../src/state/pending-video-handoff";
 import { clearAccountCreationState } from "../../src/state/creation";
+import { clearAccountAttemptState } from "../../src/state/attempt";
 import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
 import { removeLocalGenerationCredential } from "../../src/generation/local-generation-client";
 import { clearNativeGenerationOutboxes } from "../../src/generation/android-generation-outbox";
@@ -74,15 +75,18 @@ export default function SettingsScreen() {
     setError(undefined);
     try {
       const userId = session?.user.id;
-      if (userId) await disableReviewReminders(userId).catch(() => undefined);
+      if (userId && Platform.OS !== "web") {
+        await disableReviewReminders(userId);
+        await removeLocalGenerationCredential(userId);
+      }
       const result = await authClient.signOut();
       if (result.error)
         throw new Error(result.error.message ?? t("signOutFailed"));
       if (userId) cancelPreGenerationForAccount(userId);
       await Promise.allSettled([
-        userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
         userId ? clearAccountCreationState(userId) : Promise.resolve(),
+        userId ? clearAccountAttemptState(userId) : Promise.resolve(),
         clearPendingVideoHandoffs(),
       ]);
       router.replace("/(auth)/sign-in");
@@ -99,15 +103,18 @@ export default function SettingsScreen() {
     setError(undefined);
     try {
       const userId = session?.user.id;
-      if (userId) await disableReviewReminders(userId).catch(() => undefined);
+      if (userId && Platform.OS !== "web") {
+        await disableReviewReminders(userId);
+        await removeLocalGenerationCredential(userId);
+      }
       const result = await authClient.deleteUser({ password: deletePassword });
       if (result.error)
         throw new Error(result.error.message ?? t("deleteAccountFailed"));
       if (userId) cancelPreGenerationForAccount(userId);
       await Promise.allSettled([
-        userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
         userId ? clearAccountCreationState(userId) : Promise.resolve(),
+        userId ? clearAccountAttemptState(userId) : Promise.resolve(),
         clearPendingVideoHandoffs(),
       ]);
       router.replace("/(auth)/sign-in");
@@ -152,7 +159,11 @@ export default function SettingsScreen() {
       ) : null}
 
       <View style={[styles.grid, desktop && styles.gridDesktop]}>
-        <MotionView preset="from-left" delay={44} style={styles.column}>
+        <MotionView
+          preset="from-left"
+          delay={44}
+          style={[styles.column, desktop && styles.columnDesktop]}
+        >
           <SettingsSection title={t("account")} icon="people">
             <View style={styles.accountRow}>
               <View
@@ -249,7 +260,11 @@ export default function SettingsScreen() {
           </SettingsSection>
         </MotionView>
 
-        <MotionView preset="from-right" delay={88} style={styles.column}>
+        <MotionView
+          preset="from-right"
+          delay={88}
+          style={[styles.column, desktop && styles.columnDesktop]}
+        >
           <SettingsSection title={t("appearance")} icon="appearance">
             <FieldLabel>{t("theme")}</FieldLabel>
             <SegmentedControl
@@ -472,8 +487,10 @@ const styles = StyleSheet.create({
   },
   column: {
     minWidth: 0,
-    flex: 1,
     gap: spacing[5],
+  },
+  columnDesktop: {
+    flex: 1,
   },
   section: {
     padding: 0,

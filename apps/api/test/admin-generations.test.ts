@@ -350,7 +350,7 @@ describe("admin progressive generation visibility", () => {
         env,
       );
       const body = (await response.json()) as {
-        generations: Array<Record<string, unknown>>;
+        generations: Record<string, unknown>[];
         pagination: { total: number };
       };
       expect(response.status).toBe(200);

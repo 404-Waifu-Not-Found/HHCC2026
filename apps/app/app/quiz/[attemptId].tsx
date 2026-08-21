@@ -27,6 +27,7 @@ import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
+import { useAppSession } from "../../src/lib/auth-client";
 import {
   presentQuizPrompt,
   presentQuizText,
@@ -69,6 +70,8 @@ type Answer = number | boolean | number[] | string;
 
 export default function QuizScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
+  const { data: session, isPending: sessionPending } = useAppSession();
+  const userId = session?.user.id;
   const { t, theme } = useSettings();
   const [question, setQuestion] = useState<PublicQuestion>();
   const [primer, setPrimer] = useState<string | null>(null);
@@ -176,9 +179,10 @@ export default function QuizScreen() {
       setScore(undefined);
       setMastery(undefined);
       setShowCompletion(false);
-      await saveAttemptQuestion(attemptId, resumed.question);
+      if (userId)
+        await saveAttemptQuestion(userId, attemptId, resumed.question);
     },
-    [activateQuestion, attemptId, t, updateGeneration],
+    [activateQuestion, attemptId, t, updateGeneration, userId],
   );
 
   const resume = useCallback(async () => {
@@ -193,7 +197,14 @@ export default function QuizScreen() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const stored = await loadAttempt(attemptId);
+      if (!userId) {
+        if (!sessionPending) {
+          setError(t("quizResumeFailed"));
+          setLoading(false);
+        }
+        return;
+      }
+      const stored = await loadAttempt(userId, attemptId);
       if (!active) return;
       if (stored) {
         if (stored.question) activateQuestion(stored.question);
@@ -218,7 +229,7 @@ export default function QuizScreen() {
     return () => {
       active = false;
     };
-  }, [activateQuestion, attemptId, resume, t]);
+  }, [activateQuestion, attemptId, resume, sessionPending, t, userId]);
 
   useEffect(() => {
     if (!waitingForQuestions) return;
@@ -359,7 +370,8 @@ export default function QuizScreen() {
       );
       setFeedback(result);
       updateGeneration(result.generation);
-      await saveAttemptQuestion(attemptId, result.nextQuestion);
+      if (userId)
+        await saveAttemptQuestion(userId, attemptId, result.nextQuestion);
       if (result.completed) {
         setScore(result.score ?? 0);
         setMastery(result.mastery ?? "learning");
@@ -411,7 +423,7 @@ export default function QuizScreen() {
     setFeedback(undefined);
     setQuestion(undefined);
     setAnswer(undefined);
-    void saveAttemptQuestion(attemptId, null);
+    if (userId) void saveAttemptQuestion(userId, attemptId, null);
     if (feedback.generation.state !== "ready") {
       setWaitingForQuestions(true);
       setError(undefined);
@@ -514,7 +526,7 @@ export default function QuizScreen() {
                 <VoxelIcon name="next" size={20} color={theme.textOnAction} />
               }
               onPress={() => {
-                void clearAttempt(attemptId);
+                if (userId) void clearAttempt(userId, attemptId);
                 router.replace("/(tabs)/library");
               }}
             >
@@ -631,7 +643,7 @@ export default function QuizScreen() {
           <PrimaryButton
             onPress={() => {
               setShowPrimer(false);
-              void markPrimerSeen(attemptId);
+              if (userId) void markPrimerSeen(userId, attemptId);
             }}
           >
             {t("beginQuiz")}

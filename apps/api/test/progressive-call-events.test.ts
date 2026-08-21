@@ -1263,7 +1263,7 @@ describe("protocol-8 evidence-grounded call events", () => {
       .prepare(
         "SELECT protocol_version, purpose FROM quiz_generation_call_events ORDER BY call_index",
       )
-      .all() as Array<{ protocol_version: number; purpose: string }>;
+      .all() as { protocol_version: number; purpose: string }[];
     expect(events).toHaveLength(4);
     expect(events.every((event) => event.protocol_version === 8)).toBe(true);
     expect(events.every((event) => event.purpose === "generation")).toBe(true);

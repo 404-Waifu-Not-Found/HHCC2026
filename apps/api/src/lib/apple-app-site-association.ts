@@ -3,7 +3,7 @@ const TEAM_ID_PATTERN = /^[A-Z0-9]{10}$/;
 export function appleAppSiteAssociation(rawTeamId: string | undefined): {
   applinks: {
     apps: [];
-    details: Array<{ appID: string; paths: string[] }>;
+    details: { appID: string; paths: string[] }[];
   };
 } | null {
   const teamId = rawTeamId?.trim().toUpperCase();

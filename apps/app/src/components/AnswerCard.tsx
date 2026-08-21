@@ -1,11 +1,18 @@
 import { VoxelIcon } from "./VoxelIcon";
 import { MathText } from "./MathText";
 import type { ReactNode } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { FeedbackMotion, MotionPressable, MotionView } from "../motion/Motion";
 import {
   borders,
+  breakpoints,
   controls,
   motion,
   radii,
@@ -32,6 +39,8 @@ export function AnswerCard({
   leading?: ReactNode;
 }) {
   const { theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const compact = width < breakpoints.compact;
   const disabled = state === "disabled";
   const selected = state !== "default" && state !== "disabled";
   const backgroundColor =
@@ -78,6 +87,7 @@ export function AnswerCard({
         onPress={onPress}
         style={({ pressed, hovered }) => [
           styles.card,
+          compact && styles.cardCompact,
           {
             backgroundColor: disabled ? theme.surfaceSunken : backgroundColor,
             borderColor,
@@ -166,6 +176,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.large,
     paddingHorizontal: spacing[5],
     paddingVertical: spacing[4],
+  },
+  cardCompact: {
+    gap: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
   },
   index: {
     width: 34,
