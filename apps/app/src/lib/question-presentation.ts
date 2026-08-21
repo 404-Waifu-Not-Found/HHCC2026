@@ -8,6 +8,11 @@ const SOURCE_FRAMING_PREFIXES = [
     `^\\s*(?:(?:according to|based on)\\s+(?:the\\s+)?${SOURCE_NOUN}|(?:in|from)\\s+(?:(?:the|this|that)\\s+)?${SOURCE_NOUN})(?!['’]s)\\b${SAFE_DELIMITER}${SAFE_INTERROGATIVE_LOOKAHEAD}`,
     "iu",
   ),
+  new RegExp(
+    `^\\s*(?:the\\s+)?${SOURCE_NOUN}(?!['’]s)\\b\\s+(?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|supports?|describes?)\\s+(?:that\\s+)?`,
+    "iu",
+  ),
+  /^\s*(?:the\s+)?(?:evidence|reference material)(?:\s+directly|\s+clearly|\s+specifically)?\s+(?:says?|states?|shows?|supports?|describes?)\s+(?:that\s+)?/iu,
   /^\s*(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)(?:[，,:：;；\-–—]\s*|\s+(?=什么|如何|为什么|哪|谁|是否|请|解释|描述|计算|确定|定义))/u,
   /^\s*(?:在|从)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示)中(?:[，,:：;；\-–—]\s*|\s+(?=什么|如何|为什么|哪|谁|是否|请|解释|描述|计算|确定|定义))/u,
 ];
@@ -17,7 +22,7 @@ const SOURCE_FRAMING_PREFIXES = [
  * preserving the complete tested claim. Generation validation owns content
  * quality; this presentation guard also cleans older stored attempts.
  */
-export function presentQuizPrompt(value: string): string {
+export function presentQuizText(value: string): string {
   const original = value.normalize("NFC").replace(/\s+/g, " ").trim();
   for (const prefix of SOURCE_FRAMING_PREFIXES) {
     const match = original.match(prefix);
@@ -32,3 +37,5 @@ export function presentQuizPrompt(value: string): string {
   }
   return original;
 }
+
+export const presentQuizPrompt = presentQuizText;

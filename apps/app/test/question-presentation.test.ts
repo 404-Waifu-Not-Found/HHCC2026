@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { presentQuizPrompt } from "../src/lib/question-presentation";
+import {
+  presentQuizPrompt,
+  presentQuizText,
+} from "../src/lib/question-presentation";
 
 describe("quiz question presentation", () => {
   it("removes empty source framing from existing stored prompts", () => {
@@ -47,5 +50,19 @@ describe("quiz question presentation", () => {
   it("preserves incomplete attribution instead of removing a partial clause", () => {
     const prompt = "According to the lesson continuity has three conditions.";
     expect(presentQuizPrompt(prompt)).toBe(prompt);
+  });
+
+  it("uses the same bounded presenter for legacy feedback explanations", () => {
+    expect(
+      presentQuizText(
+        "The lesson says Earth is surrounded by a jacket of gases called the atmosphere.",
+      ),
+    ).toBe("Earth is surrounded by a jacket of gases called the atmosphere.");
+    expect(
+      presentQuizText("The evidence states that light carries energy."),
+    ).toBe("Light carries energy.");
+    expect(presentQuizText("The lecturer's explanation uses a limit.")).toBe(
+      "The lecturer's explanation uses a limit.",
+    );
   });
 });

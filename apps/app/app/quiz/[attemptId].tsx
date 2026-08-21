@@ -27,7 +27,10 @@ import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
-import { presentQuizPrompt } from "../../src/lib/question-presentation";
+import {
+  presentQuizPrompt,
+  presentQuizText,
+} from "../../src/lib/question-presentation";
 import {
   createChoicePresentation,
   createInitialOrdering,
@@ -611,7 +614,7 @@ export default function QuizScreen() {
     <FeedbackPanel
       status={feedback.correct ? "correct" : "incorrect"}
       title={feedback.correct ? t("correct") : t("incorrect")}
-      detail={feedback.explanation}
+      detail={presentQuizText(feedback.explanation)}
       action={
         <PrimaryButton onPress={next}>
           {feedback.completed ? t("finish") : t("next")}

@@ -988,40 +988,73 @@ export function generationAvailability(
  * authoritative grader by comparing normalized semantic tokens. Pipeline-7
  * attempts keep their historical grader for compatibility.
  */
+export type ProgressiveShortAnswerGradingPath =
+  | "atomic_exact"
+  | "formula_match"
+  | "formula_mismatch"
+  | "prose_alternative"
+  | "required_ideas"
+  | "required_idea_missing";
+
+export type ProgressiveShortAnswerDecision = {
+  correct: boolean;
+  path: ProgressiveShortAnswerGradingPath;
+};
+
+export function gradeProgressiveShortAnswerDecision(input: {
+  answer: string;
+  requiredIdeas: string[];
+  acceptableAlternatives: string[];
+}): ProgressiveShortAnswerDecision {
+  const formulaComparison = compareFormulaAnswer(
+    input.answer,
+    input.acceptableAlternatives,
+  );
+  if (formulaComparison === "match") {
+    return { correct: true, path: "formula_match" };
+  }
+  if (formulaComparison === "mismatch") {
+    return { correct: false, path: "formula_mismatch" };
+  }
+
+  const canonicalAnswer = canonicalExactAlternative(input.answer);
+  if (
+    canonicalAnswer &&
+    input.acceptableAlternatives.some(
+      (alternative) =>
+        canonicalExactAlternative(alternative) === canonicalAnswer,
+    )
+  ) {
+    return { correct: true, path: "atomic_exact" };
+  }
+
+  const normalizedAnswer = normalizeRubricText(input.answer);
+  const answerTokens = rubricTokens(input.answer);
+  if (!normalizedAnswer || answerTokens.size < 2) {
+    return { correct: false, path: "required_idea_missing" };
+  }
+
+  const matchesAlternative = input.acceptableAlternatives.some((alternative) =>
+    tokenCoverage(answerTokens, rubricTokens(alternative), 0.67),
+  );
+  if (matchesAlternative) {
+    return { correct: true, path: "prose_alternative" };
+  }
+
+  const coversRequiredIdeas = input.requiredIdeas.every((idea) =>
+    tokenCoverage(answerTokens, rubricTokens(idea), 0.5),
+  );
+  return coversRequiredIdeas
+    ? { correct: true, path: "required_ideas" }
+    : { correct: false, path: "required_idea_missing" };
+}
+
 export function gradeProgressiveShortAnswer(input: {
   answer: string;
   requiredIdeas: string[];
   acceptableAlternatives: string[];
 }): boolean {
-  const formulaComparison = compareFormulaAnswer(
-    input.answer,
-    input.acceptableAlternatives,
-  );
-  if (formulaComparison === "match") return true;
-  if (formulaComparison === "mismatch") return false;
-
-  const normalizedAnswer = normalizeRubricText(input.answer);
-  const answerTokens = rubricTokens(input.answer);
-  if (!normalizedAnswer || answerTokens.size < 2) return false;
-
-  const matchesAlternative = input.acceptableAlternatives.some(
-    (alternative) => {
-      const normalizedAlternative = normalizeRubricText(alternative);
-      if (!normalizedAlternative) return false;
-      if (
-        normalizedAnswer === normalizedAlternative ||
-        normalizedAnswer.includes(normalizedAlternative)
-      ) {
-        return true;
-      }
-      return tokenCoverage(answerTokens, rubricTokens(alternative), 0.67);
-    },
-  );
-  if (matchesAlternative) return true;
-
-  return input.requiredIdeas.every((idea) =>
-    tokenCoverage(answerTokens, rubricTokens(idea), 0.5),
-  );
+  return gradeProgressiveShortAnswerDecision(input).correct;
 }
 
 function normalizeRubricText(value: string): string {
@@ -1051,6 +1084,29 @@ function rubricTokens(value: string): Set<string> {
     if (canonical) tokens.add(canonical);
   }
   return tokens;
+}
+
+/**
+ * Canonicalize a complete answer candidate for exact equality. This is
+ * deliberately narrower than fuzzy rubric coverage: articles, harmless
+ * inflection, approved acronyms, and approved aliases may differ, but a
+ * substring or token subset is never accepted.
+ */
+function canonicalExactAlternative(value: string): string {
+  const normalized = normalizeRubricText(value);
+  const canonical: string[] = [];
+  for (const rawToken of normalized.match(/[\p{L}\p{N}]+/gu) ?? []) {
+    if (/[\u3400-\u9fff\uf900-\ufaff]/u.test(rawToken)) {
+      const meaningful = [...rawToken].filter(
+        (character) => !CJK_STOP_CHARACTERS.has(character),
+      );
+      if (meaningful.length) canonical.push(meaningful.join(""));
+      continue;
+    }
+    const token = canonicalEnglishToken(rawToken);
+    if (token) canonical.push(token);
+  }
+  return canonical.join(" ");
 }
 
 function addCjkTokens(tokens: Set<string>, value: string): void {

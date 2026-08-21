@@ -6,6 +6,7 @@ import {
   assertProgressiveChunkMetadata,
   generationAvailability,
   gradeProgressiveShortAnswer,
+  gradeProgressiveShortAnswerDecision,
   parseProgressiveQuizSummary,
   readProgressiveGenerationSnapshot,
   tryProgressiveQuizSummary,
@@ -226,6 +227,25 @@ describe("progressive quiz storage state", () => {
 });
 
 describe("progressive short-answer grading", () => {
+  it("accepts an exact atomic alternative before the two-anchor prose rule", () => {
+    const rubric = {
+      requiredIdeas: [
+        "Earth is surrounded by a jacket of gases",
+        "the jacket of gases is called the atmosphere",
+      ],
+      acceptableAlternatives: ["the atmosphere"],
+    };
+    for (const answer of ["atmosphere", "the atmosphere", "Atmosphere."]) {
+      expect(gradeProgressiveShortAnswer({ answer, ...rubric })).toBe(true);
+      expect(
+        gradeProgressiveShortAnswerDecision({ answer, ...rubric }).path,
+      ).toBe("atomic_exact");
+    }
+    for (const answer of ["gas", "Earth", "jacket"]) {
+      expect(gradeProgressiveShortAnswer({ answer, ...rubric })).toBe(false);
+    }
+  });
+
   const areaDerivativeRubric = {
     requiredIdeas: [
       "dA/dx is the ratio of a tiny change in area to a tiny change in x",
