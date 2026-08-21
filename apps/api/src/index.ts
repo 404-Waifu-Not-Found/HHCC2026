@@ -143,7 +143,7 @@ app.get("/health", (c) => {
       supportedValidatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
       rolloutMode,
       effectiveDefaultProfile: effectiveDefaultProfile.generationProfile,
-      requiredExtensionVersion: "0.8.8",
+      requiredExtensionVersion: "0.8.9",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     },
     worker: publicWorkerVersion(c.env),
