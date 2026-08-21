@@ -195,6 +195,18 @@ describe("extension generation profile compatibility", () => {
     ).toBeLessThan(admissionBlock.indexOf("schedulePendingCallFlush()"));
   });
 
+  it("treats an accepted extension progress heartbeat as dispatch proof", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/transcription/clipquest-extension.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain("if (dispatchTimeout)");
+    expect(source).toContain("authoritative proof that the handoff succeeded");
+  });
+
   it("shows retry ETA only while question one is still missing", () => {
     const source = readFileSync(
       resolve(

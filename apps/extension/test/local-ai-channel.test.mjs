@@ -120,6 +120,10 @@ test("long local generation uses a heartbeat port", () => {
   );
   assert.match(bridge, /type: "generation-call"/);
   assert.match(background, /type: "call"/);
+  assert.match(
+    background,
+    /automaticGenerationContext\(generationContext\)[\s\S]*progress\("creating_questions", 0\.2/,
+  );
   assert.doesNotMatch(popup, /chrome\.runtime\.connect/);
 });
 

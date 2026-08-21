@@ -609,6 +609,16 @@ chrome.runtime.onConnect.addListener((port) => {
           });
         };
         const generationContext = message.context;
+        if (message.context && automaticGenerationContext(generationContext)) {
+          // Prove the extension accepted the request before the shared engine
+          // performs prompt-first evidence selection. The first model-call
+          // lifecycle event is intentionally later, after that local work.
+          progress("creating_questions", 0.2, {
+            attempt: 1,
+            maxAttempts: 3,
+            status: "generating",
+          });
+        }
         // Older injected bridge scripts did not forward the request kind.
         // Cheat-sheet context is structurally distinct from quiz context, so
         // infer it here as a compatibility guard instead of routing it into
