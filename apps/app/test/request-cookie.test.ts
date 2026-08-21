@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { readNativeAuthCookie } from "../src/lib/request-cookie";
+import { readNativeAuthCookie, usesNativeAuthCookies } from "../src/lib/request-cookie";
 
 describe("readNativeAuthCookie", () => {
   it("does not touch native secure storage in browsers", () => {
@@ -11,5 +11,11 @@ describe("readNativeAuthCookie", () => {
 
   it("reads the Better Auth cookie on native platforms", () => {
     expect(readNativeAuthCookie("ios", () => "session=secret")).toBe("session=secret");
+  });
+
+  it("registers the native cookie bridge only outside the browser", () => {
+    expect(usesNativeAuthCookies("web")).toBe(false);
+    expect(usesNativeAuthCookies("ios")).toBe(true);
+    expect(usesNativeAuthCookies("android")).toBe(true);
   });
 });

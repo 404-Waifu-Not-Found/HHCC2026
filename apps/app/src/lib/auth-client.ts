@@ -3,7 +3,9 @@ import * as SecureStore from "expo-secure-store";
 import { createAuthClient } from "better-auth/react";
 import type { BetterAuthClientPlugin } from "better-auth/client";
 import { inferAdditionalFields, usernameClient } from "better-auth/client/plugins";
+import { Platform } from "react-native";
 import { API_ORIGIN } from "./config";
+import { usesNativeAuthCookies } from "./request-cookie";
 
 const nativeCookiePlugin = expoClient({
   scheme: "clipquest",
@@ -24,9 +26,9 @@ export const authClient = createAuthClient({
         },
       },
     }),
-    // Better Auth 1.6.25 exposes a valid Expo plugin at runtime, but its
-    // BetterFetch generic is narrower than the public core plugin type.
-    nativeCookiePlugin,
+    // Browsers use their ordinary same-origin cookie jar. Registering the
+    // Expo bridge on web makes it call native-only SecureStore sync methods.
+    ...(usesNativeAuthCookies(Platform.OS) ? [nativeCookiePlugin] : []),
   ],
 });
 
