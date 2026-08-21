@@ -1,25 +1,41 @@
 import {
   GenerationStageSchema,
+  GenerationFailureCodeSchema,
+  LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  LocalGenerationCallEventSchema,
   LocalConceptQuizGenerationResultSchema,
   LocalConceptQuizQuestionChunkSchema,
   LocalQuizContextSchema,
   MAX_COMPLETE_TRANSCRIPT_SEGMENTS,
   TranscriptSegmentSchema,
   type GenerationStage,
+  type GenerationFailureCode,
   type LocalConceptQuizQuestionChunk,
   type LocalConceptQuizGenerationResult,
+  type LocalGenerationCallEvent,
   type LocalQuizContext,
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import { Platform } from "react-native";
+import {
+  MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+  isCompatibleClipQuestExtensionVersion,
+} from "./extension-compat";
+
+export {
+  MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+  isCompatibleClipQuestExtensionVersion,
+  supportsQuestionStream,
+} from "./extension-compat";
 
 const CHANNEL = "clipquest:captions:v1";
 const WEBSITE_SOURCE = "clipquest-website";
 const EXTENSION_SOURCE = "clipquest-extension";
 const DETECTION_TIMEOUT_MS = 900;
 const EXTRACTION_TIMEOUT_MS = 55_000;
-export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.0";
 
 type ExtensionReadyMessage = {
   channel: typeof CHANNEL;
@@ -97,6 +113,14 @@ type ExtensionGenerationQuestionMessage = {
   result?: unknown;
 };
 
+type ExtensionGenerationCallMessage = {
+  channel: typeof CHANNEL;
+  source: typeof EXTENSION_SOURCE;
+  type: "generation-call";
+  requestId: string;
+  event?: unknown;
+};
+
 export type ClipQuestExtensionStatus =
   | { available: false }
   | {
@@ -109,38 +133,10 @@ export type ClipQuestExtensionStatus =
 export class LocalGenerationRequestError extends Error {
   constructor(
     message: string,
-    readonly reasonCode: string,
+    readonly reasonCode: GenerationFailureCode,
   ) {
     super(message);
   }
-}
-
-export function isCompatibleClipQuestExtensionVersion(
-  version: string | undefined,
-): boolean {
-  if (!version) return false;
-  const actual = version.split(".").map((part) => Number(part));
-  const required = MINIMUM_LOCAL_AI_EXTENSION_VERSION.split(".").map((part) =>
-    Number(part),
-  );
-  if (
-    actual.length < 3 ||
-    actual.some((part) => !Number.isInteger(part) || part < 0)
-  ) {
-    return false;
-  }
-  for (let index = 0; index < required.length; index += 1) {
-    const requiredPart = required[index] ?? 0;
-    if ((actual[index] ?? 0) > requiredPart) return true;
-    if ((actual[index] ?? 0) < requiredPart) return false;
-  }
-  return true;
-}
-
-export function supportsQuestionStream(
-  capabilities: readonly string[],
-): boolean {
-  return capabilities.includes(LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY);
 }
 
 function canUseExtensionBridge(): boolean {
@@ -225,6 +221,19 @@ function isGenerationQuestionMessage(
     message.channel === CHANNEL &&
     message.source === EXTENSION_SOURCE &&
     message.type === "generation-question" &&
+    typeof message.requestId === "string"
+  );
+}
+
+function isGenerationCallMessage(
+  value: unknown,
+): value is ExtensionGenerationCallMessage {
+  if (!value || typeof value !== "object") return false;
+  const message = value as Partial<ExtensionGenerationCallMessage>;
+  return (
+    message.channel === CHANNEL &&
+    message.source === EXTENSION_SOURCE &&
+    message.type === "generation-call" &&
     typeof message.requestId === "string"
   );
 }
@@ -455,20 +464,33 @@ export async function requestExtensionLocalQuiz(
     detail: LocalGenerationProgress,
   ) => void,
   onQuestion: (chunk: LocalConceptQuizQuestionChunk) => void = () => undefined,
+  onCall: (event: LocalGenerationCallEvent) => void = () => undefined,
 ): Promise<LocalConceptQuizGenerationResult> {
   const context = LocalQuizContextSchema.parse(rawContext);
+  const stableProfile = context.generationProfile !== "legacy_reasoning_v5_1";
+  const minimumExtensionVersion = stableProfile
+    ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
+    : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
+  const requiredCapability = stableProfile
+    ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+    : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
     throw new Error("ClipQuest Local AI is not installed.");
   }
-  if (!isCompatibleClipQuestExtensionVersion(extension.version)) {
+  if (
+    !isCompatibleClipQuestExtensionVersion(
+      extension.version,
+      minimumExtensionVersion,
+    )
+  ) {
     throw new Error(
-      `ClipQuest Local AI ${MINIMUM_LOCAL_AI_EXTENSION_VERSION} or newer is required for streamed questions. Download and reload the current extension.`,
+      `ClipQuest Local AI ${minimumExtensionVersion} or newer is required for streamed questions. Download and reload the current extension.`,
     );
   }
-  if (!supportsQuestionStream(extension.capabilities)) {
+  if (!extension.capabilities.includes(requiredCapability)) {
     throw new Error(
-      "Update ClipQuest Local AI. This extension does not support question-stream-v1.",
+      `Update ClipQuest Local AI. This extension does not support ${requiredCapability}.`,
     );
   }
   if (!extension.configured) {
@@ -526,6 +548,21 @@ export async function requestExtensionLocalQuiz(
         onQuestion(chunk.data);
         return;
       }
+      if (isGenerationCallMessage(event.data) && event.data.requestId === id) {
+        const call = LocalGenerationCallEventSchema.safeParse(event.data.event);
+        if (!call.success) {
+          finish(() =>
+            reject(
+              new Error(
+                "The extension returned an invalid generation call event.",
+              ),
+            ),
+          );
+          return;
+        }
+        onCall(call.data);
+        return;
+      }
       if (
         !isGenerationResultMessage(event.data) ||
         event.data.requestId !== id
@@ -540,9 +577,8 @@ export async function requestExtensionLocalQuiz(
               typeof response?.error === "string"
                 ? response.error
                 : "Local quiz generation failed.",
-              typeof response?.reasonCode === "string"
-                ? response.reasonCode
-                : "automatic_retries_exhausted",
+              GenerationFailureCodeSchema.safeParse(response?.reasonCode)
+                .data ?? "local_state_conflict",
             ),
           ),
         );

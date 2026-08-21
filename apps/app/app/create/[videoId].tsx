@@ -6,6 +6,7 @@ import {
   type VideoImportResponse,
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
+import * as Crypto from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -25,10 +26,14 @@ import { Screen } from "../../src/components/Screen";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { Surface } from "../../src/components/Surface";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { useAppSession } from "../../src/lib/auth-client";
 import {
+  loadGenerationRecord,
   loadImportedVideo,
   loadQuestPreferences,
+  saveGenerationRecord,
   saveQuestPreferences,
+  updateGenerationRecord,
 } from "../../src/state/creation";
 import {
   borders,
@@ -47,7 +52,11 @@ import {
 } from "../../src/motion/Motion";
 
 export default function CreateQuestScreen() {
-  const { videoId } = useLocalSearchParams<{ videoId: string }>();
+  const { videoId, generationId } = useLocalSearchParams<{
+    videoId: string;
+    generationId?: string;
+  }>();
+  const { data: session } = useAppSession();
   const { t, theme, locale } = useSettings();
   const { width } = useWindowDimensions();
   const [video, setVideo] = useState<VideoImportResponse>();
@@ -120,14 +129,54 @@ export default function CreateQuestScreen() {
   ).replace(/[—–]/g, "-");
   const proceed = async () => {
     blurActiveWebElement();
+    if (!session?.user.id) {
+      setError("Sign in again before creating a quiz.");
+      return;
+    }
     await saveQuestPreferences(video.video.id, {
       quizLanguage,
       questionTypes,
     });
+    const existing = generationId
+      ? await loadGenerationRecord(generationId)
+      : null;
+    const nextGenerationId = existing?.generationId ?? Crypto.randomUUID();
+    const plannedCount =
+      sessionLength === "short" ? 5 : sessionLength === "medium" ? 10 : 15;
+    if (existing) {
+      await updateGenerationRecord(nextGenerationId, {
+        quizLanguage,
+        questionTypes,
+        sessionLength,
+        watched,
+        plannedCount,
+      });
+    } else {
+      const timestamp = Date.now();
+      await saveGenerationRecord({
+        version: 2,
+        generationId: nextGenerationId,
+        generationSessionId: Crypto.randomUUID(),
+        idempotencyKey: Crypto.randomUUID(),
+        ownerUserId: session.user.id,
+        videoId: video.video.id,
+        quizLanguage,
+        questionTypes,
+        sessionLength,
+        watched,
+        acceptedCount: 0,
+        plannedCount,
+        state: "pending",
+        nextCallIndex: 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    }
     router.push({
       pathname: "/generation/[videoId]",
       params: {
         videoId: video.video.id,
+        generationId: nextGenerationId,
         watched: String(watched),
         quizLanguage,
         sessionLength,

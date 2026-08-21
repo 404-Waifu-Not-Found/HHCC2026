@@ -111,7 +111,7 @@ describe("caption word counting", () => {
 });
 
 describe("retry-aware first-question ETA", () => {
-  it("adds the actual retry delay and resets only for a new attempt", () => {
+  it("adds the actual retry delay and resets only for a new legacy attempt", () => {
     const first = updateFirstQuestionRetryEtaPhase(
       undefined,
       { attempt: 2, maxAttempts: 4, retryDelayMs: 5_000 },

@@ -52,7 +52,7 @@ import {
   StaggerItem,
 } from "../../src/motion/Motion";
 import {
-  saveGenerationState,
+  saveGenerationRecord,
   saveImportedVideo,
   saveQuestPreferences,
 } from "../../src/state/creation";
@@ -159,6 +159,10 @@ export default function HomeScreen() {
           VideoImportResponseSchema,
         );
         const idempotencyKey = importHandoff?.id ?? Crypto.randomUUID();
+        const generationId = Crypto.randomUUID();
+        const generationSessionId = Crypto.randomUUID();
+        if (!userId) throw new Error("Sign in again before creating a quiz.");
+        const timestamp = Date.now();
         void Image.prefetch(imported.video.thumbnailUrl, "memory-disk").catch(
           () => false,
         );
@@ -168,15 +172,28 @@ export default function HomeScreen() {
             quizLanguage: locale,
             questionTypes,
           }),
-          saveGenerationState(imported.video.id, {
+          saveGenerationRecord({
+            version: 2,
+            generationId,
+            generationSessionId,
             idempotencyKey,
+            ownerUserId: userId,
+            videoId: imported.video.id,
             quizLanguage: locale,
             questionTypes,
+            sessionLength: "medium",
+            watched: true,
+            acceptedCount: 0,
+            plannedCount: 10,
+            state: "pending",
+            nextCallIndex: 0,
             preworkStatus: "running",
+            createdAt: timestamp,
+            updatedAt: timestamp,
           }),
         ]);
         void preGenerateImportedQuiz(imported, {
-          idempotencyKey,
+          generationId,
           quizLanguage: locale,
           questionTypes,
         });
@@ -185,7 +202,7 @@ export default function HomeScreen() {
         setUrl("");
         router.push({
           pathname: "/create/[videoId]",
-          params: { videoId: imported.video.id },
+          params: { videoId: imported.video.id, generationId },
         });
       } catch (cause) {
         if (importHandoff && userId) {

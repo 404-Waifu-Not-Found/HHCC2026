@@ -20,6 +20,7 @@ import { FeedbackPanel } from "../../src/components/FeedbackPanel";
 import { IconButton } from "../../src/components/IconButton";
 import { LessonHeader } from "../../src/components/LessonHeader";
 import { LearningPrism } from "../../src/components/LearningPrism";
+import { MathText } from "../../src/components/MathText";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { QuestionStreamIndicator } from "../../src/components/QuestionStreamIndicator";
 import { Screen } from "../../src/components/Screen";
@@ -31,7 +32,10 @@ import {
   createInitialOrdering,
   type ChoicePresentation,
 } from "../../src/lib/quiz-order";
-import { continueProgressiveAttempt } from "../../src/generation/progressive-continuation";
+import {
+  continueProgressiveAttempt,
+  markProgressiveAttemptRequiresReclaim,
+} from "../../src/generation/progressive-continuation";
 import {
   hasActiveProgressiveGenerationForAttempt,
   publishAttemptGeneration,
@@ -247,14 +251,18 @@ export default function QuizScreen() {
           !hasActiveProgressiveGenerationForAttempt(attemptId)
         ) {
           recoveryAttemptedRef.current = true;
-          void continueProgressiveAttempt(attemptId).catch((cause) => {
-            if (!active) return;
-            setError(
-              cause instanceof Error
-                ? cause.message
-                : t("quizGenerationFailed"),
-            );
-          });
+          void markProgressiveAttemptRequiresReclaim(attemptId)
+            .then((paused) => {
+              if (active && !paused) recoveryAttemptedRef.current = false;
+            })
+            .catch((cause) => {
+              if (!active) return;
+              setError(
+                cause instanceof Error
+                  ? cause.message
+                  : t("quizGenerationFailed"),
+              );
+            });
         }
         if (status.generation.state !== "ready") {
           timeout = setTimeout(() => void poll(), 1_000);
@@ -693,12 +701,12 @@ export default function QuizScreen() {
           ) : null}
         </View>
         <MotionView preset="rise" delay={44}>
-          <Text
+          <MathText
             accessibilityRole="header"
             style={[styles.question, { color: theme.text }]}
           >
             {question.prompt}
-          </Text>
+          </MathText>
         </MotionView>
         <QuestionInput
           question={question}

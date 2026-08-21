@@ -66,10 +66,11 @@ export function countCaptionWords(
  *
  * The coefficients are a rounded, bias-corrected Huber fit from 15 real
  * Chrome runs: five captioned YouTube videos crossed with 5/10/15 questions
- * and a balanced first-question type plan. DeepSeek only receives five
- * questions in its first call, so total question count has a deliberately
- * small effect. The word term is capped at the largest measured transcript to
- * avoid pretending that this small calibration set supports extrapolation.
+ * and a balanced first-question type plan. The stable profile now requests q1
+ * alone; the small question-count coefficient is retained as the measured
+ * setup and planning effect, not as an output-batch cost. The word term is
+ * capped at the largest measured transcript to avoid extrapolating beyond the
+ * calibration set.
  */
 export function estimatedFirstQuestionDurationMs(
   input: FirstQuestionEtaInput,

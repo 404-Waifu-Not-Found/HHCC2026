@@ -11,6 +11,7 @@ import { useSettings } from "../providers/SettingsProvider";
 import {
   detectClipQuestExtension,
   isCompatibleClipQuestExtensionVersion,
+  MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
   subscribeToClipQuestExtension,
   supportsQuestionStream,
 } from "../transcription/clipquest-extension";
@@ -45,8 +46,11 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
     setStatus(
       !result.available
         ? "missing"
-        : isCompatibleClipQuestExtensionVersion(result.version) &&
-            supportsQuestionStream(result.capabilities)
+        : isCompatibleClipQuestExtensionVersion(
+              result.version,
+              MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
+            ) &&
+            supportsQuestionStream(result.capabilities, "legacy_reasoning_v5_1")
           ? "available"
           : "outdated",
     );
@@ -58,8 +62,10 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
     const unsubscribe = subscribeToClipQuestExtension(
       ({ version, capabilities }) =>
         setStatus(
-          isCompatibleClipQuestExtensionVersion(version) &&
-            supportsQuestionStream(capabilities)
+          isCompatibleClipQuestExtensionVersion(
+            version,
+            MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
+          ) && supportsQuestionStream(capabilities, "legacy_reasoning_v5_1")
             ? "available"
             : "outdated",
         ),
