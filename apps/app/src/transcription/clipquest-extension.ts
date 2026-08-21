@@ -1,4 +1,5 @@
 import {
+  CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   AutomaticRetryKindSchema,
   AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -26,6 +27,7 @@ import {
   MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_CONCEPT_FIRST_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
   isCompatibleClipQuestExtensionVersion,
@@ -531,25 +533,29 @@ export async function requestExtensionLocalQuiz(
   const minimumExtensionVersion =
     context.continuation?.resultProtocolVersion === 5
       ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
-      : context.generationProfile === "concept_first_auto_v5_8"
+      : context.generationProfile === "prompt_first_auto_v5_9"
         ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
-        : context.generationProfile === "evidence_grounded_auto_v5_4"
-          ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
-          : context.generationProfile === "stable_auto_recovery_v5_3"
-            ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
-            : context.generationProfile === "stable_non_thinking_v5_2"
-              ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
-              : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
+        : context.generationProfile === "concept_first_auto_v5_8"
+          ? MINIMUM_CONCEPT_FIRST_LOCAL_AI_EXTENSION_VERSION
+          : context.generationProfile === "evidence_grounded_auto_v5_4"
+            ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
+            : context.generationProfile === "stable_auto_recovery_v5_3"
+              ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
+              : context.generationProfile === "stable_non_thinking_v5_2"
+                ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
+                : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
   const requiredCapability =
-    context.generationProfile === "concept_first_auto_v5_8"
+    context.generationProfile === "prompt_first_auto_v5_9"
       ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-      : context.generationProfile === "evidence_grounded_auto_v5_4"
-        ? GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-        : context.generationProfile === "stable_auto_recovery_v5_3"
-          ? AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-          : context.generationProfile === "stable_non_thinking_v5_2"
-            ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-            : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
+      : context.generationProfile === "concept_first_auto_v5_8"
+        ? CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+        : context.generationProfile === "evidence_grounded_auto_v5_4"
+          ? GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+          : context.generationProfile === "stable_auto_recovery_v5_3"
+            ? AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+            : context.generationProfile === "stable_non_thinking_v5_2"
+              ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+              : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
     throw new Error("ClipQuest Local AI is not installed.");
@@ -581,7 +587,8 @@ export async function requestExtensionLocalQuiz(
     let dispatchTimeout: ReturnType<typeof setTimeout> | undefined;
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     const conceptFirst =
-      context.generationProfile === "concept_first_auto_v5_8";
+      context.generationProfile === "concept_first_auto_v5_8" ||
+      context.generationProfile === "prompt_first_auto_v5_9";
     const finish = (callback: () => void) => {
       if (settled) return;
       settled = true;

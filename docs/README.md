@@ -29,11 +29,11 @@ This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 mi
 
 ## Current source candidate
 
-The current source candidate identifies the canary as extension `0.8.13`, result protocol `9`, capability `question-stream-v6`, prompt `quiz-local-json-stream-v5.8`, validator `validator-local-progressive-v4.12`, pipeline `9`, progressive import `v7`, and profile `concept_first_auto_v5_8`. Current generation has no Automatic repair mode: validation failures use bounded automatic singleton retries, while credential and billing failures remain explicit configuration actions.
+The current source candidate is extension `0.8.14`, result protocol `10`, capability `question-stream-v7`, prompt `quiz-local-json-stream-v5.9`, validator `validator-minimal-structural-v5.0`, pipeline `9`, progressive import `v8`, and profile `prompt_first_auto_v5_9`. It has no editorial Automatic repair mode: structurally gradeable questions are accepted immediately, while only transport and unusable-output failures receive bounded automatic retries. Credential and billing failures remain explicit configuration actions.
 
-Automated regression coverage retains the 0.8.6 Run 8 recovery behavior and adds v5.7 private-evidence prompting, strict fail-closed excerpt selection, checks across every learner-visible field, distinct content-repair outcomes, bounded non-overlapping rubrics, and the observed sensory-neuron grading case with shallow-answer controls. The legacy presentation guard still preserves possessives and removes only complete anchored attribution clauses.
+Automated regression coverage retains legacy recovery and grading behavior while adding exact prompt-fingerprint/request-body checks, one-character streaming, local MC mapping, model-authored polarity, all four short-answer modes, structural-only retry classification, immutable accepted prefixes, and protocol-10 call lifecycle reconciliation.
 
-The exact candidate is pushed, deployed as a canary, and installed in Chrome. These facts do not substitute for the blocked official-origin learner matrix, so production remains canary-only until the network presents a valid ClipQuest certificate and both ten-video matrices pass.
+The source candidate is intentionally disabled by default. A commit, push, Worker deployment, matching extension installation, direct benchmark, canary matrix, and general-enablement matrix must each be verified independently before public rollout.
 
 ## QA and calibration
 

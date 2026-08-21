@@ -16,6 +16,8 @@ import {
   LocalConceptQuizResultSchema,
   LocalConceptQuizQuestionChunkSchema,
   LocalGenerationCallEventSchema,
+  MinimalGenerationFailureCodeSchema,
+  PromptFirstQuestionSchema,
   LocalQuizContextSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
@@ -66,12 +68,12 @@ describe("admin contracts", () => {
           promptVersion: "quiz-local-json-stream-v5.1",
           validatorVersion: "validator-local-progressive-v4.0",
           rolloutMode: "disabled",
-          supportedProfile: "concept_first_auto_v5_8",
-          supportedPromptVersion: "quiz-local-json-stream-v5.8",
-          supportedValidatorVersion: "validator-local-progressive-v4.12",
+          supportedProfile: "prompt_first_auto_v5_9",
+          supportedPromptVersion: "quiz-local-json-stream-v5.9",
+          supportedValidatorVersion: "validator-minimal-structural-v5.0",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.13",
-          requiredCapability: "question-stream-v6",
+          requiredExtensionVersion: "0.8.14",
+          requiredCapability: "question-stream-v7",
           states: {
             generating: 1,
             retrying: 2,
@@ -856,6 +858,43 @@ describe("generated questions", () => {
         acceptedCount: 1,
         outcome: "complete",
         elapsedMs: 900,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts protocol-10 prompt-first questions and only minimal failure telemetry", () => {
+    expect(
+      PromptFirstQuestionSchema.safeParse({
+        type: "multiple_choice",
+        concept: "atmospheric composition",
+        question: "What surrounds Earth?",
+        explanation: "A layer of gases surrounds Earth.",
+        correctAnswer: "the atmosphere",
+        distractors: ["the crust", "the mantle", "the core"],
+      }).success,
+    ).toBe(true);
+    expect(
+      MinimalGenerationFailureCodeSchema.safeParse("source_framing_invalid")
+        .success,
+    ).toBe(false);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        protocolVersion: 10,
+        purpose: "generation",
+        lifecycleState: "completed",
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        recoverySessionId: "33333333-3333-4333-8333-333333333333",
+        callIndex: 1,
+        startIndex: 0,
+        ordinalAttempt: 2,
+        requestedCount: 1,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "structural",
+        outcome: "choice_structure_invalid",
+        retryDelayMs: 200,
+        elapsedMs: 500,
+        usageComplete: false,
       }).success,
     ).toBe(true);
   });

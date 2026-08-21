@@ -22,22 +22,25 @@ import {
 import { formulaFingerprint } from "./math-expression.js";
 
 const MODEL = "deepseek-v4-flash";
-const PROTOCOL_VERSION = 9;
+const PROTOCOL_VERSION = 10;
+const CONCEPT_FIRST_PROTOCOL_VERSION = 9;
 const GROUNDED_PROTOCOL_VERSION = 8;
 const PIPELINE_VERSION = 9;
-const PROMPT_VERSION = "quiz-local-json-stream-v5.8";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.12";
-const IMPORT_VERSION = "extension-progressive-import-v7";
-const GENERATION_PROFILE = "concept_first_auto_v5_8";
+const PROMPT_VERSION = "quiz-local-json-stream-v5.9";
+const VALIDATOR_VERSION = "validator-minimal-structural-v5.0";
+const IMPORT_VERSION = "extension-progressive-import-v8";
+const GENERATION_PROFILE = "prompt_first_auto_v5_9";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
 const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 4;
 const MAX_CONTENT_RETRIES_PER_ORDINAL = 4;
+const MAX_STRUCTURAL_RETRIES_PER_ORDINAL = 2;
 const MAX_V5_3_AUTOMATIC_RETRIES = 12;
 const MAX_V5_4_AUTOMATIC_RETRIES = 48;
 const MAX_V5_6_AUTOMATIC_RETRIES = 12;
 const MAX_V5_8_AUTOMATIC_RETRIES = 48;
+const MAX_V5_9_AUTOMATIC_RETRIES = 30;
 const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 12;
 const MAX_ACTIVE_RECOVERY_MS = 15 * 60 * 1_000;
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
@@ -115,6 +118,14 @@ function normalize(value) {
     .normalize("NFKC")
     .toLocaleLowerCase("en-US")
     .replace(/[\p{P}\p{S}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeStructuralChoice(value) {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -664,6 +675,177 @@ function conceptFirstExampleQuestion(type, id) {
   };
 }
 
+export const PROMPT_FIRST_SYSTEM_PROMPT = `You create one self-contained educational quiz question from the supplied instructional evidence. Use only facts supported by that evidence. Test the underlying definition, condition, relationship, mechanism, method, formula, or application—not the recording or its presentation. Write the question and explanation directly, without mentioning a lesson, video, transcript, source, evidence, speaker, or presenter. Do not test course logistics, exam information, biographies, introductions, promotions, incidental statistics, jokes, analogies, or recording metadata. Avoid double negatives, trick wording, vague answers, and questions whose answer is already contained in the stem. The question must have one clearly correct answer and remain meaningful when shown by itself. Follow the requested question-type schema exactly and return JSON only.`;
+
+function promptFirstQuestionSchemaForType(type) {
+  const common = {
+    type: { const: type },
+    concept: { type: "string" },
+    question: { type: "string" },
+    explanation: { type: "string" },
+  };
+  if (type === "multiple_choice") {
+    return {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "type",
+        "concept",
+        "question",
+        "explanation",
+        "correctAnswer",
+        "distractors",
+      ],
+      properties: {
+        ...common,
+        correctAnswer: { type: "string" },
+        distractors: {
+          type: "array",
+          minItems: 3,
+          maxItems: 3,
+          items: { type: "string" },
+        },
+      },
+    };
+  }
+  if (type === "true_false") {
+    return {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "type",
+        "concept",
+        "question",
+        "explanation",
+        "answer",
+        "correction",
+      ],
+      properties: {
+        ...common,
+        answer: { type: "boolean" },
+        correction: { type: "string" },
+      },
+    };
+  }
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "type",
+      "concept",
+      "question",
+      "explanation",
+      "answer",
+      "gradingMode",
+    ],
+    properties: {
+      ...common,
+      answer: { type: "string" },
+      gradingMode: {
+        enum: ["atomic_term", "proposition", "enumeration", "formula"],
+      },
+      acceptableAnswers: {
+        type: "array",
+        maxItems: 8,
+        items: { type: "string" },
+      },
+      requiredItems: {
+        type: "array",
+        maxItems: 8,
+        items: { type: "string" },
+      },
+      formulaTokens: {
+        type: "array",
+        minItems: 1,
+        maxItems: 96,
+        items: formulaTokenSchema(),
+      },
+    },
+  };
+}
+
+function promptFirstExampleQuestion(type, polarity) {
+  const common = {
+    type,
+    concept: "energy transfer",
+    question: "How does the process transfer energy between the two states?",
+    explanation:
+      "The process moves energy from the initial state to the resulting state.",
+  };
+  if (type === "multiple_choice") {
+    return {
+      ...common,
+      correctAnswer: "It moves energy from the initial state to the result.",
+      distractors: [
+        "It prevents all energy transfer.",
+        "It creates matter without using energy.",
+        "It leaves both states unchanged.",
+      ],
+    };
+  }
+  if (type === "true_false") {
+    const answer = polarity !== false;
+    return {
+      ...common,
+      question: answer
+        ? "The process transfers energy between the two states."
+        : "The process prevents energy from moving between the two states.",
+      answer,
+      correction: "The process transfers energy between the two states.",
+    };
+  }
+  return {
+    ...common,
+    question: "What term identifies the transfer between the two states?",
+    answer: "energy transfer",
+    gradingMode: "atomic_term",
+    acceptableAnswers: [],
+    requiredItems: [],
+  };
+}
+
+function generationMessagesV59(input) {
+  const type = input.questionTypePlan[0];
+  const ordinal = input.questionOffset + 1;
+  const objective = objectiveCategoryForOrdinal(type, ordinal);
+  const polarity = input.trueFalseAnswerPlan[0];
+  const accepted = input.acceptedQuestions.length
+    ? input.acceptedQuestions
+        .map(
+          (question) =>
+            `${question.id}: ${question.type}; ${question.concept}; ${question.question}`,
+        )
+        .join("\n")
+    : "none";
+  const typeInstruction =
+    type === "multiple_choice"
+      ? "Return a direct question, one correctAnswer, exactly three unique plausible distractors, a concept label, and a direct explanation. Distractors must be wrong under the supplied evidence and must not be aliases of the correct answer. Do not return choices or an answer index; ClipQuest constructs and shuffles them locally."
+      : type === "true_false"
+        ? `Return the final learner-visible statement, answer=${String(polarity)}, a corrected true statement, a concept label, and a direct explanation. Match the requested polarity. Never create a false statement by merely inserting not, never, without, or a double negative. A false statement must change one meaningful relationship, condition, direction, component, or sequence.`
+        : "Return a direct question, a concise canonical answer, gradingMode, optional acceptableAnswers, requiredItems, a concept label, and a direct explanation. Use atomic_term for one term, proposition for a relationship or mechanism, enumeration for an explicit list, and formula for mathematical notation. Do not split one idea into artificial rubric requirements.";
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["questions"],
+    properties: {
+      questions: {
+        type: "array",
+        minItems: 1,
+        maxItems: 1,
+        prefixItems: [promptFirstQuestionSchemaForType(type)],
+        items: false,
+      },
+    },
+  };
+  return [
+    { role: "system", content: PROMPT_FIRST_SYSTEM_PROMPT },
+    {
+      role: "user",
+      content: `Topic hint: ${input.title}\nQuiz language: ${input.quizLanguage}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Preferred objective: ${objective}.${type === "true_false" ? ` Required answer polarity: ${String(polarity)}.` : ""}\n\nInstructional evidence:\n${input.focusExcerpt}\n\nAlready accepted questions and concepts:\n${accepted}\n\nType requirements:\n${typeInstruction}\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example:\n${JSON.stringify({ questions: [promptFirstExampleQuestion(type, polarity)] })}\n\nReturn JSON only.`,
+    },
+  ];
+}
+
 function objectiveCategoryForOrdinal(type, ordinal) {
   if (type === "short_answer" && ordinal % 5 === 4) return "formula";
   return CONCEPT_FIRST_OBJECTIVE_CATEGORIES[
@@ -751,6 +933,9 @@ Begin with {"questions":[ and return no Markdown or text outside JSON.`;
 }
 
 function generationMessages(input, isTransientRetry) {
+  if (input.promptFirstV59Mode) {
+    return generationMessagesV59(input);
+  }
   if (input.conceptFirstV58Mode) {
     return generationMessagesV58(input, isTransientRetry);
   }
@@ -873,6 +1058,7 @@ export function normalizeGeneratedQuestion(
     groundedMode = false,
     conceptMasteryMode = false,
     conceptFirstV58Mode = false,
+    promptFirstV59Mode = false,
   } = {},
 ) {
   if (
@@ -936,21 +1122,25 @@ export function normalizeGeneratedQuestion(
         : [];
       const correctAnswer =
         cleanString(
-          conceptFirstV58Mode
-            ? rawQuestion.answerText
-            : rawQuestion.correctAnswer,
+          promptFirstV59Mode
+            ? rawQuestion.correctAnswer
+            : conceptFirstV58Mode
+              ? rawQuestion.answerText
+              : rawQuestion.correctAnswer,
         ) ?? (legacyMatches.length === 1 ? legacyMatches[0] : undefined);
       const distractors = Array.isArray(rawQuestion.distractors)
-        ? groundedMode
-          ? rawQuestion.distractors.map((entry) =>
-              entry && typeof entry === "object" && !Array.isArray(entry)
-                ? {
-                    text: cleanString(entry.text),
-                    whyWrong: cleanString(entry.whyWrong),
-                  }
-                : entry,
-            )
-          : cleanStringArray(rawQuestion.distractors)
+        ? promptFirstV59Mode
+          ? cleanStringArray(rawQuestion.distractors)
+          : groundedMode
+            ? rawQuestion.distractors.map((entry) =>
+                entry && typeof entry === "object" && !Array.isArray(entry)
+                  ? {
+                      text: cleanString(entry.text),
+                      whyWrong: cleanString(entry.whyWrong),
+                    }
+                  : entry,
+              )
+            : cleanStringArray(rawQuestion.distractors)
         : Array.isArray(legacyChoices) && correctAnswer
           ? legacyChoices.filter(
               (choice) => normalize(choice) !== normalize(correctAnswer),
@@ -979,6 +1169,17 @@ export function normalizeGeneratedQuestion(
     return { ...common, choices, answerIndex, answer };
   }
   if (type === "true_false") {
+    if (promptFirstV59Mode) {
+      let answer = rawQuestion.answer;
+      if (typeof answer === "string" && /^(true|false)$/i.test(answer)) {
+        answer = answer.toLocaleLowerCase("en-US") === "true";
+      }
+      return {
+        ...common,
+        answer,
+        correction: cleanString(rawQuestion.correction),
+      };
+    }
     if (groundedMode) {
       if (conceptFirstV58Mode) {
         const supportedFact = cleanString(rawQuestion.supportedFact);
@@ -1020,6 +1221,19 @@ export function normalizeGeneratedQuestion(
     };
   }
   if (type === "short_answer") {
+    if (promptFirstV59Mode) {
+      return {
+        ...common,
+        shortAnswerMode: cleanString(rawQuestion.gradingMode),
+        answer: cleanString(rawQuestion.answer),
+        acceptableAnswers: cleanStringArray(
+          rawQuestion.acceptableAnswers,
+          true,
+        ),
+        requiredItems: cleanStringArray(rawQuestion.requiredItems, true),
+        formulaTokens: normalizeFormulaTokens(rawQuestion.formulaTokens),
+      };
+    }
     if (conceptFirstV58Mode) {
       return {
         ...common,
@@ -1528,6 +1742,118 @@ function conceptFirstShortAnswerCandidate(question, focusExcerpt) {
   validationFailure(
     "The short-answer mode is invalid.",
     "short_atomic_invalid",
+  );
+}
+
+function promptFirstShortAnswerCandidate(question) {
+  const mode = question.shortAnswerMode;
+  const answer = String(question.answer ?? "")
+    .normalize("NFC")
+    .trim();
+  const rawAcceptableAnswers = Array.isArray(question.acceptableAnswers)
+    ? question.acceptableAnswers
+    : [];
+  const rawRequiredItems = Array.isArray(question.requiredItems)
+    ? question.requiredItems
+    : [];
+  if (
+    rawAcceptableAnswers.length > 8 ||
+    rawAcceptableAnswers.some((value) => !nonEmptyString(value, 1_000)) ||
+    rawRequiredItems.length > 8 ||
+    rawRequiredItems.some((value) => !nonEmptyString(value, 300))
+  ) {
+    validationFailure(
+      "The short-answer grading fields exceed their structural limits.",
+      "schema_invalid",
+    );
+  }
+  const acceptableAnswers = uniqueNormalizedStrings(
+    rawAcceptableAnswers,
+  ).filter((value) => normalize(value) !== normalize(answer));
+  if (!nonEmptyString(answer, 1_000)) {
+    validationFailure("The short answer is missing.", "schema_invalid");
+  }
+  const common = {
+    id: question.id,
+    type: question.type,
+    concept: question.concept,
+    question: question.question,
+    explanation: question.explanation,
+    answer,
+    shortAnswerMode: mode,
+  };
+  if (mode === "atomic_term") {
+    return {
+      ...common,
+      rubricIdeas: [answer],
+      acceptableAnswers,
+      rubricV2: {
+        version: 2,
+        mode,
+        canonicalAnswer: answer,
+        aliases: acceptableAnswers,
+      },
+    };
+  }
+  if (mode === "proposition") {
+    return {
+      ...common,
+      rubricIdeas: [answer],
+      acceptableAnswers,
+      rubricV2: {
+        version: 2,
+        mode,
+        requiredIdeas: [answer],
+        acceptableAnswers: [answer, ...acceptableAnswers],
+      },
+    };
+  }
+  if (mode === "enumeration") {
+    const requiredItems = uniqueNormalizedStrings(rawRequiredItems);
+    if (requiredItems.length < 2 || requiredItems.length > 8) {
+      validationFailure(
+        "The enumeration requires between two and eight items.",
+        "schema_invalid",
+      );
+    }
+    return {
+      ...common,
+      rubricIdeas: requiredItems,
+      acceptableAnswers,
+      rubricV2: {
+        version: 2,
+        mode,
+        requiredItems,
+        requiredCardinality: requiredItems.length,
+        aliasesByItem: requiredItems.map(() => []),
+      },
+    };
+  }
+  if (mode === "formula") {
+    const serializedFormula =
+      serializeFormulaTokens(question.formulaTokens) || answer;
+    if (!formulaFingerprint(serializedFormula)) {
+      validationFailure(
+        "The formula structure is invalid.",
+        "formula_structure_invalid",
+      );
+    }
+    return {
+      ...common,
+      answer: serializedFormula,
+      rubricIdeas: [serializedFormula],
+      acceptableAnswers,
+      rubricV2: {
+        version: 2,
+        mode,
+        canonicalFormula: serializedFormula,
+        acceptableFormulas: acceptableAnswers,
+      },
+    };
+  }
+  validationFailure(
+    "The short-answer grading mode is invalid.",
+    "schema_invalid",
   );
 }
 
@@ -2061,6 +2387,106 @@ function validateQuiz(quiz, input) {
     return question;
   });
   return { title: input.title, questions };
+}
+
+function validatePromptFirstQuiz(quiz, input) {
+  if (
+    !quiz ||
+    typeof quiz !== "object" ||
+    Array.isArray(quiz) ||
+    !Array.isArray(quiz.questions) ||
+    quiz.questions.length !== 1
+  ) {
+    validationFailure(
+      "DeepSeek must return exactly one question.",
+      "truncated_json",
+    );
+  }
+  const rawQuestion = quiz.questions[0];
+  if (
+    !rawQuestion ||
+    typeof rawQuestion !== "object" ||
+    Array.isArray(rawQuestion)
+  ) {
+    validationFailure("DeepSeek returned an invalid question object.");
+  }
+  const expectedType = input.questionTypePlan[0];
+  const expectedId = `q${input.questionOffset + 1}`;
+  const question = normalizeGeneratedQuestion(rawQuestion, {
+    expectedId,
+    automaticMode: true,
+    promptFirstV59Mode: true,
+  });
+  if (question.type !== expectedType) {
+    validationFailure(
+      "DeepSeek returned the wrong singleton question type.",
+      "type_or_order_mismatch",
+    );
+  }
+  if (
+    !nonEmptyString(question.concept, 200) ||
+    !nonEmptyString(question.question, 700) ||
+    !nonEmptyString(question.explanation, 1_500)
+  ) {
+    validationFailure("The question is missing a required field.");
+  }
+  if (question.type === "multiple_choice") {
+    const correctAnswer = question.correctAnswer;
+    const distractors = question.distractors;
+    const choices = [
+      correctAnswer,
+      ...(Array.isArray(distractors) ? distractors : []),
+    ];
+    if (
+      !nonEmptyString(correctAnswer, 500) ||
+      !Array.isArray(distractors) ||
+      distractors.length !== 3 ||
+      choices.some((choice) => !nonEmptyString(choice, 500)) ||
+      new Set(choices.map(normalizeStructuralChoice)).size !== 4
+    ) {
+      validationFailure(
+        "Multiple choice requires one answer and three unique distractors.",
+        "choice_structure_invalid",
+      );
+    }
+    return [
+      {
+        id: expectedId,
+        type: question.type,
+        concept: question.concept,
+        question: question.question,
+        explanation: question.explanation,
+        choices,
+        answerIndex: 0,
+        answer: correctAnswer,
+      },
+    ];
+  }
+  if (question.type === "true_false") {
+    const expectedPolarity = input.trueFalseAnswerPlan[0];
+    if (
+      typeof question.answer !== "boolean" ||
+      question.answer !== expectedPolarity ||
+      !nonEmptyString(question.correction, 700)
+    ) {
+      validationFailure(
+        "True or false output does not match the requested polarity.",
+        "polarity_mismatch",
+      );
+    }
+    return [
+      {
+        id: expectedId,
+        type: question.type,
+        concept: question.concept,
+        question: question.question,
+        explanation: question.explanation,
+        answer: question.answer,
+        correction: question.correction,
+      },
+    ];
+  }
+  return [promptFirstShortAnswerCandidate(question)];
 }
 
 function validateQuestionTypes(questionTypes) {
@@ -2841,18 +3267,32 @@ export async function generateQuizFromPlainText(
     !stableV52Mode &&
     !automaticV53Mode &&
     input.continuation?.promptVersion === "quiz-local-json-stream-v5.7";
+  const promptFirstV59Mode =
+    !legacyMode &&
+    !stableV52Mode &&
+    !automaticV53Mode &&
+    (rawInput?.generationProfile === "prompt_first_auto_v5_9" ||
+      input.continuation?.promptVersion === "quiz-local-json-stream-v5.9");
   const conceptFirstV58Mode =
     !legacyMode &&
     !stableV52Mode &&
     !automaticV53Mode &&
+    !promptFirstV59Mode &&
     (rawInput?.generationProfile === "concept_first_auto_v5_8" ||
       input.continuation?.promptVersion === "quiz-local-json-stream-v5.8");
-  const currentConceptFirstPromptFingerprint = conceptFirstV58Mode
-    ? await sha256Hex(CONCEPT_FIRST_SYSTEM_PROMPT)
-    : undefined;
+  const currentConceptFirstPromptFingerprint =
+    promptFirstV59Mode || conceptFirstV58Mode
+      ? await sha256Hex(
+          promptFirstV59Mode
+            ? PROMPT_FIRST_SYSTEM_PROMPT
+            : CONCEPT_FIRST_SYSTEM_PROMPT,
+        )
+      : undefined;
   if (
     continuationStartIndex > 0 &&
-    input.continuation?.promptVersion === "quiz-local-json-stream-v5.8" &&
+    ["quiz-local-json-stream-v5.8", "quiz-local-json-stream-v5.9"].includes(
+      input.continuation?.promptVersion,
+    ) &&
     input.continuation?.promptFingerprint !==
       currentConceptFirstPromptFingerprint
   ) {
@@ -2882,13 +3322,18 @@ export async function generateQuizFromPlainText(
     !groundedV55Mode &&
     !groundedV56Mode;
   input.conceptFirstV58Mode = conceptFirstV58Mode;
+  input.promptFirstV59Mode = promptFirstV59Mode;
   input.legacyAutomaticRecoveryMode = legacyAutomaticRecoveryMode;
-  const conceptFirstSelection = conceptFirstV58Mode
-    ? buildConceptFirstInstructionalSelection(input.plainText, {
-        topicHint: input.title,
-      })
-    : null;
+  const conceptFirstSelection =
+    promptFirstV59Mode || conceptFirstV58Mode
+      ? buildConceptFirstInstructionalSelection(input.plainText, {
+          topicHint: input.title,
+        })
+      : null;
   input.sourceSelectionMetrics = conceptFirstSelection?.metrics;
+  input.promptFirstEvidenceWindows = promptFirstV59Mode
+    ? (conceptFirstSelection?.excerpts ?? [])
+    : undefined;
   if (
     input.conceptMasteryMode &&
     (conceptFirstSelection
@@ -2900,7 +3345,11 @@ export async function generateQuizFromPlainText(
   ) {
     throw new GenerationFailure(
       "This source does not contain enough transferable instructional content for a concept quiz.",
-      input.strictConceptMode ? "non_instructional_source" : "schema_invalid",
+      promptFirstV59Mode
+        ? "source_unavailable"
+        : input.strictConceptMode
+          ? "non_instructional_source"
+          : "schema_invalid",
     );
   }
   const selectedTypes = validateQuestionTypes(input.questionTypes);
@@ -3035,7 +3484,7 @@ export async function generateQuizFromPlainText(
             recoverySessionId: input.recoverySessionId,
             questionPlan,
           }
-        : conceptFirstV58Mode
+        : promptFirstV59Mode
           ? {
               protocolVersion: PROTOCOL_VERSION,
               pipelineVersion: PIPELINE_VERSION,
@@ -3051,36 +3500,52 @@ export async function generateQuizFromPlainText(
               questionPlan,
               promptFingerprint: currentConceptFirstPromptFingerprint,
             }
-          : {
-              protocolVersion: GROUNDED_PROTOCOL_VERSION,
-              pipelineVersion: PIPELINE_VERSION,
-              model: MODEL,
-              reasoningEffort: "none",
-              promptVersion: groundedV54Mode
-                ? "quiz-local-json-stream-v5.4"
-                : groundedV55Mode
-                  ? "quiz-local-json-stream-v5.5"
-                  : groundedV56Mode
-                    ? "quiz-local-json-stream-v5.6"
-                    : groundedV57Mode
-                      ? "quiz-local-json-stream-v5.7"
-                      : "quiz-local-json-stream-v5.7",
-              validatorVersion: groundedV54Mode
-                ? "validator-local-progressive-v4.3"
-                : groundedV55Mode
-                  ? "validator-local-progressive-v4.4"
-                  : groundedV56Mode
-                    ? "validator-local-progressive-v4.5"
-                    : groundedV57Mode
-                      ? "validator-local-progressive-v4.6"
-                      : "validator-local-progressive-v4.6",
-              importVersion: "extension-progressive-import-v6",
-              generationProfile: "evidence_grounded_auto_v5_4",
-              generationId: input.generationId,
-              generationSessionId: input.generationSessionId,
-              recoverySessionId: input.recoverySessionId,
-              questionPlan,
-            };
+          : conceptFirstV58Mode
+            ? {
+                protocolVersion: CONCEPT_FIRST_PROTOCOL_VERSION,
+                pipelineVersion: PIPELINE_VERSION,
+                model: MODEL,
+                reasoningEffort: "none",
+                promptVersion: "quiz-local-json-stream-v5.8",
+                validatorVersion: "validator-local-progressive-v4.12",
+                importVersion: "extension-progressive-import-v7",
+                generationProfile: "concept_first_auto_v5_8",
+                generationId: input.generationId,
+                generationSessionId: input.generationSessionId,
+                recoverySessionId: input.recoverySessionId,
+                questionPlan,
+                promptFingerprint: currentConceptFirstPromptFingerprint,
+              }
+            : {
+                protocolVersion: GROUNDED_PROTOCOL_VERSION,
+                pipelineVersion: PIPELINE_VERSION,
+                model: MODEL,
+                reasoningEffort: "none",
+                promptVersion: groundedV54Mode
+                  ? "quiz-local-json-stream-v5.4"
+                  : groundedV55Mode
+                    ? "quiz-local-json-stream-v5.5"
+                    : groundedV56Mode
+                      ? "quiz-local-json-stream-v5.6"
+                      : groundedV57Mode
+                        ? "quiz-local-json-stream-v5.7"
+                        : "quiz-local-json-stream-v5.7",
+                validatorVersion: groundedV54Mode
+                  ? "validator-local-progressive-v4.3"
+                  : groundedV55Mode
+                    ? "validator-local-progressive-v4.4"
+                    : groundedV56Mode
+                      ? "validator-local-progressive-v4.5"
+                      : groundedV57Mode
+                        ? "validator-local-progressive-v4.6"
+                        : "validator-local-progressive-v4.6",
+                importVersion: "extension-progressive-import-v6",
+                generationProfile: "evidence_grounded_auto_v5_4",
+                generationId: input.generationId,
+                generationSessionId: input.generationSessionId,
+                recoverySessionId: input.recoverySessionId,
+                questionPlan,
+              };
 
   if (automaticMode) {
     return generateAutomaticQuiz({
@@ -3402,7 +3867,8 @@ async function generateAutomaticQuiz({
       : [],
   );
   const historicalRetryKind =
-    automaticRetryKindForFailure(previousOutcome) ?? "automatic_resume";
+    automaticRetryKindForFailure(previousOutcome, input.promptFirstV59Mode) ??
+    "automatic_resume";
   let lastFailureReason = previousOutcome;
   let lastRepairContext;
   let retryKind =
@@ -3416,13 +3882,15 @@ async function generateAutomaticQuiz({
   const cycleRetriesByOrdinalAndClass = new Map();
   const totalAutomaticRetryLimit = input.legacyAutomaticRecoveryMode
     ? MAX_V5_6_AUTOMATIC_RETRIES
-    : input.conceptFirstV58Mode
-      ? MAX_V5_8_AUTOMATIC_RETRIES
-      : input.rawConceptValidationMode
-        ? MAX_V5_6_AUTOMATIC_RETRIES
-        : input.groundedMode
-          ? MAX_V5_4_AUTOMATIC_RETRIES
-          : MAX_V5_3_AUTOMATIC_RETRIES;
+    : input.promptFirstV59Mode
+      ? MAX_V5_9_AUTOMATIC_RETRIES
+      : input.conceptFirstV58Mode
+        ? MAX_V5_8_AUTOMATIC_RETRIES
+        : input.rawConceptValidationMode
+          ? MAX_V5_6_AUTOMATIC_RETRIES
+          : input.groundedMode
+            ? MAX_V5_4_AUTOMATIC_RETRIES
+            : MAX_V5_3_AUTOMATIC_RETRIES;
   let lastChunkAt = initialLastChunkAt;
 
   while (acceptedQuestions.length < input.questionCount) {
@@ -3478,34 +3946,36 @@ async function generateAutomaticQuiz({
         questionOffset + 1,
       ),
       acceptedQuestions: [...acceptedQuestions],
-      repairGuidance: retryGuidanceFor(
-        callRetryKind,
-        acceptedQuestions,
-        lastFailureReason,
-      ),
-      repairContext: lastRepairContext,
-      focusExcerpt: focusExcerptForOrdinal(
-        input.plainText,
-        questionOffset,
-        input.questionCount,
-        Math.max(
-          0,
-          ordinalAttempt -
-            (input.strictConceptMode &&
-            [
-              "source_framing_invalid",
-              "rubric_invalid",
-              "quiz_language_mismatch",
-            ].includes(lastFailureReason)
-              ? 2
-              : 1),
-        ),
-        {
-          strict: input.strictConceptMode === true,
-          conceptFirstV58: input.conceptFirstV58Mode === true,
-          topicHint: input.title,
-        },
-      ),
+      repairGuidance: input.promptFirstV59Mode
+        ? undefined
+        : retryGuidanceFor(callRetryKind, acceptedQuestions, lastFailureReason),
+      repairContext: input.promptFirstV59Mode ? undefined : lastRepairContext,
+      focusExcerpt: input.promptFirstV59Mode
+        ? input.promptFirstEvidenceWindows[
+            questionOffset % input.promptFirstEvidenceWindows.length
+          ]
+        : focusExcerptForOrdinal(
+            input.plainText,
+            questionOffset,
+            input.questionCount,
+            Math.max(
+              0,
+              ordinalAttempt -
+                (input.strictConceptMode &&
+                [
+                  "source_framing_invalid",
+                  "rubric_invalid",
+                  "quiz_language_mismatch",
+                ].includes(lastFailureReason)
+                  ? 2
+                  : 1),
+            ),
+            {
+              strict: input.strictConceptMode === true,
+              conceptFirstV58: input.conceptFirstV58Mode === true,
+              topicHint: input.title,
+            },
+          ),
     };
     const maximumAttempts = retryLimitForKind(retryKind) + 1;
     onProgress(
@@ -3528,7 +3998,9 @@ async function generateAutomaticQuiz({
     );
 
     const callStartedAt = Date.now();
-    const lifecycleEnabled = metadata.protocolVersion === PROTOCOL_VERSION;
+    const lifecycleEnabled =
+      metadata.protocolVersion === PROTOCOL_VERSION ||
+      metadata.protocolVersion === CONCEPT_FIRST_PROTOCOL_VERSION;
     let outcome = "complete";
     let retryDelayMs = 0;
     let callFailure;
@@ -3549,7 +4021,14 @@ async function generateAutomaticQuiz({
           "type_or_order_mismatch",
         );
       }
-      const validated = validateQuiz({ questions: [rawQuestion] }, chunkInput);
+      const validated = input.promptFirstV59Mode
+        ? {
+            questions: validatePromptFirstQuiz(
+              { questions: [rawQuestion] },
+              chunkInput,
+            ),
+          }
+        : validateQuiz({ questions: [rawQuestion] }, chunkInput);
       publishedQuestionFingerprint = JSON.stringify(rawQuestion);
       const question = randomizeQuestionAtPosition(
         validated.questions[0],
@@ -3644,18 +4123,38 @@ async function generateAutomaticQuiz({
                 : "The generated question was invalid.",
               "schema_invalid",
             );
+      if (input.promptFirstV59Mode) {
+        const normalizedReason = promptFirstFailureReason(
+          callFailure.reasonCode,
+        );
+        if (normalizedReason !== callFailure.reasonCode) {
+          callFailure = new GenerationFailure(
+            callFailure.message,
+            normalizedReason,
+            {
+              transient: callFailure.transient,
+              retryAfterMs: callFailure.retryAfterMs,
+            },
+          );
+        }
+      }
       outcome = callFailure.reasonCode;
       if (acceptedQuestions.length === acceptedBeforeCall + 1) {
         callFailure = undefined;
         outcome = "complete";
         retryDelayMs = 0;
       } else {
-        const nextKind = automaticRetryKindForFailure(callFailure.reasonCode);
+        const nextKind = automaticRetryKindForFailure(
+          callFailure.reasonCode,
+          input.promptFirstV59Mode,
+        );
         const retryNumber = ordinalAttempt;
         const limit =
           nextKind === "transport"
             ? MAX_TRANSPORT_RETRIES_PER_ORDINAL
-            : MAX_CONTENT_RETRIES_PER_ORDINAL;
+            : input.promptFirstV59Mode
+              ? MAX_STRUCTURAL_RETRIES_PER_ORDINAL
+              : MAX_CONTENT_RETRIES_PER_ORDINAL;
         const retryBudgetKey = `${questionOffset}:${retryBudgetClass(nextKind)}`;
         const ordinalClassRetries =
           cycleRetriesByOrdinalAndClass.get(retryBudgetKey) ?? 0;
@@ -3689,6 +4188,7 @@ async function generateAutomaticQuiz({
       ...(input.legacyAutomaticRecoveryMode
         ? { purpose: "automatic_recovery" }
         : metadata.protocolVersion === PROTOCOL_VERSION ||
+            metadata.protocolVersion === CONCEPT_FIRST_PROTOCOL_VERSION ||
             metadata.protocolVersion === GROUNDED_PROTOCOL_VERSION
           ? { purpose: "generation" }
           : {}),
@@ -3799,7 +4299,7 @@ async function generateAutomaticQuiz({
   };
 }
 
-function automaticRetryKindForFailure(reasonCode) {
+function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
   if (
     [
       "transient_http",
@@ -3810,6 +4310,20 @@ function automaticRetryKindForFailure(reasonCode) {
     ].includes(reasonCode)
   ) {
     return "transport";
+  }
+  if (promptFirstV59Mode) {
+    return [
+      "empty_content",
+      "truncated_json",
+      "schema_invalid",
+      "type_or_order_mismatch",
+      "choice_structure_invalid",
+      "polarity_mismatch",
+      "formula_structure_invalid",
+      "append_conflict",
+    ].includes(reasonCode)
+      ? "structural"
+      : null;
   }
   if (reasonCode === "empty_content") return "empty_content";
   if (["truncated_json", "finish_length"].includes(reasonCode)) {
@@ -3852,13 +4366,25 @@ function automaticRetryKindForFailure(reasonCode) {
   return null;
 }
 
+function promptFirstFailureReason(reasonCode) {
+  if (["call_dispatch_timeout", "stream_idle_timeout"].includes(reasonCode)) {
+    return "timeout";
+  }
+  if (reasonCode === "finish_length") return "truncated_json";
+  return reasonCode;
+}
+
 function retryLimitForKind(retryKind) {
+  if (retryKind === "structural") {
+    return MAX_STRUCTURAL_RETRIES_PER_ORDINAL;
+  }
   return retryKind === "transport" || retryKind === "automatic_resume"
     ? MAX_TRANSPORT_RETRIES_PER_ORDINAL
     : MAX_CONTENT_RETRIES_PER_ORDINAL;
 }
 
 function retryBudgetClass(retryKind) {
+  if (retryKind === "structural") return "structural";
   return retryKind === "transport" || retryKind === "automatic_resume"
     ? "transport"
     : "content";

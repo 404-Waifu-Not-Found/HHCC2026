@@ -13,6 +13,8 @@ function env(
   automaticCanaryUserIds = "",
   groundedMode?: string,
   groundedCanaryUserIds = "",
+  promptFirstMode?: string,
+  promptFirstCanaryUserIds = "",
 ): Pick<
   AppEnv,
   | "QUIZ_V5_2_ROLLOUT"
@@ -21,6 +23,8 @@ function env(
   | "QUIZ_V5_3_CANARY_USER_IDS"
   | "QUIZ_V5_4_ROLLOUT"
   | "QUIZ_V5_4_CANARY_USER_IDS"
+  | "QUIZ_V5_9_ROLLOUT"
+  | "QUIZ_V5_9_CANARY_USER_IDS"
 > {
   return {
     QUIZ_V5_2_ROLLOUT: mode,
@@ -29,13 +33,19 @@ function env(
     QUIZ_V5_3_CANARY_USER_IDS: automaticCanaryUserIds,
     QUIZ_V5_4_ROLLOUT: groundedMode,
     QUIZ_V5_4_CANARY_USER_IDS: groundedCanaryUserIds,
+    QUIZ_V5_9_ROLLOUT: promptFirstMode,
+    QUIZ_V5_9_CANARY_USER_IDS: promptFirstCanaryUserIds,
   };
 }
 
 describe("quiz generation rollout", () => {
   it("fails closed to the compatible v5.1 profile", () => {
     expect(quizGenerationRolloutMode(env())).toBe("disabled");
-    expect(quizGenerationRolloutMode(env("unexpected"))).toBe("disabled");
+    expect(
+      quizGenerationRolloutMode(
+        env(undefined, "", undefined, "", undefined, "", "unexpected"),
+      ),
+    ).toBe("disabled");
     expect(quizGenerationProfile(env(), "learner-1")).toEqual({
       generationProfile: "legacy_reasoning_v5_1",
       minimumExtensionVersion: "0.8.0",
@@ -99,6 +109,29 @@ describe("quiz generation rollout", () => {
         "legacy_reasoning_v5_1",
       ),
     ).toBe(false);
+  });
+
+  it("assigns prompt-first v5.9 only to its canary before promotion", () => {
+    const canary = env(
+      "disabled",
+      "",
+      "disabled",
+      "",
+      "enabled",
+      "",
+      "canary",
+      "learner-1",
+    );
+    expect(quizGenerationProfile(canary, "learner-1")).toEqual({
+      generationProfile: "prompt_first_auto_v5_9",
+      minimumExtensionVersion: "0.8.14",
+      requiredCapability: "question-stream-v7",
+    });
+    expect(quizGenerationProfile(canary, "learner-2")).toEqual({
+      generationProfile: "concept_first_auto_v5_8",
+      minimumExtensionVersion: "0.8.13",
+      requiredCapability: "question-stream-v6",
+    });
   });
 
   it("accepts a new legacy bank only while legacy is the assigned profile", () => {

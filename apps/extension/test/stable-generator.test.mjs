@@ -7,6 +7,7 @@ import {
   buildQuestionTypePlanFromSeed,
   buildTrueFalseAnswerPlanFromSeed,
   CONCEPT_FIRST_SYSTEM_PROMPT,
+  PROMPT_FIRST_SYSTEM_PROMPT,
   generateQuizFromPlainText,
   normalizeGeneratedQuestion,
   serializeFormulaTokens,
@@ -191,6 +192,74 @@ function conceptFirstInput(
       ][index % 6];
     }).join(" "),
   };
+}
+
+function promptFirstInput(
+  questionCount = 5,
+  questionTypes = ["multiple_choice", "true_false", "short_answer"],
+) {
+  return {
+    ...conceptFirstInput(questionCount, questionTypes),
+    generationProfile: "prompt_first_auto_v5_9",
+  };
+}
+
+function promptFirstTaskFromRequest(request) {
+  const body = typeof request === "string" ? JSON.parse(request) : request;
+  const task = body.messages.at(-1).content;
+  const slot = task.match(
+    /Create q(\d+) of (\d+)\. Required type: (multiple_choice|true_false|short_answer)\./u,
+  );
+  assert.ok(slot, "request contains one prompt-first slot");
+  const focusExcerpt = task.match(
+    /Instructional evidence:\n([\s\S]*?)\n\nAlready accepted questions and concepts/u,
+  )?.[1];
+  assert.ok(focusExcerpt, "request contains one instructional window");
+  return {
+    body,
+    task,
+    ordinal: Number(slot[1]),
+    type: slot[3],
+    polarity: /Required answer polarity: true\./u.test(task),
+    focusExcerpt,
+  };
+}
+
+function promptFirstResponse(request, mutate = (value) => value) {
+  const task = promptFirstTaskFromRequest(request);
+  const common = {
+    type: task.type,
+    concept: `energy pathway ${task.ordinal}`,
+    question: `How does pathway ${task.ordinal} transfer energy?`,
+    explanation: `Pathway ${task.ordinal} transfers energy between defined states.`,
+  };
+  const question =
+    task.type === "multiple_choice"
+      ? {
+          ...common,
+          correctAnswer: `Through route ${task.ordinal}`,
+          distractors: [
+            `By stopping route ${task.ordinal}`,
+            `By removing state ${task.ordinal}`,
+            `By isolating input ${task.ordinal}`,
+          ],
+        }
+      : task.type === "true_false"
+        ? {
+            ...common,
+            question: task.polarity
+              ? `Pathway ${task.ordinal} transfers energy between the states.`
+              : `Pathway ${task.ordinal} prevents energy transfer between the states.`,
+            answer: task.polarity,
+            correction: `Pathway ${task.ordinal} transfers energy between the states.`,
+          }
+        : {
+            ...common,
+            question: `What term names energy route ${task.ordinal}?`,
+            answer: `route ${task.ordinal}`,
+            gradingMode: "atomic_term",
+          };
+  return completionResponse(mutate({ questions: [question] }, task));
 }
 
 const RECORDED_BENCHMARK_TOPICS = [
@@ -1075,6 +1144,141 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
         question.rubricV2?.mode === "atomic_term",
     ),
   );
+});
+
+test("v5.9 sends the compact prompt-first singleton contract and accepts gradeable output immediately", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const parsed = promptFirstTaskFromRequest(init.body);
+    requests.push(parsed);
+    return promptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 2) {
+        value.questions[0].question =
+          "According to the lesson, what route transfers energy?";
+      }
+      if (task.ordinal === 3) {
+        value.questions[0].concept = "the same broad energy concept";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.protocolVersion, 10);
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.9");
+  assert.equal(result.validatorVersion, "validator-minimal-structural-v5.0");
+  assert.equal(result.importVersion, "extension-progressive-import-v8");
+  assert.equal(result.generationProfile, "prompt_first_auto_v5_9");
+  assert.equal(requests.length, 5);
+  assert.equal(
+    calls.filter((event) => event.lifecycleState === "started").length,
+    5,
+  );
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    0,
+  );
+  assert.ok(calls.every((event) => event.protocolVersion === 10));
+  assert.equal(requests[0].body.messages.length, 2);
+  assert.equal(
+    requests[0].body.messages[0].content,
+    PROMPT_FIRST_SYSTEM_PROMPT,
+  );
+  assert.equal(
+    createHash("sha256")
+      .update(requests[0].body.messages[0].content)
+      .digest("hex"),
+    result.promptFingerprint,
+  );
+  assert.match(requests[0].task, /Preferred objective:/u);
+  assert.match(requests[0].task, /Exact JSON schema:/u);
+  assert.doesNotMatch(
+    requests[0].task,
+    /repairContext|Final learner-copy gate|answerSpan/u,
+  );
+  assert.ok(
+    result.quiz.questions.some((question) =>
+      question.question.startsWith("According to the lesson"),
+    ),
+    "editorial wording is accepted instead of causing a runtime retry",
+  );
+});
+
+test("v5.9 retries only structurally unusable singleton output", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value) => {
+      if (requests === 1)
+        value.questions[0].distractors = ["same", "same", "other"];
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 6);
+  const retries = calls.filter(
+    (event) =>
+      event.lifecycleState === "started" &&
+      event.classification === "automatic_retry",
+  );
+  assert.equal(retries.length, 1);
+  assert.equal(retries[0].retryKind, "structural");
+});
+
+test("v5.9 keeps mathematical operators when checking choice uniqueness", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests += 1;
+    return promptFirstResponse(init.body, (value) => {
+      value.questions[0].correctAnswer = "(1 + 1) / 2";
+      value.questions[0].distractors = [
+        "(1 - 1) / 2",
+        "(1 * 1) / 2",
+        "(1 + 1) * 2",
+      ];
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(requests, 5);
+  assert.equal(result.metrics.retryCount, 0);
 });
 
 test("v5.8 does not revalidate an already persisted streamed singleton", async (context) => {

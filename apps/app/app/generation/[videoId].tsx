@@ -97,14 +97,16 @@ function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
-    profile === "concept_first_auto_v5_8"
+    profile === "concept_first_auto_v5_8" ||
+    profile === "prompt_first_auto_v5_9"
   );
 }
 
 function isGroundedGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "evidence_grounded_auto_v5_4" ||
-    profile === "concept_first_auto_v5_8"
+    profile === "concept_first_auto_v5_8" ||
+    profile === "prompt_first_auto_v5_9"
   );
 }
 
@@ -630,7 +632,9 @@ export default function GenerationScreen() {
                   ...commonRecord,
                   version: 4,
                   generationProfile: rolloutProfile.generationProfile as
-                    "evidence_grounded_auto_v5_4" | "concept_first_auto_v5_8",
+                    | "evidence_grounded_auto_v5_4"
+                    | "concept_first_auto_v5_8"
+                    | "prompt_first_auto_v5_9",
                   recoveryCycle: 0,
                 })
               : await saveGenerationRecord({

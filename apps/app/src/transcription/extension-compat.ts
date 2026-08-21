@@ -1,5 +1,6 @@
 import {
   AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -7,7 +8,8 @@ import {
   type LocalGenerationProfile,
 } from "@clipquest/contracts";
 
-export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.13";
+export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.14";
+export const MINIMUM_CONCEPT_FIRST_LOCAL_AI_EXTENSION_VERSION = "0.8.13";
 export const MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION = "0.8.7";
 export const MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION = "0.8.3";
 export const MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION = "0.8.2";
@@ -36,17 +38,19 @@ export function isCompatibleClipQuestExtensionVersion(
 
 export function supportsQuestionStream(
   capabilities: readonly string[],
-  generationProfile: LocalGenerationProfile = "concept_first_auto_v5_8",
+  generationProfile: LocalGenerationProfile = "prompt_first_auto_v5_9",
 ): boolean {
   return capabilities.includes(
-    generationProfile === "concept_first_auto_v5_8"
+    generationProfile === "prompt_first_auto_v5_9"
       ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-      : generationProfile === "evidence_grounded_auto_v5_4"
-        ? GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-        : generationProfile === "stable_auto_recovery_v5_3"
-          ? AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-          : generationProfile === "stable_non_thinking_v5_2"
-            ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-            : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      : generationProfile === "concept_first_auto_v5_8"
+        ? CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+        : generationProfile === "evidence_grounded_auto_v5_4"
+          ? GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+          : generationProfile === "stable_auto_recovery_v5_3"
+            ? AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+            : generationProfile === "stable_non_thinking_v5_2"
+              ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+              : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   );
 }

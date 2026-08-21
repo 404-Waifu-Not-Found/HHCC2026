@@ -8,6 +8,7 @@ import {
   ExtensionQuizProgressiveImportRequestSchema,
   ExtensionQuizProgressiveImportResponseSchema,
   AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
@@ -21,6 +22,7 @@ import {
   type LocalGenerationCallEventV3,
   type LocalGenerationCallEventV4,
   type LocalGenerationCallEventV5,
+  type LocalGenerationCallEventV6,
   type LegacyAutomaticRecoveryCallEvent,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
@@ -51,12 +53,14 @@ const MAX_V5_3_AUTOMATIC_RETRIES = 12;
 const MAX_V5_4_AUTOMATIC_RETRIES = 48;
 const MAX_V5_6_AUTOMATIC_RETRIES = 12;
 const MAX_V5_8_AUTOMATIC_RETRIES = 48;
+const MAX_V5_9_AUTOMATIC_RETRIES = 30;
 
 type AutomaticGenerationCallEvent =
   | LegacyAutomaticRecoveryCallEvent
   | LocalGenerationCallEventV3
   | LocalGenerationCallEventV4
-  | LocalGenerationCallEventV5;
+  | LocalGenerationCallEventV5
+  | LocalGenerationCallEventV6;
 
 function isAutomaticGenerationProfile(
   profile: ProgressiveQuizSummary["generationProfile"],
@@ -64,7 +68,8 @@ function isAutomaticGenerationProfile(
   return (
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
-    profile === "concept_first_auto_v5_8"
+    profile === "concept_first_auto_v5_8" ||
+    profile === "prompt_first_auto_v5_9"
   );
 }
 
@@ -78,6 +83,9 @@ function expectedAutomaticProtocol(
     return 8;
   }
   if (profile === "concept_first_auto_v5_8") {
+    return CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
+  }
+  if (profile === "prompt_first_auto_v5_9") {
     return LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
   }
   return null;
@@ -97,16 +105,27 @@ export function currentGroundedNewBankMetadataMatches(
     | "importVersion"
   >,
 ): boolean {
+  if (chunk.generationProfile === "prompt_first_auto_v5_9") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === LOCAL_QUIZ_PROMPT_VERSION &&
+      chunk.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
   if (chunk.generationProfile !== "concept_first_auto_v5_8") {
     return true;
   }
   return (
     chunk.model === LOCAL_QUIZ_MODEL &&
     chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
-    chunk.promptVersion === LOCAL_QUIZ_PROMPT_VERSION &&
-    chunk.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
-    chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
-    chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    chunk.promptVersion === "quiz-local-json-stream-v5.8" &&
+    chunk.validatorVersion === "validator-local-progressive-v4.12" &&
+    chunk.protocolVersion ===
+      CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    chunk.importVersion === "extension-progressive-import-v7"
   );
 }
 
@@ -267,6 +286,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     .toLocaleLowerCase()
     .trim();
   if (
+    summary.generationProfile !== "prompt_first_auto_v5_9" &&
     summary.acceptedQuestionSummaries.some(
       (question) =>
         promptSimilarity(question.question, normalizedPrompt) >= 0.9,
@@ -289,10 +309,13 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
   }
 
   const nextCount = input.chunk.startIndex + 1;
-  const qualityFlags = questionQualityFlags(
-    input.chunk.question,
-    summary.acceptedQuestionSummaries,
-  );
+  const qualityFlags =
+    summary.generationProfile === "prompt_first_auto_v5_9"
+      ? []
+      : questionQualityFlags(
+          input.chunk.question,
+          summary.acceptedQuestionSummaries,
+        );
   const complete = nextCount === summary.plannedCount;
   const questionId = createId();
   const timestamp = now();
@@ -614,15 +637,18 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     const retryLimit = automaticEvent
       ? legacyAutomaticRecovery
         ? MAX_V5_6_AUTOMATIC_RETRIES
-        : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
-          ? MAX_V5_8_AUTOMATIC_RETRIES
-          : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.7" ||
-              snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
-            ? MAX_V5_6_AUTOMATIC_RETRIES
-            : snapshot.summary.generationProfile ===
-                "evidence_grounded_auto_v5_4"
-              ? MAX_V5_4_AUTOMATIC_RETRIES
-              : MAX_V5_3_AUTOMATIC_RETRIES
+        : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.9"
+          ? MAX_V5_9_AUTOMATIC_RETRIES
+          : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
+            ? MAX_V5_8_AUTOMATIC_RETRIES
+            : snapshot.summary.promptVersion ===
+                  "quiz-local-json-stream-v5.7" ||
+                snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
+              ? MAX_V5_6_AUTOMATIC_RETRIES
+              : snapshot.summary.generationProfile ===
+                  "evidence_grounded_auto_v5_4"
+                ? MAX_V5_4_AUTOMATIC_RETRIES
+                : MAX_V5_3_AUTOMATIC_RETRIES
       : 1;
     if (Number(existingRetry?.count ?? 0) >= retryLimit) {
       throw new ApiError(
@@ -634,6 +660,8 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       );
     }
     if (automaticEvent) {
+      const promptFirst =
+        snapshot.summary.generationProfile === "prompt_first_auto_v5_9";
       const grounded =
         legacyAutomaticRecovery ||
         snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4" ||
@@ -646,8 +674,17 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
         "answer_repair",
       ]).has(input.retryKind!);
       const ordinalRetries = await c.env.DB.prepare(
-        grounded
+        promptFirst
           ? `SELECT COUNT(*) AS count
+             FROM quiz_generation_call_events
+             WHERE quiz_id = ?
+               AND generation_session_id = ?
+               AND recovery_session_id = ?
+               AND start_ordinal = ?
+               AND classification = 'automatic_retry'
+               AND retry_kind = ?`
+          : grounded
+            ? `SELECT COUNT(*) AS count
              FROM quiz_generation_call_events
              WHERE quiz_id = ?
                AND generation_session_id = ?
@@ -659,32 +696,43 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
                  OR
                  (? = 0 AND retry_kind IN ('transport', 'automatic_resume'))
                )`
-          : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND start_ordinal = ? AND classification = 'automatic_retry' AND retry_kind = ?",
+            : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND start_ordinal = ? AND classification = 'automatic_retry' AND retry_kind = ?",
       )
         .bind(
-          ...(grounded
+          ...(promptFirst
             ? [
                 bank.id,
                 input.generationSessionId,
                 input.recoverySessionId,
                 input.startIndex,
-                contentRetry ? 1 : 0,
-                contentRetry ? 1 : 0,
-              ]
-            : [
-                bank.id,
-                input.generationSessionId,
-                input.startIndex,
                 input.retryKind,
-              ]),
+              ]
+            : grounded
+              ? [
+                  bank.id,
+                  input.generationSessionId,
+                  input.recoverySessionId,
+                  input.startIndex,
+                  contentRetry ? 1 : 0,
+                  contentRetry ? 1 : 0,
+                ]
+              : [
+                  bank.id,
+                  input.generationSessionId,
+                  input.startIndex,
+                  input.retryKind,
+                ]),
         )
         .first<{ count: number }>();
       const perOrdinalLimit =
-        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
-          ? 4
-          : contentRetry
-            ? 2
-            : 4;
+        promptFirst && input.retryKind === "structural"
+          ? 2
+          : promptFirst ||
+              snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
+            ? 4
+            : contentRetry
+              ? 2
+              : 4;
       if (Number(ordinalRetries?.count ?? 0) >= perOrdinalLimit) {
         throw new ApiError(
           409,
@@ -969,23 +1017,28 @@ async function persistProgressiveQuiz(input: {
   ) {
     assertGroundedQuestionIdentity(question, []);
   }
-  const qualityFlags = questionQualityFlags(question, []);
+  const qualityFlags =
+    chunk.generationProfile === "prompt_first_auto_v5_9"
+      ? []
+      : questionQualityFlags(question, []);
   const summary = ProgressiveQuizSummarySchema.parse({
     source: "extension-local-json-stream",
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.8"
+      (chunk.promptVersion === "quiz-local-json-stream-v5.9"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
-        : chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
-            chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
-            chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
-            chunk.promptVersion === "quiz-local-json-stream-v5.4"
-          ? "extension-progressive-import-v6"
-          : chunk.promptVersion === "quiz-local-json-stream-v5.3"
-            ? "extension-progressive-import-v5"
-            : chunk.promptVersion === "quiz-local-json-stream-v5.2"
-              ? "extension-progressive-import-v4"
-              : "extension-progressive-import-v3"),
+        : chunk.promptVersion === "quiz-local-json-stream-v5.8"
+          ? "extension-progressive-import-v7"
+          : chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
+              chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+              chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+              chunk.promptVersion === "quiz-local-json-stream-v5.4"
+            ? "extension-progressive-import-v6"
+            : chunk.promptVersion === "quiz-local-json-stream-v5.3"
+              ? "extension-progressive-import-v5"
+              : chunk.promptVersion === "quiz-local-json-stream-v5.2"
+                ? "extension-progressive-import-v4"
+                : "extension-progressive-import-v3"),
     resultProtocolVersion: chunk.protocolVersion,
     pipelineVersion: chunk.pipelineVersion,
     model: chunk.model,
@@ -1014,7 +1067,8 @@ async function persistProgressiveQuiz(input: {
       chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.8",
+      chunk.promptVersion === "quiz-local-json-stream-v5.8" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.9",
     sourceSelection: chunk.metrics.sourceSelection,
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]
@@ -1267,6 +1321,8 @@ function isAutomaticCallEvent(
     (event.protocolVersion === 5 ||
       event.protocolVersion === AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion ===
+        CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
   );
 }
@@ -1284,20 +1340,27 @@ function isLegacyAutomaticRecoveryCallEvent(
 
 function isGroundedCallEvent(
   event: LocalGenerationCallEvent,
-): event is LocalGenerationCallEventV4 | LocalGenerationCallEventV5 {
+): event is
+  | LocalGenerationCallEventV4
+  | LocalGenerationCallEventV5
+  | LocalGenerationCallEventV6 {
   return (
     "protocolVersion" in event &&
     (event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion ===
+        CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
       event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
   );
 }
 
 function isLifecycleCallEvent(
   event: LocalGenerationCallEvent,
-): event is LocalGenerationCallEventV5 {
+): event is LocalGenerationCallEventV5 | LocalGenerationCallEventV6 {
   return (
     "protocolVersion" in event &&
-    event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    (event.protocolVersion ===
+      CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION) &&
     "lifecycleState" in event
   );
 }
@@ -1356,7 +1419,7 @@ function callEventsMatch(
 
 function lifecycleIdentityMatches(
   stored: StoredCallEvent,
-  event: LocalGenerationCallEventV5,
+  event: LocalGenerationCallEventV5 | LocalGenerationCallEventV6,
 ): boolean {
   return (
     stored.generation_session_id === event.generationSessionId &&

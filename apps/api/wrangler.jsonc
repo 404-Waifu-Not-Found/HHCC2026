@@ -73,6 +73,8 @@
     "QUIZ_V5_3_ROLLOUT": "disabled",
     "QUIZ_V5_4_CANARY_USER_IDS": "",
     "QUIZ_V5_4_ROLLOUT": "enabled",
+    "QUIZ_V5_9_CANARY_USER_IDS": "",
+    "QUIZ_V5_9_ROLLOUT": "disabled",
     "RESEND_FROM": "ClipQuest <hello@clipquest.ccwu.cc>",
   },
   "observability": {

@@ -57,7 +57,8 @@ function automaticProfile(profile: string | undefined): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
-    profile === "concept_first_auto_v5_8"
+    profile === "concept_first_auto_v5_8" ||
+    profile === "prompt_first_auto_v5_9"
   );
 }
 
@@ -83,7 +84,8 @@ async function runAutomaticRecovery(
   const automatic = profileAutomatic || legacyAutomaticRecovery;
   const grounded =
     continuation.generationProfile === "evidence_grounded_auto_v5_4" ||
-    continuation.generationProfile === "concept_first_auto_v5_8";
+    continuation.generationProfile === "concept_first_auto_v5_8" ||
+    continuation.generationProfile === "prompt_first_auto_v5_9";
   if (
     status.generation.state === "cooldown" &&
     status.generation.nextRecoveryAt &&
@@ -260,7 +262,9 @@ async function runAutomaticRecovery(
             ...commonRecord,
             version: 4,
             generationProfile: continuation.generationProfile as
-              "evidence_grounded_auto_v5_4" | "concept_first_auto_v5_8",
+              | "evidence_grounded_auto_v5_4"
+              | "concept_first_auto_v5_8"
+              | "prompt_first_auto_v5_9",
             recoveryCycle:
               stored?.version === 4
                 ? Math.min(24, stored.recoveryCycle + 1)
@@ -407,7 +411,8 @@ async function runAutomaticRecovery(
         (!("lifecycleState" in event) || event.lifecycleState === "started")
       ) {
         automaticRetryCount = Math.min(
-          continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
             continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
             continuation.promptVersion === "quiz-local-json-stream-v5.6" ||
             legacyAutomaticRecovery
@@ -557,6 +562,7 @@ async function runAutomaticRecovery(
         automaticRetryCount,
         ordinalAttempt: latestOrdinalAttempt,
         strictBudget:
+          continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.6",

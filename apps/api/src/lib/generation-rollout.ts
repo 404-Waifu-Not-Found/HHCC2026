@@ -1,5 +1,6 @@
 import {
   AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -13,10 +14,10 @@ import {
 import type { AppEnv } from "../types";
 
 export function quizGenerationRolloutMode(
-  env: Pick<AppEnv, "QUIZ_V5_4_ROLLOUT">,
+  env: Pick<AppEnv, "QUIZ_V5_9_ROLLOUT">,
 ): QuizGenerationRolloutMode {
   return QuizGenerationRolloutModeSchema.catch("disabled").parse(
-    env.QUIZ_V5_4_ROLLOUT,
+    env.QUIZ_V5_9_ROLLOUT,
   );
 }
 
@@ -29,10 +30,32 @@ export function quizGenerationProfile(
     | "QUIZ_V5_3_CANARY_USER_IDS"
     | "QUIZ_V5_4_ROLLOUT"
     | "QUIZ_V5_4_CANARY_USER_IDS"
+    | "QUIZ_V5_9_ROLLOUT"
+    | "QUIZ_V5_9_CANARY_USER_IDS"
   >,
   userId: string,
 ): QuizGenerationProfileResponse {
-  const groundedMode = quizGenerationRolloutMode(env);
+  const promptFirstMode = quizGenerationRolloutMode(env);
+  const promptFirstCanaryUsers = new Set(
+    String(env.QUIZ_V5_9_CANARY_USER_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  const promptFirst =
+    promptFirstMode === "enabled" ||
+    (promptFirstMode === "canary" && promptFirstCanaryUsers.has(userId));
+  if (promptFirst) {
+    return QuizGenerationProfileResponseSchema.parse({
+      generationProfile: "prompt_first_auto_v5_9",
+      minimumExtensionVersion: "0.8.14",
+      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+    });
+  }
+
+  const groundedMode = QuizGenerationRolloutModeSchema.catch("disabled").parse(
+    env.QUIZ_V5_4_ROLLOUT,
+  );
   const groundedCanaryUsers = new Set(
     String(env.QUIZ_V5_4_CANARY_USER_IDS ?? "")
       .split(",")
@@ -46,7 +69,7 @@ export function quizGenerationProfile(
     return QuizGenerationProfileResponseSchema.parse({
       generationProfile: "concept_first_auto_v5_8",
       minimumExtensionVersion: "0.8.13",
-      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      requiredCapability: CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     });
   }
 

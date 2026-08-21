@@ -274,7 +274,8 @@ export const ProgressiveQuizSummarySchema = z
     const automaticProfile =
       value.generationProfile === "stable_auto_recovery_v5_3" ||
       value.generationProfile === "evidence_grounded_auto_v5_4" ||
-      value.generationProfile === "concept_first_auto_v5_8";
+      value.generationProfile === "concept_first_auto_v5_8" ||
+      value.generationProfile === "prompt_first_auto_v5_9";
     if (
       automaticProfile &&
       (value.generationState === "action_required" ||
@@ -334,6 +335,8 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
+    const promptFirstV59 =
+      value.promptVersion === "quiz-local-json-stream-v5.9";
     const conceptFirstV58 =
       value.promptVersion === "quiz-local-json-stream-v5.8";
     const groundedV57 = value.promptVersion === "quiz-local-json-stream-v5.7";
@@ -343,61 +346,73 @@ export const ProgressiveQuizSummarySchema = z
     const grounded = groundedV57 || groundedV56 || groundedV55 || groundedV54;
     const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
-    const metadataMatches = conceptFirstV58
-      ? value.resultProtocolVersion === 9 &&
-        value.importVersion === "extension-progressive-import-v7" &&
+    const metadataMatches = promptFirstV59
+      ? value.resultProtocolVersion === 10 &&
+        value.importVersion === "extension-progressive-import-v8" &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.12" &&
-        value.generationProfile === "concept_first_auto_v5_8" &&
+        value.validatorVersion === "validator-minimal-structural-v5.0" &&
+        value.generationProfile === "prompt_first_auto_v5_9" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
         Boolean(value.recoverySessionId) &&
         Boolean(value.questionPlanSeed) &&
         Boolean(value.promptFingerprint) &&
         value.telemetryAvailable
-      : grounded
-        ? value.resultProtocolVersion === 8 &&
-          value.importVersion === "extension-progressive-import-v6" &&
+      : conceptFirstV58
+        ? value.resultProtocolVersion === 9 &&
+          value.importVersion === "extension-progressive-import-v7" &&
           value.reasoningEffort === "none" &&
-          value.validatorVersion ===
-            (groundedV57
-              ? "validator-local-progressive-v4.6"
-              : groundedV56
-                ? "validator-local-progressive-v4.5"
-                : groundedV55
-                  ? "validator-local-progressive-v4.4"
-                  : "validator-local-progressive-v4.3") &&
-          value.generationProfile === "evidence_grounded_auto_v5_4" &&
+          value.validatorVersion === "validator-local-progressive-v4.12" &&
+          value.generationProfile === "concept_first_auto_v5_8" &&
           Boolean(value.generationId) &&
           Boolean(value.generationSessionId) &&
           Boolean(value.recoverySessionId) &&
           Boolean(value.questionPlanSeed) &&
+          Boolean(value.promptFingerprint) &&
           value.telemetryAvailable
-        : automatic
-          ? value.resultProtocolVersion === 7 &&
-            value.importVersion === "extension-progressive-import-v5" &&
+        : grounded
+          ? value.resultProtocolVersion === 8 &&
+            value.importVersion === "extension-progressive-import-v6" &&
             value.reasoningEffort === "none" &&
-            value.validatorVersion === "validator-local-progressive-v4.2" &&
-            value.generationProfile === "stable_auto_recovery_v5_3" &&
+            value.validatorVersion ===
+              (groundedV57
+                ? "validator-local-progressive-v4.6"
+                : groundedV56
+                  ? "validator-local-progressive-v4.5"
+                  : groundedV55
+                    ? "validator-local-progressive-v4.4"
+                    : "validator-local-progressive-v4.3") &&
+            value.generationProfile === "evidence_grounded_auto_v5_4" &&
             Boolean(value.generationId) &&
             Boolean(value.generationSessionId) &&
             Boolean(value.recoverySessionId) &&
             Boolean(value.questionPlanSeed) &&
             value.telemetryAvailable
-          : stable
-            ? value.resultProtocolVersion === 6 &&
-              value.importVersion === "extension-progressive-import-v4" &&
+          : automatic
+            ? value.resultProtocolVersion === 7 &&
+              value.importVersion === "extension-progressive-import-v5" &&
               value.reasoningEffort === "none" &&
-              value.validatorVersion === "validator-local-progressive-v4.1" &&
-              value.generationProfile === "stable_non_thinking_v5_2" &&
+              value.validatorVersion === "validator-local-progressive-v4.2" &&
+              value.generationProfile === "stable_auto_recovery_v5_3" &&
               Boolean(value.generationId) &&
+              Boolean(value.generationSessionId) &&
+              Boolean(value.recoverySessionId) &&
               Boolean(value.questionPlanSeed) &&
               value.telemetryAvailable
-            : value.resultProtocolVersion === 5 &&
-              value.importVersion === "extension-progressive-import-v3" &&
-              value.reasoningEffort === "high" &&
-              value.validatorVersion === "validator-local-progressive-v4.0" &&
-              value.generationProfile === "legacy_reasoning_v5_1";
+            : stable
+              ? value.resultProtocolVersion === 6 &&
+                value.importVersion === "extension-progressive-import-v4" &&
+                value.reasoningEffort === "none" &&
+                value.validatorVersion === "validator-local-progressive-v4.1" &&
+                value.generationProfile === "stable_non_thinking_v5_2" &&
+                Boolean(value.generationId) &&
+                Boolean(value.questionPlanSeed) &&
+                value.telemetryAvailable
+              : value.resultProtocolVersion === 5 &&
+                value.importVersion === "extension-progressive-import-v3" &&
+                value.reasoningEffort === "high" &&
+                value.validatorVersion === "validator-local-progressive-v4.0" &&
+                value.generationProfile === "legacy_reasoning_v5_1";
     if (!metadataMatches) {
       context.addIssue({
         code: "custom",
@@ -524,6 +539,7 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
       "duplicate_repair",
       "answer_repair",
       "automatic_resume",
+      "structural",
     ])
     .nullable()
     .default(null),
@@ -595,6 +611,16 @@ const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
     "question_answer_kind_mismatch",
   ],
   automatic_resume: ["local_state_conflict", "append_conflict"],
+  structural: [
+    "empty_content",
+    "truncated_json",
+    "schema_invalid",
+    "type_or_order_mismatch",
+    "choice_structure_invalid",
+    "polarity_mismatch",
+    "formula_structure_invalid",
+    "append_conflict",
+  ],
 } as const satisfies Record<
   AutomaticRetryKind,
   readonly LocalGenerationCallOutcome[]
@@ -624,16 +650,15 @@ export function retryKindMatchesGenerationOutcome(
     : false;
 }
 
-const AUTOMATIC_RETRY_KIND_SQL_CASE = Object.entries(
-  AUTOMATIC_RETRY_OUTCOMES_BY_KIND,
-)
-  .map(
+const AUTOMATIC_RETRY_KIND_SQL_CASE = [
+  `WHEN event.protocol_version = 10 AND event.outcome_code IN ('empty_content', 'truncated_json', 'schema_invalid', 'type_or_order_mismatch', 'choice_structure_invalid', 'polarity_mismatch', 'formula_structure_invalid', 'append_conflict') THEN 'structural'`,
+  ...Object.entries(AUTOMATIC_RETRY_OUTCOMES_BY_KIND).map(
     ([kind, outcomes]) =>
       `WHEN event.outcome_code IN (${outcomes
         .map((outcome) => `'${outcome.replaceAll("'", "''")}'`)
         .join(", ")}) THEN '${kind}'`,
-  )
-  .join("\n        ");
+  ),
+].join("\n        ");
 
 export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
   SELECT
@@ -668,7 +693,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
                 SELECT 1
                 FROM quiz_generation_call_events initial
                 WHERE initial.quiz_id = qb.id
-                  AND initial.protocol_version IN (7, 8, 9)
+                  AND initial.protocol_version IN (7, 8, 9, 10)
                   AND initial.call_index = 0
               ) THEN 1
               ELSE 0
@@ -758,7 +783,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       SELECT MAX(event.ordinal_attempt) + 1
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
-        AND event.protocol_version IN (7, 8, 9)
+        AND event.protocol_version IN (7, 8, 9, 10)
         AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
         AND event.start_ordinal = (
           SELECT COUNT(*) FROM questions stored_question
@@ -772,7 +797,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       END
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
-        AND event.protocol_version IN (7, 8, 9)
+        AND event.protocol_version IN (7, 8, 9, 10)
         AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
         AND event.start_ordinal = (
           SELECT COUNT(*) FROM questions stored_question
@@ -910,6 +935,7 @@ export type ProgressiveGenerationSnapshot = {
     | "duplicate_repair"
     | "answer_repair"
     | "automatic_resume"
+    | "structural"
     | null;
   latestGenerationSessionId: string | null;
   nextCallIndex: number;
@@ -1015,6 +1041,7 @@ export async function readProgressiveGenerationSnapshot(
     summary.generationProfile === "stable_auto_recovery_v5_3" ||
     summary.generationProfile === "evidence_grounded_auto_v5_4" ||
     summary.generationProfile === "concept_first_auto_v5_8" ||
+    summary.generationProfile === "prompt_first_auto_v5_9" ||
     summary.resultProtocolVersion === 5;
   const stalled =
     (availability.state === "generating" ||

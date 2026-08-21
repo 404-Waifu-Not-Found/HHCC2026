@@ -64,7 +64,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.13 and stream v6 for new concept-first generation", () => {
+  it("requires v0.8.14 and stream v7 for new prompt-first generation", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -94,10 +94,19 @@ describe("extension generation profile compatibility", () => {
         "0.8.13",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
-    ).toBe(true);
-    expect(supportsQuestionStream(["question-stream-v5"])).toBe(false);
+    ).toBe(false);
     expect(
-      supportsQuestionStream(["question-stream-v5", "question-stream-v6"]),
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.14",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(true);
+    expect(supportsQuestionStream(["question-stream-v6"])).toBe(false);
+    expect(
+      supportsQuestionStream(["question-stream-v6", "question-stream-v7"]),
+    ).toBe(true);
+    expect(
+      supportsQuestionStream(["question-stream-v6"], "concept_first_auto_v5_8"),
     ).toBe(true);
     expect(
       supportsQuestionStream(

@@ -30,7 +30,8 @@ function automaticGenerationContext(context) {
   return (
     (context?.generationProfile === "stable_auto_recovery_v5_3" ||
       context?.generationProfile === "evidence_grounded_auto_v5_4" ||
-      context?.generationProfile === "concept_first_auto_v5_8") &&
+      context?.generationProfile === "concept_first_auto_v5_8" ||
+      context?.generationProfile === "prompt_first_auto_v5_9") &&
     typeof context.generationId === "string" &&
     typeof context.generationSessionId === "string" &&
     typeof context.recoverySessionId === "string"

@@ -347,6 +347,30 @@ function createConceptFirstDatabase(timestamp = Date.now()) {
   return db;
 }
 
+function createPromptFirstDatabase(timestamp = Date.now()) {
+  const db = createAutomaticDatabase("generating", timestamp);
+  const promptFirst = {
+    ...automaticSummary("generating", timestamp),
+    importVersion: "extension-progressive-import-v8",
+    resultProtocolVersion: 10,
+    promptVersion: "quiz-local-json-stream-v5.9",
+    validatorVersion: "validator-minimal-structural-v5.0",
+    generationProfile: "prompt_first_auto_v5_9",
+    promptFingerprint: "f".repeat(64),
+    sourceSelection: {
+      sentenceCount: 10,
+      excludedSentenceCount: 1,
+      candidateWindowCount: 6,
+      selectedWindowCount: 5,
+      focusWordCount: 120,
+    },
+  };
+  db.sqlite
+    .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+    .run(JSON.stringify(promptFirst), QUIZ_ID);
+  return db;
+}
+
 function testApp(db: SqliteD1Adapter, userId = USER_ID) {
   const app = new Hono<ApiBindings>();
   app.use("*", async (context, next) => {
@@ -475,6 +499,40 @@ function conceptFirstLifecycleEvent(
   const terminal = lifecycleState !== "started";
   return {
     protocolVersion: 9 as const,
+    purpose: "generation" as const,
+    lifecycleState,
+    generationSessionId: SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    callIndex: 0,
+    startIndex: 0,
+    ordinalAttempt: 1,
+    requestedCount: 1 as const,
+    acceptedCount: terminal ? (1 as const) : (0 as const),
+    classification: "primary" as const,
+    retryDelayMs: 0,
+    usageComplete: false,
+    ...(terminal ? { outcome: "complete" as const, elapsedMs: 2_000 } : {}),
+    ...overrides,
+  };
+}
+
+function promptFirstLifecycleEvent(
+  lifecycleState: "started" | "completed" | "abandoned",
+  overrides: Partial<{
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+    acceptedCount: 0 | 1;
+    classification: "primary" | "automatic_retry";
+    retryKind: "transport" | "structural";
+    outcome: LocalGenerationCallOutcome;
+    retryDelayMs: number;
+    elapsedMs: number;
+  }> = {},
+) {
+  const terminal = lifecycleState !== "started";
+  return {
+    protocolVersion: 10 as const,
     purpose: "generation" as const,
     lifecycleState,
     generationSessionId: SESSION_ID,
@@ -1990,6 +2048,55 @@ describe("protocol-9 concept-first call lifecycles", () => {
         .prepare("SELECT COUNT(*) AS count FROM quiz_generation_call_events")
         .get(),
     ).toMatchObject({ count: 0 });
+  });
+});
+
+describe("protocol-10 prompt-first call lifecycles", () => {
+  it("accepts structural retries and rejects historical content-repair kinds", async () => {
+    const db = createPromptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, promptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          promptFirstLifecycleEvent("completed", {
+            acceptedCount: 0,
+            outcome: "schema_invalid",
+            retryDelayMs: 200,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          promptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            ordinalAttempt: 2,
+            acceptedCount: 0,
+            classification: "automatic_retry",
+            retryKind: "structural",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    const invalid = {
+      ...promptFirstLifecycleEvent("started", {
+        callIndex: 2,
+        ordinalAttempt: 3,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "structural",
+      }),
+      retryKind: "content_repair",
+    };
+    expect((await putCall(app, env, invalid)).status).toBe(422);
   });
 });
 

@@ -213,7 +213,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.13",
+            version: outdated ? "0.7.9" : "0.8.14",
             configured: true,
             capabilities: outdated
               ? []
@@ -224,6 +224,7 @@ test.beforeEach(async ({ page }) => {
                   "question-stream-v4",
                   "question-stream-v5",
                   "question-stream-v6",
+                  "question-stream-v7",
                   "ensure-source-ready-v1",
                 ],
           },
@@ -761,7 +762,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.13 or newer", { exact: false }),
+    page.getByText("0.8.14 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -1967,15 +1968,15 @@ async function installMocks(page: Page): Promise<Scenario> {
           extensionRequired: true,
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
-          promptVersion: "quiz-local-json-stream-v5.8",
-          validatorVersion: "validator-local-progressive-v4.12",
+          promptVersion: "quiz-local-json-stream-v5.9",
+          validatorVersion: "validator-minimal-structural-v5.0",
           rolloutMode: "disabled",
-          supportedProfile: "concept_first_auto_v5_8",
-          supportedPromptVersion: "quiz-local-json-stream-v5.8",
-          supportedValidatorVersion: "validator-local-progressive-v4.12",
-          effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.13",
-          requiredCapability: "question-stream-v6",
+          supportedProfile: "prompt_first_auto_v5_9",
+          supportedPromptVersion: "quiz-local-json-stream-v5.9",
+          supportedValidatorVersion: "validator-minimal-structural-v5.0",
+          effectiveDefaultProfile: "concept_first_auto_v5_8",
+          requiredExtensionVersion: "0.8.14",
+          requiredCapability: "question-stream-v7",
           states: {
             generating: 2,
             retrying: 1,
