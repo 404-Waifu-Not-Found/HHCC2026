@@ -138,7 +138,7 @@ export const messages = {
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
     extensionUpdateTitle: "Update ClipQuest Local AI",
     extensionUpdateBody:
-      "This version cannot use prompt-first quiz generation yet. Install ClipQuest Local AI 0.8.14 or newer to continue.",
+      "This version cannot use prompt-first quiz generation yet. Install ClipQuest Local AI 0.8.17 or newer to continue.",
     extensionStepDownload: "Download and unzip the extension package.",
     extensionStepOpen: "Open chrome://extensions and turn on Developer mode.",
     extensionStepLoad:
@@ -364,7 +364,7 @@ export const messages = {
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
     extensionUpdateTitle: "更新 ClipQuest Local AI",
     extensionUpdateBody:
-      "当前版本尚不支持提示词优先的测验生成。请安装 ClipQuest Local AI 0.8.14 或更高版本后继续。",
+      "当前版本尚不支持提示词优先的测验生成。请安装 ClipQuest Local AI 0.8.17 或更高版本后继续。",
     extensionStepDownload: "下载并解压扩展安装包。",
     extensionStepOpen: "打开 chrome://extensions，并启用开发者模式。",
     extensionStepLoad:

@@ -54,6 +54,9 @@ const MAX_V5_4_AUTOMATIC_RETRIES = 48;
 const MAX_V5_6_AUTOMATIC_RETRIES = 12;
 const MAX_V5_8_AUTOMATIC_RETRIES = 48;
 const MAX_V5_9_AUTOMATIC_RETRIES = 30;
+const MAX_V5_10_AUTOMATIC_RETRIES = 30;
+const MAX_V5_11_AUTOMATIC_RETRIES = 30;
+const MAX_V5_12_AUTOMATIC_RETRIES = 30;
 
 type AutomaticGenerationCallEvent =
   | LegacyAutomaticRecoveryCallEvent
@@ -69,7 +72,21 @@ function isAutomaticGenerationProfile(
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
     profile === "concept_first_auto_v5_8" ||
-    profile === "prompt_first_auto_v5_9"
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
+  );
+}
+
+function isPromptFirstProfile(
+  profile: ProgressiveQuizSummary["generationProfile"] | undefined,
+): boolean {
+  return (
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
   );
 }
 
@@ -85,7 +102,7 @@ function expectedAutomaticProtocol(
   if (profile === "concept_first_auto_v5_8") {
     return CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
   }
-  if (profile === "prompt_first_auto_v5_9") {
+  if (isPromptFirstProfile(profile)) {
     return LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
   }
   return null;
@@ -105,12 +122,42 @@ export function currentGroundedNewBankMetadataMatches(
     | "importVersion"
   >,
 ): boolean {
-  if (chunk.generationProfile === "prompt_first_auto_v5_9") {
+  if (chunk.generationProfile === "prompt_first_auto_v5_12") {
     return (
       chunk.model === LOCAL_QUIZ_MODEL &&
       chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
       chunk.promptVersion === LOCAL_QUIZ_PROMPT_VERSION &&
       chunk.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
+  if (chunk.generationProfile === "prompt_first_auto_v5_11") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === "quiz-local-json-stream-v5.11" &&
+      chunk.validatorVersion === "validator-minimal-gradeability-v5.2" &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
+  if (chunk.generationProfile === "prompt_first_auto_v5_10") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === "quiz-local-json-stream-v5.10" &&
+      chunk.validatorVersion === "validator-minimal-gradeability-v5.1" &&
+      chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+    );
+  }
+  if (chunk.generationProfile === "prompt_first_auto_v5_9") {
+    return (
+      chunk.model === LOCAL_QUIZ_MODEL &&
+      chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+      chunk.promptVersion === "quiz-local-json-stream-v5.9" &&
+      chunk.validatorVersion === "validator-minimal-structural-v5.0" &&
       chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
       chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
     );
@@ -286,7 +333,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     .toLocaleLowerCase()
     .trim();
   if (
-    summary.generationProfile !== "prompt_first_auto_v5_9" &&
+    !isPromptFirstProfile(summary.generationProfile) &&
     summary.acceptedQuestionSummaries.some(
       (question) =>
         promptSimilarity(question.question, normalizedPrompt) >= 0.9,
@@ -309,13 +356,12 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
   }
 
   const nextCount = input.chunk.startIndex + 1;
-  const qualityFlags =
-    summary.generationProfile === "prompt_first_auto_v5_9"
-      ? []
-      : questionQualityFlags(
-          input.chunk.question,
-          summary.acceptedQuestionSummaries,
-        );
+  const qualityFlags = isPromptFirstProfile(summary.generationProfile)
+    ? []
+    : questionQualityFlags(
+        input.chunk.question,
+        summary.acceptedQuestionSummaries,
+      );
   const complete = nextCount === summary.plannedCount;
   const questionId = createId();
   const timestamp = now();
@@ -637,18 +683,26 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     const retryLimit = automaticEvent
       ? legacyAutomaticRecovery
         ? MAX_V5_6_AUTOMATIC_RETRIES
-        : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.9"
-          ? MAX_V5_9_AUTOMATIC_RETRIES
-          : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
-            ? MAX_V5_8_AUTOMATIC_RETRIES
-            : snapshot.summary.promptVersion ===
-                  "quiz-local-json-stream-v5.7" ||
-                snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
-              ? MAX_V5_6_AUTOMATIC_RETRIES
-              : snapshot.summary.generationProfile ===
-                  "evidence_grounded_auto_v5_4"
-                ? MAX_V5_4_AUTOMATIC_RETRIES
-                : MAX_V5_3_AUTOMATIC_RETRIES
+        : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.12"
+          ? MAX_V5_12_AUTOMATIC_RETRIES
+          : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.11"
+            ? MAX_V5_11_AUTOMATIC_RETRIES
+            : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.10"
+              ? MAX_V5_10_AUTOMATIC_RETRIES
+              : snapshot.summary.promptVersion === "quiz-local-json-stream-v5.9"
+                ? MAX_V5_9_AUTOMATIC_RETRIES
+                : snapshot.summary.promptVersion ===
+                    "quiz-local-json-stream-v5.8"
+                  ? MAX_V5_8_AUTOMATIC_RETRIES
+                  : snapshot.summary.promptVersion ===
+                        "quiz-local-json-stream-v5.7" ||
+                      snapshot.summary.promptVersion ===
+                        "quiz-local-json-stream-v5.6"
+                    ? MAX_V5_6_AUTOMATIC_RETRIES
+                    : snapshot.summary.generationProfile ===
+                        "evidence_grounded_auto_v5_4"
+                      ? MAX_V5_4_AUTOMATIC_RETRIES
+                      : MAX_V5_3_AUTOMATIC_RETRIES
       : 1;
     if (Number(existingRetry?.count ?? 0) >= retryLimit) {
       throw new ApiError(
@@ -660,8 +714,9 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       );
     }
     if (automaticEvent) {
-      const promptFirst =
-        snapshot.summary.generationProfile === "prompt_first_auto_v5_9";
+      const promptFirst = isPromptFirstProfile(
+        snapshot.summary.generationProfile,
+      );
       const grounded =
         legacyAutomaticRecovery ||
         snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4" ||
@@ -1017,15 +1072,17 @@ async function persistProgressiveQuiz(input: {
   ) {
     assertGroundedQuestionIdentity(question, []);
   }
-  const qualityFlags =
-    chunk.generationProfile === "prompt_first_auto_v5_9"
-      ? []
-      : questionQualityFlags(question, []);
+  const qualityFlags = isPromptFirstProfile(chunk.generationProfile)
+    ? []
+    : questionQualityFlags(question, []);
   const summary = ProgressiveQuizSummarySchema.parse({
     source: "extension-local-json-stream",
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.9"
+      (chunk.promptVersion === "quiz-local-json-stream-v5.12" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.11" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.10" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.9"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
         : chunk.promptVersion === "quiz-local-json-stream-v5.8"
           ? "extension-progressive-import-v7"
@@ -1068,7 +1125,10 @@ async function persistProgressiveQuiz(input: {
       chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.8" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.9",
+      chunk.promptVersion === "quiz-local-json-stream-v5.9" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.10" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.11" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.12",
     sourceSelection: chunk.metrics.sourceSelection,
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]

@@ -16,6 +16,12 @@ export type AppEnv = Omit<
   | "QUIZ_V5_4_CANARY_USER_IDS"
   | "QUIZ_V5_9_ROLLOUT"
   | "QUIZ_V5_9_CANARY_USER_IDS"
+  | "QUIZ_V5_10_ROLLOUT"
+  | "QUIZ_V5_10_CANARY_USER_IDS"
+  | "QUIZ_V5_11_ROLLOUT"
+  | "QUIZ_V5_11_CANARY_USER_IDS"
+  | "QUIZ_V5_12_ROLLOUT"
+  | "QUIZ_V5_12_CANARY_USER_IDS"
 > &
   AppSecrets & {
     ENABLE_YOUTUBE_DEMO_HISTORY: string;
@@ -27,6 +33,12 @@ export type AppEnv = Omit<
     QUIZ_V5_4_CANARY_USER_IDS?: string;
     QUIZ_V5_9_ROLLOUT?: string;
     QUIZ_V5_9_CANARY_USER_IDS?: string;
+    QUIZ_V5_10_ROLLOUT?: string;
+    QUIZ_V5_10_CANARY_USER_IDS?: string;
+    QUIZ_V5_11_ROLLOUT?: string;
+    QUIZ_V5_11_CANARY_USER_IDS?: string;
+    QUIZ_V5_12_ROLLOUT?: string;
+    QUIZ_V5_12_CANARY_USER_IDS?: string;
   };
 
 import type { AdminRole } from "@clipquest/contracts";

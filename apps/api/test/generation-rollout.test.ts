@@ -15,6 +15,12 @@ function env(
   groundedCanaryUserIds = "",
   promptFirstMode?: string,
   promptFirstCanaryUserIds = "",
+  promptFirstV510Mode?: string,
+  promptFirstV510CanaryUserIds = "",
+  promptFirstV511Mode?: string,
+  promptFirstV511CanaryUserIds = "",
+  promptFirstV512Mode?: string,
+  promptFirstV512CanaryUserIds = "",
 ): Pick<
   AppEnv,
   | "QUIZ_V5_2_ROLLOUT"
@@ -25,6 +31,12 @@ function env(
   | "QUIZ_V5_4_CANARY_USER_IDS"
   | "QUIZ_V5_9_ROLLOUT"
   | "QUIZ_V5_9_CANARY_USER_IDS"
+  | "QUIZ_V5_10_ROLLOUT"
+  | "QUIZ_V5_10_CANARY_USER_IDS"
+  | "QUIZ_V5_11_ROLLOUT"
+  | "QUIZ_V5_11_CANARY_USER_IDS"
+  | "QUIZ_V5_12_ROLLOUT"
+  | "QUIZ_V5_12_CANARY_USER_IDS"
 > {
   return {
     QUIZ_V5_2_ROLLOUT: mode,
@@ -35,6 +47,12 @@ function env(
     QUIZ_V5_4_CANARY_USER_IDS: groundedCanaryUserIds,
     QUIZ_V5_9_ROLLOUT: promptFirstMode,
     QUIZ_V5_9_CANARY_USER_IDS: promptFirstCanaryUserIds,
+    QUIZ_V5_10_ROLLOUT: promptFirstV510Mode,
+    QUIZ_V5_10_CANARY_USER_IDS: promptFirstV510CanaryUserIds,
+    QUIZ_V5_11_ROLLOUT: promptFirstV511Mode,
+    QUIZ_V5_11_CANARY_USER_IDS: promptFirstV511CanaryUserIds,
+    QUIZ_V5_12_ROLLOUT: promptFirstV512Mode,
+    QUIZ_V5_12_CANARY_USER_IDS: promptFirstV512CanaryUserIds,
   };
 }
 
@@ -42,9 +60,7 @@ describe("quiz generation rollout", () => {
   it("fails closed to the compatible v5.1 profile", () => {
     expect(quizGenerationRolloutMode(env())).toBe("disabled");
     expect(
-      quizGenerationRolloutMode(
-        env(undefined, "", undefined, "", undefined, "", "unexpected"),
-      ),
+      quizGenerationRolloutMode({ QUIZ_V5_12_ROLLOUT: "unexpected" }),
     ).toBe("disabled");
     expect(quizGenerationProfile(env(), "learner-1")).toEqual({
       generationProfile: "legacy_reasoning_v5_1",
@@ -131,6 +147,87 @@ describe("quiz generation rollout", () => {
       generationProfile: "concept_first_auto_v5_8",
       minimumExtensionVersion: "0.8.13",
       requiredCapability: "question-stream-v6",
+    });
+  });
+
+  it("assigns prompt-first v5.10 ahead of the compatibility v5.9 rollout", () => {
+    const canary = env(
+      "disabled",
+      "",
+      "disabled",
+      "",
+      "enabled",
+      "",
+      "enabled",
+      "",
+      "canary",
+      "learner-1",
+    );
+    expect(quizGenerationProfile(canary, "learner-1")).toEqual({
+      generationProfile: "prompt_first_auto_v5_10",
+      minimumExtensionVersion: "0.8.15",
+      requiredCapability: "question-stream-v7",
+    });
+    expect(quizGenerationProfile(canary, "learner-2")).toEqual({
+      generationProfile: "prompt_first_auto_v5_9",
+      minimumExtensionVersion: "0.8.14",
+      requiredCapability: "question-stream-v7",
+    });
+  });
+
+  it("assigns prompt-first v5.11 ahead of the compatibility v5.10 rollout", () => {
+    const canary = env(
+      "disabled",
+      "",
+      "disabled",
+      "",
+      "enabled",
+      "",
+      "enabled",
+      "",
+      "enabled",
+      "",
+      "canary",
+      "learner-1",
+    );
+    expect(quizGenerationProfile(canary, "learner-1")).toEqual({
+      generationProfile: "prompt_first_auto_v5_11",
+      minimumExtensionVersion: "0.8.16",
+      requiredCapability: "question-stream-v7",
+    });
+    expect(quizGenerationProfile(canary, "learner-2")).toEqual({
+      generationProfile: "prompt_first_auto_v5_10",
+      minimumExtensionVersion: "0.8.15",
+      requiredCapability: "question-stream-v7",
+    });
+  });
+
+  it("assigns prompt-first v5.12 ahead of the compatibility v5.11 rollout", () => {
+    const canary = env(
+      "disabled",
+      "",
+      "disabled",
+      "",
+      "enabled",
+      "",
+      "enabled",
+      "",
+      "enabled",
+      "",
+      "enabled",
+      "",
+      "canary",
+      "learner-1",
+    );
+    expect(quizGenerationProfile(canary, "learner-1")).toEqual({
+      generationProfile: "prompt_first_auto_v5_12",
+      minimumExtensionVersion: "0.8.17",
+      requiredCapability: "question-stream-v7",
+    });
+    expect(quizGenerationProfile(canary, "learner-2")).toEqual({
+      generationProfile: "prompt_first_auto_v5_11",
+      minimumExtensionVersion: "0.8.16",
+      requiredCapability: "question-stream-v7",
     });
   });
 

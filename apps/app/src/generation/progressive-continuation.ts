@@ -58,7 +58,10 @@ function automaticProfile(profile: string | undefined): boolean {
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
     profile === "concept_first_auto_v5_8" ||
-    profile === "prompt_first_auto_v5_9"
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
   );
 }
 
@@ -85,7 +88,10 @@ async function runAutomaticRecovery(
   const grounded =
     continuation.generationProfile === "evidence_grounded_auto_v5_4" ||
     continuation.generationProfile === "concept_first_auto_v5_8" ||
-    continuation.generationProfile === "prompt_first_auto_v5_9";
+    continuation.generationProfile === "prompt_first_auto_v5_9" ||
+    continuation.generationProfile === "prompt_first_auto_v5_10" ||
+    continuation.generationProfile === "prompt_first_auto_v5_11" ||
+    continuation.generationProfile === "prompt_first_auto_v5_12";
   if (
     status.generation.state === "cooldown" &&
     status.generation.nextRecoveryAt &&
@@ -264,7 +270,10 @@ async function runAutomaticRecovery(
             generationProfile: continuation.generationProfile as
               | "evidence_grounded_auto_v5_4"
               | "concept_first_auto_v5_8"
-              | "prompt_first_auto_v5_9",
+              | "prompt_first_auto_v5_9"
+              | "prompt_first_auto_v5_10"
+              | "prompt_first_auto_v5_11"
+              | "prompt_first_auto_v5_12",
             recoveryCycle:
               stored?.version === 4
                 ? Math.min(24, stored.recoveryCycle + 1)
@@ -411,7 +420,10 @@ async function runAutomaticRecovery(
         (!("lifecycleState" in event) || event.lifecycleState === "started")
       ) {
         automaticRetryCount = Math.min(
-          continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.12" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.11" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.10" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
             continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
             continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
             continuation.promptVersion === "quiz-local-json-stream-v5.6" ||
@@ -562,6 +574,9 @@ async function runAutomaticRecovery(
         automaticRetryCount,
         ordinalAttempt: latestOrdinalAttempt,
         strictBudget:
+          continuation.promptVersion === "quiz-local-json-stream-v5.12" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.11" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.10" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.7" ||

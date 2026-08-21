@@ -45,8 +45,8 @@ async function requestJson<T>(
       body: JSON.stringify({
         model: env.DEEPSEEK_MODEL,
         messages,
-        thinking: { type: "enabled" },
-        reasoning_effort: "high",
+        thinking: { type: "disabled" },
+        temperature: 0.2,
         response_format: { type: "json_object" },
         max_tokens: maximumOutputTokens,
       }),

@@ -113,7 +113,10 @@ function tokenizeMath(value) {
         index += 1;
       }
       const identifier = input.slice(start, index);
-      if (/^[uv]{2,4}$/u.test(identifier)) {
+      if (
+        /^(?:[uv]{2,4}|[a-z]{2,4})$/u.test(identifier) &&
+        !/^(?:sin|cos|tan|log|sqrt|exp)$/u.test(identifier)
+      ) {
         for (const variable of identifier)
           push({ type: "identifier", value: variable });
       } else push({ type: "identifier", value: identifier });
@@ -138,6 +141,7 @@ function tokenizeMath(value) {
       "*": "multiply",
       "/": "divide",
       "^": "power",
+      "=": "equals",
       "(": "left",
       ")": "right",
       "'": "prime",
@@ -151,9 +155,15 @@ function tokenizeMath(value) {
 
 function hasStructuralToken(tokens) {
   return tokens.some((token) =>
-    ["plus", "minus", "multiply", "divide", "power", "prime"].includes(
-      token.type,
-    ),
+    [
+      "plus",
+      "minus",
+      "multiply",
+      "divide",
+      "power",
+      "prime",
+      "equals",
+    ].includes(token.type),
   );
 }
 
@@ -164,7 +174,15 @@ class MathParser {
   }
   parse() {
     try {
-      const expression = this.parseAdd();
+      const left = this.parseAdd();
+      if (left && this.peek("equals")) {
+        this.consume();
+        const right = this.parseAdd();
+        return right && this.index === this.tokens.length
+          ? { kind: "equality", left, right }
+          : null;
+      }
+      const expression = left;
       return expression && this.index === this.tokens.length
         ? expression
         : null;
@@ -310,6 +328,7 @@ function formulaComplexity(node) {
         node.value.startsWith("derivative:")) &&
       !(
         /^\p{L}$/u.test(identifier) ||
+        /^\p{L}(?:\p{N}+|_[\p{L}\p{N}]+)$/u.test(identifier) ||
         /^(?:sin|cos|tan|log|ln|exp|sqrt)$/u.test(identifier)
       )
         ? 40
@@ -340,6 +359,9 @@ function formulaComplexity(node) {
       formulaComplexity(node.numerator) +
       formulaComplexity(node.denominator)
     );
+  if (node.kind === "equality") {
+    return 18 + formulaComplexity(node.left) + formulaComplexity(node.right);
+  }
   return 10 + formulaComplexity(node.base) + formulaComplexity(node.exponent);
 }
 
@@ -382,6 +404,15 @@ function canonicalSigned(node) {
     };
   }
   if (node.kind === "add") return { sign: 1, key: canonicalExpression(node) };
+  if (node.kind === "equality") {
+    const left = canonicalSigned(node.left);
+    const right = canonicalSigned(node.right);
+    const sides = [
+      `${left.sign === 1 ? "+" : "-"}${left.key}`,
+      `${right.sign === 1 ? "+" : "-"}${right.key}`,
+    ].sort();
+    return { sign: 1, key: `equals(${sides.join("|")})` };
+  }
   if (node.kind === "multiply" || node.kind === "divide")
     return canonicalRationalProduct(node);
   const base = canonicalSigned(node.base);

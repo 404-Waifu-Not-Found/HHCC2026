@@ -98,7 +98,10 @@ function isAutomaticGenerationProfile(profile: string | undefined): boolean {
     profile === "stable_auto_recovery_v5_3" ||
     profile === "evidence_grounded_auto_v5_4" ||
     profile === "concept_first_auto_v5_8" ||
-    profile === "prompt_first_auto_v5_9"
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
   );
 }
 
@@ -106,7 +109,10 @@ function isGroundedGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "evidence_grounded_auto_v5_4" ||
     profile === "concept_first_auto_v5_8" ||
-    profile === "prompt_first_auto_v5_9"
+    profile === "prompt_first_auto_v5_9" ||
+    profile === "prompt_first_auto_v5_10" ||
+    profile === "prompt_first_auto_v5_11" ||
+    profile === "prompt_first_auto_v5_12"
   );
 }
 
@@ -634,7 +640,10 @@ export default function GenerationScreen() {
                   generationProfile: rolloutProfile.generationProfile as
                     | "evidence_grounded_auto_v5_4"
                     | "concept_first_auto_v5_8"
-                    | "prompt_first_auto_v5_9",
+                    | "prompt_first_auto_v5_9"
+                    | "prompt_first_auto_v5_10"
+                    | "prompt_first_auto_v5_11"
+                    | "prompt_first_auto_v5_12",
                   recoveryCycle: 0,
                 })
               : await saveGenerationRecord({

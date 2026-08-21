@@ -11,6 +11,7 @@ type MathToken = (
         | "left"
         | "right"
         | "prime"
+        | "equals"
         | "boundary";
     }
 ) & { attached?: boolean };
@@ -22,7 +23,8 @@ type MathNode =
   | { kind: "multiply"; factors: MathNode[] }
   | { kind: "divide"; numerator: MathNode; denominator: MathNode }
   | { kind: "call"; callee: MathNode; argument: MathNode }
-  | { kind: "power"; base: MathNode; exponent: MathNode };
+  | { kind: "power"; base: MathNode; exponent: MathNode }
+  | { kind: "equality"; left: MathNode; right: MathNode };
 
 type FormulaCandidate = {
   fingerprint: string;
@@ -73,11 +75,31 @@ export function compareFormulaAnswer(
   // multilingual semantic rubric instead of being rejected merely because a
   // stored alternative used separate `+` and `-` equations.
   if (!learner) return "not_formula";
-  return references.some(
-    (reference) => reference.fingerprint === learner.fingerprint,
-  )
-    ? "match"
-    : "mismatch";
+  if (
+    references.some(
+      (reference) => reference.fingerprint === learner.fingerprint,
+    )
+  ) {
+    return "match";
+  }
+  // Combined rule explanations can contain several individually valid
+  // equations. Selecting only the single highest-scoring candidate from each
+  // paragraph is not enough evidence to call the learner structurally wrong
+  // when both paragraphs contain multiple equation statements. Let the strict
+  // semantic rubric compare that bounded prose instead. A standalone or
+  // prose-wrapped single formula still receives a definitive mismatch.
+  if (
+    hasMultipleFormulaStatements(learnerAnswer) &&
+    referenceAnswers.some(hasMultipleFormulaStatements)
+  ) {
+    return "not_formula";
+  }
+  return "mismatch";
+}
+
+function hasMultipleFormulaStatements(value: string): boolean {
+  const equalityCount = value.match(/=/gu)?.length ?? 0;
+  return equalityCount >= 2 || (equalityCount >= 1 && /±/u.test(value));
 }
 
 export function formulaFingerprint(value: string): string | null {
@@ -182,12 +204,20 @@ function tokenizeMath(value: string): MathToken[] {
         index += 1;
       }
       const identifier = input.slice(start, index);
-      if (/^[uv]{2,4}$/u.test(identifier)) {
+      if (/^(?:sin|cos|tan|log|ln|sqrt|exp)$/u.test(identifier)) {
+        push({ type: "identifier", value: identifier });
+      } else if (/^(?:uv|vu|ma|am|xy|yx|fg|gf)$/u.test(identifier)) {
         for (const variable of identifier) {
           push({ type: "identifier", value: variable });
         }
-      } else {
+      } else if (isMathIdentifier(identifier)) {
         push({ type: "identifier", value: identifier });
+      } else {
+        // Natural-language words delimit formula candidates. Treating short
+        // prose such as "is", "for", or "and" as products of one-letter
+        // variables can make a correct formula embedded in a sentence appear
+        // structurally different from the same standalone formula.
+        pushBoundary();
       }
       continue;
     }
@@ -211,6 +241,7 @@ function tokenizeMath(value: string): MathToken[] {
       "*": "multiply",
       "/": "divide",
       "^": "power",
+      "=": "equals",
       "(": "left",
       ")": "right",
       "'": "prime",
@@ -225,9 +256,15 @@ function tokenizeMath(value: string): MathToken[] {
 
 function hasStructuralToken(tokens: MathToken[]): boolean {
   return tokens.some((token) =>
-    ["plus", "minus", "multiply", "divide", "power", "prime"].includes(
-      token.type,
-    ),
+    [
+      "plus",
+      "minus",
+      "multiply",
+      "divide",
+      "power",
+      "prime",
+      "equals",
+    ].includes(token.type),
   );
 }
 
@@ -238,7 +275,15 @@ class MathParser {
 
   parse(): MathNode | null {
     try {
-      const expression = this.parseAdd();
+      const left = this.parseAdd();
+      if (left && this.peek("equals")) {
+        this.consume();
+        const right = this.parseAdd();
+        return right && this.index === this.tokens.length
+          ? { kind: "equality", left, right }
+          : null;
+      }
+      const expression = left;
       return expression && this.index === this.tokens.length
         ? expression
         : null;
@@ -437,12 +482,16 @@ function formulaComplexity(node: MathNode): number {
       return (
         10 + formulaComplexity(node.base) + formulaComplexity(node.exponent)
       );
+    case "equality":
+      return 18 + formulaComplexity(node.left) + formulaComplexity(node.right);
   }
 }
 
 function isMathIdentifier(value: string): boolean {
   return (
-    /^\p{L}$/u.test(value) || /^(?:sin|cos|tan|log|ln|exp|sqrt)$/u.test(value)
+    /^\p{L}$/u.test(value) ||
+    /^\p{L}(?:\p{N}+|_[\p{L}\p{N}]+)$/u.test(value) ||
+    /^(?:sin|cos|tan|log|ln|exp|sqrt)$/u.test(value)
   );
 }
 
@@ -496,6 +545,15 @@ function canonicalSigned(node: MathNode): { sign: 1 | -1; key: string } {
   }
   if (node.kind === "add") {
     return { sign: 1, key: canonicalExpression(node) };
+  }
+  if (node.kind === "equality") {
+    const left = canonicalSigned(node.left);
+    const right = canonicalSigned(node.right);
+    const sides = [
+      `${left.sign === 1 ? "+" : "-"}${left.key}`,
+      `${right.sign === 1 ? "+" : "-"}${right.key}`,
+    ].sort();
+    return { sign: 1, key: `equals(${sides.join("|")})` };
   }
   if (node.kind === "multiply" || node.kind === "divide") {
     return canonicalRationalProduct(node);

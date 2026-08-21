@@ -213,7 +213,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.14",
+            version: outdated ? "0.7.9" : "0.8.17",
             configured: true,
             capabilities: outdated
               ? []
@@ -762,7 +762,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.14 or newer", { exact: false }),
+    page.getByText("0.8.17 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -1968,14 +1968,14 @@ async function installMocks(page: Page): Promise<Scenario> {
           extensionRequired: true,
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
-          promptVersion: "quiz-local-json-stream-v5.9",
-          validatorVersion: "validator-minimal-structural-v5.0",
+          promptVersion: "quiz-local-json-stream-v5.12",
+          validatorVersion: "validator-minimal-gradeability-v5.3",
           rolloutMode: "disabled",
-          supportedProfile: "prompt_first_auto_v5_9",
-          supportedPromptVersion: "quiz-local-json-stream-v5.9",
-          supportedValidatorVersion: "validator-minimal-structural-v5.0",
+          supportedProfile: "prompt_first_auto_v5_12",
+          supportedPromptVersion: "quiz-local-json-stream-v5.12",
+          supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
           effectiveDefaultProfile: "concept_first_auto_v5_8",
-          requiredExtensionVersion: "0.8.14",
+          requiredExtensionVersion: "0.8.17",
           requiredCapability: "question-stream-v7",
           states: {
             generating: 2,

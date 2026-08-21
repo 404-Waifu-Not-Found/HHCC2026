@@ -8,7 +8,10 @@ import {
   type LocalGenerationProfile,
 } from "@clipquest/contracts";
 
-export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.14";
+export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.17";
+export const MINIMUM_PROMPT_FIRST_V511_LOCAL_AI_EXTENSION_VERSION = "0.8.16";
+export const MINIMUM_PROMPT_FIRST_V510_LOCAL_AI_EXTENSION_VERSION = "0.8.15";
+export const MINIMUM_PROMPT_FIRST_V59_LOCAL_AI_EXTENSION_VERSION = "0.8.14";
 export const MINIMUM_CONCEPT_FIRST_LOCAL_AI_EXTENSION_VERSION = "0.8.13";
 export const MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION = "0.8.7";
 export const MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION = "0.8.3";
@@ -38,10 +41,13 @@ export function isCompatibleClipQuestExtensionVersion(
 
 export function supportsQuestionStream(
   capabilities: readonly string[],
-  generationProfile: LocalGenerationProfile = "prompt_first_auto_v5_9",
+  generationProfile: LocalGenerationProfile = "prompt_first_auto_v5_12",
 ): boolean {
   return capabilities.includes(
-    generationProfile === "prompt_first_auto_v5_9"
+    generationProfile === "prompt_first_auto_v5_12" ||
+      generationProfile === "prompt_first_auto_v5_11" ||
+      generationProfile === "prompt_first_auto_v5_10" ||
+      generationProfile === "prompt_first_auto_v5_9"
       ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
       : generationProfile === "concept_first_auto_v5_8"
         ? CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY

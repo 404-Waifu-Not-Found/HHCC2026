@@ -533,18 +533,27 @@ export async function requestExtensionLocalQuiz(
   const minimumExtensionVersion =
     context.continuation?.resultProtocolVersion === 5
       ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
-      : context.generationProfile === "prompt_first_auto_v5_9"
+      : context.generationProfile === "prompt_first_auto_v5_12"
         ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
-        : context.generationProfile === "concept_first_auto_v5_8"
-          ? MINIMUM_CONCEPT_FIRST_LOCAL_AI_EXTENSION_VERSION
-          : context.generationProfile === "evidence_grounded_auto_v5_4"
-            ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
-            : context.generationProfile === "stable_auto_recovery_v5_3"
-              ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
-              : context.generationProfile === "stable_non_thinking_v5_2"
-                ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
-                : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
+        : context.generationProfile === "prompt_first_auto_v5_11"
+          ? "0.8.16"
+          : context.generationProfile === "prompt_first_auto_v5_10"
+            ? "0.8.15"
+            : context.generationProfile === "prompt_first_auto_v5_9"
+              ? "0.8.14"
+              : context.generationProfile === "concept_first_auto_v5_8"
+                ? MINIMUM_CONCEPT_FIRST_LOCAL_AI_EXTENSION_VERSION
+                : context.generationProfile === "evidence_grounded_auto_v5_4"
+                  ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
+                  : context.generationProfile === "stable_auto_recovery_v5_3"
+                    ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
+                    : context.generationProfile === "stable_non_thinking_v5_2"
+                      ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
+                      : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
   const requiredCapability =
+    context.generationProfile === "prompt_first_auto_v5_12" ||
+    context.generationProfile === "prompt_first_auto_v5_11" ||
+    context.generationProfile === "prompt_first_auto_v5_10" ||
     context.generationProfile === "prompt_first_auto_v5_9"
       ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
       : context.generationProfile === "concept_first_auto_v5_8"
@@ -588,7 +597,10 @@ export async function requestExtensionLocalQuiz(
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     const conceptFirst =
       context.generationProfile === "concept_first_auto_v5_8" ||
-      context.generationProfile === "prompt_first_auto_v5_9";
+      context.generationProfile === "prompt_first_auto_v5_9" ||
+      context.generationProfile === "prompt_first_auto_v5_10" ||
+      context.generationProfile === "prompt_first_auto_v5_11" ||
+      context.generationProfile === "prompt_first_auto_v5_12";
     const finish = (callback: () => void) => {
       if (settled) return;
       settled = true;

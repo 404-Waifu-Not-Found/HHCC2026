@@ -11,7 +11,10 @@ import {
   readProgressiveGenerationSnapshot,
   tryProgressiveQuizSummary,
 } from "../src/lib/progressive-quiz";
-import { formulaFingerprint } from "../src/lib/math-expression";
+import {
+  compareFormulaAnswer,
+  formulaFingerprint,
+} from "../src/lib/math-expression";
 
 const questionTypes = [
   "multiple_choice",
@@ -267,6 +270,28 @@ describe("progressive short-answer grading", () => {
     ).toBe(true);
   });
 
+  it("treats unchanged and does-not-change as the same bounded proposition", () => {
+    const requiredIdeas = [
+      "seawater warms",
+      "volume increases",
+      "mass does not change",
+    ];
+    expect(
+      gradeProgressiveShortAnswer({
+        answer:
+          "When seawater warms, its volume increases while its mass stays the same.",
+        requiredIdeas,
+        acceptableAlternatives: [],
+        rubricV2: {
+          version: 2,
+          mode: "proposition",
+          requiredIdeas,
+          acceptableAnswers: [],
+        },
+      }),
+    ).toBe(true);
+  });
+
   it("rejects answers that mention only one idea", () => {
     expect(
       gradeProgressiveShortAnswer({
@@ -322,6 +347,56 @@ describe("progressive short-answer grading", () => {
     }
   });
 
+  it("accepts concise prediction and interpretability paraphrases", () => {
+    const predictionAnswer =
+      "With very limited training data, prediction is uncertain; with more examples, prediction becomes more reliable.";
+    const predictionRubric = {
+      version: 2 as const,
+      mode: "proposition" as const,
+      requiredIdeas: [predictionAnswer],
+      acceptableAnswers: [predictionAnswer],
+    };
+    for (const answer of [
+      "More training data makes predictions more reliable.",
+      "Predictions become more reliable with more examples.",
+      "Limited data is uncertain; more data improves reliability.",
+    ]) {
+      expect(
+        gradeProgressiveShortAnswerDecision({
+          answer,
+          requiredIdeas: predictionRubric.requiredIdeas,
+          acceptableAlternatives: predictionRubric.acceptableAnswers,
+          rubricV2: predictionRubric,
+        }),
+      ).toMatchObject({ correct: true });
+    }
+
+    const interpretabilityAnswer =
+      "Because the neural network has so many layers, making it difficult to trace how inputs lead to outputs.";
+    const interpretabilityRubric = {
+      version: 2 as const,
+      mode: "proposition" as const,
+      requiredIdeas: [interpretabilityAnswer],
+      acceptableAnswers: [interpretabilityAnswer],
+    };
+    expect(
+      gradeProgressiveShortAnswerDecision({
+        answer: "Too many layers make the reasoning difficult to trace.",
+        requiredIdeas: interpretabilityRubric.requiredIdeas,
+        acceptableAlternatives: interpretabilityRubric.acceptableAnswers,
+        rubricV2: interpretabilityRubric,
+      }),
+    ).toMatchObject({ correct: true });
+    expect(
+      gradeProgressiveShortAnswerDecision({
+        answer: "Neural networks are complex.",
+        requiredIdeas: interpretabilityRubric.requiredIdeas,
+        acceptableAlternatives: interpretabilityRubric.acceptableAnswers,
+        rubricV2: interpretabilityRubric,
+      }),
+    ).toEqual({ correct: false, path: "required_idea_missing" });
+  });
+
   describe("formula-aware grading", () => {
     const quotientRuleRubric = {
       requiredIdeas: [
@@ -359,6 +434,13 @@ describe("progressive short-answer grading", () => {
       expect(formulaFingerprint("(f(b)-f(a))/(b-a)")).not.toBe(
         formulaFingerprint("(f(a)-f(b))/(b-a)"),
       );
+    });
+
+    it("accepts compact equations with implicit or explicit multiplication", () => {
+      expect(compareFormulaAnswer("F=ma", ["F=m*a"])).toBe("match");
+      expect(formulaFingerprint("a=(W1-W2)/(m1+m2)")).not.toBeNull();
+      expect(formulaFingerprint("a=F_net/m_total")).not.toBeNull();
+      expect(compareFormulaAnswer("F=m+a", ["F=m*a"])).toBe("mismatch");
     });
 
     it("accepts the equivalent product-of-fractions wording seen in production", () => {

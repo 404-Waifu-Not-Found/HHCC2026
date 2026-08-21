@@ -42,14 +42,20 @@ const ENGLISH_STOP_WORDS = new Set([
   "at",
   "be",
   "by",
+  "because",
+  "become",
+  "becomes",
   "for",
   "from",
+  "has",
+  "how",
   "in",
   "is",
   "it",
   "of",
   "on",
   "or",
+  "so",
   "that",
   "the",
   "their",
@@ -59,6 +65,8 @@ const ENGLISH_STOP_WORDS = new Set([
   "this",
   "those",
   "to",
+  "too",
+  "very",
   "was",
   "what",
   "when",
@@ -93,8 +101,15 @@ const TOKEN_ALIASES = new Map([
   ["divided", "ratio"],
   ["division", "ratio"],
   ["height", "value"],
+  ["improve", "reliable"],
+  ["improved", "reliable"],
+  ["improves", "reliable"],
+  ["improving", "reliable"],
   ["limiting", "limit"],
+  ["making", "make"],
   ["quotient", "ratio"],
+  ["reliability", "reliable"],
+  ["uncertainty", "uncertain"],
   ["smaller", "small"],
   ["tiny", "small"],
   ["carry", "transfer"],
@@ -275,7 +290,10 @@ export const ProgressiveQuizSummarySchema = z
       value.generationProfile === "stable_auto_recovery_v5_3" ||
       value.generationProfile === "evidence_grounded_auto_v5_4" ||
       value.generationProfile === "concept_first_auto_v5_8" ||
-      value.generationProfile === "prompt_first_auto_v5_9";
+      value.generationProfile === "prompt_first_auto_v5_9" ||
+      value.generationProfile === "prompt_first_auto_v5_10" ||
+      value.generationProfile === "prompt_first_auto_v5_11" ||
+      value.generationProfile === "prompt_first_auto_v5_12";
     if (
       automaticProfile &&
       (value.generationState === "action_required" ||
@@ -335,6 +353,12 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
+    const promptFirstV512 =
+      value.promptVersion === "quiz-local-json-stream-v5.12";
+    const promptFirstV511 =
+      value.promptVersion === "quiz-local-json-stream-v5.11";
+    const promptFirstV510 =
+      value.promptVersion === "quiz-local-json-stream-v5.10";
     const promptFirstV59 =
       value.promptVersion === "quiz-local-json-stream-v5.9";
     const conceptFirstV58 =
@@ -346,73 +370,115 @@ export const ProgressiveQuizSummarySchema = z
     const grounded = groundedV57 || groundedV56 || groundedV55 || groundedV54;
     const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
-    const metadataMatches = promptFirstV59
+    const metadataMatches = promptFirstV512
       ? value.resultProtocolVersion === 10 &&
         value.importVersion === "extension-progressive-import-v8" &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-minimal-structural-v5.0" &&
-        value.generationProfile === "prompt_first_auto_v5_9" &&
+        value.validatorVersion === "validator-minimal-gradeability-v5.3" &&
+        value.generationProfile === "prompt_first_auto_v5_12" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
         Boolean(value.recoverySessionId) &&
         Boolean(value.questionPlanSeed) &&
         Boolean(value.promptFingerprint) &&
         value.telemetryAvailable
-      : conceptFirstV58
-        ? value.resultProtocolVersion === 9 &&
-          value.importVersion === "extension-progressive-import-v7" &&
+      : promptFirstV511
+        ? value.resultProtocolVersion === 10 &&
+          value.importVersion === "extension-progressive-import-v8" &&
           value.reasoningEffort === "none" &&
-          value.validatorVersion === "validator-local-progressive-v4.12" &&
-          value.generationProfile === "concept_first_auto_v5_8" &&
+          value.validatorVersion === "validator-minimal-gradeability-v5.2" &&
+          value.generationProfile === "prompt_first_auto_v5_11" &&
           Boolean(value.generationId) &&
           Boolean(value.generationSessionId) &&
           Boolean(value.recoverySessionId) &&
           Boolean(value.questionPlanSeed) &&
           Boolean(value.promptFingerprint) &&
           value.telemetryAvailable
-        : grounded
-          ? value.resultProtocolVersion === 8 &&
-            value.importVersion === "extension-progressive-import-v6" &&
+        : promptFirstV510
+          ? value.resultProtocolVersion === 10 &&
+            value.importVersion === "extension-progressive-import-v8" &&
             value.reasoningEffort === "none" &&
-            value.validatorVersion ===
-              (groundedV57
-                ? "validator-local-progressive-v4.6"
-                : groundedV56
-                  ? "validator-local-progressive-v4.5"
-                  : groundedV55
-                    ? "validator-local-progressive-v4.4"
-                    : "validator-local-progressive-v4.3") &&
-            value.generationProfile === "evidence_grounded_auto_v5_4" &&
+            value.validatorVersion === "validator-minimal-gradeability-v5.1" &&
+            value.generationProfile === "prompt_first_auto_v5_10" &&
             Boolean(value.generationId) &&
             Boolean(value.generationSessionId) &&
             Boolean(value.recoverySessionId) &&
             Boolean(value.questionPlanSeed) &&
+            Boolean(value.promptFingerprint) &&
             value.telemetryAvailable
-          : automatic
-            ? value.resultProtocolVersion === 7 &&
-              value.importVersion === "extension-progressive-import-v5" &&
+          : promptFirstV59
+            ? value.resultProtocolVersion === 10 &&
+              value.importVersion === "extension-progressive-import-v8" &&
               value.reasoningEffort === "none" &&
-              value.validatorVersion === "validator-local-progressive-v4.2" &&
-              value.generationProfile === "stable_auto_recovery_v5_3" &&
+              value.validatorVersion === "validator-minimal-structural-v5.0" &&
+              value.generationProfile === "prompt_first_auto_v5_9" &&
               Boolean(value.generationId) &&
               Boolean(value.generationSessionId) &&
               Boolean(value.recoverySessionId) &&
               Boolean(value.questionPlanSeed) &&
+              Boolean(value.promptFingerprint) &&
               value.telemetryAvailable
-            : stable
-              ? value.resultProtocolVersion === 6 &&
-                value.importVersion === "extension-progressive-import-v4" &&
+            : conceptFirstV58
+              ? value.resultProtocolVersion === 9 &&
+                value.importVersion === "extension-progressive-import-v7" &&
                 value.reasoningEffort === "none" &&
-                value.validatorVersion === "validator-local-progressive-v4.1" &&
-                value.generationProfile === "stable_non_thinking_v5_2" &&
+                value.validatorVersion ===
+                  "validator-local-progressive-v4.12" &&
+                value.generationProfile === "concept_first_auto_v5_8" &&
                 Boolean(value.generationId) &&
+                Boolean(value.generationSessionId) &&
+                Boolean(value.recoverySessionId) &&
                 Boolean(value.questionPlanSeed) &&
+                Boolean(value.promptFingerprint) &&
                 value.telemetryAvailable
-              : value.resultProtocolVersion === 5 &&
-                value.importVersion === "extension-progressive-import-v3" &&
-                value.reasoningEffort === "high" &&
-                value.validatorVersion === "validator-local-progressive-v4.0" &&
-                value.generationProfile === "legacy_reasoning_v5_1";
+              : grounded
+                ? value.resultProtocolVersion === 8 &&
+                  value.importVersion === "extension-progressive-import-v6" &&
+                  value.reasoningEffort === "none" &&
+                  value.validatorVersion ===
+                    (groundedV57
+                      ? "validator-local-progressive-v4.6"
+                      : groundedV56
+                        ? "validator-local-progressive-v4.5"
+                        : groundedV55
+                          ? "validator-local-progressive-v4.4"
+                          : "validator-local-progressive-v4.3") &&
+                  value.generationProfile === "evidence_grounded_auto_v5_4" &&
+                  Boolean(value.generationId) &&
+                  Boolean(value.generationSessionId) &&
+                  Boolean(value.recoverySessionId) &&
+                  Boolean(value.questionPlanSeed) &&
+                  value.telemetryAvailable
+                : automatic
+                  ? value.resultProtocolVersion === 7 &&
+                    value.importVersion === "extension-progressive-import-v5" &&
+                    value.reasoningEffort === "none" &&
+                    value.validatorVersion ===
+                      "validator-local-progressive-v4.2" &&
+                    value.generationProfile === "stable_auto_recovery_v5_3" &&
+                    Boolean(value.generationId) &&
+                    Boolean(value.generationSessionId) &&
+                    Boolean(value.recoverySessionId) &&
+                    Boolean(value.questionPlanSeed) &&
+                    value.telemetryAvailable
+                  : stable
+                    ? value.resultProtocolVersion === 6 &&
+                      value.importVersion ===
+                        "extension-progressive-import-v4" &&
+                      value.reasoningEffort === "none" &&
+                      value.validatorVersion ===
+                        "validator-local-progressive-v4.1" &&
+                      value.generationProfile === "stable_non_thinking_v5_2" &&
+                      Boolean(value.generationId) &&
+                      Boolean(value.questionPlanSeed) &&
+                      value.telemetryAvailable
+                    : value.resultProtocolVersion === 5 &&
+                      value.importVersion ===
+                        "extension-progressive-import-v3" &&
+                      value.reasoningEffort === "high" &&
+                      value.validatorVersion ===
+                        "validator-local-progressive-v4.0" &&
+                      value.generationProfile === "legacy_reasoning_v5_1";
     if (!metadataMatches) {
       context.addIssue({
         code: "custom",
@@ -1042,6 +1108,9 @@ export async function readProgressiveGenerationSnapshot(
     summary.generationProfile === "evidence_grounded_auto_v5_4" ||
     summary.generationProfile === "concept_first_auto_v5_8" ||
     summary.generationProfile === "prompt_first_auto_v5_9" ||
+    summary.generationProfile === "prompt_first_auto_v5_10" ||
+    summary.generationProfile === "prompt_first_auto_v5_11" ||
+    summary.generationProfile === "prompt_first_auto_v5_12" ||
     summary.resultProtocolVersion === 5;
   const stalled =
     (availability.state === "generating" ||
@@ -1358,6 +1427,10 @@ function normalizeRubricText(value: string): string {
     .replace(/\bdeoxyribonucleic acid\b/gu, " dna ")
     .replace(/\bribonucleic acid\b/gu, " rna ")
     .replace(/\bpick(?:s|ed|ing)?\s+up\b/gu, " detect ")
+    .replace(
+      /\b(?:stays?|remains?)\s+(?:the\s+)?same\b|\b(?:is|are)\s+unchanged\b/gu,
+      " does not change ",
+    )
     .replace(/[’']/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()

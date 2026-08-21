@@ -360,11 +360,15 @@ export const LocalQuizPromptVersionSchema = z.enum([
   "quiz-local-json-stream-v5.7",
   "quiz-local-json-stream-v5.8",
   "quiz-local-json-stream-v5.9",
+  "quiz-local-json-stream-v5.10",
+  "quiz-local-json-stream-v5.11",
+  "quiz-local-json-stream-v5.12",
 ]);
 export type LocalQuizPromptVersion = z.infer<
   typeof LocalQuizPromptVersionSchema
 >;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.9" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION =
+  "quiz-local-json-stream-v5.12" as const;
 export const LocalQuizValidatorVersionSchema = z.enum([
   "validator-local-progressive-v4.0",
   "validator-local-progressive-v4.1",
@@ -380,12 +384,15 @@ export const LocalQuizValidatorVersionSchema = z.enum([
   "validator-local-progressive-v4.11",
   "validator-local-progressive-v4.12",
   "validator-minimal-structural-v5.0",
+  "validator-minimal-gradeability-v5.1",
+  "validator-minimal-gradeability-v5.2",
+  "validator-minimal-gradeability-v5.3",
 ]);
 export type LocalQuizValidatorVersion = z.infer<
   typeof LocalQuizValidatorVersionSchema
 >;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
-  "validator-minimal-structural-v5.0" as const;
+  "validator-minimal-gradeability-v5.3" as const;
 export const LocalQuizProgressiveImportVersionSchema = z.enum([
   "extension-progressive-import-v3",
   "extension-progressive-import-v4",
@@ -555,6 +562,9 @@ export const LocalGenerationProfileSchema = z.enum([
   "evidence_grounded_auto_v5_4",
   "concept_first_auto_v5_8",
   "prompt_first_auto_v5_9",
+  "prompt_first_auto_v5_10",
+  "prompt_first_auto_v5_11",
+  "prompt_first_auto_v5_12",
 ]);
 export type LocalGenerationProfile = z.infer<
   typeof LocalGenerationProfileSchema
@@ -586,6 +596,9 @@ export const QuizGenerationProfileResponseSchema = z
       "0.8.12",
       "0.8.13",
       "0.8.14",
+      "0.8.15",
+      "0.8.16",
+      "0.8.17",
     ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -600,17 +613,26 @@ export const QuizGenerationProfileResponseSchema = z
   .strict()
   .superRefine((value, context) => {
     const expected =
-      value.generationProfile === "prompt_first_auto_v5_9"
-        ? ["0.8.14", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-        : value.generationProfile === "concept_first_auto_v5_8"
-          ? ["0.8.13", CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-          : value.generationProfile === "evidence_grounded_auto_v5_4"
-            ? ["0.8.7", GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-            : value.generationProfile === "stable_auto_recovery_v5_3"
-              ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-              : value.generationProfile === "stable_non_thinking_v5_2"
-                ? ["0.8.2", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-                : ["0.8.0", LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY];
+      value.generationProfile === "prompt_first_auto_v5_12"
+        ? ["0.8.17", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        : value.generationProfile === "prompt_first_auto_v5_11"
+          ? ["0.8.16", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+          : value.generationProfile === "prompt_first_auto_v5_10"
+            ? ["0.8.15", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+            : value.generationProfile === "prompt_first_auto_v5_9"
+              ? ["0.8.14", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+              : value.generationProfile === "concept_first_auto_v5_8"
+                ? [
+                    "0.8.13",
+                    CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                  ]
+                : value.generationProfile === "evidence_grounded_auto_v5_4"
+                  ? ["0.8.7", GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                  : value.generationProfile === "stable_auto_recovery_v5_3"
+                    ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                    : value.generationProfile === "stable_non_thinking_v5_2"
+                      ? ["0.8.2", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                      : ["0.8.0", LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY];
     if (
       value.minimumExtensionVersion !== expected[0] ||
       value.requiredCapability !== expected[1]
@@ -1364,6 +1386,9 @@ export const GenerationRecordV4Schema = z
       "evidence_grounded_auto_v5_4",
       "concept_first_auto_v5_8",
       "prompt_first_auto_v5_9",
+      "prompt_first_auto_v5_10",
+      "prompt_first_auto_v5_11",
+      "prompt_first_auto_v5_12",
     ]),
     quizId: z.string().uuid().optional(),
     attemptId: z.string().uuid().optional(),
@@ -1572,7 +1597,10 @@ export const LocalQuizContextSchema = z
         value.generationProfile === "stable_auto_recovery_v5_3" ||
         value.generationProfile === "evidence_grounded_auto_v5_4" ||
         value.generationProfile === "concept_first_auto_v5_8" ||
-        value.generationProfile === "prompt_first_auto_v5_9") &&
+        value.generationProfile === "prompt_first_auto_v5_9" ||
+        value.generationProfile === "prompt_first_auto_v5_10" ||
+        value.generationProfile === "prompt_first_auto_v5_11" ||
+        value.generationProfile === "prompt_first_auto_v5_12") &&
       (!value.generationId || !value.generationSessionId)
     ) {
       context.addIssue({
@@ -1950,6 +1978,12 @@ function validateLocalGenerationMetadata(
   value: LocalGenerationMetadata,
   context: z.RefinementCtx,
 ): void {
+  const promptFirstV512 =
+    value.promptVersion === "quiz-local-json-stream-v5.12";
+  const promptFirstV511 =
+    value.promptVersion === "quiz-local-json-stream-v5.11";
+  const promptFirstV510 =
+    value.promptVersion === "quiz-local-json-stream-v5.10";
   const promptFirstV59 = value.promptVersion === "quiz-local-json-stream-v5.9";
   const conceptFirstV58 = value.promptVersion === "quiz-local-json-stream-v5.8";
   const groundedV57 = value.promptVersion === "quiz-local-json-stream-v5.7";
@@ -1959,76 +1993,113 @@ function validateLocalGenerationMetadata(
   const grounded = groundedV57 || groundedV56 || groundedV55 || groundedV54;
   const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
   const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
-  const valid = promptFirstV59
+  const valid = promptFirstV512
     ? value.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
       value.reasoningEffort === "none" &&
       value.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
       value.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION &&
-      value.generationProfile === "prompt_first_auto_v5_9" &&
+      value.generationProfile === "prompt_first_auto_v5_12" &&
       Boolean(value.generationId) &&
       Boolean(value.generationSessionId) &&
       Boolean(value.recoverySessionId) &&
       Boolean(value.questionPlan) &&
       Boolean(value.promptFingerprint?.match(/^[a-f0-9]{64}$/))
-    : conceptFirstV58
-      ? value.protocolVersion ===
-          CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    : promptFirstV511
+      ? value.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.12" &&
-        value.importVersion === "extension-progressive-import-v7" &&
-        value.generationProfile === "concept_first_auto_v5_8" &&
+        value.validatorVersion === "validator-minimal-gradeability-v5.2" &&
+        value.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION &&
+        value.generationProfile === "prompt_first_auto_v5_11" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
         Boolean(value.recoverySessionId) &&
         Boolean(value.questionPlan) &&
         Boolean(value.promptFingerprint?.match(/^[a-f0-9]{64}$/))
-      : grounded
-        ? value.protocolVersion ===
-            GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      : promptFirstV510
+        ? value.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
           value.reasoningEffort === "none" &&
-          value.validatorVersion ===
-            (groundedV57
-              ? "validator-local-progressive-v4.6"
-              : groundedV56
-                ? "validator-local-progressive-v4.5"
-                : groundedV55
-                  ? "validator-local-progressive-v4.4"
-                  : "validator-local-progressive-v4.3") &&
-          value.importVersion === "extension-progressive-import-v6" &&
-          value.generationProfile === "evidence_grounded_auto_v5_4" &&
+          value.validatorVersion === "validator-minimal-gradeability-v5.1" &&
+          value.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION &&
+          value.generationProfile === "prompt_first_auto_v5_10" &&
           Boolean(value.generationId) &&
           Boolean(value.generationSessionId) &&
           Boolean(value.recoverySessionId) &&
-          Boolean(value.questionPlan)
-        : automatic
-          ? value.protocolVersion ===
-              AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+          Boolean(value.questionPlan) &&
+          Boolean(value.promptFingerprint?.match(/^[a-f0-9]{64}$/))
+        : promptFirstV59
+          ? value.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
             value.reasoningEffort === "none" &&
-            value.validatorVersion === "validator-local-progressive-v4.2" &&
-            value.importVersion === "extension-progressive-import-v5" &&
-            value.generationProfile === "stable_auto_recovery_v5_3" &&
+            value.validatorVersion === "validator-minimal-structural-v5.0" &&
+            value.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION &&
+            value.generationProfile === "prompt_first_auto_v5_9" &&
             Boolean(value.generationId) &&
             Boolean(value.generationSessionId) &&
             Boolean(value.recoverySessionId) &&
-            Boolean(value.questionPlan)
-          : stable
+            Boolean(value.questionPlan) &&
+            Boolean(value.promptFingerprint?.match(/^[a-f0-9]{64}$/))
+          : conceptFirstV58
             ? value.protocolVersion ===
-                STABLE_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+                CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
               value.reasoningEffort === "none" &&
-              value.validatorVersion === "validator-local-progressive-v4.1" &&
-              value.importVersion === "extension-progressive-import-v4" &&
-              value.generationProfile === "stable_non_thinking_v5_2" &&
+              value.validatorVersion === "validator-local-progressive-v4.12" &&
+              value.importVersion === "extension-progressive-import-v7" &&
+              value.generationProfile === "concept_first_auto_v5_8" &&
               Boolean(value.generationId) &&
-              Boolean(value.questionPlan)
-            : value.protocolVersion ===
-                LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
-              value.reasoningEffort === "high" &&
-              value.validatorVersion === "validator-local-progressive-v4.0" &&
-              (value.importVersion === undefined ||
-                value.importVersion === "extension-progressive-import-v3") &&
-              (value.generationProfile === undefined ||
-                value.generationProfile === "legacy_reasoning_v5_1") &&
-              value.questionPlan === undefined;
+              Boolean(value.generationSessionId) &&
+              Boolean(value.recoverySessionId) &&
+              Boolean(value.questionPlan) &&
+              Boolean(value.promptFingerprint?.match(/^[a-f0-9]{64}$/))
+            : grounded
+              ? value.protocolVersion ===
+                  GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+                value.reasoningEffort === "none" &&
+                value.validatorVersion ===
+                  (groundedV57
+                    ? "validator-local-progressive-v4.6"
+                    : groundedV56
+                      ? "validator-local-progressive-v4.5"
+                      : groundedV55
+                        ? "validator-local-progressive-v4.4"
+                        : "validator-local-progressive-v4.3") &&
+                value.importVersion === "extension-progressive-import-v6" &&
+                value.generationProfile === "evidence_grounded_auto_v5_4" &&
+                Boolean(value.generationId) &&
+                Boolean(value.generationSessionId) &&
+                Boolean(value.recoverySessionId) &&
+                Boolean(value.questionPlan)
+              : automatic
+                ? value.protocolVersion ===
+                    AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+                  value.reasoningEffort === "none" &&
+                  value.validatorVersion ===
+                    "validator-local-progressive-v4.2" &&
+                  value.importVersion === "extension-progressive-import-v5" &&
+                  value.generationProfile === "stable_auto_recovery_v5_3" &&
+                  Boolean(value.generationId) &&
+                  Boolean(value.generationSessionId) &&
+                  Boolean(value.recoverySessionId) &&
+                  Boolean(value.questionPlan)
+                : stable
+                  ? value.protocolVersion ===
+                      STABLE_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+                    value.reasoningEffort === "none" &&
+                    value.validatorVersion ===
+                      "validator-local-progressive-v4.1" &&
+                    value.importVersion === "extension-progressive-import-v4" &&
+                    value.generationProfile === "stable_non_thinking_v5_2" &&
+                    Boolean(value.generationId) &&
+                    Boolean(value.questionPlan)
+                  : value.protocolVersion ===
+                      LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+                    value.reasoningEffort === "high" &&
+                    value.validatorVersion ===
+                      "validator-local-progressive-v4.0" &&
+                    (value.importVersion === undefined ||
+                      value.importVersion ===
+                        "extension-progressive-import-v3") &&
+                    (value.generationProfile === undefined ||
+                      value.generationProfile === "legacy_reasoning_v5_1") &&
+                    value.questionPlan === undefined;
   if (!valid) {
     context.addIssue({
       code: "custom",
