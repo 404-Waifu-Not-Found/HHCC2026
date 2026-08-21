@@ -75,7 +75,7 @@ export default function CreateQuestScreen() {
     if (!videoId || !session?.user.id) return;
     void Promise.all([
       loadImportedVideo(session.user.id, videoId),
-      loadQuestPreferences(videoId),
+      loadQuestPreferences(session.user.id, videoId),
     ]).then(([value, preferences]) => {
       if (value) {
         setVideo(value);
@@ -176,7 +176,7 @@ export default function CreateQuestScreen() {
       setError("Sign in again before creating a quiz.");
       return;
     }
-    await saveQuestPreferences(video.video.id, {
+    await saveQuestPreferences(session.user.id, video.video.id, {
       quizLanguage,
       questionTypes,
     });

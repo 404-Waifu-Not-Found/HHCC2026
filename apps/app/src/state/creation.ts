@@ -31,8 +31,12 @@ const GENERATION_V2_PREFIX = "clipquest:generation:v2:";
 const LEGACY_GENERATION_PREFIX = "clipquest:generation:";
 const attemptGenerationKeyFor = (attemptId: string) =>
   `clipquest:generation-attempt:v2:${attemptId}`;
-const preferencesKeyFor = (videoId: string) =>
-  `clipquest:preferences:${videoId}`;
+const LEGACY_PREFERENCES_PREFIX = "clipquest:preferences:";
+const PREFERENCES_PREFIX = "clipquest:preferences:v2:";
+const preferencesKeyFor = (userId: string, videoId: string) =>
+  `${PREFERENCES_PREFIX}${accountPart(userId)}:${encodeURIComponent(videoId)}`;
+const legacyPreferencesKeyFor = (videoId: string) =>
+  `${LEGACY_PREFERENCES_PREFIX}${videoId}`;
 const TRANSCRIPT_CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
 export const GENERATION_RECORD_HEARTBEAT_TIMEOUT_MS = 15_000;
 
@@ -127,7 +131,8 @@ export async function clearImportedVideo(
 ): Promise<void> {
   await AsyncStorage.multiRemove([
     keyFor(ownerUserId, videoId),
-    preferencesKeyFor(videoId),
+    preferencesKeyFor(ownerUserId, videoId),
+    legacyPreferencesKeyFor(videoId),
   ]);
 }
 
@@ -137,15 +142,19 @@ export async function clearAccountCreationState(
   const keys = await AsyncStorage.getAllKeys();
   const accountCreationPrefix = `${CREATION_PREFIX}${accountPart(ownerUserId)}:`;
   const accountCheckpointPrefix = `${TRANSCRIPT_CHECKPOINT_PREFIX}${accountPart(ownerUserId)}:`;
+  const accountPreferencesPrefix = `${PREFERENCES_PREFIX}${accountPart(ownerUserId)}:`;
   const removable = new Set(
     keys.filter(
       (candidate) =>
         candidate.startsWith(accountCreationPrefix) ||
         candidate.startsWith(accountCheckpointPrefix) ||
+        candidate.startsWith(accountPreferencesPrefix) ||
         (candidate.startsWith(LEGACY_CREATION_PREFIX) &&
           !candidate.startsWith(CREATION_PREFIX)) ||
         (candidate.startsWith(LEGACY_TRANSCRIPT_CHECKPOINT_PREFIX) &&
           !candidate.startsWith(TRANSCRIPT_CHECKPOINT_PREFIX)) ||
+        (candidate.startsWith(LEGACY_PREFERENCES_PREFIX) &&
+          !candidate.startsWith(PREFERENCES_PREFIX)) ||
         (candidate.startsWith(LEGACY_GENERATION_PREFIX) &&
           !candidate.startsWith(GENERATION_V2_PREFIX) &&
           !candidate.startsWith("clipquest:generation-attempt:v2:")),
@@ -176,6 +185,7 @@ export async function clearAccountCreationState(
 }
 
 export async function saveQuestPreferences(
+  ownerUserId: string,
   videoId: string,
   value: QuestPreferences,
 ): Promise<void> {
@@ -183,16 +193,20 @@ export async function saveQuestPreferences(
     quizLanguage: LanguageSchema.parse(value.quizLanguage),
     questionTypes: QuizQuestionTypesSchema.parse(value.questionTypes),
   };
+  await AsyncStorage.removeItem(legacyPreferencesKeyFor(videoId));
   await AsyncStorage.setItem(
-    preferencesKeyFor(videoId),
+    preferencesKeyFor(ownerUserId, videoId),
     JSON.stringify(parsed),
   );
 }
 
 export async function loadQuestPreferences(
+  ownerUserId: string,
   videoId: string,
 ): Promise<QuestPreferences> {
-  const raw = await AsyncStorage.getItem(preferencesKeyFor(videoId));
+  await AsyncStorage.removeItem(legacyPreferencesKeyFor(videoId));
+  const storageKey = preferencesKeyFor(ownerUserId, videoId);
+  const raw = await AsyncStorage.getItem(storageKey);
   if (!raw) {
     return {
       quizLanguage: "en",
@@ -206,7 +220,7 @@ export async function loadQuestPreferences(
       questionTypes: QuizQuestionTypesSchema.parse(value.questionTypes),
     };
   } catch {
-    await AsyncStorage.removeItem(preferencesKeyFor(videoId));
+    await AsyncStorage.removeItem(storageKey);
     return {
       quizLanguage: "en",
       questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],

@@ -17,6 +17,8 @@ describe("native account storage boundary", () => {
     expect(creation).toContain("ownerUserId");
     expect(creation).toContain("GenerationRecordSchema.parse");
     expect(creation).toContain("record.ownerUserId !== ownerUserId");
+    expect(creation).toContain("clipquest:preferences:v2:");
+    expect(creation).toContain("preferencesKeyFor(ownerUserId, videoId)");
     expect(creation).toContain("attemptGenerationKeyFor(record.attemptId)");
     expect(creation).toContain("!candidate.startsWith(CREATION_PREFIX)");
     expect(creation).toContain(
@@ -31,10 +33,23 @@ describe("native account storage boundary", () => {
   it("clears private local state on sign-out, deletion, and account change", () => {
     const settings = source("app/(tabs)/settings.tsx");
     const layout = source("app/_layout.tsx");
+    const prework = source("src/generation/prework.ts");
     for (const file of [settings, layout]) {
       expect(file).toContain("clearNativeGenerationOutboxes");
       expect(file).toContain("clearAccountCreationState");
+      expect(file).toContain("cancelPreGenerationForAccount");
     }
     expect(settings).toContain("Promise.allSettled");
+    expect(settings).toMatch(
+      /authClient\.signOut\(\)[\s\S]+result\.error[\s\S]+cancelPreGenerationForAccount/,
+    );
+    expect(settings).toMatch(
+      /authClient\.deleteUser[\s\S]+result\.error[\s\S]+cancelPreGenerationForAccount/,
+    );
+    expect(prework).toContain("initial.ownerUserId !== input.ownerUserId");
+    expect(prework).toContain("current.ownerUserId !== input.ownerUserId");
+    expect(prework).toContain("controller.signal.aborted");
+    expect(prework).toContain("activeTask?.controller !== controller");
+    expect(prework).toContain("clearImportedVideo");
   });
 });

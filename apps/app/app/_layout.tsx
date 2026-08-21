@@ -28,6 +28,7 @@ import { pauseAllProgressiveGenerationTasks } from "../src/generation/progressiv
 import { useAppSession } from "../src/lib/auth-client";
 import { clearReviewReminderDeviceState } from "../src/notifications/review-reminders";
 import { clearAccountCreationState } from "../src/state/creation";
+import { cancelPreGenerationForAccount } from "../src/generation/prework";
 import { nativeRouteForUrl } from "../src/navigation/native-deep-links";
 
 const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
@@ -138,6 +139,7 @@ function NativeAccountBoundary() {
         OBSERVED_NATIVE_USER_KEY,
       );
       if (previousUserId && previousUserId !== currentUserId) {
+        cancelPreGenerationForAccount(previousUserId);
         await Promise.allSettled([
           removeLocalGenerationCredential(previousUserId),
           clearReviewReminderDeviceState(previousUserId),

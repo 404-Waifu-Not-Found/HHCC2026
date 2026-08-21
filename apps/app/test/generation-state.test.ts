@@ -16,6 +16,12 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
     async multiRemove(keys: string[]) {
       keys.forEach((key) => storage.delete(key));
     },
+    async getAllKeys() {
+      return [...storage.keys()];
+    },
+    async multiGet(keys: string[]) {
+      return keys.map((key) => [key, storage.get(key) ?? null]);
+    },
   },
 }));
 
@@ -24,11 +30,13 @@ import {
   clearGenerationRecord,
   GENERATION_RECORD_HEARTBEAT_TIMEOUT_MS,
   generationRecordHasLiveHeartbeat,
+  loadQuestPreferences,
   loadGenerationRecord,
   loadGenerationRecordForAttempt,
   migrateLegacyGenerationRecord,
   saveGenerationRecord,
   saveGenerationState,
+  saveQuestPreferences,
 } from "../src/state/creation";
 
 const VIDEO_ID = "11111111-1111-4111-8111-111111111111";
@@ -96,6 +104,47 @@ describe("generation-scoped local state", () => {
       attemptId: ATTEMPT_TWO,
       quizId: QUIZ_TWO,
     });
+  });
+
+  it("keeps quiz preferences isolated between accounts for the same video", async () => {
+    await saveQuestPreferences("owner-one", VIDEO_ID, {
+      quizLanguage: "en",
+      questionTypes: ["multiple_choice"],
+    });
+    await saveQuestPreferences("owner-two", VIDEO_ID, {
+      quizLanguage: "zh-CN",
+      questionTypes: ["short_answer"],
+    });
+
+    await expect(loadQuestPreferences("owner-one", VIDEO_ID)).resolves.toEqual({
+      quizLanguage: "en",
+      questionTypes: ["multiple_choice"],
+    });
+    await expect(loadQuestPreferences("owner-two", VIDEO_ID)).resolves.toEqual({
+      quizLanguage: "zh-CN",
+      questionTypes: ["short_answer"],
+    });
+    expect([...storage.keys()]).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("clipquest:preferences:v2:owner-one:"),
+        expect.stringContaining("clipquest:preferences:v2:owner-two:"),
+      ]),
+    );
+  });
+
+  it("discards ambiguous unscoped preference records", async () => {
+    storage.set(
+      `clipquest:preferences:${VIDEO_ID}`,
+      JSON.stringify({
+        quizLanguage: "zh-CN",
+        questionTypes: ["short_answer"],
+      }),
+    );
+    await expect(loadQuestPreferences("owner-one", VIDEO_ID)).resolves.toEqual({
+      quizLanguage: "en",
+      questionTypes: ["multiple_choice", "true_false", "short_answer"],
+    });
+    expect(storage.has(`clipquest:preferences:${VIDEO_ID}`)).toBe(false);
   });
 
   it("migrates legacy video state only for the exact server quiz", async () => {

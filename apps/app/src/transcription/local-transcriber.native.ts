@@ -30,6 +30,7 @@ const MODEL_DIR = new Directory(
 );
 const MODEL_FILE = new File(MODEL_DIR, "ggml-tiny-q5_1.bin");
 const PAUSED_MODEL_DOWNLOAD_KEY = "clipquest:model-download:v1";
+const MAX_MEDIA_BYTES = 180 * 1024 * 1024;
 const checkpointKey = (ownerUserId: string, videoId: string) =>
   `clipquest:transcript-checkpoint:v2:${encodeURIComponent(ownerUserId)}:${encodeURIComponent(videoId)}`;
 
@@ -284,21 +285,37 @@ async function downloadAudio(
     throw new Error("The audio source is not trusted.");
   }
   const cookie = authClient.getCookie();
-  const task = File.createDownloadTask(url, destination, {
+  let exceededLimit = false;
+  let task: DownloadTask;
+  task = File.createDownloadTask(url, destination, {
     headers: cookie ? { Cookie: cookie } : undefined,
     signal: options.signal,
-    onProgress: ({ bytesWritten, totalBytes }) =>
+    onProgress: ({ bytesWritten, totalBytes }) => {
+      if (bytesWritten > MAX_MEDIA_BYTES) {
+        exceededLimit = true;
+        void task.cancel();
+        return;
+      }
       options.onProgress(
         totalBytes > 0
           ? bytesWritten / totalBytes
           : Math.min(0.95, bytesWritten / 20_000_000),
-      ),
+      );
+    },
   });
   try {
     const result = await task.downloadAsync();
     if (!result) throw new TranscriptionPausedError();
+    if (result.size > MAX_MEDIA_BYTES) {
+      if (destination.exists) destination.delete();
+      throw new Error("The video audio is too large to transcribe safely.");
+    }
   } catch (error) {
     if (options.signal.aborted) throw new TranscriptionPausedError();
+    if (exceededLimit) {
+      if (destination.exists) destination.delete();
+      throw new Error("The video audio is too large to transcribe safely.");
+    }
     throw error;
   }
 }

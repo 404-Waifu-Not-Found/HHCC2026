@@ -39,4 +39,16 @@ describe("native caption-only generation boundary", () => {
       expect.arrayContaining(["whisper.rn", "@clipquest/local-audio-decoder"]),
     );
   });
+
+  it("bounds native media downloads and removes oversized partial files", () => {
+    const transcriber = readFileSync(
+      resolve(appRoot, "src/transcription/local-transcriber.native.ts"),
+      "utf8",
+    );
+    expect(transcriber).toContain("MAX_MEDIA_BYTES = 180 * 1024 * 1024");
+    expect(transcriber).toContain("bytesWritten > MAX_MEDIA_BYTES");
+    expect(transcriber).toContain("result.size > MAX_MEDIA_BYTES");
+    expect(transcriber).toContain("void task.cancel()");
+    expect(transcriber).toContain("destination.delete()");
+  });
 });

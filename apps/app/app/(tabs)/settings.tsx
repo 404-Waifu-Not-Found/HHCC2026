@@ -23,6 +23,7 @@ import { clearAccountCreationState } from "../../src/state/creation";
 import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
 import { removeLocalGenerationCredential } from "../../src/generation/local-generation-client";
 import { clearNativeGenerationOutboxes } from "../../src/generation/android-generation-outbox";
+import { cancelPreGenerationForAccount } from "../../src/generation/prework";
 import {
   disableReviewReminders,
   enableReviewReminders,
@@ -77,6 +78,7 @@ export default function SettingsScreen() {
       const result = await authClient.signOut();
       if (result.error)
         throw new Error(result.error.message ?? t("signOutFailed"));
+      if (userId) cancelPreGenerationForAccount(userId);
       await Promise.allSettled([
         userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
@@ -101,6 +103,7 @@ export default function SettingsScreen() {
       const result = await authClient.deleteUser({ password: deletePassword });
       if (result.error)
         throw new Error(result.error.message ?? t("deleteAccountFailed"));
+      if (userId) cancelPreGenerationForAccount(userId);
       await Promise.allSettled([
         userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),

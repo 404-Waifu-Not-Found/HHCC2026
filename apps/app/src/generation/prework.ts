@@ -4,11 +4,25 @@ import {
   type VideoImportResponse,
 } from "@clipquest/contracts";
 import {
+  clearImportedVideo,
   loadGenerationRecord,
   saveImportedVideo,
   updateGenerationRecord,
 } from "../state/creation";
 import { acquireTextTranscript } from "../transcription/acquire-text-transcript";
+
+const activePrework = new Map<
+  string,
+  { ownerUserId: string; controller: AbortController }
+>();
+
+export function cancelPreGenerationForAccount(ownerUserId: string): void {
+  for (const [generationId, task] of activePrework) {
+    if (task.ownerUserId !== ownerUserId) continue;
+    task.controller.abort();
+    activePrework.delete(generationId);
+  }
+}
 
 export async function preGenerateImportedQuiz(
   imported: VideoImportResponse,
@@ -20,8 +34,15 @@ export async function preGenerateImportedQuiz(
   },
 ): Promise<void> {
   const startedAt = Date.now();
+  activePrework.get(input.generationId)?.controller.abort();
   const controller = new AbortController();
+  activePrework.set(input.generationId, {
+    ownerUserId: input.ownerUserId,
+    controller,
+  });
   try {
+    const initial = await loadGenerationRecord(input.generationId);
+    if (!initial || initial.ownerUserId !== input.ownerUserId) return;
     const transcript = await acquireTextTranscript(
       imported,
       controller.signal,
@@ -29,9 +50,17 @@ export async function preGenerateImportedQuiz(
       input.quizLanguage,
     );
     if (!transcript) {
-      await updateMatchingState(input.generationId, {
+      await updateMatchingState(input.generationId, input.ownerUserId, {
         preworkStatus: "unavailable",
       });
+      return;
+    }
+    const current = await loadGenerationRecord(input.generationId);
+    if (
+      controller.signal.aborted ||
+      !current ||
+      current.ownerUserId !== input.ownerUserId
+    ) {
       return;
     }
     await saveImportedVideo(input.ownerUserId, {
@@ -54,9 +83,28 @@ export async function preGenerateImportedQuiz(
       },
       requiresLocalTranscription: false,
     });
-    await updateMatchingState(input.generationId, {
-      preworkStatus: "ready",
-    });
+    const activeTask = activePrework.get(input.generationId);
+    if (
+      controller.signal.aborted ||
+      activeTask?.controller !== controller ||
+      activeTask.ownerUserId !== input.ownerUserId
+    ) {
+      if (!activeTask) {
+        await clearImportedVideo(input.ownerUserId, imported.video.id);
+      }
+      return;
+    }
+    const stored = await updateMatchingState(
+      input.generationId,
+      input.ownerUserId,
+      {
+        preworkStatus: "ready",
+      },
+    );
+    if (!stored) {
+      await clearImportedVideo(input.ownerUserId, imported.video.id);
+      return;
+    }
     console.info(
       JSON.stringify({
         scope: "generation_prework",
@@ -71,7 +119,8 @@ export async function preGenerateImportedQuiz(
       }),
     );
   } catch (error) {
-    await updateMatchingState(input.generationId, {
+    if (controller.signal.aborted) return;
+    await updateMatchingState(input.generationId, input.ownerUserId, {
       preworkStatus: "failed",
     });
     console.warn(
@@ -83,14 +132,19 @@ export async function preGenerateImportedQuiz(
         elapsedMs: Date.now() - startedAt,
       }),
     );
+  } finally {
+    if (activePrework.get(input.generationId)?.controller === controller) {
+      activePrework.delete(input.generationId);
+    }
   }
 }
 
 async function updateMatchingState(
   generationId: string,
+  ownerUserId: string,
   update: { preworkStatus: "ready" | "unavailable" | "failed" },
-) {
+): Promise<boolean> {
   const current = await loadGenerationRecord(generationId);
-  if (!current) return;
-  await updateGenerationRecord(generationId, update);
+  if (!current || current.ownerUserId !== ownerUserId) return false;
+  return Boolean(await updateGenerationRecord(generationId, update));
 }

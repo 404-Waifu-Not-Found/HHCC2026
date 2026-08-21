@@ -168,7 +168,7 @@ export default function HomeScreen() {
         );
         await Promise.all([
           saveImportedVideo(userId, imported),
-          saveQuestPreferences(imported.video.id, {
+          saveQuestPreferences(userId, imported.video.id, {
             quizLanguage: locale,
             questionTypes,
           }),
