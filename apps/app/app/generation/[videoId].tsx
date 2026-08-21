@@ -1,13 +1,14 @@
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
-  GenerationStatusSchema,
+  ExtensionQuizImportResponseSchema,
   MediaResolveResponseSchema,
-  QuizQuestionTypesSchema,
   QuizStartResponseSchema,
-  TranscriptUploadResponseSchema,
+  QuizQuestionTypesSchema,
   createTranscriptCompleteness,
+  questionLimitForSession,
   type AppLanguage,
   type GenerationStage,
+  type LocalQuizContext,
   type QuizQuestionType,
   type SessionLength,
   type TranscriptCompleteness,
@@ -27,20 +28,20 @@ import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { ProgressBar } from "../../src/components/ProgressBar";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
-import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
-import { isGenerationPollExpired } from "../../src/lib/generation-timeout";
+import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { saveAttemptStart } from "../../src/state/attempt";
 import {
-  clearGenerationState,
   clearImportedVideo,
+  clearGenerationState,
   loadGenerationState,
   loadImportedVideo,
   saveGenerationState,
 } from "../../src/state/creation";
+import { saveAttemptStart } from "../../src/state/attempt";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
 import { acquireTextTranscript } from "../../src/transcription/acquire-text-transcript";
+import { requestExtensionLocalQuiz } from "../../src/transcription/clipquest-extension";
 import {
   breakpoints,
   layout,
@@ -54,34 +55,6 @@ type ProgressDetail = {
   totalBytes?: number;
   cached?: boolean;
 };
-
-function sameQuestionTypes(
-  stored: QuizQuestionType[] | undefined,
-  requested: QuizQuestionType[],
-): boolean {
-  return (
-    stored?.length === requested.length &&
-    stored.every((type, index) => type === requested[index])
-  );
-}
-
-function waitFor(milliseconds: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason);
-      return;
-    }
-    const abort = () => {
-      clearTimeout(timeout);
-      reject(signal.reason);
-    };
-    const timeout = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve();
-    }, milliseconds);
-    signal.addEventListener("abort", abort, { once: true });
-  });
-}
 
 export default function GenerationScreen() {
   const params = useLocalSearchParams<{
@@ -99,12 +72,9 @@ export default function GenerationScreen() {
   const [error, setError] = useState<string>();
   const [paused, setPaused] = useState(false);
   const [runNumber, setRunNumber] = useState(0);
-  const [jobId, setJobId] = useState<string>();
   const [cancelling, setCancelling] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const [localTranscription, setLocalTranscription] = useState(false);
-  const importedRef =
-    useRef<Awaited<ReturnType<typeof loadImportedVideo>>>(null);
   const questionTypes = useMemo<QuizQuestionType[]>(() => {
     const parsed = QuizQuestionTypesSchema.safeParse(
       params.questionTypes?.split(",").filter(Boolean),
@@ -113,86 +83,27 @@ export default function GenerationScreen() {
   }, [params.questionTypes]);
 
   const execute = useCallback(
-    async (signal: AbortSignal, retryExisting: boolean) => {
+    async (signal: AbortSignal) => {
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
-      importedRef.current = imported;
-      setLocalTranscription(imported.transcriptionMode === "device_media");
-      let storedGeneration = await loadGenerationState(imported.video.id);
-      if (
-        !storedGeneration ||
-        storedGeneration.quizLanguage !== params.quizLanguage ||
-        !sameQuestionTypes(storedGeneration.questionTypes, questionTypes)
-      ) {
-        storedGeneration = {
-          idempotencyKey: Crypto.randomUUID(),
+      const storedGeneration = await loadGenerationState(params.videoId);
+      const idempotencyKey = isUuid(storedGeneration?.idempotencyKey)
+        ? storedGeneration.idempotencyKey
+        : Crypto.randomUUID();
+      if (storedGeneration?.idempotencyKey !== idempotencyKey) {
+        await saveGenerationState(params.videoId, {
+          ...storedGeneration,
+          idempotencyKey,
           quizLanguage: params.quizLanguage,
           questionTypes,
-        };
-        await saveGenerationState(imported.video.id, storedGeneration);
+        });
       }
-
-      let queuedJobId = storedGeneration.jobId;
-      if (!queuedJobId && storedGeneration.preworkStatus === "running") {
-        for (let attempt = 0; attempt < 6 && !queuedJobId; attempt += 1) {
-          await waitFor(250, signal);
-          const latest = await loadGenerationState(imported.video.id);
-          if (latest?.idempotencyKey !== storedGeneration.idempotencyKey) break;
-          storedGeneration = latest;
-          queuedJobId = latest.jobId;
-          if (latest.preworkStatus !== "running") break;
-        }
-      }
-      if (!queuedJobId) {
-        try {
-          const found = await apiRequest(
-            `/api/generation/idempotency/${encodeURIComponent(storedGeneration.idempotencyKey)}`,
-            { signal },
-            TranscriptUploadResponseSchema.nullable(),
-          );
-          if (found) {
-            queuedJobId = found.jobId;
-            storedGeneration = { ...storedGeneration, jobId: queuedJobId };
-            await saveGenerationState(imported.video.id, storedGeneration);
-          }
-        } catch (cause) {
-          if (!(cause instanceof ClientApiError && cause.status === 404))
-            throw cause;
-        }
-      }
-
-      if (queuedJobId) {
-        setJobId(queuedJobId);
-        setStage("creating_questions");
-        setProgress(0.05);
-        if (retryExisting) {
-          await apiRequest(
-            `/api/generation/${queuedJobId}/retry`,
-            { method: "POST", signal },
-            GenerationStatusSchema,
-          );
-        }
-        const quizId = await pollGeneration(
-          queuedJobId,
-          signal,
-          (value) => setProgress(value),
-          t("generationTimeout"),
-        );
-        await startQuiz(quizId, imported.video.id, signal);
-        return;
-      }
-
+      setLocalTranscription(imported.transcriptionMode === "device_media");
       setStage("getting_video");
       setProgress(1);
       let segments: TranscriptSegment[] = [];
       let completeness: TranscriptCompleteness | null = null;
       let language = imported.video.sourceLanguage ?? "und";
-      let origin: "captions" | "device_whisper" = "captions";
-      let acquisition:
-        | "server_captions"
-        | "youtube_signed_captions"
-        | "youtube_text_provider"
-        | "device_whisper" = "server_captions";
       setStage("preparing_audio");
       const textTranscript = await acquireTextTranscript(
         imported,
@@ -202,7 +113,6 @@ export default function GenerationScreen() {
       if (textTranscript) {
         segments = textTranscript.segments;
         language = textTranscript.language;
-        acquisition = textTranscript.acquisition;
         completeness = textTranscript.completeness;
         setProgress(1);
       }
@@ -238,8 +148,6 @@ export default function GenerationScreen() {
           segments,
           imported.video.durationSeconds,
         );
-        origin = "device_whisper";
-        acquisition = "device_whisper";
       }
       if (signal.aborted) throw new TranscriptionPausedError();
       if (!completeness) {
@@ -248,70 +156,69 @@ export default function GenerationScreen() {
         );
       }
       setStage("creating_questions");
-      setProgress(0.04);
+      setProgress(0.15);
       setDetail(undefined);
-      const queued = await apiRequest(
-        "/api/transcripts",
+      const context: LocalQuizContext = {
+        protocolVersion: 1,
+        jobId: idempotencyKey,
+        videoId: imported.video.id,
+        title: imported.video.title,
+        quizLanguage: params.quizLanguage,
+        questionTypes,
+        questionCount: questionLimitForSession(params.sessionLength) as
+          5 | 10 | 15,
+        transcriptFingerprint: completeness.textFingerprint,
+        transcriptLanguage: language,
+        segments,
+      };
+      const result = await requestExtensionLocalQuiz(
+        context,
+        signal,
+        (nextStage, value) => {
+          setStage(nextStage);
+          setProgress(value);
+        },
+      );
+      setStage("finalizing_questions");
+      setProgress(0.96);
+      const importedQuiz = await apiRequest(
+        "/api/quiz-imports",
         {
           method: "POST",
-          signal,
-          headers: { "Idempotency-Key": storedGeneration.idempotencyKey },
+          headers: { "Idempotency-Key": idempotencyKey },
           body: jsonBody({
             videoId: imported.video.id,
-            language,
-            origin,
-            acquisition,
-            completeness,
-            segments,
             quizLanguage: params.quizLanguage,
-            sessionLength: "long",
+            sessionLength: params.sessionLength,
             watched: params.watched === "true",
-            questionTypes,
+            quiz: result,
           }),
+          signal,
         },
-        TranscriptUploadResponseSchema,
+        ExtensionQuizImportResponseSchema,
       );
-      setJobId(queued.jobId);
-      await saveGenerationState(imported.video.id, {
-        ...storedGeneration,
-        jobId: queued.jobId,
+      const start = await apiRequest(
+        `/api/quizzes/${importedQuiz.quizId}/start`,
+        {
+          method: "POST",
+          body: jsonBody({
+            mode: "learn",
+            sessionLength: params.sessionLength,
+            questionTypes: ["multiple_choice"],
+            watched: params.watched === "true",
+          }),
+          signal,
+        },
+        QuizStartResponseSchema,
+      );
+      await saveAttemptStart(start);
+      await clearImportedVideo(imported.video.id);
+      setStage("complete");
+      setProgress(1);
+      router.replace({
+        pathname: "/quiz/[attemptId]",
+        params: { attemptId: start.attemptId },
       });
-      const quizId = await pollGeneration(
-        queued.jobId,
-        signal,
-        (value) => setProgress(value),
-        t("generationTimeout"),
-      );
-      await startQuiz(quizId, imported.video.id, signal);
-
-      async function startQuiz(
-        quizId: string,
-        videoId: string,
-        startSignal: AbortSignal,
-      ) {
-        const start = await apiRequest(
-          `/api/quizzes/${quizId}/start`,
-          {
-            method: "POST",
-            signal: startSignal,
-            body: jsonBody({
-              mode: "learn",
-              sessionLength: params.sessionLength,
-              questionTypes,
-              watched: params.watched === "true",
-            }),
-          },
-          QuizStartResponseSchema,
-        );
-        await saveAttemptStart(start);
-        await clearImportedVideo(videoId);
-        setStage("complete");
-        setProgress(1);
-        router.replace({
-          pathname: "/quiz/[attemptId]",
-          params: { attemptId: start.attemptId },
-        });
-      }
     },
     [
       params.quizLanguage,
@@ -327,7 +234,7 @@ export default function GenerationScreen() {
     const controller = new AbortController();
     controllerRef.current = controller;
     void Promise.resolve()
-      .then(() => execute(controller.signal, runNumber > 0))
+      .then(() => execute(controller.signal))
       .catch((cause) => {
         // Expo's development Strict Mode mounts, cleans up, then remounts an
         // effect. Ignore the aborted controller from the obsolete run so it
@@ -340,9 +247,7 @@ export default function GenerationScreen() {
           setPaused(true);
           return;
         }
-        setError(
-          cause instanceof Error ? cause.message : t("trustworthyError"),
-        );
+        setError(formatGenerationError(cause, t("trustworthyError")));
       });
     return () => controller.abort();
   }, [execute, runNumber, t]);
@@ -353,7 +258,9 @@ export default function GenerationScreen() {
       { id: "preparing_audio" as const, label: t("preparingAudio") },
       { id: "downloading_model" as const, label: t("downloadingModel") },
       { id: "transcribing_device" as const, label: t("transcribing") },
+      { id: "planning_questions" as const, label: t("planningQuestions") },
       { id: "creating_questions" as const, label: t("creatingQuestions") },
+      { id: "finalizing_questions" as const, label: t("finalizingQuestions") },
     ],
     [t],
   );
@@ -403,14 +310,6 @@ export default function GenerationScreen() {
     setCancelling(true);
     controllerRef.current?.abort();
     try {
-      const stored = await loadGenerationState(params.videoId);
-      const activeJobId = jobId ?? stored?.jobId;
-      if (activeJobId)
-        await apiRequest(
-          `/api/generation/${activeJobId}`,
-          { method: "DELETE" },
-          GenerationStatusSchema,
-        );
       await clearGenerationState(params.videoId);
       router.replace("/(tabs)");
     } catch (cause) {
@@ -550,48 +449,24 @@ export default function GenerationScreen() {
   );
 }
 
-async function pollGeneration(
-  jobId: string,
-  signal: AbortSignal,
-  onProgress: (value: number) => void,
-  timeoutMessage: string,
-): Promise<string> {
-  const startedAt = Date.now();
-  while (!signal.aborted) {
-    if (isGenerationPollExpired(startedAt, Date.now()))
-      throw new Error(timeoutMessage);
-    const status = await apiRequest(
-      `/api/generation/${jobId}`,
-      { signal },
-      GenerationStatusSchema,
-    );
-    onProgress(Math.max(0.05, status.progress));
-    if (status.stage === "complete" && status.quizId) return status.quizId;
-    if (status.stage === "failed")
-      throw new Error(status.error?.message ?? timeoutMessage);
-    await wait(500, signal);
-  }
-  throw new TranscriptionPausedError();
-}
-
-function wait(milliseconds: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const abort = () => {
-      clearTimeout(timer);
-      reject(new TranscriptionPausedError());
-    };
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve();
-    }, milliseconds);
-    signal.addEventListener("abort", abort, { once: true });
-  });
+function formatGenerationError(cause: unknown, fallback: string): string {
+  if (!(cause instanceof Error)) return fallback;
+  return cause.message;
 }
 
 function formatBytes(bytes: number): string {
   return bytes >= 1_000_000
     ? `${(bytes / 1_000_000).toFixed(1)} MB`
     : `${Math.round(bytes / 1_000)} KB`;
+}
+
+function isUuid(value: string | undefined): value is string {
+  return Boolean(
+    value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    ),
+  );
 }
 
 const styles = StyleSheet.create({

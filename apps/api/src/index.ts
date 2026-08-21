@@ -120,7 +120,6 @@ app.get("/health", (c) => {
     pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
-    importVersion: "extension-import-v1",
     maintenance: false,
     configuration,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",

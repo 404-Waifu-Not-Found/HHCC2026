@@ -74,7 +74,11 @@ export const messages = {
     preparingAudio: "Checking captions / downloading audio",
     downloadingModel: "Downloading speech model",
     transcribing: "Transcribing on this device",
+    planningQuestions: "Planning the complete quiz",
     creatingQuestions: "Creating questions",
+    reviewingQuestions: "Reviewing every question",
+    repairingQuestions: "Repairing rejected questions",
+    finalizingQuestions: "Opening your quiz",
     cached: "Already downloaded",
     removeModel: "Remove downloaded model",
     pause: "Pause",
@@ -116,10 +120,23 @@ export const messages = {
     notFoundBody:
       "That page does not exist. Head home to start or continue a video quest.",
     videoReady: "Video ready",
-    sourceCaptions:
-      "Captions will be checked in this browser — no extension needed.",
+    sourceCaptions: "Complete source captions are ready.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
+    extensionRequiredTitle: "Install ClipQuest Local AI",
+    extensionRequiredBody:
+      "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
+    extensionStepDownload: "Download and unzip the extension package.",
+    extensionStepOpen: "Open chrome://extensions and turn on Developer mode.",
+    extensionStepLoad:
+      "Choose Load unpacked, select the unzipped folder, then return here.",
+    extensionPrivacy:
+      "Your DeepSeek key stays in Chrome extension storage. ClipQuest never receives it, and YouTube audio/video never reaches ClipQuest’s servers.",
+    extensionDownload: "Download extension",
+    extensionDownloadAgain: "Download again",
+    extensionCheck: "Check installation",
+    extensionDownloaded:
+      "Downloaded. Unzip it, load the folder in Chrome, and ClipQuest will connect automatically.",
     modelSize: "Speech model · about 45 MB",
     removeModelConfirm: "Downloaded speech model removed from this device.",
     modelNotDownloaded: "No speech model is stored on this device.",
@@ -149,11 +166,11 @@ export const messages = {
     retryingConcept: "Retrying this concept",
     generationFailed: "Quiz creation stopped",
     generationTimeout:
-      "Quiz creation is taking longer than expected. Try again to resume this job.",
+      "Local generation stopped. Open the extension to verify your DeepSeek key, then retry.",
     cancelGenerationFailed: "Could not cancel quiz creation. Please try again.",
     tryAgain: "Try again",
     privateTranscription:
-      "ClipQuest downloads caption text in this browser first. If none exists, audio is streamed without caching and transcribed on this device. Only transcript text is stored.",
+      "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only the completed quiz so you can answer it and save progress.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube or bilibili link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -267,7 +284,11 @@ export const messages = {
     preparingAudio: "正在检查字幕 / 下载音频",
     downloadingModel: "正在下载语音模型",
     transcribing: "正在此设备上转写",
+    planningQuestions: "正在规划完整测验",
     creatingQuestions: "正在生成题目",
+    reviewingQuestions: "正在审核每一道题",
+    repairingQuestions: "正在修复未通过的题目",
+    finalizingQuestions: "正在打开测验",
     cached: "已下载",
     removeModel: "删除已下载模型",
     pause: "暂停",
@@ -306,8 +327,22 @@ export const messages = {
     notFoundTitle: "这个学习任务走丢了",
     notFoundBody: "该页面不存在。返回首页开始或继续视频学习任务。",
     videoReady: "视频已准备好",
-    sourceCaptions: "将在此浏览器中检查字幕，无需安装扩展。",
+    sourceCaptions: "完整的来源字幕已准备好。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
+    extensionRequiredTitle: "安装 ClipQuest 本地 AI 扩展",
+    extensionRequiredBody:
+      "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
+    extensionStepDownload: "下载并解压扩展安装包。",
+    extensionStepOpen: "打开 chrome://extensions，并启用开发者模式。",
+    extensionStepLoad:
+      "点击“加载已解压的扩展程序”，选择解压后的文件夹，然后返回此页面。",
+    extensionPrivacy:
+      "DeepSeek 密钥只保存在 Chrome 扩展本地存储中，ClipQuest 不会收到它；YouTube 音视频也不会经过 ClipQuest 服务器。",
+    extensionDownload: "下载扩展",
+    extensionDownloadAgain: "重新下载",
+    extensionCheck: "检查安装状态",
+    extensionDownloaded:
+      "已下载。解压后在 Chrome 中加载该文件夹，ClipQuest 会自动连接。",
     modelSize: "语音模型 · 约 45 MB",
     removeModelConfirm: "已从此设备删除语音模型。",
     modelNotDownloaded: "此设备未保存语音模型。",
@@ -335,11 +370,11 @@ export const messages = {
     answerCheckFailed: "无法检查此答案。",
     retryingConcept: "换一种方式再练一次",
     generationFailed: "测验生成已停止",
-    generationTimeout: "测验生成时间超出预期，请重试以继续此任务。",
+    generationTimeout: "本地生成已停止。请在扩展中检查 DeepSeek 密钥后重试。",
     cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
     privateTranscription:
-      "ClipQuest 会先在此浏览器中下载字幕文本；没有字幕时才无缓存地传输音频并在此设备转写。只存储转写文本。",
+      "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存完成的测验，供你作答并保存学习进度。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 或哔哩哔哩链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",

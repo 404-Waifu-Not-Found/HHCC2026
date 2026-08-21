@@ -19,6 +19,7 @@ import {
   SettingsProvider,
   useSettings,
 } from "../src/providers/SettingsProvider";
+import { ExtensionInstallGate } from "../src/components/ExtensionInstallGate";
 
 const SITE_TITLE = "ClipQuest — Paste a video, build mastery";
 
@@ -76,7 +77,7 @@ function RootNavigator() {
 
   if (!ready) return null;
   return (
-    <>
+    <ExtensionInstallGate>
       <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
@@ -86,6 +87,6 @@ function RootNavigator() {
           animation: "fade",
         }}
       />
-    </>
+    </ExtensionInstallGate>
   );
 }
