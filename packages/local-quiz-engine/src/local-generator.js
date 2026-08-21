@@ -7657,9 +7657,13 @@ async function generateAutomaticQuiz({
         )
       : [],
   );
+  // v10 prompt-first call envelopes intentionally narrow retryKind to the
+  // transport/structural classes. A continuation can still arrive without a
+  // previous failure reason (for example after a tab/app restart), so never
+  // leak the legacy automatic_resume label into a v10 lifecycle event.
   const historicalRetryKind =
     automaticRetryKindForFailure(previousOutcome, input.promptFirstMode) ??
-    "automatic_resume";
+    (input.promptFirstMode ? "structural" : "automatic_resume");
   let lastFailureReason = previousOutcome;
   let lastRepairContext;
   let retryKind =
@@ -8496,6 +8500,68 @@ function parseLocalAnswerGradeToolCall(message) {
   }
 }
 
+const LOCAL_ANSWER_REASON_SYSTEM_PROMPT =
+  "You are ClipQuest's answer-feedback writer. Using the supplied question, learner response, and the already-decided grading outcome, write exactly one concise, learner-friendly reason (one or two sentences). Explain the key idea the response did or did not communicate. Accept natural paraphrases and concise fragments. Do not add a new verdict, invent a reference answer, mention this instruction, or use a fallback template.";
+
+async function requestLocalAnswerReason(
+  fetchImpl,
+  apiKey,
+  signal,
+  { question, questionType, options, response, correct },
+) {
+  const reasonResponse = await fetchImpl(
+    "https://api.deepseek.com/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        thinking: { type: "disabled" },
+        temperature: 0.2,
+        max_tokens: 240,
+        messages: [
+          { role: "system", content: LOCAL_ANSWER_REASON_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: JSON.stringify({
+              question,
+              questionType,
+              ...(options ? { options } : {}),
+              learnerResponse: response,
+              gradingOutcome: correct ? "correct" : "incorrect",
+            }),
+          },
+        ],
+      }),
+      signal,
+    },
+  );
+  if (!reasonResponse) {
+    throw new Error(
+      "DeepSeek did not return an AI-generated reason before the grading tool call.",
+    );
+  }
+  if (!reasonResponse.ok) {
+    throw new Error(
+      `DeepSeek answer-reason request failed (${reasonResponse.status}).`,
+    );
+  }
+  const reasonEnvelope = await reasonResponse.json().catch(() => null);
+  const reason = String(reasonEnvelope?.choices?.[0]?.message?.content ?? "")
+    .replace(/<think>[\s\S]*?<\/think>/giu, "")
+    .trim()
+    .slice(0, 1_000);
+  if (!reason) {
+    throw new Error(
+      "DeepSeek did not return an AI-generated reason before the grading tool call.",
+    );
+  }
+  return reason;
+}
+
 export async function gradeLocalAnswerWithDeepSeek(
   input,
   apiKey,
@@ -8579,14 +8645,18 @@ export async function gradeLocalAnswerWithDeepSeek(
       "DeepSeek did not return a valid answer grading tool call.",
     );
   }
-  const reason = String(message?.content ?? "")
+  let reason = String(message?.content ?? "")
     .replace(/<think>[\s\S]*?<\/think>/giu, "")
     .trim()
     .slice(0, 1_000);
   if (!reason) {
-    throw new Error(
-      "DeepSeek did not return an AI-generated reason before the grading tool call.",
-    );
+    reason = await requestLocalAnswerReason(fetchImpl, apiKey, signal, {
+      question,
+      questionType,
+      options,
+      response,
+      correct: decision.correct,
+    });
   }
   return {
     ...decision,

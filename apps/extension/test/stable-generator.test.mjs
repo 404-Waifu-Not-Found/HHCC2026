@@ -3872,6 +3872,58 @@ test("v5.12 sends the grading-consistent local-polarity contract", async (contex
   );
 });
 
+test("v5.12 continuation normalizes a missing retry kind to a schema-safe structural retry", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => promptFirstResponse(init.body);
+
+  const input = promptFirstInput(5, ["multiple_choice"]);
+  input.continuation = {
+    startIndex: 1,
+    resultProtocolVersion: 10,
+    promptVersion: "quiz-local-json-stream-v5.12",
+    validatorVersion: "validator-minimal-gradeability-v5.3",
+    promptFingerprint: createHash("sha256")
+      .update(PROMPT_FIRST_SYSTEM_PROMPT)
+      .digest("hex"),
+    generationProfile: "prompt_first_auto_v5_12",
+    nextCallIndex: 0,
+    nextOrdinalAttempt: 2,
+    automaticRetryCount: 1,
+    retryBudgetUsedCount: 1,
+    retryOrdinals: [2],
+    acceptedQuestions: [
+      {
+        id: "q1",
+        type: "multiple_choice",
+        concept: "accepted concept",
+        question: "Which mechanism explains accepted concept?",
+      },
+    ],
+  };
+
+  const result = await generateQuizFromPlainText(
+    input,
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.generatedStartIndex, 1);
+  assert.equal(result.totalQuestions, 5);
+  const firstRetry = calls.find(
+    (event) =>
+      event.lifecycleState === "started" &&
+      event.classification === "automatic_retry",
+  );
+  assert.equal(firstRetry?.retryKind, "structural");
+});
+
 test("v5.12 retries an exact repeated question and grading target", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];

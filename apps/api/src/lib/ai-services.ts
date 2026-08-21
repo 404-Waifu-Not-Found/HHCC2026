@@ -37,6 +37,98 @@ export type ShortAnswerAiGradeInput = {
   rubricV2?: LocalShortAnswerRubricV2;
 };
 
+const SHORT_ANSWER_REASON_SYSTEM_PROMPT =
+  "You are ClipQuest's answer-feedback writer. Using the supplied question, rubric, learner answer, and already-decided grading outcome, write exactly one concise, learner-friendly reason (one or two sentences). Explain the key idea the response did or did not communicate. Accept natural paraphrases and concise fragments. Do not add a new verdict, invent a reference answer, mention this instruction, or use a fallback template.";
+
+async function requestShortAnswerReasonWithAi(
+  env: AppEnv,
+  input: ShortAnswerAiGradeInput,
+  correct: boolean,
+): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      "https://api.deepseek.com/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: env.DEEPSEEK_MODEL,
+          thinking: { type: "disabled" },
+          temperature: 0.2,
+          max_tokens: 240,
+          messages: [
+            { role: "system", content: SHORT_ANSWER_REASON_SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: JSON.stringify({
+                question: input.question,
+                ...(input.sampleAnswer
+                  ? { sampleAnswer: input.sampleAnswer }
+                  : {}),
+                learnerAnswer: input.learnerAnswer,
+                rubric: {
+                  requiredIdeas: input.requiredIdeas,
+                  acceptableAlternatives: input.acceptableAlternatives,
+                  ...(input.rubricV2
+                    ? { versionedCriteria: input.rubricV2 }
+                    : {}),
+                },
+                gradingOutcome: correct ? "correct" : "incorrect",
+              }),
+            },
+          ],
+        }),
+      },
+      25_000,
+    );
+  } catch {
+    throw new ApiError(
+      503,
+      "ai_service_unavailable",
+      "The classification service is temporarily unavailable.",
+    );
+  }
+  if (!response.ok) {
+    throw new ApiError(
+      503,
+      "ai_service_unavailable",
+      "The classification service is temporarily unavailable.",
+    );
+  }
+  const outer = z
+    .object({
+      choices: z
+        .array(
+          z.object({
+            message: z.object({ content: z.string().nullable().optional() }),
+          }),
+        )
+        .min(1),
+    })
+    .safeParse(
+      await readBoundedResponseJson(
+        response,
+        AI_RESPONSE_MAX_BYTES,
+        25_000,
+      ).catch(() => null),
+    );
+  const reason = outer.success
+    ? (outer.data.choices[0]?.message.content?.trim() ?? "")
+    : "";
+  if (!reason) {
+    throw new ApiError(
+      502,
+      "ai_service_invalid",
+      "The classification service returned no reasoned grading decision.",
+    );
+  }
+  return reason.slice(0, 1_000);
+}
+
 async function requestJson<T>(
   env: AppEnv,
   messages: { role: "system" | "user"; content: string }[],
@@ -284,12 +376,22 @@ export async function gradeShortAnswerWithAi(
     .min(1)
     .max(1_000)
     .safeParse(message?.content ?? "");
-  if (!decision || !reason.success) {
+  if (!decision) {
     throw new ApiError(
       502,
       "ai_service_invalid",
       "The classification service returned no reasoned grading decision.",
     );
+  }
+  if (!reason.success) {
+    return {
+      correct: decision.is_correct,
+      reason: await requestShortAnswerReasonWithAi(
+        env,
+        input,
+        decision.is_correct,
+      ),
+    };
   }
   return { correct: decision.is_correct, reason: reason.data };
 }

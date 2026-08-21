@@ -80,9 +80,9 @@
     "QUIZ_V5_10_CANARY_USER_IDS": "",
     "QUIZ_V5_10_ROLLOUT": "disabled",
     "QUIZ_V5_11_CANARY_USER_IDS": "",
-    "QUIZ_V5_11_ROLLOUT": "enabled",
+    "QUIZ_V5_11_ROLLOUT": "disabled",
     "QUIZ_V5_12_CANARY_USER_IDS": "",
-    "QUIZ_V5_12_ROLLOUT": "disabled",
+    "QUIZ_V5_12_ROLLOUT": "enabled",
     "RESEND_FROM": "ClipQuest <hello@clipquest.ccwu.cc>",
   },
   "observability": {

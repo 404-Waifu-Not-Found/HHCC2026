@@ -84,6 +84,7 @@ test("local answer grading rejects a response without a valid tool decision", as
 });
 
 test("local answer grading rejects a tool decision without an AI reason", async () => {
+  let calls = 0;
   await assert.rejects(
     gradeLocalAnswerWithDeepSeek(
       {
@@ -94,8 +95,61 @@ test("local answer grading rejects a tool decision without an AI reason", async 
       "sk-test-key",
       undefined,
       {
-        fetch: async () =>
-          new Response(
+        fetch: async () => {
+          calls += 1;
+          if (calls === 1) {
+            return new Response(
+              JSON.stringify({
+                choices: [
+                  {
+                    message: {
+                      content: "",
+                      tool_calls: [
+                        {
+                          function: {
+                            name: "grade_answer",
+                            arguments: JSON.stringify({
+                              is_correct: true,
+                              confidence: "high",
+                              matched_ideas: ["water is wet"],
+                            }),
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }),
+              { status: 200 },
+            );
+          }
+          return new Response(
+            JSON.stringify({ choices: [{ message: { content: "" } }] }),
+            { status: 200 },
+          );
+        },
+      },
+    ),
+    /AI-generated reason/,
+  );
+});
+
+test("local answer grading asks DeepSeek for a reason when the tool turn is blank", async () => {
+  let calls = 0;
+  const result = await gradeLocalAnswerWithDeepSeek(
+    {
+      question: "Why does a battery need a complete external circuit?",
+      response: "It lets charge move through the circuit.",
+      questionType: "short_answer",
+    },
+    "sk-test-key",
+    undefined,
+    {
+      fetch: async (_url, init) => {
+        calls += 1;
+        const body = JSON.parse(init.body);
+        if (calls === 1) {
+          return new Response(
             JSON.stringify({
               choices: [
                 {
@@ -107,8 +161,10 @@ test("local answer grading rejects a tool decision without an AI reason", async 
                           name: "grade_answer",
                           arguments: JSON.stringify({
                             is_correct: true,
-                            confidence: "high",
-                            matched_ideas: ["water is wet"],
+                            confidence: "medium",
+                            matched_ideas: [
+                              "charge can move through the circuit",
+                            ],
                           }),
                         },
                       },
@@ -118,9 +174,28 @@ test("local answer grading rejects a tool decision without an AI reason", async 
               ],
             }),
             { status: 200 },
-          ),
+          );
+        }
+        assert.equal(body.tools, undefined);
+        assert.match(body.messages[0].content, /answer-feedback writer/);
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content:
+                    "It explains that the circuit gives charge a complete path to move.",
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       },
-    ),
-    /AI-generated reason/,
+    },
   );
+
+  assert.equal(calls, 2);
+  assert.equal(result.correct, true);
+  assert.match(result.reason, /complete path/);
 });

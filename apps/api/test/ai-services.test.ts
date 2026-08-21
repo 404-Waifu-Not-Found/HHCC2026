@@ -136,4 +136,67 @@ describe("gradeShortAnswerWithAi", () => {
     );
     expect(body.messages[0]?.content).toContain("First write one concise");
   });
+
+  it("requests a second AI-only reason when the tool turn has no assistant text", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: "",
+                  tool_calls: [
+                    {
+                      function: {
+                        name: "grade_answer",
+                        arguments: JSON.stringify({ is_correct: true }),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content:
+                    "It communicates the required mechanism in a concise paraphrase.",
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      gradeShortAnswerWithAi(env, {
+        question: "What does chlorophyll absorb?",
+        learnerAnswer: "It absorbs light.",
+        requiredIdeas: ["Chlorophyll absorbs light energy"],
+        acceptableAlternatives: ["It absorbs light."],
+      }),
+    ).resolves.toEqual({
+      correct: true,
+      reason: "It communicates the required mechanism in a concise paraphrase.",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, request] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(request.body)) as {
+      tools?: unknown;
+      messages: { role: string; content: string }[];
+    };
+    expect(body.tools).toBeUndefined();
+    expect(body.messages[0]?.content).toContain("answer-feedback writer");
+  });
 });
