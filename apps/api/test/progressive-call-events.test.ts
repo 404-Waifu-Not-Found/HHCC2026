@@ -1334,6 +1334,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
     ["mc_distractor_duplicate", "answer_repair"],
     ["mc_distractor_equivalent", "answer_repair"],
     ["mc_answer_kind_mismatch", "answer_repair"],
+    ["mc_question_answer_mismatch", "answer_repair"],
     ["true_false_fact_invalid", "answer_repair"],
     ["true_false_mutation_unavailable", "answer_repair"],
     ["short_atomic_invalid", "answer_repair"],

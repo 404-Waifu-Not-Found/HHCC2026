@@ -72,6 +72,7 @@ const SOURCE_FRAMING_PREFIX_PATTERNS = [
 
 const SOURCE_REFERENCE_PATTERNS = [
   /^\s*according to\b/iu,
+  /\baccording to (?:the )?(?:analogy|described (?:mechanism|process|relationship)|example|evidence|metaphor|weave metaphor)\b/iu,
   /\b(?:the )?(?:reference|reference material|material|evidence|excerpt|content)\s+(?:says?|states?|mentions?|lists?|shows?|describes?|provides?|indicates?)\b/iu,
   /\b(?:(?:according to|based on) (?:the )?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:lesson|video|lecture|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)(?: (?:explicitly|directly|clearly|specifically|also))? (?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|covers?|lists?|listed|supports?|describes?))\b/iu,
   /\b(?:in|from) (?:this|the|that) (?:lesson|video|lecture|transcript|presentation)\b/iu,
@@ -639,18 +640,28 @@ export function focusExcerptForOrdinal(
   if (options.conceptFirstV58) {
     // q1 keeps the strongest-ranked window. Spread later primary questions
     // across the complete safe evidence set instead of walking adjacent
-    // high-scoring windows, which often describe the same objective. Repairs
-    // move by one quiz-length so they cannot consume the next ordinal's
-    // primary focus.
-    const primaryIndex = Math.min(
+    // high-scoring windows, which often describe the same objective. Each
+    // ordinal owns the range from its primary index up to (but excluding) the
+    // next ordinal's primary index. Repairs rotate only inside that range, so
+    // a q1 repair can never become q2's primary objective.
+    const boundedOrdinal = Math.max(0, Math.min(totalQuestions - 1, ordinal));
+    const rangeStart = Math.min(
       excerpts.length - 1,
       Math.floor(
-        (Math.max(0, ordinal) / Math.max(1, totalQuestions)) * excerpts.length,
+        (boundedOrdinal / Math.max(1, totalQuestions)) * excerpts.length,
       ),
     );
-    const index =
-      (primaryIndex + repairCycle * Math.max(1, totalQuestions)) %
-      excerpts.length;
+    const nextRangeStart = Math.min(
+      excerpts.length,
+      Math.floor(
+        ((boundedOrdinal + 1) / Math.max(1, totalQuestions)) * excerpts.length,
+      ),
+    );
+    const rangeWidth = Math.max(1, nextRangeStart - rangeStart);
+    const index = Math.min(
+      excerpts.length - 1,
+      rangeStart + (Math.max(0, repairCycle) % rangeWidth),
+    );
     return excerpts[index].slice(0, 2_400).trim();
   }
   if (options.strict) {
@@ -801,6 +812,118 @@ export function answerSupportedByEvidence(answer, evidence) {
     if (evidenceTokens.has(token)) supportedTokens += 1;
   }
   return supportedTokens / answerTokens.size >= 0.75;
+}
+
+const DIRECTIONAL_SCOPE_TOKENS = new Set([
+  "absence",
+  "decreased",
+  "decreasing",
+  "fewer",
+  "greater",
+  "higher",
+  "increased",
+  "increasing",
+  "lack",
+  "less",
+  "loss",
+  "lower",
+  "more",
+  "reduced",
+  "reduction",
+]);
+
+const DIRECTIONAL_SCOPE_BOUNDARIES = new Set([
+  "are",
+  "be",
+  "became",
+  "become",
+  "becomes",
+  "can",
+  "cause",
+  "causes",
+  "could",
+  "had",
+  "has",
+  "have",
+  "is",
+  "lead",
+  "leads",
+  "make",
+  "makes",
+  "may",
+  "might",
+  "result",
+  "results",
+  "was",
+  "were",
+  "will",
+  "would",
+]);
+
+const RELATIONSHIP_QUESTION_PATTERN =
+  /\b(?:affect|contribute|effect|impact|influence|relationship|role|what happens|how do|how does|why do|why does)\b/iu;
+
+function directionalScopes(value) {
+  const tokens = normalizeGroundedText(value).split(/\s+/u).filter(Boolean);
+  const scopes = [];
+  for (let index = 0; index < tokens.length; index += 1) {
+    const modifier = tokens[index];
+    if (!DIRECTIONAL_SCOPE_TOKENS.has(modifier)) continue;
+    let nounStart = index + 1;
+    if (["absence", "lack", "loss", "reduction"].includes(modifier)) {
+      if (tokens[nounStart] !== "of") continue;
+      nounStart += 1;
+    }
+    const nounTokens = [];
+    for (
+      let cursor = nounStart;
+      cursor < tokens.length && nounTokens.length < 4;
+      cursor += 1
+    ) {
+      const token = tokens[cursor];
+      if (DIRECTIONAL_SCOPE_BOUNDARIES.has(token)) break;
+      nounTokens.push(token);
+    }
+    if (!nounTokens.length) continue;
+    const phrase = nounTokens.join(" ");
+    if (phrase.length >= 4) scopes.push({ modifier, phrase });
+  }
+  return scopes;
+}
+
+/**
+ * Reject a relationship answer that silently drops a directional qualifier
+ * from the evidence and then uses a pronoun as if the unqualified concept were
+ * the subject. For example, evidence about "less genetic diversity" cannot
+ * support "genetic diversity makes a species more vulnerable." The model may
+ * instead keep "less" in the stem or state the complete directional relation
+ * in the answer.
+ */
+export function multipleChoiceQuestionAnswerIsCoherent(
+  question,
+  answer,
+  evidence,
+) {
+  const normalizedQuestion = normalizeGroundedText(question);
+  const normalizedAnswer = normalizeGroundedText(answer);
+  if (
+    !normalizedQuestion ||
+    !normalizedAnswer ||
+    !RELATIONSHIP_QUESTION_PATTERN.test(question)
+  ) {
+    return true;
+  }
+  for (const { modifier, phrase } of directionalScopes(evidence)) {
+    if (!normalizedQuestion.includes(phrase)) continue;
+    const scopedPhrase = `${modifier} ${phrase}`;
+    const questionKeepsScope = normalizedQuestion.includes(scopedPhrase);
+    const answerKeepsScope =
+      normalizedAnswer.includes(scopedPhrase) ||
+      (normalizedAnswer.includes(phrase) &&
+        normalizedAnswer.split(/\s+/u).includes(modifier));
+    if (!questionKeepsScope && !answerKeepsScope) return false;
+  }
+  return true;
 }
 
 export function resolveUniqueEvidenceAnswerSpan(answerSpan, evidence) {

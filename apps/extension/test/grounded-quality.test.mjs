@@ -13,6 +13,7 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  multipleChoiceQuestionAnswerIsCoherent,
   questionConceptFailure,
   questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
@@ -72,6 +73,35 @@ test("multiple-choice grounding resolves an equivalent private answer span local
     ),
     null,
     "an unrelated private span must never be repaired into acceptance",
+  );
+});
+
+test("v5.8 preserves directional scope between a relationship stem and its answer", () => {
+  const evidence =
+    "A species with less genetic diversity is much more vulnerable to fluctuations caused by climate change, disease, or habitat fragmentation.";
+  assert.equal(
+    multipleChoiceQuestionAnswerIsCoherent(
+      "What is the role of genetic diversity in a species' ability to cope with environmental changes?",
+      "It makes the species much more vulnerable to environmental fluctuations.",
+      evidence,
+    ),
+    false,
+  );
+  assert.equal(
+    multipleChoiceQuestionAnswerIsCoherent(
+      "How does less genetic diversity affect a species' ability to cope with environmental changes?",
+      "It makes the species much more vulnerable to environmental fluctuations.",
+      evidence,
+    ),
+    true,
+  );
+  assert.equal(
+    multipleChoiceQuestionAnswerIsCoherent(
+      "How does genetic diversity affect a species' ability to cope with environmental changes?",
+      "Less genetic diversity makes the species much more vulnerable to environmental fluctuations.",
+      evidence,
+    ),
+    true,
   );
 });
 
@@ -190,6 +220,27 @@ test("v5.8 repair windows do not consume the next ordinal's primary focus", () =
   const repairedQ1 = focusExcerptForOrdinal(transcript, 0, 5, 1, options);
   const primaryQ2 = focusExcerptForOrdinal(transcript, 1, 5, 0, options);
   assert.notEqual(repairedQ1, primaryQ2);
+
+  const exactPartitionTranscript = Array.from(
+    { length: 25 },
+    (_, index) =>
+      `Partition ${index + 1} transfers energy through route${index + 1} because its distinct mechanism changes result ${index + 40}.`,
+  ).join(" ");
+  const exactRepair = focusExcerptForOrdinal(
+    exactPartitionTranscript,
+    0,
+    5,
+    1,
+    options,
+  );
+  const exactNextPrimary = focusExcerptForOrdinal(
+    exactPartitionTranscript,
+    1,
+    5,
+    0,
+    options,
+  );
+  assert.notEqual(exactRepair, exactNextPrimary);
 });
 
 test("v5.8 spreads primary ordinals across the ranked evidence set", () => {
@@ -376,6 +427,10 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
 
   const sourceFraming = [
     { question: "According to the lesson, what defines continuity?" },
+    {
+      question:
+        "How does biodiversity loss affect human survival according to the weave metaphor?",
+    },
     {
       question:
         "Which of the following is a method mentioned to reduce deforestation's environmental impact?",

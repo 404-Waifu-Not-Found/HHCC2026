@@ -1139,6 +1139,93 @@ test("v5.8 accepts one uniquely grounded learner answer when the private MC span
   );
 });
 
+test("v5.8 repairs a relationship answer that drops its directional qualifier", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const chunks = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 5 && httpCalls === 1) {
+        const question = value.questions[0];
+        question.evidenceQuote = task.focusExcerpt
+          .split(/(?<=[.!?。！？])\s+/u)
+          .find((sentence) => /less genetic diversity/iu.test(sentence));
+        question.question =
+          "What is the role of genetic diversity in a species' ability to cope with environmental changes?";
+        question.answerSpan = "much more vulnerable";
+        question.answerText =
+          "It makes the species much more vulnerable to environmental fluctuations.";
+      }
+      return value;
+    });
+  };
+
+  const input = conceptFirstInput(5, ["multiple_choice"]);
+  input.plainText = Array.from(
+    { length: 5 },
+    (_, index) =>
+      `Species ${index + 1} uses pathway${index + 1} during objectiveadaptation${index + 1} because less genetic diversity is much more vulnerable to environmental fluctuation ${index + 11}; the defined mechanism links variation to a distinct adaptive response.`,
+  ).join(" ");
+  input.continuation = {
+    startIndex: 4,
+    resultProtocolVersion: 9,
+    promptVersion: "quiz-local-json-stream-v5.8",
+    validatorVersion: "validator-local-progressive-v4.7",
+    generationProfile: "concept_first_auto_v5_8",
+    questionPlan: {
+      seed: "a".repeat(64),
+      types: Array.from({ length: 5 }, () => "multiple_choice"),
+    },
+    nextCallIndex: 0,
+    nextOrdinalAttempt: 1,
+    automaticRetryCount: 0,
+    retryBudgetUsedCount: 0,
+    acceptedQuestions: Array.from({ length: 4 }, (_, index) => ({
+      id: `q${index + 1}`,
+      type: "multiple_choice",
+      concept: `Immutable accepted concept ${index + 1}`,
+      question: `Which distinct mechanism explains accepted concept ${index + 1}?`,
+      claimKey: `immutable accepted claim ${index + 1}`,
+      conceptCluster: `immutable cluster ${index + 1}`,
+    })),
+  };
+  const result = await generateQuizFromPlainText(
+    input,
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    (chunk) => chunks.push(chunk),
+    (event) => calls.push(event),
+  );
+
+  assert.equal(
+    httpCalls,
+    2,
+    JSON.stringify(
+      calls
+        .filter((event) => event.lifecycleState === "completed")
+        .map((event) => ({
+          ordinal: event.startIndex,
+          classification: event.classification,
+          outcome: event.outcome,
+        })),
+    ),
+  );
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(calls[1]?.outcome, "mc_question_answer_mismatch");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "answer_repair");
+  assert.doesNotMatch(
+    chunks[0]?.question.question,
+    /role of genetic diversity/iu,
+  );
+});
+
 test("v5.8 rejects presentation statistics before storage and repairs only that ordinal", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];

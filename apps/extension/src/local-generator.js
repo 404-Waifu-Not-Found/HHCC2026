@@ -12,6 +12,7 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  multipleChoiceQuestionAnswerIsCoherent,
   questionConceptFailure,
   questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
@@ -632,7 +633,7 @@ function generationMessagesV58(input, isTransientRetry) {
     );
   const typeRules =
     type === "multiple_choice"
-      ? "Return one unique private answerSpan copied as a contiguous phrase from evidenceQuote, one semantically equivalent answerText in the selected quiz language, and exactly three misconception-based distractors in the selected quiz language. answerText and every distractor must form a coherent answer to the question. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally. Each whyWrong must identify the specific misconception without source attribution."
+      ? "Return one unique private answerSpan copied as a contiguous phrase from evidenceQuote, one semantically equivalent answerText in the selected quiz language, and exactly three misconception-based distractors in the selected quiz language. answerText and every distractor must form a coherent answer to the question. Preserve every causal, comparative, quantitative, and directional qualifier: if evidence supports only lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relationship in answerText. Do not use a pronoun whose antecedent changes the scope of the evidence. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally. Each whyWrong must identify the specific misconception without source attribution."
       : type === "true_false"
         ? "Return one direct supportedFact contained in evidenceQuote. Do not choose truth polarity, mutate the statement, or return an answer boolean; ClipQuest constructs a safe true or false item locally."
         : "Choose exactly one shortAnswerMode. Use atomic_term for a single term or name, proposition for a concise explanatory claim with 1-3 independent requiredIdeas, enumeration for 2-8 indispensable requiredItems, and formula only with canonical formulaTokens. Do not manufacture paraphrase lists; ClipQuest derives safe variants locally.";
@@ -1677,6 +1678,20 @@ function validateQuiz(quiz, input) {
           validationFailure(
             `Question ${index + 1} must contain one unique answer span grounded in its evidence quote.`,
             "mc_evidence_span_invalid",
+          );
+        }
+        if (
+          input.conceptFirstV58Mode &&
+          grounded &&
+          !multipleChoiceQuestionAnswerIsCoherent(
+            question.question,
+            correctAnswer,
+            input.focusExcerpt,
+          )
+        ) {
+          validationFailure(
+            `Question ${index + 1} drops a directional qualifier or changes the subject of its supported answer.`,
+            "mc_question_answer_mismatch",
           );
         }
         if (
@@ -3621,6 +3636,7 @@ function automaticRetryKindForFailure(reasonCode) {
       "mc_distractor_duplicate",
       "mc_distractor_equivalent",
       "mc_answer_kind_mismatch",
+      "mc_question_answer_mismatch",
       "true_false_fact_invalid",
       "true_false_mutation_unavailable",
       "short_atomic_invalid",
@@ -3696,6 +3712,8 @@ function repairGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
       "Replace only equivalent distractors. None may be an alias, algebraic equivalent, or defensible restatement of answerSpan.",
     mc_answer_kind_mismatch:
       "Make answerSpan answer the exact wh-kind requested by the question; rewrite the question directly if its requested kind is ambiguous.",
+    mc_question_answer_mismatch:
+      "Preserve the complete supported relationship. If evidence applies to lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relation in answerText. Do not bind a pronoun to an unqualified concept.",
     true_false_fact_invalid:
       "Return one concise self-contained supportedFact contained in evidenceQuote. Do not mutate it or return a truth value.",
     short_atomic_invalid:
