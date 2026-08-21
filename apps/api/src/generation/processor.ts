@@ -1,4 +1,4 @@
-import { GenerationStatusSchema, LanguageSchema, SessionLengthSchema } from "@clipquest/contracts";
+import { LanguageSchema, SessionLengthSchema } from "@clipquest/contracts";
 import { z } from "zod";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
@@ -18,6 +18,7 @@ const JobSchema = z.object({
   session_length: SessionLengthSchema,
   watched: z.number().int(),
   title: z.string(),
+  transcript_key: z.string().min(1),
 });
 
 async function setStatus(
@@ -29,60 +30,48 @@ async function setStatus(
     quizId?: string | null;
     error?: { code: string; message: string } | null;
   },
-): Promise<void> {
+): Promise<boolean> {
   const state = input.stage === "complete" ? "complete" : input.stage === "failed" ? "failed" : "running";
-  await Promise.all([
-    env.DB.prepare(
-      "UPDATE generation_jobs SET state = ?, stage = ?, progress = ?, quiz_id = ?, error_code = ?, error_message = ?, updated_at = ?, generation_attempts = generation_attempts + 1 WHERE id = ?",
+  const updated = await env.DB.prepare(
+    "UPDATE generation_jobs SET state = ?, stage = ?, progress = ?, quiz_id = ?, error_code = ?, error_message = ?, updated_at = ? WHERE id = ? AND cancel_requested = 0 AND state != 'complete'",
+  )
+    .bind(
+      state,
+      input.stage,
+      input.progress,
+      input.quizId ?? null,
+      input.error?.code ?? null,
+      input.error?.message ?? null,
+      now(),
+      input.jobId,
     )
-      .bind(
-        state,
-        input.stage,
-        input.progress,
-        input.quizId ?? null,
-        input.error?.code ?? null,
-        input.error?.message ?? null,
-        now(),
-        input.jobId,
-      )
-      .run(),
-    env.CACHE.put(
-      `generation:${input.jobId}`,
-      JSON.stringify(
-        GenerationStatusSchema.parse({
-          jobId: input.jobId,
-          stage: input.stage,
-          progress: input.progress,
-          quizId: input.quizId ?? null,
-          error: input.error ?? null,
-        }),
-      ),
-      { expirationTtl: 3_600 },
-    ),
-  ]);
+    .run();
+  return Boolean(updated.meta.changes);
 }
 
 export async function processGeneration(env: AppEnv, message: GenerationQueueMessage): Promise<void> {
-  await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.08 });
+  const claimed = await env.DB.prepare(
+    "UPDATE generation_jobs SET state = 'running', stage = 'creating_questions', progress = 0.08, error_code = NULL, error_message = NULL, generation_attempts = generation_attempts + 1, updated_at = ? WHERE id = ? AND user_id = ? AND video_id = ? AND state = 'queued' AND cancel_requested = 0",
+  ).bind(now(), message.jobId, message.userId, message.videoId).run();
+  if (!claimed.meta.changes) return;
   const row = await env.DB.prepare(
-    "SELECT j.id, j.user_id, j.video_id, j.quiz_language, j.session_length, j.watched, v.title FROM generation_jobs j JOIN videos v ON v.id = j.video_id WHERE j.id = ? AND j.user_id = ? AND j.video_id = ?",
+    "SELECT j.id, j.user_id, j.video_id, j.quiz_language, j.session_length, j.watched, j.transcript_key, v.title FROM generation_jobs j JOIN videos v ON v.id = j.video_id WHERE j.id = ? AND j.user_id = ? AND j.video_id = ?",
   )
     .bind(message.jobId, message.userId, message.videoId)
     .first();
   const job = JobSchema.safeParse(row);
   if (!job.success) throw new ApiError(404, "generation_not_found", "Generation job not found.");
 
-  const transcriptObject = await env.PRIVATE_BUCKET.get(
-    `transcripts/${job.data.user_id}/${job.data.video_id}.json`,
-  );
+  const transcriptObject = await env.PRIVATE_BUCKET.get(job.data.transcript_key);
   if (!transcriptObject) throw new ApiError(500, "transcript_missing", "The private transcript could not be found.");
   const transcript = StoredTranscriptSchema.safeParse(await transcriptObject.json());
   if (!transcript.success) {
     throw new ApiError(500, "transcript_invalid", "The private transcript failed integrity checks.");
   }
 
-  await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.2 });
+  if (!await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.2 })) return;
   const classification = await classifyTranscript(env, job.data.title, transcript.data.segments);
+  if (!await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.42 })) return;
   if (!classification.educational) {
     await env.DB.prepare("UPDATE videos SET education_status = 'rejected', updated_at = ? WHERE id = ?")
       .bind(now(), job.data.video_id)
@@ -97,7 +86,6 @@ export async function processGeneration(env: AppEnv, message: GenerationQueueMes
     .bind(now(), job.data.video_id)
     .run();
 
-  await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.42 });
   const generation = await generateQuiz(env, {
     title: job.data.title,
     language: job.data.quiz_language,
@@ -105,6 +93,7 @@ export async function processGeneration(env: AppEnv, message: GenerationQueueMes
     watched: Boolean(job.data.watched),
     segments: transcript.data.segments,
   });
+  if (!await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.9 })) return;
   const quizId = createId();
   const timestamp = now();
   const statements = [
@@ -143,9 +132,15 @@ export async function processGeneration(env: AppEnv, message: GenerationQueueMes
         question.difficulty,
       );
     }),
+    env.DB.prepare(
+      "UPDATE generation_jobs SET state = 'complete', stage = 'complete', progress = 1, quiz_id = ?, error_code = NULL, error_message = NULL, updated_at = ? WHERE id = ? AND state = 'running' AND cancel_requested = 0",
+    ).bind(quizId, timestamp, message.jobId),
   ];
-  await env.DB.batch(statements);
-  await setStatus(env, { jobId: message.jobId, stage: "complete", progress: 1, quizId });
+  const results = await env.DB.batch(statements);
+  if (!results.at(-1)?.meta.changes) {
+    await env.DB.prepare("DELETE FROM quiz_banks WHERE id = ?").bind(quizId).run();
+    return;
+  }
 }
 
 export async function failGeneration(env: AppEnv, jobId: string, error: unknown): Promise<void> {
@@ -163,3 +158,9 @@ export async function failGeneration(env: AppEnv, jobId: string, error: unknown)
   });
 }
 
+export async function prepareGenerationRetry(env: AppEnv, jobId: string): Promise<boolean> {
+  const updated = await env.DB.prepare(
+    "UPDATE generation_jobs SET state = 'queued', stage = 'creating_questions', progress = 0, error_code = NULL, error_message = NULL, updated_at = ? WHERE id = ? AND state = 'running' AND cancel_requested = 0",
+  ).bind(now(), jobId).run();
+  return Boolean(updated.meta.changes);
+}

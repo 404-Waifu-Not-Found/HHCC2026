@@ -56,6 +56,7 @@ const AttemptRowSchema = z.object({
   item_count: z.number().int().positive(),
   score: z.number().nullable(),
   mastery_state: MasteryStateSchema.nullable(),
+  transcript_key: z.string().nullable(),
 });
 type AttemptRow = z.infer<typeof AttemptRowSchema>;
 
@@ -139,7 +140,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
 
 quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   const user = c.get("user");
-  await enforceRateLimit(c.env.CACHE, {
+  await enforceRateLimit(c.env.DB, {
     namespace: "quiz-answer",
     identifier: user.id,
     maximum: 90,
@@ -327,7 +328,7 @@ function toPublicQuestion(
 async function getAttempt(db: D1Database, attemptId: string, userId: string): Promise<AttemptRow> {
   const row = await db
     .prepare(
-      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
+      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, (SELECT gj.transcript_key FROM generation_jobs gj WHERE gj.quiz_id = a.quiz_id ORDER BY gj.updated_at DESC LIMIT 1) AS transcript_key FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
     )
     .bind(attemptId, userId)
     .first();
@@ -361,7 +362,7 @@ async function gradeAnswer(
     }
     const rubric = parseStoredJson(question.rubric_json, RubricSchema, "short-answer rubric");
     const transcriptObject = await env.PRIVATE_BUCKET.get(
-      `transcripts/${attempt.user_id}/${attempt.video_id}.json`,
+      attempt.transcript_key ?? `transcripts/${attempt.user_id}/${attempt.video_id}.json`,
     );
     if (!transcriptObject) throw new ApiError(500, "transcript_missing", "Video evidence is unavailable.");
     const transcript = StoredTranscriptSchema.safeParse(await transcriptObject.json());

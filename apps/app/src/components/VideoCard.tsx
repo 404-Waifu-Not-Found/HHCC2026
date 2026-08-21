@@ -50,7 +50,7 @@ export function VideoCard({ card, onPress, compact = false }: { card: LibraryCar
 }
 
 const styles = StyleSheet.create({
-  card: { width: 286, overflow: "hidden", borderWidth: 2, borderRadius: radii.large, ...shadows.card },
+  card: { width: 286, maxWidth: "100%", overflow: "hidden", borderWidth: 2, borderRadius: radii.large, ...shadows.card },
   horizontal: { width: "100%", flexDirection: "row" },
   pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
   image: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#CBD2DE" },

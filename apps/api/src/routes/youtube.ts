@@ -63,7 +63,7 @@ export const youtubeRouter = new Hono<ApiBindings>();
 youtubeRouter.post("/device/start", async (c) => {
   assertFeatureEnabled(c.env.ENABLE_YOUTUBE_DEMO_HISTORY);
   const user = c.get("user");
-  await enforceRateLimit(c.env.CACHE, {
+  await enforceRateLimit(c.env.DB, {
     namespace: "youtube-device-start",
     identifier: user.id,
     maximum: 3,

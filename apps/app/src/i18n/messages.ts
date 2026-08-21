@@ -111,6 +111,8 @@ export const messages = {
     quizResynced: "This quiz changed on another screen. The current question has been restored.",
     retryingConcept: "Retrying this concept",
     generationFailed: "Quiz creation stopped",
+    generationTimeout: "Quiz creation is taking longer than expected. Try again to resume this job.",
+    cancelGenerationFailed: "Could not cancel quiz creation. Please try again.",
     tryAgain: "Try again",
     privateTranscription: "Raw audio and speech recognition stay on this device. Only transcript text is uploaded.",
     notifications: "Review reminders",
@@ -135,6 +137,7 @@ export const messages = {
     quizLanguageHelp: "Questions and explanations use this language.",
     watchedHelp: "If not, you’ll see a short primer before the quiz.",
     unsupportedLength: "Captionless videos can be at most 90 minutes.",
+    webUnsupportedLength: "Captionless videos can be at most 20 minutes in a browser. Use the mobile app for longer videos.",
     transcriptionQualityError: "The local transcript was too uncertain to create a trustworthy quiz.",
   },
   "zh-CN": {
@@ -247,6 +250,8 @@ export const messages = {
     quizResynced: "此测验已在其他页面更新，现已恢复到当前题目。",
     retryingConcept: "换一种方式再练一次",
     generationFailed: "测验生成已停止",
+    generationTimeout: "测验生成时间超出预期，请重试以继续此任务。",
+    cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
     privateTranscription: "原始音频和语音识别仅留在此设备，只上传转写文本。",
     notifications: "复习提醒",
@@ -271,6 +276,7 @@ export const messages = {
     quizLanguageHelp: "题目与解析将使用此语言。",
     watchedHelp: "如果没看过，答题前会显示简短导读。",
     unsupportedLength: "无字幕视频最长支持 90 分钟。",
+    webUnsupportedLength: "浏览器中无字幕视频最长支持 20 分钟；更长视频请使用移动应用。",
     transcriptionQualityError: "本地转写可信度不足，无法生成可靠测验。",
   },
 } as const;

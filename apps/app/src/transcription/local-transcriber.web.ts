@@ -2,6 +2,7 @@ import type { TranscriptSegment } from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createFile, type MP4BoxBuffer, type Sample } from "mp4box";
 import { getSpeechModelManifest } from "./manifest";
+import { canTranscribeInBrowser } from "./limits";
 import { assertTranscriptQuality } from "./quality";
 import type { LocalTranscriptionOptions, LocalTranscriptionResult, ModelStatus } from "./types";
 import { TranscriptionPausedError } from "./types";
@@ -17,6 +18,9 @@ type WorkerMessage =
 const checkpointKey = (videoId: string) => `clipquest:transcript-checkpoint:${videoId}`;
 
 export async function transcribeLocally(options: LocalTranscriptionOptions): Promise<LocalTranscriptionResult> {
+  if (!canTranscribeInBrowser(options.durationSeconds)) {
+    throw new Error("Captionless videos can be at most 20 minutes in a browser. Use the mobile app for longer videos.");
+  }
   const manifest = await getSpeechModelManifest();
   options.onPhase("preparing_audio");
   const media = await downloadMedia(options.mediaUrl, options.signal, (progress) => options.onProgress(progress));

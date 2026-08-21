@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import { z } from "zod";
 import { createAuth } from "./auth";
-import { failGeneration, processGeneration } from "./generation/processor";
+import { failGeneration, prepareGenerationRetry, processGeneration } from "./generation/processor";
 import { ApiError, errorResponse } from "./lib/errors";
+import { clearExpiredRateLimits } from "./lib/rate-limit";
 import { authenticated, type ApiBindings } from "./middleware/authenticated";
 import { libraryRouter } from "./routes/library";
 import { mediaRouter } from "./routes/media";
@@ -62,14 +63,21 @@ app.use("*", async (c, next) => {
   c.res = response;
 });
 
-app.get("/health", (c) =>
-  c.json({
-    ok: true,
+app.get("/health", (c) => {
+  const configuration = {
+    authentication: Boolean(c.env.BETTER_AUTH_SECRET),
+    generation: Boolean(c.env.DEEPSEEK_API_KEY),
+    email: Boolean(c.env.RESEND_API_KEY),
+    youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
+  };
+  return c.json({
+    ok: configuration.authentication && configuration.generation && configuration.email,
     service: "clipquest",
     model: c.env.DEEPSEEK_MODEL,
+    configuration,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",
-  }),
-);
+  });
+});
 
 app.on(["GET", "POST"], "/api/auth/*", (c) => createAuth(c.env).handler(c.req.raw));
 
@@ -128,13 +136,15 @@ const worker = {
           await failGeneration(env, parsed.data.jobId, error);
           message.ack();
         } else {
-          message.retry({ delaySeconds: Math.min(60, 5 * message.attempts) });
+          const prepared = await prepareGenerationRetry(env, parsed.data.jobId);
+          if (prepared) message.retry({ delaySeconds: Math.min(60, 5 * message.attempts) });
+          else message.ack();
         }
       }
     }
   },
   async scheduled(_controller, env): Promise<void> {
-    await sendDueReviewNotifications(env);
+    await Promise.all([sendDueReviewNotifications(env), clearExpiredRateLimits(env.DB)]);
   },
 } satisfies ExportedHandler<AppEnv, GenerationQueueMessage>;
 

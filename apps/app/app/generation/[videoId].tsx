@@ -17,10 +17,17 @@ import { Mascot } from "../../src/components/Mascot";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { ProgressBar } from "../../src/components/ProgressBar";
 import { Screen } from "../../src/components/Screen";
-import { apiRequest, jsonBody } from "../../src/lib/api";
+import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
+import { isGenerationPollExpired } from "../../src/lib/generation-timeout";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { saveAttemptStart } from "../../src/state/attempt";
-import { clearImportedVideo, loadImportedVideo } from "../../src/state/creation";
+import {
+  clearGenerationState,
+  clearImportedVideo,
+  loadGenerationState,
+  loadImportedVideo,
+  saveGenerationState,
+} from "../../src/state/creation";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
 import { radii, typography } from "../../src/theme/tokens";
@@ -36,12 +43,48 @@ export default function GenerationScreen() {
   const [error, setError] = useState<string>();
   const [paused, setPaused] = useState(false);
   const [runNumber, setRunNumber] = useState(0);
+  const [jobId, setJobId] = useState<string>();
+  const [cancelling, setCancelling] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const localTranscriptionRef = useRef(false);
 
-  const execute = useCallback(async (signal: AbortSignal) => {
+  const execute = useCallback(async (signal: AbortSignal, retryExisting: boolean) => {
     const imported = await loadImportedVideo(params.videoId);
     if (!imported) throw new Error("This generation setup expired. Paste the video again.");
+    let storedGeneration = await loadGenerationState(imported.video.id);
+    if (!storedGeneration) {
+      storedGeneration = { idempotencyKey: Crypto.randomUUID() };
+      await saveGenerationState(imported.video.id, storedGeneration);
+    }
+
+    let queuedJobId = storedGeneration.jobId;
+    if (!queuedJobId) {
+      try {
+        const found = await apiRequest(
+          `/api/generation/idempotency/${encodeURIComponent(storedGeneration.idempotencyKey)}`,
+          { signal },
+          TranscriptUploadResponseSchema,
+        );
+        queuedJobId = found.jobId;
+        storedGeneration = { ...storedGeneration, jobId: queuedJobId };
+        await saveGenerationState(imported.video.id, storedGeneration);
+      } catch (cause) {
+        if (!(cause instanceof ClientApiError && cause.status === 404)) throw cause;
+      }
+    }
+
+    if (queuedJobId) {
+      setJobId(queuedJobId);
+      setStage("creating_questions");
+      setProgress(0.05);
+      if (retryExisting) {
+        await apiRequest(`/api/generation/${queuedJobId}/retry`, { method: "POST", signal }, GenerationStatusSchema);
+      }
+      const quizId = await pollGeneration(queuedJobId, signal, (value) => setProgress(value), t("generationTimeout"));
+      await startQuiz(quizId, imported.video.id, signal);
+      return;
+    }
+
     setStage("getting_video");
     setProgress(1);
     let segments: TranscriptSegment[];
@@ -80,7 +123,7 @@ export default function GenerationScreen() {
       {
         method: "POST",
         signal,
-        headers: { "Idempotency-Key": Crypto.randomUUID() },
+        headers: { "Idempotency-Key": storedGeneration.idempotencyKey },
         body: jsonBody({
           videoId: imported.video.id,
           language,
@@ -93,18 +136,24 @@ export default function GenerationScreen() {
       },
       TranscriptUploadResponseSchema,
     );
-    const quizId = await pollGeneration(queued.jobId, signal, (value) => setProgress(value));
-    const start = await apiRequest(
-      `/api/quizzes/${quizId}/start`,
-      { method: "POST", signal, body: jsonBody({ mode: "learn", sessionLength: params.sessionLength }) },
-      QuizStartResponseSchema,
-    );
-    await saveAttemptStart(start);
-    await clearImportedVideo(imported.video.id);
-    setStage("complete");
-    setProgress(1);
-    router.replace({ pathname: "/quiz/[attemptId]", params: { attemptId: start.attemptId } });
-  }, [params.quizLanguage, params.sessionLength, params.videoId, params.watched]);
+    setJobId(queued.jobId);
+    await saveGenerationState(imported.video.id, { ...storedGeneration, jobId: queued.jobId });
+    const quizId = await pollGeneration(queued.jobId, signal, (value) => setProgress(value), t("generationTimeout"));
+    await startQuiz(quizId, imported.video.id, signal);
+
+    async function startQuiz(quizId: string, videoId: string, startSignal: AbortSignal) {
+      const start = await apiRequest(
+        `/api/quizzes/${quizId}/start`,
+        { method: "POST", signal: startSignal, body: jsonBody({ mode: "learn", sessionLength: params.sessionLength }) },
+        QuizStartResponseSchema,
+      );
+      await saveAttemptStart(start);
+      await clearImportedVideo(videoId);
+      setStage("complete");
+      setProgress(1);
+      router.replace({ pathname: "/quiz/[attemptId]", params: { attemptId: start.attemptId } });
+    }
+  }, [params.quizLanguage, params.sessionLength, params.videoId, params.watched, t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -112,7 +161,7 @@ export default function GenerationScreen() {
     localTranscriptionRef.current = false;
     setPaused(false);
     setError(undefined);
-    void execute(controller.signal).catch((cause) => {
+    void execute(controller.signal, runNumber > 0).catch((cause) => {
       if (cause instanceof TranscriptionPausedError || controller.signal.aborted) {
         setPaused(true);
         return;
@@ -140,12 +189,30 @@ export default function GenerationScreen() {
     setPaused(true);
   };
   const retry = () => setRunNumber((value) => value + 1);
+  const cancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    controllerRef.current?.abort();
+    try {
+      const stored = await loadGenerationState(params.videoId);
+      const activeJobId = jobId ?? stored?.jobId;
+      if (activeJobId) await apiRequest(`/api/generation/${activeJobId}`, { method: "DELETE" }, GenerationStatusSchema);
+      await clearGenerationState(params.videoId);
+      router.replace("/(tabs)");
+    } catch (cause) {
+      setPaused(false);
+      setStage("failed");
+      setError(cause instanceof Error ? cause.message : t("cancelGenerationFailed"));
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
-    <Screen scroll={false} footer={
+    <Screen footer={
       <View style={styles.footerRow}>
-        <PrimaryButton variant="ghost" onPress={() => { controllerRef.current?.abort(); router.replace("/(tabs)"); }}>{t("cancel")}</PrimaryButton>
-        {paused || stage === "failed" ? <PrimaryButton onPress={retry}>{t("retry")}</PrimaryButton> : localTranscriptionRef.current && ["preparing_audio", "downloading_model", "transcribing_device"].includes(stage) ? <PrimaryButton variant="secondary" onPress={pause}>{t("pause")}</PrimaryButton> : null}
+        <PrimaryButton variant="ghost" loading={cancelling} onPress={() => void cancel()}>{t("cancel")}</PrimaryButton>
+        {paused || stage === "failed" ? <PrimaryButton disabled={cancelling} onPress={retry}>{t("retry")}</PrimaryButton> : localTranscriptionRef.current && ["preparing_audio", "downloading_model", "transcribing_device"].includes(stage) ? <PrimaryButton variant="secondary" disabled={cancelling} onPress={pause}>{t("pause")}</PrimaryButton> : null}
       </View>
     }>
       <View style={styles.top}>
@@ -188,8 +255,15 @@ export default function GenerationScreen() {
   );
 }
 
-async function pollGeneration(jobId: string, signal: AbortSignal, onProgress: (value: number) => void): Promise<string> {
+async function pollGeneration(
+  jobId: string,
+  signal: AbortSignal,
+  onProgress: (value: number) => void,
+  timeoutMessage: string,
+): Promise<string> {
+  const startedAt = Date.now();
   while (!signal.aborted) {
+    if (isGenerationPollExpired(startedAt, Date.now())) throw new Error(timeoutMessage);
     const status = await apiRequest(`/api/generation/${jobId}`, { signal }, GenerationStatusSchema);
     onProgress(Math.max(0.05, status.progress));
     if (status.stage === "complete" && status.quizId) return status.quizId;
@@ -201,8 +275,12 @@ async function pollGeneration(jobId: string, signal: AbortSignal, onProgress: (v
 
 function wait(milliseconds: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, milliseconds);
-    signal.addEventListener("abort", () => { clearTimeout(timer); reject(new TranscriptionPausedError()); }, { once: true });
+    const abort = () => { clearTimeout(timer); reject(new TranscriptionPausedError()); };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, milliseconds);
+    signal.addEventListener("abort", abort, { once: true });
   });
 }
 
@@ -224,5 +302,5 @@ const styles = StyleSheet.create({
   detail: { fontFamily: typography.bodyMedium, fontSize: 12 },
   cached: { fontFamily: typography.bodyBold, fontSize: 12 },
   error: { maxWidth: 680, alignSelf: "center", fontFamily: typography.bodyMedium, fontSize: 14, lineHeight: 20, textAlign: "center", marginTop: 16 },
-  footerRow: { width: "100%", maxWidth: 680, alignSelf: "center", flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  footerRow: { width: "100%", maxWidth: 680, alignSelf: "center", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 },
 });

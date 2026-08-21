@@ -29,7 +29,7 @@ export const thumbnailRouter = new Hono<ApiBindings>();
 
 videosRouter.post("/import", async (c) => {
   const user = c.get("user");
-  await enforceRateLimit(c.env.CACHE, {
+  await enforceRateLimit(c.env.DB, {
     namespace: "video-import",
     identifier: user.id,
     maximum: 20,

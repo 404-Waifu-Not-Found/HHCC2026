@@ -26,7 +26,7 @@ export const mediaRouter = new Hono<ApiBindings>();
 
 mediaRouter.post("/resolve", async (c) => {
   const user = c.get("user");
-  await enforceRateLimit(c.env.CACHE, {
+  await enforceRateLimit(c.env.DB, {
     namespace: "media-resolve",
     identifier: user.id,
     maximum: 10,
@@ -97,4 +97,3 @@ mediaRouter.get("/:token", async (c) => {
     headers,
   });
 });
-

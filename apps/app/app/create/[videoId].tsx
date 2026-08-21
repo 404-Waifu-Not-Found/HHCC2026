@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Mascot } from "../../src/components/Mascot";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
@@ -11,6 +11,7 @@ import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { loadImportedVideo } from "../../src/state/creation";
 import { radii, typography } from "../../src/theme/tokens";
+import { canTranscribeInBrowser } from "../../src/transcription/limits";
 
 export default function CreateQuestScreen() {
   const { videoId } = useLocalSearchParams<{ videoId: string }>();
@@ -41,6 +42,7 @@ export default function CreateQuestScreen() {
     );
   }
   const tooLong = video.requiresLocalTranscription && video.video.durationSeconds > 5_400;
+  const tooLongForWeb = video.requiresLocalTranscription && Platform.OS === "web" && !canTranscribeInBrowser(video.video.durationSeconds);
   const proceed = () => router.push({
     pathname: "/generation/[videoId]",
     params: { videoId: video.video.id, watched: String(watched), quizLanguage, sessionLength },
@@ -97,8 +99,8 @@ export default function CreateQuestScreen() {
           </View>
         </View>
       ) : null}
-      {tooLong ? <Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{t("unsupportedLength")}</Text> : null}
-      <View style={styles.submit}><PrimaryButton disabled={tooLong} onPress={proceed}>{t("generate")}</PrimaryButton></View>
+      {tooLong || tooLongForWeb ? <Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{t(tooLongForWeb ? "webUnsupportedLength" : "unsupportedLength")}</Text> : null}
+      <View style={styles.submit}><PrimaryButton disabled={tooLong || tooLongForWeb} onPress={proceed}>{t("generate")}</PrimaryButton></View>
     </Screen>
   );
 }
