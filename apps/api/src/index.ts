@@ -16,12 +16,8 @@ import { libraryRouter } from "./routes/library";
 import { mediaRouter } from "./routes/media";
 import { modelsRouter } from "./routes/models";
 import { pushRouter, sendDueReviewNotifications } from "./routes/push";
+import { quizImportsRouter } from "./routes/quiz-imports";
 import { quizzesRouter } from "./routes/quizzes";
-import {
-  LOCAL_QUIZ_ORCHESTRATOR_VERSION,
-  generationRouter,
-  transcriptsRouter,
-} from "./routes/transcripts";
 import { thumbnailRouter, videosRouter } from "./routes/videos";
 import { youtubeRouter } from "./routes/youtube";
 import type { AppEnv } from "./types";
@@ -109,7 +105,8 @@ app.use("*", async (c, next) => {
 app.get("/health", (c) => {
   const configuration = {
     authentication: Boolean(c.env.BETTER_AUTH_SECRET),
-    localGeneration: true,
+    backendQuizGeneration: false,
+    extensionQuizGeneration: true,
     extensionRequired: true,
     email: Boolean(c.env.RESEND_API_KEY),
     youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
@@ -123,7 +120,7 @@ app.get("/health", (c) => {
     pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
-    orchestratorVersion: LOCAL_QUIZ_ORCHESTRATOR_VERSION,
+    importVersion: "extension-import-v1",
     maintenance: false,
     configuration,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",
@@ -145,8 +142,7 @@ app.use("/api/*", authenticated);
 app.route("/api/admin", adminRouter);
 app.route("/api/videos", videosRouter);
 app.route("/api/media", mediaRouter);
-app.route("/api/transcripts", transcriptsRouter);
-app.route("/api/generation", generationRouter);
+app.route("/api/quiz-imports", quizImportsRouter);
 app.route("/api", quizzesRouter);
 app.route("/api/library", libraryRouter);
 app.route("/api/push", pushRouter);

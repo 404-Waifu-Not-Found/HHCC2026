@@ -64,7 +64,6 @@ const AttemptRowSchema = z.object({
   item_count: z.number().int().positive(),
   score: z.number().nullable(),
   mastery_state: MasteryStateSchema.nullable(),
-  transcript_key: z.string().nullable(),
 });
 type AttemptRow = z.infer<typeof AttemptRowSchema>;
 
@@ -441,7 +440,7 @@ async function getAttempt(
 ): Promise<AttemptRow> {
   const row = await db
     .prepare(
-      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, (SELECT gj.transcript_key FROM generation_jobs gj WHERE gj.quiz_id = a.quiz_id ORDER BY gj.updated_at DESC LIMIT 1) AS transcript_key FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id AND q.pipeline_version = ? AND q.quality_status = 'passed' LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
+      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id AND q.pipeline_version = ? AND q.quality_status = 'passed' LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
     )
     .bind(LOCAL_QUIZ_PIPELINE_VERSION, attemptId, userId)
     .first();
@@ -493,8 +492,7 @@ async function gradeAnswer(
       "short-answer rubric",
     );
     const transcriptObject = await env.PRIVATE_BUCKET.get(
-      attempt.transcript_key ??
-        `transcripts/${attempt.user_id}/${attempt.video_id}.json`,
+      `transcripts/${attempt.user_id}/${attempt.video_id}/${attempt.quiz_id}.json`,
     );
     if (!transcriptObject)
       throw new ApiError(

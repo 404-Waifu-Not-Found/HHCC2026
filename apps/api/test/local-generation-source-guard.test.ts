@@ -7,8 +7,16 @@ const apiRoot = resolve(import.meta.dirname, "../src");
 describe("extension generation source guard", () => {
   it("contains no backend quiz-generation implementation", () => {
     const index = readFileSync(resolve(apiRoot, "index.ts"), "utf8");
-    const routes = readFileSync(
-      resolve(apiRoot, "routes/transcripts.ts"),
+    const importRoute = readFileSync(
+      resolve(apiRoot, "routes/quiz-imports.ts"),
+      "utf8",
+    );
+    const adminRoute = readFileSync(
+      resolve(apiRoot, "routes/admin.ts"),
+      "utf8",
+    );
+    const quizRoute = readFileSync(
+      resolve(apiRoot, "routes/quizzes.ts"),
       "utf8",
     );
     const generationDirectory = resolve(apiRoot, "generation");
@@ -16,9 +24,12 @@ describe("extension generation source guard", () => {
       existsSync(generationDirectory) ? readdirSync(generationDirectory) : [],
     ).toEqual([]);
     expect(index).not.toContain("QuizGenerationWorkflow");
-    expect(routes).not.toContain("waitUntil");
-    expect(routes).not.toContain("QUIZ_GENERATION_WORKFLOW");
-    expect(routes).not.toContain("chat/completions");
-    expect(routes).not.toContain("validateLocalQuizSubmission");
+    expect(index).not.toContain('app.route("/api/generation"');
+    expect(index).not.toContain('app.route("/api/transcripts"');
+    expect(importRoute).not.toContain("chat/completions");
+    expect(importRoute).not.toContain("generation_jobs");
+    expect(importRoute).not.toContain("validateLocalQuizSubmission");
+    expect(adminRoute).not.toContain("generation_jobs");
+    expect(quizRoute).not.toContain("generation_jobs");
   });
 });

@@ -517,6 +517,23 @@ export const LocalQuizSubmissionSchema = z
   .strict();
 export type LocalQuizSubmission = z.infer<typeof LocalQuizSubmissionSchema>;
 
+export const ExtensionQuizImportRequestSchema = z
+  .object({
+    transcript: TranscriptUploadRequestSchema,
+    quiz: LocalQuizSubmissionSchema,
+  })
+  .strict();
+export type ExtensionQuizImportRequest = z.infer<
+  typeof ExtensionQuizImportRequestSchema
+>;
+
+export const ExtensionQuizImportResponseSchema = z
+  .object({ quizId: z.string().uuid() })
+  .strict();
+export type ExtensionQuizImportResponse = z.infer<
+  typeof ExtensionQuizImportResponseSchema
+>;
+
 export const QuizStartRequestSchema = z.object({
   mode: z.enum(["learn", "review"]).default("learn"),
   sessionLength: SessionLengthSchema,

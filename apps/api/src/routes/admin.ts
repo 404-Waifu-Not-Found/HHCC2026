@@ -1,6 +1,5 @@
 import {
   AdminAuditResponseSchema,
-  AdminJobsResponseSchema,
   AdminLessonsResponseSchema,
   AdminMeResponseSchema,
   AdminMutationResponseSchema,
@@ -31,10 +30,6 @@ const ListQuerySchema = z.object({
 const UserListQuerySchema = ListQuerySchema.extend({
   role: AdminRoleSchema.optional(),
   status: z.enum(["active", "banned"]).optional(),
-});
-
-const JobListQuerySchema = ListQuerySchema.extend({
-  state: z.enum(["queued", "running", "complete", "failed"]).optional(),
 });
 
 const AuditListQuerySchema = ListQuerySchema.extend({
@@ -80,69 +75,37 @@ adminRouter.get(
   requireAdminPermission("overview:read"),
   async (c) => {
     const weekAgo = now() - 7 * 24 * 60 * 60 * 1_000;
-    const [
-      users,
-      lessons,
-      activeJobs,
-      failedJobs,
-      newUsers,
-      lessons7d,
-      attempts7d,
-      failures,
-    ] = await Promise.all([
-      count(c.env.DB, "SELECT COUNT(*) AS count FROM user"),
-      count(c.env.DB, "SELECT COUNT(*) AS count FROM quiz_banks"),
-      count(
-        c.env.DB,
-        "SELECT COUNT(*) AS count FROM generation_jobs WHERE state IN ('queued', 'running')",
-      ),
-      count(
-        c.env.DB,
-        "SELECT COUNT(*) AS count FROM generation_jobs WHERE state = 'failed'",
-      ),
-      count(
-        c.env.DB,
-        "SELECT COUNT(*) AS count FROM user WHERE created_at >= ?",
-        [weekAgo],
-      ),
-      count(
-        c.env.DB,
-        "SELECT COUNT(*) AS count FROM quiz_banks WHERE created_at >= ?",
-        [weekAgo],
-      ),
-      count(
-        c.env.DB,
-        "SELECT COUNT(*) AS count FROM attempts WHERE status = 'complete' AND completed_at >= ?",
-        [weekAgo],
-      ),
-      c.env.DB.prepare(
-        "SELECT g.id, v.title AS video_title, u.email AS owner_email, g.error_code, g.error_message, g.updated_at FROM generation_jobs g JOIN videos v ON v.id = g.video_id JOIN user u ON u.id = g.user_id WHERE g.state = 'failed' ORDER BY g.updated_at DESC LIMIT 6",
-      ).all<{
-        id: string;
-        video_title: string;
-        owner_email: string;
-        error_code: string | null;
-        error_message: string | null;
-        updated_at: number;
-      }>(),
-    ]);
+    const [users, lessons, newUsers, lessons7d, attempts7d] = await Promise.all(
+      [
+        count(c.env.DB, "SELECT COUNT(*) AS count FROM user"),
+        count(c.env.DB, "SELECT COUNT(*) AS count FROM quiz_banks"),
+        count(
+          c.env.DB,
+          "SELECT COUNT(*) AS count FROM user WHERE created_at >= ?",
+          [weekAgo],
+        ),
+        count(
+          c.env.DB,
+          "SELECT COUNT(*) AS count FROM quiz_banks WHERE created_at >= ?",
+          [weekAgo],
+        ),
+        count(
+          c.env.DB,
+          "SELECT COUNT(*) AS count FROM attempts WHERE status = 'complete' AND completed_at >= ?",
+          [weekAgo],
+        ),
+      ],
+    );
 
     return c.json(
       AdminOverviewResponseSchema.parse({
-        totals: { users, lessons, activeJobs, failedJobs },
+        totals: { users, lessons, activeJobs: 0, failedJobs: 0 },
         activity: {
           newUsers7d: newUsers,
           lessons7d,
           completedAttempts7d: attempts7d,
         },
-        recentFailures: failures.results.map((row) => ({
-          id: row.id,
-          videoTitle: row.video_title,
-          ownerEmail: row.owner_email,
-          errorCode: row.error_code,
-          errorMessage: row.error_message,
-          updatedAt: toIso(row.updated_at),
-        })),
+        recentFailures: [],
       }),
     );
   },
@@ -319,92 +282,6 @@ adminRouter.post(
   },
 );
 
-adminRouter.get("/jobs", requireAdminPermission("jobs:read"), async (c) => {
-  const query = parseListQuery(c.req.query(), JobListQuerySchema);
-  const where: string[] = [];
-  const values: unknown[] = [];
-  if (query.search) {
-    where.push("(v.title LIKE ? OR u.email LIKE ? OR g.id LIKE ?)");
-    const pattern = `%${query.search}%`;
-    values.push(pattern, pattern, pattern);
-  }
-  if (query.state) {
-    where.push("g.state = ?");
-    values.push(query.state);
-  }
-  const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
-  const total = await count(
-    c.env.DB,
-    `SELECT COUNT(*) AS count FROM generation_jobs g JOIN videos v ON v.id = g.video_id JOIN user u ON u.id = g.user_id ${clause}`,
-    values,
-  );
-  const rows = await c.env.DB.prepare(
-    `SELECT g.id, g.state, g.stage, g.progress, g.error_code, g.error_message, g.cancel_requested, g.created_at, g.updated_at,
-      u.id AS owner_id, u.name AS owner_name, u.email AS owner_email,
-      v.id AS video_id, v.title AS video_title, v.source AS video_source
-      FROM generation_jobs g JOIN videos v ON v.id = g.video_id JOIN user u ON u.id = g.user_id
-      ${clause} ORDER BY g.updated_at DESC LIMIT ? OFFSET ?`,
-  )
-    .bind(...values, query.pageSize, (query.page - 1) * query.pageSize)
-    .all<Record<string, string | number | null>>();
-  return c.json(
-    AdminJobsResponseSchema.parse({
-      jobs: rows.results.map((row) => ({
-        id: row.id,
-        state: row.state,
-        stage: row.stage,
-        progress: row.progress,
-        errorCode: row.error_code,
-        errorMessage: row.error_message,
-        cancelRequested: Boolean(row.cancel_requested),
-        createdAt: toIso(row.created_at as number),
-        updatedAt: toIso(row.updated_at as number),
-        owner: {
-          id: row.owner_id,
-          name: row.owner_name,
-          email: row.owner_email,
-        },
-        video: {
-          id: row.video_id,
-          title: row.video_title,
-          source: row.video_source,
-        },
-      })),
-      pagination: { page: query.page, pageSize: query.pageSize, total },
-    }),
-  );
-});
-
-adminRouter.post(
-  "/jobs/:jobId/cancel",
-  requireAdminPermission("jobs:manage"),
-  async (c) => {
-    const actor = c.get("user");
-    const input = await parseJson(c, AdminReasonRequestSchema);
-    const job = await getManagedJob(c.env.DB, c.req.param("jobId"));
-    if (job.state === "complete")
-      throw new ApiError(
-        409,
-        "generation_complete",
-        "This lesson is already complete.",
-      );
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        "UPDATE generation_jobs SET state = 'failed', stage = 'failed', progress = 1, cancel_requested = 1, error_code = 'generation_cancelled', error_message = 'Quiz creation was cancelled by ClipQuest operations.', updated_at = ? WHERE id = ? AND state != 'complete'",
-      ).bind(now(), job.id),
-      adminAuditStatement(c.env.DB, {
-        actorUserId: actor.id,
-        action: "generation.cancel",
-        targetType: "generation_job",
-        targetId: job.id,
-        reason: input.reason,
-        metadata: { previousState: job.state },
-      }),
-    ]);
-    return c.json(AdminMutationResponseSchema.parse({ ok: true }));
-  },
-);
-
 adminRouter.get(
   "/lessons",
   requireAdminPermission("lessons:read"),
@@ -513,24 +390,17 @@ adminRouter.get("/audit", requireAdminPermission("audit:read"), async (c) => {
 });
 
 adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
-  const states = await c.env.DB.prepare(
-    "SELECT state, COUNT(*) AS count FROM generation_jobs GROUP BY state",
-  ).all<{
-    state: "queued" | "running" | "complete" | "failed";
-    count: number;
-  }>();
   const jobs = { queued: 0, running: 0, complete: 0, failed: 0 };
-  for (const row of states.results) jobs[row.state] = Number(row.count);
   return c.json(
     AdminSystemResponseSchema.parse({
       configuration: {
         authentication: Boolean(c.env.BETTER_AUTH_SECRET),
-        generation: Boolean(c.env.DEEPSEEK_API_KEY),
+        generation: false,
         email: Boolean(c.env.RESEND_API_KEY),
         youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
         youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",
       },
-      model: c.env.DEEPSEEK_MODEL,
+      model: "extension-local",
       jobs,
       database: {
         migration: "0007_admin_audit_retention",
@@ -623,25 +493,6 @@ function assertCanModerate(
       "Only an owner can manage an operations account.",
     );
   }
-}
-
-async function getManagedJob(db: D1Database, jobId: string) {
-  const row = await db
-    .prepare(
-      "SELECT id, user_id, video_id, state, error_code, cancel_requested FROM generation_jobs WHERE id = ?",
-    )
-    .bind(jobId)
-    .first<{
-      id: string;
-      user_id: string;
-      video_id: string;
-      state: "queued" | "running" | "complete" | "failed";
-      error_code: string | null;
-      cancel_requested: number;
-    }>();
-  if (!row)
-    throw new ApiError(404, "admin_job_not_found", "Generation job not found.");
-  return row;
 }
 
 function safeMetadata(value: unknown): Record<string, unknown> {

@@ -20,8 +20,6 @@ const sharedPermissions: AdminPermission[] = [
   "overview:read",
   "users:read",
   "users:moderate",
-  "jobs:read",
-  "jobs:manage",
   "lessons:read",
   "audit:read",
   "system:read",
