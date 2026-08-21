@@ -1,0 +1,87 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clipquest",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "clipquest.ccwu.cc",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "../app/dist",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*",
+      "/health",
+      "/",
+      "/_sitemap*",
+      "/create/*",
+      "/forgot-password*",
+      "/generation/*",
+      "/library*",
+      "/quiz/*",
+      "/reset-password*",
+      "/settings*",
+      "/sign-in*",
+      "/sign-up*",
+      "/verify-email*",
+      "/welcome*"
+    ],
+    "html_handling": "none",
+    "not_found_handling": "404-page"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "clipquest",
+      "database_id": "bd20a127-8557-4ab0-8f98-531cbbd11236"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "d2dd1683876f44eb99b66443aefba4fd"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PRIVATE_BUCKET",
+      "bucket_name": "clipquest-private"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "GENERATION_QUEUE",
+        "queue": "clipquest-generation"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "clipquest-generation",
+        "max_batch_size": 5,
+        "max_batch_timeout": 5,
+        "max_retries": 2,
+        "dead_letter_queue": "clipquest-generation-dead"
+      }
+    ]
+  },
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "vars": {
+    "APP_ORIGIN": "https://clipquest.ccwu.cc",
+    "BETTER_AUTH_URL": "https://clipquest.ccwu.cc",
+    "DEEPSEEK_MODEL": "deepseek-v4-flash",
+    "ENABLE_YOUTUBE_DEMO_HISTORY": "false",
+    "MODEL_MANIFEST_KEY": "models/whisper-tiny/manifest.json",
+    "RESEND_FROM": "ClipQuest <hello@clipquest.ccwu.cc>"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

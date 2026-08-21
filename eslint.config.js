@@ -1,0 +1,27 @@
+const expoConfig = require("eslint-config-expo/flat");
+const { defineConfig } = require("eslint/config");
+
+module.exports = defineConfig([
+  {
+    ignores: [
+      "**/dist/**",
+      "**/.expo/**",
+      "**/node_modules/**",
+      "apps/app/public/runtime/**",
+      "docs/screenshots/**",
+    ],
+  },
+  expoConfig,
+  {
+    files: ["apps/app/**/*.{ts,tsx}", "e2e/**/*.ts", "playwright.config.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='alert']",
+          message: "Use an accessible in-app dialog instead of window.alert.",
+        },
+      ],
+    },
+  },
+]);

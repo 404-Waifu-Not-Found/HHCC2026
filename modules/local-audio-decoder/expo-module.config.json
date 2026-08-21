@@ -1,0 +1,10 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["ClipQuestLocalAudioDecoderModule"]
+  },
+  "android": {
+    "modules": ["cc.ccwu.clipquest.audio.ClipQuestLocalAudioDecoderModule"]
+  }
+}
+
