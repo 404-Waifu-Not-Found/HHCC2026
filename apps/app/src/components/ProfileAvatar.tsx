@@ -19,7 +19,8 @@ export function ProfileAvatar({
   const [cookie, setCookie] = useState<string>();
   useEffect(() => {
     if (Platform.OS === "web") return;
-    setCookie(authClient.getCookie());
+    const timer = setTimeout(() => setCookie(authClient.getCookie()), 0);
+    return () => clearTimeout(timer);
   }, [image]);
   const uri = image
     ? image.startsWith("http")

@@ -232,7 +232,7 @@ export default function QuizScreen() {
     [activateQuestion, attemptId, t, updateGeneration, userId],
   );
 
-  const prepareCheatSheet = async (quizId: string, videoId: string) => {
+  async function prepareCheatSheet(quizId: string, videoId: string) {
     let lastError = "Local cheat-sheet generation failed.";
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -259,9 +259,9 @@ export default function QuizScreen() {
         sourceRevision: context.sourceRevision,
         lastError,
       });
-  };
+  }
 
-  const syncCheatSheet = useCallback(async () => {
+  async function syncCheatSheet() {
     const pending = pendingCheatSheetRef.current;
     if (!pending) return;
     try {
@@ -270,11 +270,11 @@ export default function QuizScreen() {
     } catch {
       setCheatSheetStatus("failed");
     }
-  }, []);
+  }
 
   useEffect(() => {
     if (showCompletion && cheatSheetStatus === "ready") void syncCheatSheet();
-  }, [cheatSheetStatus, showCompletion, syncCheatSheet]);
+  }, [cheatSheetStatus, showCompletion]);
 
   const resume = useCallback(async () => {
     const resumed = await apiRequest(

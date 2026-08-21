@@ -62,9 +62,9 @@ export default function SettingsScreen() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [avatarRevision, setAvatarRevision] = useState<string | null>(
-    session?.user.image ?? null,
-  );
+  const [avatarRevision, setAvatarRevision] = useState<
+    string | null | undefined
+  >(undefined);
   const [avatarBusy, setAvatarBusy] = useState(false);
 
   useEffect(() => {
@@ -78,10 +78,10 @@ export default function SettingsScreen() {
     };
   }, [session?.user.id]);
 
-  useEffect(
-    () => setAvatarRevision(session?.user.image ?? null),
-    [session?.user.image],
-  );
+  const effectiveAvatarRevision =
+    avatarRevision === undefined
+      ? (session?.user.image ?? null)
+      : avatarRevision;
 
   const uploadAvatar = async () => {
     if (avatarBusy) return;
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
   };
 
   const removeAvatar = async () => {
-    if (avatarBusy || !avatarRevision) return;
+    if (avatarBusy || !effectiveAvatarRevision) return;
     setAvatarBusy(true);
     setError(undefined);
     try {
@@ -270,7 +270,7 @@ export default function SettingsScreen() {
             <View style={styles.accountRow}>
               <ProfileAvatar
                 name={session?.user.name ?? session?.user.email ?? "CQ"}
-                image={avatarRevision}
+                image={effectiveAvatarRevision}
                 size={64}
               />
               <View style={styles.accountCopy}>
@@ -288,9 +288,11 @@ export default function SettingsScreen() {
                 loading={avatarBusy}
                 onPress={() => void uploadAvatar()}
               >
-                {avatarRevision ? t("replacePicture") : t("uploadPicture")}
+                {effectiveAvatarRevision
+                  ? t("replacePicture")
+                  : t("uploadPicture")}
               </PrimaryButton>
-              {avatarRevision ? (
+              {effectiveAvatarRevision ? (
                 <PrimaryButton
                   variant="ghost"
                   disabled={avatarBusy}
@@ -538,15 +540,6 @@ function Notice({
       </Text>
     </View>
   );
-}
-
-function initials(value: string): string {
-  const parts = value.trim().split(/\s+/).filter(Boolean);
-  return (
-    parts.length > 1
-      ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`
-      : value.slice(0, 2)
-  ).toUpperCase();
 }
 
 async function normalizeWebAvatar(file: File): Promise<Blob> {
