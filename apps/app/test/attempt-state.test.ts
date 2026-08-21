@@ -26,6 +26,8 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 import {
   clearAccountAttemptState,
   loadAttempt,
+  saveAttemptQuestion,
+  saveAttemptRecap,
   saveAttemptStart,
 } from "../src/state/attempt";
 
@@ -102,5 +104,51 @@ describe("account-scoped attempt state", () => {
         "clipquest:attempt:v2:owner-two:cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       ),
     ).toBe(true);
+  });
+
+  it("keeps the session recap across question updates and reloads", async () => {
+    await saveAttemptStart("owner-one", start);
+    const recap = [
+      {
+        questionId: start.question.id,
+        prompt: start.question.prompt,
+        correct: false,
+        isRetry: false,
+        learnerAnswer: "Spacing",
+        correctAnswer: "Retrieval practice",
+        explanation: "Recalling the idea rebuilds it.",
+      },
+    ];
+
+    await saveAttemptRecap("owner-one", ATTEMPT_ID, recap);
+    await saveAttemptQuestion("owner-one", ATTEMPT_ID, {
+      ...start.question,
+      prompt: "Try again: what concept is being assessed?",
+      isRetry: true,
+    });
+
+    await expect(loadAttempt("owner-one", ATTEMPT_ID)).resolves.toMatchObject({
+      question: { isRetry: true },
+      recap,
+    });
+  });
+
+  it("loads records written before the recap existed with an empty recap", async () => {
+    storage.set(
+      `clipquest:attempt:v2:owner-one:${ATTEMPT_ID}`,
+      JSON.stringify({
+        version: 2,
+        ownerUserId: "owner-one",
+        attemptId: ATTEMPT_ID,
+        primer: null,
+        question: start.question,
+        primerSeen: true,
+      }),
+    );
+
+    await expect(loadAttempt("owner-one", ATTEMPT_ID)).resolves.toMatchObject({
+      question: start.question,
+      recap: [],
+    });
   });
 });

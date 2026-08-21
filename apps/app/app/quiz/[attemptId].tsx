@@ -50,7 +50,7 @@ import {
   presentQuizText,
 } from "../../src/lib/question-presentation";
 import {
-  recordRecapEntry,
+  attachLocalReason,
   summarizeRecap,
   type RecapEntry,
 } from "../../src/lib/session-recap";
@@ -81,6 +81,7 @@ import {
   loadAttempt,
   markPrimerSeen,
   saveAttemptQuestion,
+  saveAttemptRecap,
 } from "../../src/state/attempt";
 import {
   borders,
@@ -208,6 +209,15 @@ export default function QuizScreen() {
       ),
     [],
   );
+
+  // Persist the session recap beside the stored attempt so a reload or an
+  // app resume mid-quest keeps every earlier answer in the completion recap.
+  useEffect(() => {
+    if (!userId || recapEntries.length === 0) return;
+    void saveAttemptRecap(userId, attemptId, recapEntries).catch(
+      () => undefined,
+    );
+  }, [attemptId, recapEntries, userId]);
 
   const activateQuestion = useCallback((nextQuestion: PublicQuestion) => {
     setQuestionInteractionReady(false);
@@ -396,6 +406,7 @@ export default function QuizScreen() {
       if (!active) return;
       if (stored) {
         if (stored.question) activateQuestion(stored.question);
+        if (stored.recap.length) setRecapEntries(stored.recap);
         setPrimer(stored.primer);
         setShowPrimer(Boolean(stored.primer && !stored.primerSeen));
         if (stored.question) {
@@ -559,6 +570,8 @@ export default function QuizScreen() {
       if (submittedAnswer === undefined) {
         throw new Error(t("answerRequired"));
       }
+      let localGradePromise:
+        Promise<import("@clipquest/contracts").LocalAnswerGrade> | undefined;
       if (question.type !== "ordering") {
         const responseText =
           question.type === "multiple_choice" &&
@@ -573,7 +586,7 @@ export default function QuizScreen() {
         const gradingTimeout = setTimeout(() => {
           gradingController.abort(new Error("Local grading timed out."));
         }, 30_000);
-        const localGradePromise = requestLocalAnswerGrade(
+        localGradePromise = requestLocalAnswerGrade(
           {
             question: presentQuizPrompt(question.prompt),
             response: responseText,
@@ -598,25 +611,33 @@ export default function QuizScreen() {
         AttemptAnswerResponseSchema,
       );
       setFeedback(result);
-      setRecapEntries((entries) =>
-        recordRecapEntry(entries, {
-          questionId: question.id,
+      const recapTarget = {
+        questionId: question.id,
+        isRetry: question.isRetry,
+      };
+      setRecapEntries((entries) => [
+        ...entries,
+        {
+          ...recapTarget,
           prompt: presentQuizPrompt(question.prompt),
           correct: result.correct,
-          isRetry: question.isRetry,
-          learnerAnswer: presentCorrectAnswer(
-            question,
-            submittedAnswer,
-            (key) => t(key),
-          ),
+          learnerAnswer: presentCorrectAnswer(question, submittedAnswer, t),
           correctAnswer: result.correct
             ? undefined
-            : presentCorrectAnswer(question, result.correctAnswer, (key) =>
-                t(key),
-              ),
+            : presentCorrectAnswer(question, result.correctAnswer, t),
           explanation: presentQuizText(result.explanation),
-        }),
-      );
+        },
+      ]);
+      // Keep the recap's reasoning identical to what the feedback panel shows:
+      // when the device-local grade agrees with the server verdict, the panel
+      // prefers its reason, so the recap records that same text.
+      void localGradePromise
+        ?.then((grade) =>
+          setRecapEntries((entries) =>
+            attachLocalReason(entries, recapTarget, grade),
+          ),
+        )
+        .catch(() => undefined);
       updateGeneration(result.generation);
       if (userId)
         await saveAttemptQuestion(userId, attemptId, result.nextQuestion);
@@ -712,6 +733,10 @@ export default function QuizScreen() {
     const mastered = mastery === "mastered";
     const recap = summarizeRecap(recapEntries);
     const showRecap = recapEntries.length > 0;
+    // Only claim a perfect run when the recap saw every question; a session
+    // restored without its earlier answers must not overstate itself.
+    const recapCoversAttempt =
+      completedTotal === undefined || recap.answered >= completedTotal;
     const showCompactCompletionStats =
       compactCompletion && completedTotal !== undefined;
     const localCheatSheetReady = Boolean(pendingCheatSheetRef.current);
@@ -801,10 +826,10 @@ export default function QuizScreen() {
             ) : null}
             {showRecap ? (
               <StaggerItem
-                index={3}
+                index={completedTotal !== undefined ? 3 : 2}
                 style={[
                   styles.statItem,
-                  compactCompletion && styles.statItemCompact,
+                  showCompactCompletionStats && styles.statItemCompact,
                 ]}
               >
                 <StatTile
@@ -834,7 +859,11 @@ export default function QuizScreen() {
                   {t("recapTitle")}
                 </Text>
                 <Text style={[styles.recapBody, { color: theme.textMuted }]}>
-                  {recap.missed.length ? t("recapSubtitle") : t("recapPerfect")}
+                  {recap.missed.length
+                    ? t("recapSubtitle")
+                    : recapCoversAttempt
+                      ? t("recapPerfect")
+                      : t("recapPartial")}
                 </Text>
                 {recap.missed.map((item, index) => (
                   <View
@@ -848,6 +877,9 @@ export default function QuizScreen() {
                       },
                     ]}
                   >
+                    {/* Each line is one top-level MathText (the FeedbackPanel
+                        pattern) so formula answers typeset and native MathText
+                        is never nested inside Text. */}
                     <MathText
                       selectable
                       style={[styles.recapPrompt, { color: theme.text }]}
@@ -855,36 +887,27 @@ export default function QuizScreen() {
                       {item.prompt}
                     </MathText>
                     {item.learnerAnswer ? (
-                      <Text style={[styles.recapLine, { color: theme.error }]}>
-                        <Text style={styles.recapLabel}>
-                          {t("recapYourAnswer")}:{" "}
-                        </Text>
-                        {item.learnerAnswer}
-                      </Text>
+                      <MathText
+                        selectable
+                        style={[styles.recapLine, { color: theme.error }]}
+                      >
+                        {`${t("recapYourAnswer")}: ${item.learnerAnswer}`}
+                      </MathText>
                     ) : null}
                     {item.correctAnswer ? (
-                      <Text
+                      <MathText
+                        selectable
                         style={[styles.recapLine, { color: theme.success }]}
                       >
-                        <Text style={styles.recapLabel}>
-                          {t("correctAnswer")}:{" "}
-                        </Text>
-                        {item.correctAnswer}
-                      </Text>
+                        {`${t("correctAnswer")}: ${item.correctAnswer}`}
+                      </MathText>
                     ) : null}
-                    <Text
+                    <MathText
                       selectable
                       style={[styles.recapLine, { color: theme.textMuted }]}
                     >
-                      <Text style={styles.recapLabel}>
-                        {t("explanation")}:{" "}
-                      </Text>
-                      <MathText
-                        style={[styles.recapLine, { color: theme.textMuted }]}
-                      >
-                        {item.explanation}
-                      </MathText>
-                    </Text>
+                      {`${t("answerReason")}: ${item.reason ?? item.explanation}`}
+                    </MathText>
                     {item.recoveredOnRetry ? (
                       <View
                         style={[

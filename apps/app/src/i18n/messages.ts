@@ -179,6 +179,8 @@ export const messages = {
       "Every question was right on the first try. Come back for the scheduled review to lock it in.",
     recapYourAnswer: "Your answer",
     recapRecovered: "Recovered on retry",
+    recapPartial:
+      "No misses among the answers recorded in this session. Earlier answers from before the quest was reopened are not listed.",
     answerRequired: "Choose or write an answer first.",
     moveUp: "Move up",
     moveDown: "Move down",
@@ -409,6 +411,7 @@ export const messages = {
     recapPerfect: "所有题目都一次答对。按计划回来复习，巩固记忆。",
     recapYourAnswer: "你的答案",
     recapRecovered: "重试时已答对",
+    recapPartial: "本次记录的作答没有错题。重新打开任务之前的作答未列出。",
     answerRequired: "请先选择或填写答案。",
     moveUp: "上移",
     moveDown: "下移",

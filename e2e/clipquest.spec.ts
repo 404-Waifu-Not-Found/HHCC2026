@@ -1347,28 +1347,36 @@ test("completion recap lists missed questions with the correct answer and retry 
 }) => {
   await page.setViewportSize({ width: 1440, height: 1024 });
   const scenario = await installMocks(page);
+  // A one-question quest keeps every completion tile coherent: one question,
+  // missed first, recovered on the retry, 100% once the retry is credited.
+  const singleQuestion = { ...baseQuestion, total: 1 };
+  scenario.question = singleQuestion;
   await page.goto("/welcome");
-  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await seedAttempt(page, ATTEMPT_ID, singleQuestion);
   scenario.completedAttempt = false;
   scenario.answerCorrect = false;
 
   await page.goto(`/quiz/${ATTEMPT_ID}`);
   await expect(
-    page.getByRole("heading", { name: baseQuestion.prompt }),
+    page.getByRole("heading", { name: singleQuestion.prompt }),
   ).toBeVisible();
-  await page.getByRole("button", { name: baseQuestion.options[1] }).click();
+  await page.getByRole("button", { name: singleQuestion.options[1] }).click();
   await page.getByRole("button", { name: "Check answer" }).click();
   await expect(
     page.getByText("Almost—try this concept another way."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
-  await expect(
-    page.getByRole("heading", { name: `Try again: ${baseQuestion.prompt}` }),
-  ).toBeVisible();
+  const retryPrompt = `Try again: ${singleQuestion.prompt}`;
+  await expect(page.getByRole("heading", { name: retryPrompt })).toBeVisible();
+
+  // A refresh in the middle of the quest must not lose the recorded miss.
+  scenario.question = { ...singleQuestion, prompt: retryPrompt, isRetry: true };
+  await page.reload();
+  await expect(page.getByRole("heading", { name: retryPrompt })).toBeVisible();
 
   scenario.answerCorrect = true;
   scenario.completeOnAnswer = true;
-  await page.getByRole("button", { name: baseQuestion.options[0] }).click();
+  await page.getByRole("button", { name: singleQuestion.options[0] }).click();
   await page.getByRole("button", { name: "Check answer" }).click();
   await expect(page.getByText("Nice! That’s right.")).toBeVisible();
   await page.getByRole("button", { name: "Finish" }).click();
@@ -1376,6 +1384,7 @@ test("completion recap lists missed questions with the correct answer and retry 
   await expect(
     page.getByRole("heading", { name: "Quest complete!" }),
   ).toBeVisible();
+  await expect(page.getByText("100%", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "What to review" }),
   ).toBeVisible();
@@ -1383,13 +1392,15 @@ test("completion recap lists missed questions with the correct answer and retry 
   await expect(page.getByText("0/1", { exact: true })).toBeVisible();
   const missed = page.getByTestId("recap-missed-item");
   await expect(missed).toHaveCount(1);
-  await expect(missed).toContainText(baseQuestion.prompt);
-  await expect(missed).toContainText(`Your answer: ${baseQuestion.options[1]}`);
+  await expect(missed).toContainText(singleQuestion.prompt);
   await expect(missed).toContainText(
-    `Correct answer: ${baseQuestion.options[0]}`,
+    `Your answer: ${singleQuestion.options[1]}`,
   );
   await expect(missed).toContainText(
-    "Why: The key is effortful reconstruction: recalling the idea strengthens access to it later.",
+    `Correct answer: ${singleQuestion.options[0]}`,
+  );
+  await expect(missed).toContainText(
+    "Reason: The key is effortful reconstruction: recalling the idea strengthens access to it later.",
   );
   await expect(missed).toContainText("Recovered on retry");
   await capture(page, "desktop-completion-recap");
@@ -2429,9 +2440,19 @@ async function installMocks(page: Page): Promise<Scenario> {
     if (path.endsWith("/answer") && path.includes("/api/attempts/")) {
       scenario.answerBodies.push(request.postDataJSON());
       const completed = scenario.completeOnAnswer;
+      // Mirror the API's canonical-answer shape per question type: option
+      // index, boolean, item order, or the rubric's model answer string.
+      const correctAnswer =
+        scenario.question.type === "true_false"
+          ? true
+          : scenario.question.type === "ordering"
+            ? (scenario.question.items ?? []).map((_, index) => index)
+            : scenario.question.type === "short_answer"
+              ? "Retrieval practice forces the brain to reconstruct the idea."
+              : 0;
       await json(route, {
         correct: scenario.answerCorrect,
-        correctAnswer: scenario.question.type === "true_false" ? true : 0,
+        correctAnswer,
         explanation: scenario.answerCorrect
           ? "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice."
           : "The key is effortful reconstruction: recalling the idea strengthens access to it later.",
@@ -2449,7 +2470,7 @@ async function installMocks(page: Page): Promise<Scenario> {
               ? null
               : nextQuestion,
         completed,
-        score: completed ? 80 : null,
+        score: completed ? (scenario.answerCorrect ? 100 : 0) : null,
         mastery: completed ? "learning" : null,
         generation: generation(),
       });

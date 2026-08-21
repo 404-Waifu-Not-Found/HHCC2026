@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  recordRecapEntry,
+  attachLocalReason,
+  parseRecapEntries,
   summarizeRecap,
   type RecapEntry,
 } from "../src/lib/session-recap";
@@ -15,16 +16,6 @@ function entry(overrides: Partial<RecapEntry> = {}): RecapEntry {
     ...overrides,
   };
 }
-
-describe("recordRecapEntry", () => {
-  it("appends without mutating the previous list", () => {
-    const first = recordRecapEntry([], entry());
-    const second = recordRecapEntry(first, entry({ questionId: "q2" }));
-    expect(first).toHaveLength(1);
-    expect(second).toHaveLength(2);
-    expect(second[0]).toBe(first[0]);
-  });
-});
 
 describe("summarizeRecap", () => {
   it("reports an empty session", () => {
@@ -85,18 +76,121 @@ describe("summarizeRecap", () => {
     expect(summary.missed[0]?.recoveredOnRetry).toBe(true);
   });
 
-  it("preserves the correct answer and explanation of the missed attempt", () => {
+  it("treats a session that resumes on a pending retry as answered but not first-try correct", () => {
+    const summary = summarizeRecap([
+      entry({ questionId: "q1", correct: true, isRetry: true }),
+    ]);
+    expect(summary.answered).toBe(1);
+    expect(summary.firstTryCorrect).toBe(0);
+    expect(summary.missed).toEqual([]);
+  });
+
+  it("preserves the correct answer, explanation, and reason of the missed attempt", () => {
     const summary = summarizeRecap([
       entry({
         questionId: "q1",
         correct: false,
         correctAnswer: "It requires the brain to reconstruct the idea",
         explanation: "Effortful reconstruction strengthens access later.",
+        reason: "Shorter videos do not change how memory is encoded.",
       }),
     ]);
     expect(summary.missed[0]).toMatchObject({
       correctAnswer: "It requires the brain to reconstruct the idea",
       explanation: "Effortful reconstruction strengthens access later.",
+      reason: "Shorter videos do not change how memory is encoded.",
     });
+  });
+});
+
+describe("attachLocalReason", () => {
+  const entries = [
+    entry({ questionId: "q1", correct: false }),
+    entry({ questionId: "q2", correct: true }),
+    entry({ questionId: "q1", correct: true, isRetry: true }),
+  ];
+
+  it("attaches the reason to the matching entry when the verdicts agree", () => {
+    const next = attachLocalReason(
+      entries,
+      { questionId: "q1", isRetry: false },
+      {
+        correct: false,
+        reason: "The answer names a side effect, not the cause.",
+      },
+    );
+    expect(next[0]?.reason).toBe(
+      "The answer names a side effect, not the cause.",
+    );
+    expect(next[2]?.reason).toBeUndefined();
+    expect(entries[0]?.reason).toBeUndefined();
+  });
+
+  it("targets the retry entry separately from the first attempt", () => {
+    const next = attachLocalReason(
+      entries,
+      { questionId: "q1", isRetry: true },
+      { correct: true, reason: "Correct: recall rebuilds the idea." },
+    );
+    expect(next[0]?.reason).toBeUndefined();
+    expect(next[2]?.reason).toBe("Correct: recall rebuilds the idea.");
+  });
+
+  it("ignores a local grade that disagrees with the server or is empty", () => {
+    expect(
+      attachLocalReason(
+        entries,
+        { questionId: "q1", isRetry: false },
+        { correct: true, reason: "Looks right to me." },
+      )[0]?.reason,
+    ).toBeUndefined();
+    expect(
+      attachLocalReason(
+        entries,
+        { questionId: "q1", isRetry: false },
+        { correct: false, reason: "   " },
+      )[0]?.reason,
+    ).toBeUndefined();
+    expect(
+      attachLocalReason(
+        entries,
+        { questionId: "q9", isRetry: false },
+        { correct: false, reason: "No such question." },
+      ),
+    ).toEqual(entries);
+  });
+});
+
+describe("parseRecapEntries", () => {
+  it("round-trips valid entries and drops malformed ones", () => {
+    const valid = entry({
+      questionId: "q1",
+      correct: false,
+      learnerAnswer: "A",
+      correctAnswer: "B",
+      reason: "Because B.",
+    });
+    const restored = parseRecapEntries(
+      JSON.parse(
+        JSON.stringify([
+          valid,
+          { questionId: "q2", prompt: "missing fields" },
+          "not an object",
+          null,
+          { ...entry({ questionId: "q3" }), learnerAnswer: 42 },
+        ]),
+      ),
+    );
+    expect(restored).toHaveLength(2);
+    expect(restored[0]).toEqual(valid);
+    expect(restored[1]).toMatchObject({
+      questionId: "q3",
+      learnerAnswer: undefined,
+    });
+  });
+
+  it("returns an empty list for non-array input", () => {
+    expect(parseRecapEntries(undefined)).toEqual([]);
+    expect(parseRecapEntries({ entries: [] })).toEqual([]);
   });
 });
