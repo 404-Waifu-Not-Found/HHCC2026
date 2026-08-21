@@ -2,6 +2,7 @@ import type { TranscriptSegment } from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createFile, type MP4BoxBuffer, type Sample } from "mp4box";
 import { getSpeechModelManifest } from "./manifest";
+import { assertTranscriptQuality } from "./quality";
 import type { LocalTranscriptionOptions, LocalTranscriptionResult, ModelStatus } from "./types";
 import { TranscriptionPausedError } from "./types";
 
@@ -68,7 +69,7 @@ export async function transcribeLocally(options: LocalTranscriptionOptions): Pro
   } finally {
     worker.terminate();
   }
-  validateTranscriptQuality(segments, options.durationSeconds);
+  assertTranscriptQuality(segments, options.durationSeconds);
   await AsyncStorage.removeItem(checkpointKey(options.videoId));
   return { language: options.language ?? "und", segments: segments.sort((a, b) => a.startMs - b.startMs) };
 }
@@ -204,13 +205,6 @@ async function loadCheckpoint(videoId: string): Promise<Checkpoint> {
   const raw = await AsyncStorage.getItem(checkpointKey(videoId));
   if (!raw) return { completedChunks: 0, segments: [] };
   try { return JSON.parse(raw) as Checkpoint; } catch { return { completedChunks: 0, segments: [] }; }
-}
-
-function validateTranscriptQuality(segments: TranscriptSegment[], durationSeconds: number): void {
-  const characters = segments.reduce((total, segment) => total + segment.text.length, 0);
-  if (!segments.length || characters < Math.max(20, durationSeconds * 0.12)) {
-    throw new Error("The local transcript was too uncertain to create a trustworthy quiz.");
-  }
 }
 
 function throwIfAborted(signal: AbortSignal): void {

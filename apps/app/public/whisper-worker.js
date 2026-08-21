@@ -38,7 +38,7 @@ self.onmessage = async (event) => {
       transcriber = await pipeline("automatic-speech-recognition", manifest.web.repository, {
         revision: manifest.revision,
         device,
-        dtype: device === "webgpu" ? "q4" : "q8",
+        dtype: "q8",
         progress_callback: (progress) => {
           if (run !== activeRun) return;
           if (progress.status === "progress" || progress.status === "progress_total") {

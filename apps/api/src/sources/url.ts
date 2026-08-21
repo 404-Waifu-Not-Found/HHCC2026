@@ -5,6 +5,10 @@ const youtubeHosts = new Set(["youtube.com", "www.youtube.com", "m.youtube.com",
 const bilibiliHosts = new Set(["bilibili.com", "www.bilibili.com", "m.bilibili.com", "b23.tv"]);
 
 export async function normalizeSourceUrl(raw: string): Promise<{ source: VideoSource; url: URL }> {
+  return normalizeSourceUrlWithRedirectLimit(raw, 0);
+}
+
+async function normalizeSourceUrlWithRedirectLimit(raw: string, redirectCount: number): Promise<{ source: VideoSource; url: URL }> {
   let url: URL;
   try {
     url = new URL(raw);
@@ -18,10 +22,13 @@ export async function normalizeSourceUrl(raw: string): Promise<{ source: VideoSo
 
   const host = url.hostname.toLowerCase();
   if (host === "b23.tv") {
+    if (redirectCount >= 3) {
+      throw new ApiError(422, "invalid_bilibili_link", "This bilibili short link redirected too many times.");
+    }
     const response = await fetch(url, { redirect: "manual" });
     const location = response.headers.get("location");
     if (!location) throw new ApiError(422, "invalid_bilibili_link", "This bilibili short link could not be resolved.");
-    return normalizeSourceUrl(new URL(location, url).toString());
+    return normalizeSourceUrlWithRedirectLimit(new URL(location, url).toString(), redirectCount + 1);
   }
 
   if (youtubeHosts.has(host)) return { source: "youtube", url };
@@ -44,4 +51,3 @@ export function parseBilibiliId(url: URL): string {
   }
   return match[1];
 }
-

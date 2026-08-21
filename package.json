@@ -18,7 +18,9 @@
     "cf:dry-run": "npm run deploy:dry -w @clipquest/api",
     "cf:deploy": "npm run deploy -w @clipquest/api",
     "db:migrate:local": "npm run db:migrate:local -w @clipquest/api",
-    "db:migrate:remote": "npm run db:migrate:remote -w @clipquest/api"
+    "db:migrate:remote": "npm run db:migrate:remote -w @clipquest/api",
+    "models:prepare": "node scripts/prepare-models.mjs",
+    "models:upload": "node scripts/upload-models.mjs"
   },
   "engines": {
     "node": ">=22.13.0",
@@ -28,4 +30,3 @@
     "typescript": "^5.9.3"
   }
 }
-

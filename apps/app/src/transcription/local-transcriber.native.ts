@@ -7,6 +7,7 @@ import { initWhisper } from "whisper.rn/index";
 import { authClient } from "../lib/auth-client";
 import { API_ORIGIN } from "../lib/config";
 import { getSpeechModelManifest } from "./manifest";
+import { assertTranscriptQuality } from "./quality";
 import type { LocalTranscriptionOptions, LocalTranscriptionResult, ModelStatus, SpeechModelManifest } from "./types";
 import { TranscriptionPausedError } from "./types";
 
@@ -74,7 +75,7 @@ export async function transcribeLocally(options: LocalTranscriptionOptions): Pro
     } finally {
       await context.release();
     }
-    validateTranscriptQuality(segments, options.durationSeconds);
+    assertTranscriptQuality(segments, options.durationSeconds);
     await AsyncStorage.removeItem(checkpointKey(options.videoId));
     return { language: options.language ?? "und", segments: segments.sort((a, b) => a.startMs - b.startMs) };
   } finally {
@@ -194,13 +195,6 @@ function normalizeLanguage(language: string | null | undefined): string {
   if (language.toLowerCase().startsWith("zh")) return "zh";
   if (language.toLowerCase().startsWith("en")) return "en";
   return "auto";
-}
-
-function validateTranscriptQuality(segments: TranscriptSegment[], durationSeconds: number): void {
-  const characters = segments.reduce((total, segment) => total + segment.text.length, 0);
-  if (!segments.length || characters < Math.max(20, durationSeconds * 0.12)) {
-    throw new Error("The local transcript was too uncertain to create a trustworthy quiz.");
-  }
 }
 
 function throwIfAborted(signal: AbortSignal): void {
