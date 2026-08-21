@@ -35,10 +35,21 @@ export const QuizQuestionTypesSchema = z
 
 export const MasteryStateSchema = z.enum([
   "not_started",
-  "learning",
+  "basic",
+  "intermediate",
+  "expert",
   "mastered",
 ]);
 export type MasteryState = z.infer<typeof MasteryStateSchema>;
+
+export function masteryStateForScore(
+  score: number,
+): Exclude<MasteryState, "not_started"> {
+  if (score >= 100) return "mastered";
+  if (score >= 90) return "expert";
+  if (score >= 80) return "intermediate";
+  return "basic";
+}
 
 export const GenerationStageSchema = z.enum([
   "getting_video",

@@ -34,6 +34,7 @@ import {
   type LocalConceptQuizChunk,
   type LocalConceptQuizResult,
   type QuizQuestionType,
+  masteryStateForScore,
 } from "../src/index";
 
 const validCheatSheetDocument = {
@@ -65,6 +66,17 @@ describe("cheat-sheet quality contracts", () => {
         summary: "Regional anesthetics create a chemical barricade.",
       }).success,
     ).toBe(false);
+  });
+
+  describe("mastery rank thresholds", () => {
+    it.each([
+      [100, "mastered"],
+      [90, "expert"],
+      [80, "intermediate"],
+      [79, "basic"],
+    ] as const)("maps %s%% to %s", (score, expected) => {
+      expect(masteryStateForScore(score)).toBe(expected);
+    });
   });
 
   it("accepts caption-only artifacts without a quiz", () => {
@@ -241,7 +253,7 @@ describe("session length", () => {
       title: "Library replay",
       thumbnailUrl: "https://example.com/thumbnail.jpg",
       bestScore: 67,
-      mastery: "learning",
+      mastery: "basic",
       action: "start",
       dueForReview: false,
       startSettings: {

@@ -13,13 +13,12 @@ import { useState } from "react";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, motion, radii, spacing, typography } from "../theme/tokens";
 import { MotionPressable, MotionView } from "../motion/Motion";
+import {
+  MasteryBadge,
+  masteryColors,
+  masteryPresentation,
+} from "./MasteryBadge";
 import { ReliableThumbnail } from "./ReliableThumbnail";
-
-const masteryKeys = {
-  not_started: "notStarted",
-  learning: "learning",
-  mastered: "mastered",
-} as const;
 
 export function VideoCard({
   card,
@@ -57,12 +56,7 @@ export function VideoCard({
       : card.action === "review"
         ? t("review")
         : t("start");
-  const masteryColor =
-    card.mastery === "mastered"
-      ? theme.success
-      : card.mastery === "learning"
-        ? theme.primary
-        : theme.textMuted;
+  const masteryColor = masteryColors(card.mastery, theme).color;
   const notesStatus = notesPending ? "generating" : card.cheatSheet.status;
   const notesLabel =
     notesStatus === "ready"
@@ -96,7 +90,7 @@ export function VideoCard({
     >
       <MotionPressable
         accessibilityRole="button"
-        accessibilityLabel={`${card.title}, ${t(masteryKeys[card.mastery])}, ${actionLabel}`}
+        accessibilityLabel={`${card.title}, ${t(masteryPresentation(card.mastery).labelKey)}, ${actionLabel}`}
         onPress={onPress}
         style={({ pressed, hovered }) => [
           styles.main,
@@ -137,14 +131,7 @@ export function VideoCard({
             {card.title}
           </Text>
           <View style={styles.meta}>
-            <View
-              style={[styles.badge, { backgroundColor: theme.surfaceSunken }]}
-            >
-              <View style={[styles.dot, { backgroundColor: masteryColor }]} />
-              <Text style={[styles.badgeText, { color: theme.textMuted }]}>
-                {t(masteryKeys[card.mastery])}
-              </Text>
-            </View>
+            <MasteryBadge state={card.mastery} compact />
             {card.bestScore !== null ? (
               <Text style={[styles.score, { color: masteryColor }]}>
                 {Math.round(card.bestScore)}%
@@ -356,23 +343,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
     paddingRight: spacing[20] + spacing[5],
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[2],
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing[3],
-    paddingVertical: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  badgeText: {
-    fontFamily: typography.bodyBold,
-    fontSize: 11,
   },
   score: {
     marginLeft: "auto",

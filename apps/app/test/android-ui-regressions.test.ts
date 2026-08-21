@@ -169,6 +169,27 @@ describe("Android UI regressions", () => {
     expect(quiz).toContain('t("retryPdf")');
   });
 
+  it("uses score-based, color-coded mastery ranks everywhere", () => {
+    const contracts = source("../../packages/contracts/src/index.ts");
+    const badge = source("src/components/MasteryBadge.tsx");
+    const videoCard = source("src/components/VideoCard.tsx");
+    const quiz = source("app/quiz/[attemptId].tsx");
+
+    expect(contracts).toContain('"basic"');
+    expect(contracts).toContain('"intermediate"');
+    expect(contracts).toContain('"expert"');
+    expect(contracts).toContain('if (score >= 100) return "mastered"');
+    expect(badge).toContain("theme.errorSoft");
+    expect(badge).toContain("theme.warningSoft");
+    expect(badge).toContain("theme.secondarySoft");
+    expect(badge).toContain("theme.successSoft");
+    expect(videoCard).toContain(
+      "<MasteryBadge state={card.mastery} compact />",
+    );
+    expect(quiz).toContain("masteryStateForScore(score)");
+    expect(quiz).not.toContain('t("learning")');
+  });
+
   it("omits empty AI sections from exported cheat sheets", () => {
     const cheatSheet = source("src/lib/cheat-sheet.ts");
 

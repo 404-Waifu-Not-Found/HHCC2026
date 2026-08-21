@@ -10,40 +10,47 @@ const empty: MasterySnapshot = {
 };
 
 describe("calculateMastery", () => {
-  it("does not schedule an impossible review after a failed first attempt", () => {
+  it("assigns Basic to a first attempt below 80%", () => {
     expect(
       calculateMastery(empty, { mode: "learn", score: 60, timestamp: 1_000 }),
     ).toMatchObject({
-      state: "learning",
+      state: "basic",
       initialPassedAt: null,
       nextReviewAt: null,
     });
   });
 
-  it("schedules the first review three days after an initial pass", () => {
+  it.each([
+    [100, "mastered"],
+    [99, "expert"],
+    [90, "expert"],
+    [89, "intermediate"],
+    [80, "intermediate"],
+    [79, "basic"],
+  ] as const)("maps %s%% to the %s rank", (score, state) => {
     expect(
-      calculateMastery(empty, { mode: "learn", score: 80, timestamp: 1_000 }),
+      calculateMastery(empty, { mode: "learn", score, timestamp: 1_000 }),
     ).toMatchObject({
-      state: "learning",
-      initialPassedAt: 1_000,
-      nextReviewAt: 259_201_000,
+      state,
+      bestScore: score,
     });
   });
 
-  it("marks mastery only after a later passing review", () => {
+  it("promotes a later review when it improves the best score", () => {
     const learning = calculateMastery(empty, {
       mode: "learn",
-      score: 90,
+      score: 80,
       timestamp: 1_000,
     });
     expect(
       calculateMastery(learning, {
         mode: "review",
-        score: 90,
+        score: 100,
         timestamp: 259_201_000,
       }),
     ).toMatchObject({
       state: "mastered",
+      bestScore: 100,
       reviewPassedAt: 259_201_000,
       nextReviewAt: null,
     });

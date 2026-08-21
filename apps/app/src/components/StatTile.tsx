@@ -12,7 +12,7 @@ export function StatTile({
   value: string;
   label: string;
   icon?: ReactNode;
-  tone?: "primary" | "success" | "warning" | "secondary";
+  tone?: "primary" | "success" | "warning" | "secondary" | "error";
 }) {
   const { theme } = useSettings();
   const color =
@@ -22,7 +22,9 @@ export function StatTile({
         ? theme.warningText
         : tone === "secondary"
           ? theme.secondary
-          : theme.primary;
+          : tone === "error"
+            ? theme.error
+            : theme.primary;
   return (
     <View
       style={[

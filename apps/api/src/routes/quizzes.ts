@@ -253,7 +253,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
       throw new ApiError(
         409,
         "review_not_ready",
-        "Complete an 80% learning session before starting a mastery review.",
+        "Complete an 80% or higher learning session before starting a mastery review.",
       );
     }
   }
@@ -415,7 +415,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
         ).bind(attemptId, index, question.id),
       ),
       c.env.DB.prepare(
-        "INSERT INTO mastery (user_id, video_id, state, updated_at) VALUES (?, ?, 'learning', ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = CASE WHEN mastery.state = 'not_started' THEN 'learning' ELSE mastery.state END, updated_at = excluded.updated_at",
+        "INSERT INTO mastery (user_id, video_id, state, updated_at) VALUES (?, ?, 'basic', ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = CASE WHEN mastery.state = 'not_started' THEN 'basic' ELSE mastery.state END, updated_at = excluded.updated_at",
       ).bind(user.id, quiz.video_id, timestamp),
     ]);
   } catch (error) {
@@ -696,7 +696,7 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
         question: null,
         completed: true,
         score: attempt.score,
-        mastery: attempt.mastery_state ?? "learning",
+        mastery: attempt.mastery_state ?? "basic",
         generation: readyGeneration(attempt.item_count),
       }),
     );

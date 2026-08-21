@@ -150,7 +150,7 @@ const dueCard = {
   title: "How memory really works: retrieval, spacing, and sleep",
   thumbnailUrl: THUMBNAIL_URL,
   bestScore: 76,
-  mastery: "learning" as const,
+  mastery: "intermediate" as const,
   action: "continue" as const,
   dueForReview: true,
 };
