@@ -241,6 +241,7 @@ export const AttemptResumeResponseSchema = z.object({
   question: PublicQuestionSchema.nullable(),
   completed: z.boolean(),
   score: z.number().min(0).max(100).nullable(),
+  mastery: MasteryStateSchema.nullable(),
 });
 export type AttemptResumeResponse = z.infer<typeof AttemptResumeResponseSchema>;
 

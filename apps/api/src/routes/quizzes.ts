@@ -16,6 +16,7 @@ import { z } from "zod";
 import { gradeWrittenAnswer, StoredTranscriptSchema } from "../generation/deepseek";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
+import { calculateMastery } from "../lib/mastery";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { parseJson, parseStoredJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
@@ -54,6 +55,7 @@ const AttemptRowSchema = z.object({
   total_answered: z.number().int().nonnegative(),
   item_count: z.number().int().positive(),
   score: z.number().nullable(),
+  mastery_state: MasteryStateSchema.nullable(),
 });
 type AttemptRow = z.infer<typeof AttemptRowSchema>;
 
@@ -262,6 +264,7 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
         question: null,
         completed: true,
         score: attempt.score,
+        mastery: attempt.mastery_state ?? "learning",
       }),
     );
   }
@@ -278,6 +281,7 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
       ),
       completed: false,
       score: null,
+      mastery: null,
     }),
   );
 });
@@ -323,7 +327,7 @@ function toPublicQuestion(
 async function getAttempt(db: D1Database, attemptId: string, userId: string): Promise<AttemptRow> {
   const row = await db
     .prepare(
-      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id WHERE a.id = ? AND a.user_id = ?",
+      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
     )
     .bind(attemptId, userId)
     .first();
@@ -452,48 +456,40 @@ async function updateMastery(
   const current = parsed.success
     ? parsed.data
     : { state: "not_started" as const, best_score: null, initial_passed_at: null, review_passed_at: null, next_review_at: null };
-  let state: MasteryState = current.state === "mastered" ? "mastered" : "learning";
-  let initialPassedAt = current.initial_passed_at;
-  let reviewPassedAt = current.review_passed_at;
-  let nextReviewAt: number | null = input.timestamp + 24 * 60 * 60 * 1_000;
-
-  if (input.score >= 80 && !initialPassedAt) {
-    initialPassedAt = input.timestamp;
-    nextReviewAt = input.timestamp + 3 * 24 * 60 * 60 * 1_000;
-  } else if (input.score >= 80 && initialPassedAt && input.mode === "review" && input.timestamp > initialPassedAt) {
-    reviewPassedAt = input.timestamp;
-    nextReviewAt = null;
-    state = "mastered";
-  }
-  const bestScore = Math.max(current.best_score ?? 0, input.score);
+  const next = calculateMastery(
+    {
+      state: current.state,
+      bestScore: current.best_score,
+      initialPassedAt: current.initial_passed_at,
+      reviewPassedAt: current.review_passed_at,
+      nextReviewAt: current.next_review_at,
+    },
+    input,
+  );
   const statements = [
     db.prepare(
       "INSERT INTO mastery (user_id, video_id, state, best_score, initial_passed_at, review_passed_at, next_review_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = excluded.state, best_score = excluded.best_score, initial_passed_at = excluded.initial_passed_at, review_passed_at = excluded.review_passed_at, next_review_at = excluded.next_review_at, updated_at = excluded.updated_at",
     ).bind(
       input.userId,
       input.videoId,
-      state,
-      bestScore,
-      initialPassedAt,
-      reviewPassedAt,
-      nextReviewAt,
+      next.state,
+      next.bestScore,
+      next.initialPassedAt,
+      next.reviewPassedAt,
+      next.nextReviewAt,
       input.timestamp,
     ),
+    db.prepare(
+      "UPDATE reviews SET completed_at = ? WHERE user_id = ? AND video_id = ? AND completed_at IS NULL",
+    ).bind(input.timestamp, input.userId, input.videoId),
   ];
-  if (nextReviewAt) {
+  if (next.nextReviewAt) {
     statements.push(
       db.prepare(
         "INSERT INTO reviews (id, user_id, video_id, attempt_id, score, scheduled_for, completed_at) VALUES (?, ?, ?, ?, ?, ?, NULL)",
-      ).bind(createId(), input.userId, input.videoId, input.attemptId, input.score, nextReviewAt),
-    );
-  }
-  if (state === "mastered") {
-    statements.push(
-      db.prepare(
-        "UPDATE reviews SET completed_at = ? WHERE user_id = ? AND video_id = ? AND completed_at IS NULL",
-      ).bind(input.timestamp, input.userId, input.videoId),
+      ).bind(createId(), input.userId, input.videoId, input.attemptId, input.score, next.nextReviewAt),
     );
   }
   await db.batch(statements);
-  return MasteryStateSchema.parse(state);
+  return MasteryStateSchema.parse(next.state);
 }

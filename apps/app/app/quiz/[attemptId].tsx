@@ -2,20 +2,22 @@ import {
   AttemptAnswerResponseSchema,
   AttemptResumeResponseSchema,
   type AttemptAnswerResponse,
+  type AttemptResumeResponse,
   type MasteryState,
   type PublicQuestion,
 } from "@clipquest/contracts";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Mascot } from "../../src/components/Mascot";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { ProgressBar } from "../../src/components/ProgressBar";
 import { Screen } from "../../src/components/Screen";
-import { apiRequest, jsonBody } from "../../src/lib/api";
+import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
+import { createInitialOrdering } from "../../src/lib/quiz-order";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { clearAttempt, loadAttempt, markPrimerSeen, saveAttemptQuestion } from "../../src/state/attempt";
 import { radii, typography } from "../../src/theme/tokens";
@@ -29,6 +31,7 @@ export default function QuizScreen() {
   const [primer, setPrimer] = useState<string | null>(null);
   const [showPrimer, setShowPrimer] = useState(false);
   const [answer, setAnswer] = useState<Answer>();
+  const [orderingTouched, setOrderingTouched] = useState(false);
   const [feedback, setFeedback] = useState<AttemptAnswerResponse>();
   const [score, setScore] = useState<number>();
   const [mastery, setMastery] = useState<MasteryState>();
@@ -36,26 +39,39 @@ export default function QuizScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
 
+  const applyResume = useCallback(async (resumed: AttemptResumeResponse) => {
+    setFeedback(undefined);
+    setError(undefined);
+    if (resumed.completed) {
+      setQuestion(undefined);
+      setScore(resumed.score ?? 0);
+      setMastery(resumed.mastery ?? "learning");
+      return;
+    }
+    if (!resumed.question) throw new Error("The current quiz question is missing.");
+    setQuestion(resumed.question);
+    setScore(undefined);
+    setMastery(undefined);
+    await saveAttemptQuestion(attemptId, resumed.question);
+  }, [attemptId]);
+
+  const resume = useCallback(async () => {
+    const resumed = await apiRequest(`/api/attempts/${attemptId}/resume`, {}, AttemptResumeResponseSchema);
+    await applyResume(resumed);
+  }, [applyResume, attemptId]);
+
   useEffect(() => {
     let active = true;
     void (async () => {
       const stored = await loadAttempt(attemptId);
       if (!active) return;
-      if (stored?.question) {
-        setQuestion(stored.question);
+      if (stored) {
+        setQuestion(stored.question ?? undefined);
         setPrimer(stored.primer);
         setShowPrimer(Boolean(stored.primer && !stored.primerSeen));
-        setLoading(false);
-        return;
       }
       try {
-        const resumed = await apiRequest(`/api/attempts/${attemptId}/resume`, {}, AttemptResumeResponseSchema);
-        if (!active) return;
-        if (resumed.completed) setScore(resumed.score ?? 0);
-        else if (resumed.question) {
-          setQuestion(resumed.question);
-          await saveAttemptQuestion(attemptId, resumed.question);
-        }
+        await resume();
       } catch (cause) {
         if (active) setError(cause instanceof Error ? cause.message : "Could not resume this quiz.");
       } finally {
@@ -63,10 +79,11 @@ export default function QuizScreen() {
       }
     })();
     return () => { active = false; };
-  }, [attemptId]);
+  }, [attemptId, resume]);
 
   useEffect(() => {
-    setAnswer(question?.type === "ordering" ? question.items?.map((_, index) => index) : undefined);
+    setAnswer(question?.type === "ordering" ? createInitialOrdering(question.items?.length ?? 0) : undefined);
+    setOrderingTouched(false);
     setFeedback(undefined);
     setError(undefined);
   }, [question?.id, question?.isRetry]);
@@ -74,8 +91,8 @@ export default function QuizScreen() {
   const canSubmit = useMemo(() => {
     if (answer === undefined) return false;
     if (typeof answer === "string") return answer.trim().length > 0;
-    return true;
-  }, [answer]);
+    return question?.type !== "ordering" || orderingTouched;
+  }, [answer, orderingTouched, question?.type]);
 
   const submit = async () => {
     if (!question || !canSubmit || answer === undefined) {
@@ -99,7 +116,16 @@ export default function QuizScreen() {
       if (result.correct) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       else void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not check that answer.");
+      if (cause instanceof ClientApiError && cause.code === "answer_out_of_sequence") {
+        try {
+          await resume();
+          setError(t("quizResynced"));
+        } catch (resumeCause) {
+          setError(resumeCause instanceof Error ? resumeCause.message : "Could not resume this quiz.");
+        }
+      } else {
+        setError(cause instanceof Error ? cause.message : "Could not check that answer.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -115,7 +141,7 @@ export default function QuizScreen() {
 
   if (score !== undefined && (!question || feedback?.completed)) {
     return (
-      <Screen scroll={false}>
+      <Screen>
         <View style={styles.complete}>
           <Mascot mood="happy" size={124} />
           <Text accessibilityRole="header" style={[styles.completeTitle, { color: theme.text }]}>{t("quizComplete")}</Text>
@@ -147,7 +173,7 @@ export default function QuizScreen() {
 
   const progress = (question.position - 1) / question.total;
   return (
-    <Screen scroll={false} footer={
+    <Screen footer={
       feedback ? <PrimaryButton onPress={next}>{feedback.completed ? t("finish") : t("next")}</PrimaryButton> : <PrimaryButton loading={submitting} disabled={!canSubmit} onPress={() => void submit()}>{t("checkAnswer")}</PrimaryButton>
     }>
       <View style={styles.quizHeader}>
@@ -160,7 +186,13 @@ export default function QuizScreen() {
       <View style={styles.quizBody}>
         {question.isRetry ? <View style={[styles.retryBadge, { backgroundColor: theme.secondary }]}><MaterialCommunityIcons name="refresh" size={16} color={theme.text} /><Text style={[styles.retryText, { color: theme.text }]}>{t("retryingConcept")}</Text></View> : null}
         <Text accessibilityRole="header" style={[styles.question, { color: theme.text }]}>{question.prompt}</Text>
-        <QuestionInput question={question} answer={answer} setAnswer={setAnswer} disabled={Boolean(feedback)} />
+        <QuestionInput
+          question={question}
+          answer={answer}
+          setAnswer={setAnswer}
+          onInteraction={() => setOrderingTouched(true)}
+          disabled={Boolean(feedback) || submitting}
+        />
         {error ? <Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{error}</Text> : null}
         {feedback ? (
           <Animated.View
@@ -180,7 +212,7 @@ export default function QuizScreen() {
   );
 }
 
-function QuestionInput({ question, answer, setAnswer, disabled }: { question: PublicQuestion; answer: Answer | undefined; setAnswer(answer: Answer): void; disabled: boolean }) {
+function QuestionInput({ question, answer, setAnswer, onInteraction, disabled }: { question: PublicQuestion; answer: Answer | undefined; setAnswer(answer: Answer): void; onInteraction(): void; disabled: boolean }) {
   const { t, theme } = useSettings();
   if (question.type === "multiple_choice") {
     return <View style={styles.options}>{question.options?.map((option, index) => <OptionButton key={`${index}-${option}`} label={option} selected={answer === index} disabled={disabled} onPress={() => setAnswer(index)} />)}</View>;
@@ -191,14 +223,14 @@ function QuestionInput({ question, answer, setAnswer, disabled }: { question: Pu
   if (question.type === "ordering") {
     const order = Array.isArray(answer) ? answer : question.items?.map((_, index) => index) ?? [];
     return (
-      <View accessibilityLabel="Arrange the items in order" style={styles.options}>
+      <View accessibilityLabel={t("arrangeItems")} style={styles.options}>
         {order.map((itemIndex, position) => (
           <View key={itemIndex} style={[styles.orderItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={[styles.orderNumber, { backgroundColor: theme.secondary }]}><Text style={[styles.orderNumberText, { color: theme.text }]}>{position + 1}</Text></View>
             <Text style={[styles.orderText, { color: theme.text }]}>{question.items?.[itemIndex]}</Text>
             <View style={styles.orderActions}>
-              <MoveButton label={t("moveUp")} icon="chevron-up" disabled={disabled || position === 0} onPress={() => setAnswer(move(order, position, position - 1))} />
-              <MoveButton label={t("moveDown")} icon="chevron-down" disabled={disabled || position === order.length - 1} onPress={() => setAnswer(move(order, position, position + 1))} />
+              <MoveButton label={t("moveUp")} icon="chevron-up" disabled={disabled || position === 0} onPress={() => { onInteraction(); setAnswer(move(order, position, position - 1)); }} />
+              <MoveButton label={t("moveDown")} icon="chevron-down" disabled={disabled || position === order.length - 1} onPress={() => { onInteraction(); setAnswer(move(order, position, position + 1)); }} />
             </View>
           </View>
         ))}
@@ -207,13 +239,13 @@ function QuestionInput({ question, answer, setAnswer, disabled }: { question: Pu
   }
   return (
     <TextInput
-      accessibilityLabel="Short answer"
+      accessibilityLabel={t("shortAnswer")}
       editable={!disabled}
       multiline
       maxLength={2_000}
       value={typeof answer === "string" ? answer : ""}
       onChangeText={setAnswer}
-      placeholder="Write a short answer…"
+      placeholder={t("shortAnswerPlaceholder")}
       placeholderTextColor={theme.textMuted}
       style={[styles.shortAnswer, { color: theme.text, backgroundColor: theme.surface, borderColor: theme.border }]}
     />
