@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -6,12 +6,17 @@ import sharp from "sharp";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputRoot = resolve(root, "dist");
-const extensionOutput = resolve(outputRoot, "clipquest-captions-extension");
+const stableExtensionOutput = resolve(
+  outputRoot,
+  "clipquest-captions-extension",
+);
 const appIcon = resolve(root, "../app/assets/brand/learning-prism.png");
 const appBrandRoot = resolve(root, "../app/assets/brand");
 const generatedIconRoot = resolve(root, "../app/assets/platform/extension");
 
-rmSync(outputRoot, { recursive: true, force: true });
+mkdirSync(outputRoot, { recursive: true });
+const stagingRoot = mkdtempSync(resolve(outputRoot, ".clipquest-build-"));
+const extensionOutput = resolve(stagingRoot, "clipquest-captions-extension");
 mkdirSync(resolve(extensionOutput, "icons"), { recursive: true });
 mkdirSync(resolve(extensionOutput, "brand"), { recursive: true });
 
@@ -70,11 +75,18 @@ if (
 JSON.parse(readFileSync(resolve(extensionOutput, "manifest.json"), "utf8"));
 
 const archive = resolve(outputRoot, "clipquest-captions-extension.zip");
+rmSync(archive, { force: true });
+mkdirSync(stableExtensionOutput, { recursive: true });
+cpSync(extensionOutput, stableExtensionOutput, {
+  recursive: true,
+  force: true,
+});
 const zipped = spawnSync(
   "zip",
   ["-q", "-r", archive, "clipquest-captions-extension"],
-  { cwd: outputRoot, stdio: "inherit" },
+  { cwd: stagingRoot, stdio: "inherit" },
 );
+rmSync(stagingRoot, { recursive: true, force: true });
 if (zipped.status !== 0) {
   throw new Error(
     "Could not package the ClipQuest caption extension. Install the zip command and retry.",

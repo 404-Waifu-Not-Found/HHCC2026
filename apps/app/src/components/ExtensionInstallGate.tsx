@@ -1,4 +1,5 @@
 import { VoxelIcon } from "./VoxelIcon";
+import { usePathname } from "expo-router";
 import {
   useCallback,
   useEffect,
@@ -22,11 +23,13 @@ import {
 import { BrandLockup } from "./BrandLockup";
 import { PrimaryButton } from "./PrimaryButton";
 import { FeedbackMotion, MotionView, StaggerItem } from "../motion/Motion";
+import { routeRequiresClipQuestExtension } from "../transcription/extension-route";
 
 type GateStatus = "checking" | "missing" | "available";
 
 export function ExtensionInstallGate({ children }: PropsWithChildren) {
   const { reduceMotion, t, theme } = useSettings();
+  const pathname = usePathname();
   const [status, setStatus] = useState<GateStatus>(
     Platform.OS === "web" ? "checking" : "available",
   );
@@ -71,7 +74,9 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
     <>
       {children}
       <Modal
-        visible={status === "missing"}
+        visible={
+          status === "missing" && routeRequiresClipQuestExtension(pathname)
+        }
         transparent
         animationType={reduceMotion ? "none" : "fade"}
         onRequestClose={() => undefined}

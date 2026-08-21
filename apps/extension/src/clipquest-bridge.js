@@ -18,14 +18,20 @@
   }
 
   async function announce() {
-    const configuration = await chrome.runtime
-      .sendMessage({ type: "clipquest.config.v1" })
-      .catch(() => ({ configured: false }));
-    post({
-      type: "ready",
-      version: chrome.runtime.getManifest().version,
-      configured: configuration?.configured === true,
-    });
+    try {
+      const version = chrome.runtime.getManifest().version;
+      const configuration = await chrome.runtime.sendMessage({
+        type: "clipquest.config.v1",
+      });
+      post({
+        type: "ready",
+        version,
+        configured: configuration?.configured === true,
+      });
+    } catch {
+      // An unpacked extension can be reloaded while a page is open. The page
+      // will time out and show recovery UI without an unhandled console error.
+    }
   }
 
   window.addEventListener("message", (event) => {

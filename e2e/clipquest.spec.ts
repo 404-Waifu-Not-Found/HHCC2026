@@ -443,7 +443,7 @@ test("unauthenticated entry defaults to sign-in and sign-up links to welcome", a
 test("requires the local caption extension and reconnects automatically", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/welcome");
   await page.evaluate(() =>
     window.sessionStorage.setItem("clipquest:e2e-extension-missing", "1"),
   );
@@ -464,9 +464,11 @@ test("requires the local caption extension and reconnects automatically", async 
   await expect(
     page.getByRole("heading", { name: "Install the Chrome extension" }),
   ).toBeHidden();
-  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page).toHaveURL(/\/welcome$/);
   await expect(
-    page.getByRole("heading", { name: "Welcome back" }),
+    page.getByRole("heading", {
+      name: "Paste a YouTube video. Build real mastery.",
+    }),
   ).toBeVisible();
 });
 

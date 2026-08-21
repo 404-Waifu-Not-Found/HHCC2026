@@ -138,6 +138,14 @@ test("long local generation uses a heartbeat port", () => {
   assert.doesNotMatch(popup, /chrome\.runtime\.connect/);
 });
 
+test("release builds preserve the loaded unpacked extension directory", () => {
+  assert.doesNotMatch(buildScript, /rmSync\(outputRoot/);
+  assert.match(buildScript, /mkdtempSync/);
+  assert.match(buildScript, /stableExtensionOutput/);
+  assert.match(buildScript, /cpSync\(extensionOutput, stableExtensionOutput/);
+  assert.match(bridge, /async function announce\(\) \{\s+try \{/);
+});
+
 test("the popup exposes only DeepSeek configuration", () => {
   assert.equal(manifest.version, "0.4.2");
   assert.match(popupHtml, /DeepSeek configuration/);
