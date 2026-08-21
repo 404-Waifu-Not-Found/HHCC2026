@@ -1,48 +1,58 @@
 import type { LibraryCard } from "@clipquest/contracts";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { radii, shadows, typography } from "../theme/tokens";
+import { borders, motion, radii, spacing, typography } from "../theme/tokens";
 
-const masteryKeys = {
-  not_started: "notStarted",
-  learning: "learning",
-  mastered: "mastered",
-} as const;
+const masteryKeys = { not_started: "notStarted", learning: "learning", mastered: "mastered" } as const;
 
 export function VideoCard({ card, onPress, compact = false }: { card: LibraryCard; onPress(): void; compact?: boolean }) {
-  const { t, theme } = useSettings();
+  const { t, theme, reduceMotion } = useSettings();
   const { width } = useWindowDimensions();
   const horizontal = !compact && width >= 720;
   const actionLabel = card.action === "continue" ? t("continue") : card.action === "review" ? t("review") : t("start");
+  const masteryColor = card.mastery === "mastered" ? theme.success : card.mastery === "learning" ? theme.primary : theme.textMuted;
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${card.title}. ${t(masteryKeys[card.mastery])}. ${actionLabel}`}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }) => [
         styles.card,
         horizontal && styles.horizontal,
-        { backgroundColor: theme.surface, borderColor: theme.border },
-        pressed && styles.pressed,
+        { backgroundColor: theme.surface, borderColor: hovered ? theme.primary : theme.border, borderBottomColor: hovered ? theme.primaryPressed : theme.borderStrong },
+        {
+          borderBottomWidth: pressed ? borders.standard : borders.tactileDepth + borders.standard,
+          transform: [{ translateY: pressed ? borders.tactileDepth : hovered && !reduceMotion ? -2 : 0 }],
+        },
+        Platform.OS === "web" && {
+          transitionDuration: `${motion.fast}ms`,
+          transitionProperty: "transform, border-color",
+          outlineColor: theme.focus,
+        },
       ]}
     >
-      <Image source={{ uri: card.thumbnailUrl }} contentFit="cover" transition={180} style={[styles.image, horizontal && styles.imageHorizontal]} />
-      <View style={styles.body}>
-        <View style={styles.sourceRow}>
-          <MaterialCommunityIcons name={card.source === "youtube" ? "youtube" : "television-play"} size={18} color={theme.textMuted} />
-          <Text style={[styles.source, { color: theme.textMuted }]}>{card.source === "youtube" ? "YouTube" : "bilibili"}</Text>
+      <View style={[styles.media, horizontal && styles.mediaHorizontal]}>
+        <Image source={{ uri: card.thumbnailUrl }} contentFit="cover" transition={reduceMotion ? 0 : 180} style={styles.image} />
+        <View style={[styles.sourceBadge, { backgroundColor: "rgba(11,20,48,0.78)" }]}> 
+          <MaterialCommunityIcons name={card.source === "youtube" ? "youtube" : "television-play"} size={15} color="#FFFFFF" />
+          <Text style={styles.source}>{card.source === "youtube" ? "YouTube" : "bilibili"}</Text>
         </View>
+      </View>
+      <View style={styles.body}>
         <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>{card.title}</Text>
         <View style={styles.meta}>
-          <View style={[styles.badge, { backgroundColor: card.mastery === "mastered" ? theme.primary : theme.elevated }]}>
-            <Text style={[styles.badgeText, { color: theme.text }]}>{t(masteryKeys[card.mastery])}</Text>
+          <View style={[styles.badge, { backgroundColor: theme.surfaceSunken }]}> 
+            <View style={[styles.dot, { backgroundColor: masteryColor }]} />
+            <Text style={[styles.badgeText, { color: theme.textMuted }]}>{t(masteryKeys[card.mastery])}</Text>
           </View>
-          {card.bestScore !== null ? <Text style={[styles.score, { color: theme.textMuted }]}>{Math.round(card.bestScore)}%</Text> : null}
-          <View style={styles.spacer} />
-          <Text style={[styles.action, { color: theme.text }]}>{actionLabel}</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.text} />
+          {card.bestScore !== null ? <Text style={[styles.score, { color: masteryColor }]}>{Math.round(card.bestScore)}%</Text> : null}
+        </View>
+        <View style={[styles.actionRow, { borderTopColor: theme.divider }]}> 
+          <Text style={[styles.action, { color: theme.primary }]}>{actionLabel}</Text>
+          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.primary} />
         </View>
       </View>
     </Pressable>
@@ -50,19 +60,98 @@ export function VideoCard({ card, onPress, compact = false }: { card: LibraryCar
 }
 
 const styles = StyleSheet.create({
-  card: { width: 286, maxWidth: "100%", overflow: "hidden", borderWidth: 2, borderRadius: radii.large, ...shadows.card },
-  horizontal: { width: "100%", flexDirection: "row" },
-  pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
-  image: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#CBD2DE" },
-  imageHorizontal: { width: 236, aspectRatio: 16 / 10 },
-  body: { flex: 1, padding: 15, gap: 8 },
-  sourceRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  source: { fontFamily: typography.bodyMedium, fontSize: 12 },
-  title: { minHeight: 44, fontFamily: typography.bodyBold, fontSize: 16, lineHeight: 21 },
-  meta: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 7 },
-  badge: { borderRadius: radii.pill, paddingHorizontal: 9, paddingVertical: 5 },
-  badgeText: { fontFamily: typography.bodyBold, fontSize: 11 },
-  score: { fontFamily: typography.bodyBold, fontSize: 13 },
-  spacer: { flex: 1 },
-  action: { fontFamily: typography.bodyBold, fontSize: 13 },
+  card: {
+    width: 292,
+    maxWidth: "100%",
+    overflow: "hidden",
+    borderWidth: borders.standard,
+    borderRadius: radii.feature,
+  },
+  horizontal: {
+    width: "100%",
+    flexDirection: "row",
+  },
+  media: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 16 / 9,
+  },
+  mediaHorizontal: {
+    width: 250,
+    aspectRatio: 16 / 10,
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#DCE1ED",
+  },
+  sourceBadge: {
+    position: "absolute",
+    left: spacing[3],
+    bottom: spacing[3],
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 5,
+  },
+  source: {
+    color: "#FFFFFF",
+    fontFamily: typography.bodyBold,
+    fontSize: 11,
+  },
+  body: {
+    minWidth: 0,
+    flex: 1,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  title: {
+    minHeight: 48,
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  meta: {
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  badgeText: {
+    fontFamily: typography.bodyBold,
+    fontSize: 11,
+  },
+  score: {
+    marginLeft: "auto",
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+  },
+  actionRow: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: spacing[1],
+    borderTopWidth: borders.hairline,
+    paddingTop: spacing[3],
+  },
+  action: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+  },
 });

@@ -1,21 +1,58 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { Platform, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../providers/SettingsProvider";
+import { breakpoints, layout, safeArea, spacing } from "../theme/tokens";
+
+type ContentWidth = "wide" | "reading" | "lesson" | "auth" | "full";
 
 export function Screen({
   children,
   scroll = true,
   footer,
-}: PropsWithChildren<{ scroll?: boolean; footer?: ReactNode }>) {
+  contentWidth = "wide",
+  centered = false,
+  padded = true,
+}: PropsWithChildren<{
+  scroll?: boolean;
+  footer?: ReactNode;
+  contentWidth?: ContentWidth;
+  centered?: boolean;
+  padded?: boolean;
+}>) {
   const { theme } = useSettings();
-  const content = <View style={styles.content}>{children}</View>;
+  const { width } = useWindowDimensions();
+  const horizontal = width >= breakpoints.desktop ? layout.desktopGutter : width >= breakpoints.tablet ? layout.gutter : layout.compactGutter;
+  const maxWidth =
+    contentWidth === "reading"
+      ? layout.reading
+      : contentWidth === "lesson"
+        ? layout.lesson
+        : contentWidth === "auth"
+          ? layout.auth
+          : contentWidth === "full"
+            ? undefined
+            : layout.content;
+  const content = (
+    <View
+      style={[
+        styles.content,
+        centered && styles.centered,
+        padded && { paddingHorizontal: horizontal, paddingTop: spacing[6], paddingBottom: spacing[10] },
+        maxWidth ? { maxWidth } : null,
+      ]}
+    >
+      {children}
+    </View>
+  );
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={["top", "left", "right", "bottom"]}>
       {scroll ? (
         <ScrollView
           style={styles.flex}
           contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -25,28 +62,47 @@ export function Screen({
       ) : (
         <View style={styles.flex}>{content}</View>
       )}
-      {footer ? <View style={[styles.footer, { backgroundColor: theme.background }]}>{footer}</View> : null}
+      {footer ? (
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: theme.surface,
+              borderTopColor: theme.divider,
+              paddingHorizontal: horizontal,
+            },
+          ]}
+        >
+          {footer}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  scrollContent: { flexGrow: 1 },
+  safe: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: {
     width: "100%",
-    maxWidth: 1120,
     alignSelf: "center",
-    paddingHorizontal: Platform.select({ web: 28, default: 20 }),
-    paddingTop: 18,
-    paddingBottom: 32,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(100, 110, 130, 0.3)",
+    minHeight: 72,
+    borderTopWidth: 1,
+    paddingTop: spacing[3],
+    paddingBottom: safeArea.minimumBottom,
   },
 });
+
