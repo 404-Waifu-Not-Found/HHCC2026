@@ -122,4 +122,34 @@ test("adaptive retries require a genuinely different AI-generated prompt", () =>
     }),
     null,
   );
+  assert.equal(
+    promptFirstRetryQuestionFailure({
+      type: "true_false",
+      question:
+        "The classical worldview held that space and time were relative.",
+      retryQuestion:
+        "Under the classical worldview, were space and time absolute or relative?",
+      answer: false,
+      correction:
+        "The classical worldview held that space and time were absolute.",
+      explanation:
+        "Classical physics treated spatial and temporal measurements as absolute.",
+    }),
+    "retry_question_invalid",
+  );
+  assert.equal(
+    promptFirstRetryQuestionFailure({
+      type: "true_false",
+      question:
+        "The classical worldview held that space and time were relative.",
+      retryQuestion:
+        "Classical physics treated space and time as relative rather than absolute.",
+      answer: false,
+      correction:
+        "The classical worldview held that space and time were absolute.",
+      explanation:
+        "Classical physics treated spatial and temporal measurements as absolute.",
+    }),
+    null,
+  );
 });

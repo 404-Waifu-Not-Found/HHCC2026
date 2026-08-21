@@ -55,7 +55,7 @@ export function quizGenerationProfile(
   if (promptFirstV512) {
     return QuizGenerationProfileResponseSchema.parse({
       generationProfile: "prompt_first_auto_v5_12",
-      minimumExtensionVersion: "0.8.25",
+      minimumExtensionVersion: "0.8.26",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     });
   }

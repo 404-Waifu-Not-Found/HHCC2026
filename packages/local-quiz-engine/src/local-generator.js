@@ -3075,7 +3075,7 @@ function generationMessagesV512(input) {
   typeInstruction +=
     " FINAL OUTPUT DECISION: If the assigned fact is a named anecdote, personal routine, quotation, graph axis, matrix cell, table row, diagram label, example-specific count, or a claim that depends on an unseen visual, do not quiz that detail. Extract the general definition, relationship, mechanism, method, or institutional rule that the example teaches, or select another complete fact from the additional context. A matrix item must state a general row, column, entry, or direction rule unless every required matrix value appears in the learner-visible stem. A history or civics item must test a durable cause, consequence, institution, power, constraint, or viewpoint—not who said a quote, which administration faced a condition, or a date by itself. Do not repeat any blocked grading target. No learner-visible field may contain 'the context specifies,' 'as described in the context,' 'the material says,' or any source attribution.";
   typeInstruction +=
-    " REQUIRED ADAPTIVE RETRY: return retryQuestion as a second learner-visible prompt for exactly the same grading target. It must be genuinely different wording, not an exact copy or punctuation-only edit. It may not add a new fact, change the answer, reverse True/False polarity, or depend on unseen context. For True/False, retryQuestion must preserve the same assigned truth value as the first learner-visible statement. A True/False item must contain one independently judgeable claim; do not join a historical fact to a second claim or consequence with comma-and, replacing, causing, leading, resulting, or similar wording.";
+    " REQUIRED ADAPTIVE RETRY: return retryQuestion as a second learner-visible prompt for exactly the same grading target. It must be genuinely different wording, not an exact copy or punctuation-only edit. It may not add a new fact, change the answer, reverse True/False polarity, or depend on unseen context. For True/False, retryQuestion must be a standalone declarative assertion with the same assigned truth value as the first learner-visible statement. End it as a statement, never with a question mark; do not ask what, which, how, whether, or an absolute-or-relative choice because the learner will still answer only True or False. A True/False item must contain one independently judgeable claim; do not join a historical fact to a second claim or consequence with comma-and, replacing, causing, leading, resulting, or similar wording.";
   const schema = {
     type: "object",
     additionalProperties: false,
@@ -5391,7 +5391,12 @@ function validateQuiz(quiz, input) {
         );
       }
       const retryQuestionFailure = input.promptFirstV512Mode
-        ? promptFirstRetryQuestionFailure(question)
+        ? promptFirstRetryQuestionFailure(
+            question,
+            input.focusExcerpt,
+            input.promptFirstPrimaryClaims?.[index],
+            true,
+          )
         : null;
       if (retryQuestionFailure) {
         validationFailure(
@@ -5942,12 +5947,34 @@ export function promptFirstLearnerQualityFailure(
   return null;
 }
 
-export function promptFirstRetryQuestionFailure(question) {
+export function promptFirstRetryQuestionFailure(
+  question,
+  focusExcerpt,
+  primaryClaim,
+  enforceSourceGrounding = false,
+) {
   const questionText = normalize(question?.question ?? "");
   const retryQuestion = normalize(question?.retryQuestion ?? "");
   if (!questionText || !retryQuestion || questionText === retryQuestion) {
     return "retry_question_invalid";
   }
+  const rawRetryQuestion = String(question?.retryQuestion ?? "").trim();
+  if (
+    question?.type === "true_false" &&
+    (/[?？]\s*$/u.test(rawRetryQuestion) ||
+      /^\s*(?:what|which|how|why|when|where|who|whether|is|are|was|were|do|does|did|can|could|would|should|under\s+what)\b/iu.test(
+        rawRetryQuestion,
+      ))
+  ) {
+    return "retry_question_invalid";
+  }
+  const retryQualityFailure = promptFirstLearnerQualityFailure(
+    { ...question, question: rawRetryQuestion },
+    focusExcerpt,
+    primaryClaim,
+    enforceSourceGrounding,
+  );
+  if (retryQualityFailure) return retryQualityFailure;
   return null;
 }
 
@@ -6069,7 +6096,12 @@ function validatePromptFirstQuiz(quiz, input) {
     );
   }
   const retryQuestionFailure = input.promptFirstV512Mode
-    ? promptFirstRetryQuestionFailure(question)
+    ? promptFirstRetryQuestionFailure(
+        question,
+        input.focusExcerpt,
+        input.promptFirstPrimaryClaim,
+        true,
+      )
     : null;
   if (retryQuestionFailure) {
     validationFailure(
@@ -8319,6 +8351,19 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "polarity_mismatch",
       "formula_structure_invalid",
       "append_conflict",
+      "duplicate_question",
+      "source_framing_invalid",
+      "course_logistics_invalid",
+      "low_pedagogical_value",
+      "rubric_invalid",
+      "question_tautology_invalid",
+      "quiz_language_mismatch",
+      "source_grounding_invalid",
+      "retry_question_invalid",
+      "true_false_compound_claim",
+      "question_answer_kind_mismatch",
+      "answer_fragment_invalid",
+      "unsupported_absolute_claim",
     ].includes(reasonCode)
       ? "structural"
       : null;
@@ -8451,7 +8496,7 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
     unsupported_absolute_claim:
       "Remove absolute wording such as always, never, all, none, every, or must unless the assigned evidence explicitly supports that exact absolute claim. Keep the wording evidence-bounded and softer.",
     retry_question_invalid:
-      "Return a genuinely different retryQuestion that tests exactly the same answer or True/False polarity. Do not make a punctuation-only edit, add a new fact, or copy the original prompt.",
+      "Return a genuinely different retryQuestion that tests exactly the same answer or True/False polarity. Do not make a punctuation-only edit, add a new fact, or copy the original prompt. For True/False, return one declarative statement with the same truth value; never return an interrogative question, a question mark, or a choice such as absolute versus relative.",
     true_false_compound_claim:
       "Rewrite the True/False item as one independently judgeable factual claim. Remove any second historical claim, appended consequence, or causal clause introduced with comma-and, replacing, causing, leading, resulting, or similar wording.",
     quiz_language_mismatch:

@@ -221,7 +221,7 @@ describe("quiz generation rollout", () => {
     );
     expect(quizGenerationProfile(canary, "learner-1")).toEqual({
       generationProfile: "prompt_first_auto_v5_12",
-      minimumExtensionVersion: "0.8.25",
+      minimumExtensionVersion: "0.8.26",
       requiredCapability: "question-stream-v7",
     });
     expect(quizGenerationProfile(canary, "learner-2")).toEqual({

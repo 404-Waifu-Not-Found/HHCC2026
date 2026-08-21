@@ -4032,6 +4032,41 @@ test("v5.12 retries an exact repeated question and grading target", async (conte
   );
 });
 
+test("v5.12 repairs an interrogative true-false retry before storage", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let firstQuestionAttempts = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) =>
+    promptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && firstQuestionAttempts++ === 0) {
+        value.questions[0].retryQuestion =
+          "Under this relationship, does pathway 1 transfer or block energy?";
+      }
+      return value;
+    });
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(firstQuestionAttempts, 2);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.doesNotMatch(result.quiz.questions[0].retryQuestion, /[?？]\s*$/u);
+  assert.equal(
+    calls.some((event) => event.outcome === "retry_question_invalid"),
+    true,
+  );
+});
+
 test("v5.12 locally normalizes a collapsed false item without another model request", async (context) => {
   const originalFetch = globalThis.fetch;
   let injected = false;
@@ -4910,6 +4945,7 @@ test("v5.11 accepts a proposition answering one explicit condition", async (cont
     return promptFirstResponse(init.body, (value, task) => {
       const question = value.questions[0];
       question.question = `Under what condition does process ${task.ordinal} begin?`;
+      question.retryQuestion = `What activation-threshold condition starts process ${task.ordinal}?`;
       question.answer = `Process ${task.ordinal} begins when input ${task.ordinal} exceeds its activation threshold.`;
       question.gradingMode = "proposition";
       question.acceptableAnswers = [];

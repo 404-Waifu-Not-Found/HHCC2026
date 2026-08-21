@@ -109,7 +109,7 @@ describe("admin contracts", () => {
           supportedPromptVersion: "quiz-local-json-stream-v5.12",
           supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.25",
+          requiredExtensionVersion: "0.8.26",
           requiredCapability: "question-stream-v7",
           states: {
             generating: 1,
@@ -259,11 +259,11 @@ describe("generated questions", () => {
     expect(
       QuizGenerationProfileResponseSchema.parse({
         generationProfile: "prompt_first_auto_v5_12",
-        minimumExtensionVersion: "0.8.25",
+        minimumExtensionVersion: "0.8.26",
         requiredCapability: "question-stream-v7",
         clientRequirements: {
           chromeExtension: {
-            minimumVersion: "0.8.25",
+            minimumVersion: "0.8.26",
             requiredCapability: "question-stream-v7",
           },
           androidApp: {
