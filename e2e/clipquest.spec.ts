@@ -1282,7 +1282,7 @@ test("desktop learning journey and visual states", async ({ page }) => {
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
   const quizCloseButton = page.getByRole("button", { name: "Cancel" });
-  await expect(quizCloseButton).toContainText("×");
+  await expect(quizCloseButton.locator("svg")).toHaveCount(1);
   await expect(quizCloseButton.locator("img")).toHaveCount(0);
   await capture(page, "desktop-quiz-initial");
 
@@ -1339,6 +1339,41 @@ test("desktop learning journey and visual states", async ({ page }) => {
   expect(
     scenario.requestedPaths.filter((path) => path.startsWith("/api/youtube")),
   ).toEqual([]);
+});
+
+test("library card actions align with score and mastery status", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  await installMocks(page);
+  await page.goto("/library");
+
+  const notesButtons = page.getByRole("button", { name: "Generate notes" });
+  const scoredTarget = page.getByLabel("Score: 76%");
+  const statusTarget = page.getByText(/^Not Started$/i);
+  await expect(notesButtons).toHaveCount(2);
+  await expect(scoredTarget).toBeVisible();
+  await expect(statusTarget).toBeVisible();
+
+  const centers = await Promise.all(
+    [
+      notesButtons.nth(0),
+      page.getByRole("button", { name: "Continue", exact: true }),
+      scoredTarget,
+      notesButtons.nth(1),
+      page.getByRole("button", { name: "Start", exact: true }),
+      statusTarget,
+    ].map(async (locator) => {
+      const box = await locator.boundingBox();
+      if (!box) throw new Error("Missing library card alignment target");
+      return box.y + box.height / 2;
+    }),
+  );
+
+  expect(Math.abs(centers[0]! - centers[2]!)).toBeLessThanOrEqual(2);
+  expect(Math.abs(centers[1]! - centers[2]!)).toBeLessThanOrEqual(2);
+  expect(Math.abs(centers[3]! - centers[5]!)).toBeLessThanOrEqual(2);
+  expect(Math.abs(centers[4]! - centers[5]!)).toBeLessThanOrEqual(2);
 });
 
 test("mobile link, processing, lesson feedback, and completion", async ({
