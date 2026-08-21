@@ -3,7 +3,7 @@ export type Locale = "en" | "zh-CN";
 export const messages = {
   en: {
     appName: "ClipQuest",
-    tagline: "Paste a video. Build real mastery.",
+    tagline: "Paste a YouTube video. Build real mastery.",
     signIn: "Sign in",
     welcomeBack: "Welcome back",
     welcomeBackSubtitle: "Continue your learning progress.",
@@ -33,20 +33,20 @@ export const messages = {
     authCrossDevice:
       "Your progress stays synced across web, iPhone, and Android.",
     welcomeSubtitle:
-      "Turn the videos you already watch into a focused, evidence-based learning quest.",
+      "Turn the YouTube videos you already watch into focused, evidence-based learning quests.",
     welcomePrivacy:
-      "No YouTube login required. We only use captions from the public video.",
-    authShellTagline: "Turn serious videos into lasting knowledge",
+      "No YouTube login required. ClipQuest uses captions from the public YouTube video only.",
+    authShellTagline: "Turn YouTube lessons into lasting knowledge",
     authShellDetail:
-      "Build an evidence-backed lesson from any public YouTube or bilibili link.",
+      "Build an evidence-backed lesson from any public YouTube video.",
     ageConfirmation: "I confirm I am at least 13 years old.",
     verifyEmail: "Check your email",
     verifyEmailBody:
       "We sent a verification link. Open it, then come back to ClipQuest.",
     homeGreeting: "What do you want to master?",
-    pastePlaceholder: "Paste a YouTube or bilibili link",
+    pastePlaceholder: "Paste a YouTube link",
     makeQuest: "Make my quest",
-    startWithVideo: "Start with a video link",
+    startWithVideo: "Start with a YouTube link",
     orContinue: "or use your account",
     dueReviews: "Due reviews",
     youtubeSuggestions: "From your YouTube learning history",
@@ -110,7 +110,7 @@ export const messages = {
     signOut: "Sign out",
     trustworthyError: "Couldn’t create a trustworthy quiz",
     emptyLibrary: "Your first quest will appear here.",
-    pasteError: "Paste a valid YouTube or bilibili link.",
+    pasteError: "Paste a valid public YouTube link.",
     videoSetupExpired:
       "This video setup expired. Paste its link again from Home.",
     generationSetupExpired:
@@ -179,7 +179,7 @@ export const messages = {
     privateTranscription:
       "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only the completed quiz so you can answer it and save progress.",
     youtubeAuthNotRequired:
-      "Pasting a public YouTube or bilibili link never requires access to your YouTube account or watch history.",
+      "Pasting a public YouTube link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
     enableNotifications: "Enable reminders",
     remindersHelp:
@@ -225,7 +225,7 @@ export const messages = {
   },
   "zh-CN": {
     appName: "ClipQuest",
-    tagline: "粘贴视频，真正掌握。",
+    tagline: "粘贴 YouTube 视频，真正掌握。",
     signIn: "登录",
     welcomeBack: "欢迎回来",
     welcomeBackSubtitle: "继续你的学习进度。",
@@ -252,17 +252,19 @@ export const messages = {
     alreadyHaveAccount: "已有账户？",
     tryWithoutAccount: "不想创建账户，只想先试用？",
     authCrossDevice: "学习进度会在网页、iPhone 和 Android 设备间同步。",
-    welcomeSubtitle: "把你正在观看的视频变成专注、基于证据的学习任务。",
-    welcomePrivacy: "无需登录 YouTube，我们只使用公开视频字幕。",
-    authShellTagline: "把严谨视频转化为真正掌握的知识",
-    authShellDetail: "通过公开的 YouTube 或哔哩哔哩链接生成基于证据的课程。",
+    welcomeSubtitle:
+      "把你正在观看的 YouTube 视频变成专注、基于证据的学习任务。",
+    welcomePrivacy:
+      "无需登录 YouTube，ClipQuest 只使用公开 YouTube 视频的字幕。",
+    authShellTagline: "把 YouTube 课程转化为真正掌握的知识",
+    authShellDetail: "通过公开的 YouTube 视频生成基于证据的课程。",
     ageConfirmation: "我确认自己已满 13 岁。",
     verifyEmail: "请查看邮箱",
     verifyEmailBody: "验证链接已发送。打开链接后回到 ClipQuest。",
     homeGreeting: "今天想掌握什么？",
-    pastePlaceholder: "粘贴 YouTube 或哔哩哔哩链接",
+    pastePlaceholder: "粘贴 YouTube 链接",
     makeQuest: "生成学习任务",
-    startWithVideo: "从视频链接开始",
+    startWithVideo: "从 YouTube 链接开始",
     orContinue: "或使用账户",
     dueReviews: "待复习",
     youtubeSuggestions: "来自 YouTube 学习记录",
@@ -326,9 +328,9 @@ export const messages = {
     signOut: "退出登录",
     trustworthyError: "无法生成可信的测验",
     emptyLibrary: "你的第一个学习任务会出现在这里。",
-    pasteError: "请粘贴有效的 YouTube 或哔哩哔哩链接。",
+    pasteError: "请粘贴有效的公开 YouTube 链接。",
     videoSetupExpired: "此视频设置已过期，请从首页重新粘贴链接。",
-    generationSetupExpired: "此生成任务设置已过期，请重新粘贴视频。",
+    generationSetupExpired: "此生成任务设置已过期，请重新粘贴 YouTube 链接。",
     videoImportFailed: "无法获取该视频。",
     libraryLoadFailed: "无法加载资料库。",
     openQuestFailed: "无法打开此学习任务。",
@@ -388,7 +390,7 @@ export const messages = {
     privateTranscription:
       "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存完成的测验，供你作答并保存学习进度。",
     youtubeAuthNotRequired:
-      "粘贴公开的 YouTube 或哔哩哔哩链接无需访问你的 YouTube 账号或观看记录。",
+      "粘贴公开的 YouTube 链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",
     enableNotifications: "开启提醒",
     remindersHelp: "ClipQuest 只会在掌握度复习到期时发送提醒。",

@@ -78,7 +78,10 @@ adminRouter.get(
     const [users, lessons, newUsers, lessons7d, attempts7d] = await Promise.all(
       [
         count(c.env.DB, "SELECT COUNT(*) AS count FROM user"),
-        count(c.env.DB, "SELECT COUNT(*) AS count FROM quiz_banks"),
+        count(
+          c.env.DB,
+          "SELECT COUNT(*) AS count FROM quiz_banks q JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube'",
+        ),
         count(
           c.env.DB,
           "SELECT COUNT(*) AS count FROM user WHERE created_at >= ?",
@@ -86,12 +89,12 @@ adminRouter.get(
         ),
         count(
           c.env.DB,
-          "SELECT COUNT(*) AS count FROM quiz_banks WHERE created_at >= ?",
+          "SELECT COUNT(*) AS count FROM quiz_banks q JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube' AND q.created_at >= ?",
           [weekAgo],
         ),
         count(
           c.env.DB,
-          "SELECT COUNT(*) AS count FROM attempts WHERE status = 'complete' AND completed_at >= ?",
+          "SELECT COUNT(*) AS count FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube' AND a.status = 'complete' AND a.completed_at >= ?",
           [weekAgo],
         ),
       ],
@@ -138,8 +141,8 @@ adminRouter.get("/users", requireAdminPermission("users:read"), async (c) => {
   const rows = await c.env.DB.prepare(
     `SELECT u.id, u.name, u.email, u.username, u.role, u.banned, u.ban_reason, u.ban_expires, u.email_verified, u.created_at,
       (SELECT MAX(s.updated_at) FROM session s WHERE s.user_id = u.id) AS last_seen_at,
-      (SELECT COUNT(*) FROM quiz_banks q WHERE q.user_id = u.id) AS lesson_count,
-      (SELECT COUNT(*) FROM attempts a WHERE a.user_id = u.id) AS attempt_count
+      (SELECT COUNT(*) FROM quiz_banks q JOIN videos v ON v.id = q.video_id WHERE q.user_id = u.id AND v.source = 'youtube') AS lesson_count,
+      (SELECT COUNT(*) FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id JOIN videos v ON v.id = q.video_id WHERE a.user_id = u.id AND v.source = 'youtube') AS attempt_count
       FROM user u ${clause} ORDER BY u.created_at DESC LIMIT ? OFFSET ?`,
   )
     .bind(...values, query.pageSize, offset)
@@ -288,13 +291,13 @@ adminRouter.get(
   async (c) => {
     const query = parseListQuery(c.req.query(), ListQuerySchema);
     const values: unknown[] = [];
-    const clause = query.search
-      ? "WHERE (v.title LIKE ? OR u.email LIKE ? OR q.id LIKE ?)"
-      : "";
+    const where = ["v.source = 'youtube'"];
     if (query.search) {
+      where.push("(v.title LIKE ? OR u.email LIKE ? OR q.id LIKE ?)");
       const pattern = `%${query.search}%`;
       values.push(pattern, pattern, pattern);
     }
+    const clause = `WHERE ${where.join(" AND ")}`;
     const total = await count(
       c.env.DB,
       `SELECT COUNT(*) AS count FROM quiz_banks q JOIN videos v ON v.id = q.video_id JOIN user u ON u.id = q.user_id ${clause}`,

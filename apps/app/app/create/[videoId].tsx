@@ -162,7 +162,7 @@ export default function CreateQuestScreen() {
             />
             <View style={styles.previewCopy}>
               <Text style={[styles.source, { color: theme.primary }]}>
-                {video.video.source === "youtube" ? "YouTube" : "Bilibili"}
+                YouTube
               </Text>
               <Text
                 accessibilityRole="header"

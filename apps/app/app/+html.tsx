@@ -24,10 +24,10 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
-        <title>ClipQuest — Paste a video, build mastery</title>
+        <title>ClipQuest — Paste a YouTube video, build mastery</title>
         <meta
           name="description"
-          content="Turn YouTube and bilibili learning videos into evidence-backed adaptive quizzes."
+          content="Turn public YouTube learning videos into evidence-backed adaptive quizzes."
         />
         <ScrollViewStyleReset />
       </head>

@@ -1,13 +1,13 @@
 <a id="top"></a>
 
-<h1 align="center"><strong>ClipQuest:</strong> turn rigorous videos into real mastery</h1>
+<h1 align="center"><strong>ClipQuest:</strong> turn YouTube lessons into real mastery</h1>
 
 <p align="center">
   <img src="./apps/app/assets/brand/learning-prism.png" alt="ClipQuest learning prism: an abstract voxel video frame and quiz card" width="220" />
 </p>
 
 <p align="center">
-  <strong>Paste a public lesson video, build an evidence-based quiz in your browser, and learn through immediate feedback.</strong>
+  <strong>Paste a public YouTube lesson, build an evidence-based quiz in your browser, and learn through immediate feedback.</strong>
 </p>
 
 <p align="center">
@@ -54,14 +54,14 @@
 
 ## 🧭 Product overview
 
-ClipQuest turns public educational videos into focused learning sessions. A learner pastes a supported link, chooses multiple-choice, true/false, and/or short-answer questions, confirms the video, and starts a generated quest.
+ClipQuest turns public YouTube educational videos into focused learning sessions. A learner pastes a YouTube link, chooses multiple-choice, true/false, and/or short-answer questions, confirms the lesson, and starts a generated quest.
 
 On the web, the **ClipQuest Local AI** Chrome extension is the generation boundary. It acquires YouTube captions in the browser, converts timestamped segments into normalized plain text, and sends that text directly to DeepSeek using the learner's own API key. DeepSeek returns the complete quiz in one required tool call. The extension strictly validates the whole result, randomizes multiple-choice option order, and returns only the completed quiz to the ClipQuest page.
 
 The Cloudflare Worker does **not** generate quizzes. It authenticates the learner, validates the extension result against the shared schema, and atomically stores only a passed quiz so attempts, feedback, mastery, and review can work across sessions.
 
 ```text
-public lesson URL
+public YouTube URL
        │
        ▼
 ClipQuest page ───── authenticated metadata ────► Cloudflare Worker
@@ -85,7 +85,7 @@ ClipQuest page ───── completed quiz only ───────► stor
 ```
 
 > [!IMPORTANT]
-> Google or YouTube account access is not required. The web experience does require the unpacked Chrome extension and a learner-supplied DeepSeek API key. Private, deleted, geo-restricted, active-live, captionless-without-a-working-local-transcription-path, and otherwise unplayable sources fail explicitly; ClipQuest does not manufacture fallback questions.
+> Google or YouTube account access is not required. The web experience does require the unpacked Chrome extension and a learner-supplied DeepSeek API key. Private, deleted, geo-restricted, active-live, captionless-without-a-working-local-transcription-path, and otherwise unplayable YouTube videos fail explicitly; ClipQuest does not manufacture fallback questions.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -108,9 +108,9 @@ As of **2026-08-06**, `main` and [clipquest.ccwu.cc](https://clipquest.ccwu.cc) 
 
 The live `/health` response and Wrangler deployment history are the authoritative production checks. Health exposes the model and pipeline versions plus `backendQuizGeneration`, `extensionQuizGeneration`, and `extensionRequired` readiness flags without exposing secrets or relying on a stale version number in this document.
 
-The 2026-08-06 release gate passes **82 unit, contract, and extension tests** plus **12 Playwright journeys**, repository-wide TypeScript, ESLint, and Prettier checks, the Expo static export, extension packaging, Worker bundling, asset validation, and a Wrangler dry run.
+The 2026-08-06 release gate passes **77 unit, contract, and extension tests** plus **12 Playwright journeys**, repository-wide TypeScript, ESLint, and Prettier checks, the Expo static export, extension packaging, Worker bundling, asset validation, and a Wrangler dry run.
 
-Remaining release acceptance includes repeated real-browser runs across varied subjects, the captionless local-Whisper path on supported hardware, live bilibili acquisition, Resend and push delivery, and production-signed native builds.
+Remaining release acceptance includes repeated real-browser runs across varied YouTube subjects, the captionless local-Whisper path on supported hardware, Resend and push delivery, and production-signed native builds.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -148,7 +148,7 @@ ClipQuest detects the extension before allowing the web flow to continue. If it 
 
 ### 2. Paste and preview
 
-The URL field is the primary action on desktop, tablet, and mobile. ClipQuest validates supported hosts and common URL forms, then presents available title, creator, duration, language, platform, and thumbnail information before generation begins.
+The YouTube URL field is the primary action on desktop, tablet, and mobile. ClipQuest validates official YouTube hosts and common URL forms, then presents the available title, channel, duration, language, and thumbnail before generation begins.
 
 ### 3. Acquire captions as plain text
 
@@ -186,7 +186,7 @@ The presentation estimate moves linearly from 0% to 99% over **35 seconds**, so 
 
 ### Link-first home
 
-The public-video field remains immediately visible and visually dominant. Saved ClipQuest lessons appear below it without turning the product into a video feed or account dashboard.
+The YouTube-link field remains immediately visible and visually dominant. Saved ClipQuest lessons appear below it without turning the product into a video feed or account dashboard.
 
 ![ClipQuest desktop link-import screen](./docs/screenshots/final/desktop-link-import.png)
 
@@ -343,7 +343,7 @@ npm run dev:api
 npm run dev:web
 ```
 
-Open the Expo URL shown in the web terminal. Unauthenticated visits start at `/sign-in`; choose **Create account**, or follow the trial link on the sign-up screen to open `/welcome` and try the public-video flow without making an account first.
+Open the Expo URL shown in the web terminal. Unauthenticated visits start at `/sign-in`; choose **Create account**, or follow the trial link on the sign-up screen to open `/welcome` and try the YouTube flow without making an account first.
 
 ### Build and load the extension
 

@@ -93,9 +93,7 @@ export function VideoCard({
           ]}
         >
           <VoxelIcon name="video" size={15} color="#FFFFFF" />
-          <Text style={styles.source}>
-            {card.source === "youtube" ? "YouTube" : "bilibili"}
-          </Text>
+          <Text style={styles.source}>YouTube</Text>
         </View>
       </View>
       <View style={styles.body}>

@@ -107,7 +107,7 @@ export const AdminJobSchema = z.object({
   video: z.object({
     id: z.string(),
     title: z.string(),
-    source: z.enum(["youtube", "bilibili"]),
+    source: z.literal("youtube"),
   }),
 });
 export type AdminJob = z.infer<typeof AdminJobSchema>;
@@ -134,7 +134,7 @@ export const AdminLessonSchema = z.object({
   video: z.object({
     id: z.string(),
     title: z.string(),
-    source: z.enum(["youtube", "bilibili"]),
+    source: z.literal("youtube"),
   }),
 });
 export type AdminLesson = z.infer<typeof AdminLessonSchema>;

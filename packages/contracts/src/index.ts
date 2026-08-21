@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export * from "./admin";
 
-export const SourceSchema = z.enum(["youtube", "bilibili"]);
+export const SourceSchema = z.literal("youtube");
 export type VideoSource = z.infer<typeof SourceSchema>;
 
 export const LanguageSchema = z.enum(["en", "zh-CN"]);
@@ -217,7 +217,7 @@ const httpUrl = z
   .refine(
     (value) => value.startsWith("https://") || value.startsWith("http://"),
     {
-      message: "Only HTTP(S) video links are supported",
+      message: "Only HTTP(S) YouTube links are supported",
     },
   );
 
@@ -611,18 +611,10 @@ const youtubeHosts = new Set([
   "m.youtube.com",
   "youtu.be",
 ]);
-const bilibiliHosts = new Set([
-  "bilibili.com",
-  "www.bilibili.com",
-  "m.bilibili.com",
-  "b23.tv",
-]);
-
 export function identifyVideoSource(rawUrl: string): VideoSource | null {
   try {
     const host = new URL(rawUrl).hostname.toLowerCase();
     if (youtubeHosts.has(host)) return "youtube";
-    if (bilibiliHosts.has(host)) return "bilibili";
     return null;
   } catch {
     return null;

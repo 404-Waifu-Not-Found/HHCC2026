@@ -21,7 +21,7 @@ import {
 } from "../src/providers/SettingsProvider";
 import { ExtensionInstallGate } from "../src/components/ExtensionInstallGate";
 
-const SITE_TITLE = "ClipQuest — Paste a video, build mastery";
+const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
 
 void SplashScreen.preventAutoHideAsync();
 

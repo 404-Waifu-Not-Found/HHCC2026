@@ -55,9 +55,7 @@ describe("admin contracts", () => {
 describe("video source validation", () => {
   it("recognizes supported hosts without accepting lookalikes", () => {
     expect(identifyVideoSource("https://youtu.be/abc")).toBe("youtube");
-    expect(identifyVideoSource("https://www.bilibili.com/video/BV1xx")).toBe(
-      "bilibili",
-    );
+    expect(identifyVideoSource("https://vimeo.com/123456789")).toBeNull();
     expect(
       identifyVideoSource("https://youtube.com.evil.example/video"),
     ).toBeNull();

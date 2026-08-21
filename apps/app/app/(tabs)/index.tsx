@@ -207,7 +207,6 @@ export default function HomeScreen() {
       >
         <View style={styles.platforms}>
           <PlatformBadge icon="video" label="YouTube" />
-          <PlatformBadge icon="video" label="bilibili" />
         </View>
 
         <View style={styles.questionTypeSetup}>

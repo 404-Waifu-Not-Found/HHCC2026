@@ -165,8 +165,7 @@ export default function AdminJobsScreen() {
               items={[
                 {
                   label: "Platform",
-                  value:
-                    job.video.source === "youtube" ? "YouTube" : "Bilibili",
+                  value: "YouTube",
                   icon: "video",
                 },
                 {

@@ -123,8 +123,8 @@ const savedCard = {
   videoId: VIDEO_ID_TWO,
   quizId: null,
   attemptId: null,
-  originalUrl: "https://www.bilibili.com/video/BV1clipquest",
-  source: "bilibili" as const,
+  originalUrl: "https://www.youtube.com/watch?v=feynman-learning",
+  source: "youtube" as const,
   title: "A visual guide to the Feynman technique",
   bestScore: null,
   mastery: "not_started" as const,
@@ -287,7 +287,7 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
   await expect(formPane).toBeVisible();
   await expect(divider).toBeVisible();
   await expect(
-    brandPane.getByText("Turn serious videos into lasting knowledge"),
+    brandPane.getByText("Turn YouTube lessons into lasting knowledge"),
   ).toBeVisible();
   await expect(
     formPane.getByRole("heading", { name: "Welcome back" }),
@@ -382,7 +382,9 @@ test("unauthenticated entry defaults to sign-in and sign-up links to welcome", a
   await trialLink.click();
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(
-    page.getByRole("heading", { name: "Paste a video. Build real mastery." }),
+    page.getByRole("heading", {
+      name: "Paste a YouTube video. Build real mastery.",
+    }),
   ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -449,7 +451,7 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
   scenario.extensionCaptionImport = true;
   await page.goto("/");
   await page
-    .getByLabel("Paste a YouTube or bilibili link")
+    .getByLabel("Paste a YouTube link")
     .fill("https://www.youtube.com/watch?v=SVb9OV0bLzI&t=44s");
   await expect(page).toHaveURL(`/create/${VIDEO_ID}`);
   await page.getByRole("radio", { name: "Short · 5" }).click();
@@ -483,9 +485,7 @@ test("desktop learning journey and visual states", async ({ page }) => {
   const scenario = await installMocks(page);
 
   await page.goto("/welcome");
-  await expect(
-    page.getByLabel("Paste a YouTube or bilibili link"),
-  ).toBeVisible();
+  await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
 
   await page.goto("/");
   await expect(
@@ -574,9 +574,7 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   const scenario = await installMocks(page);
 
   await page.goto("/");
-  await expect(
-    page.getByLabel("Paste a YouTube or bilibili link"),
-  ).toBeVisible();
+  await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
   await capture(page, "mobile-link-import");
 
   await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
@@ -693,7 +691,9 @@ test("dark theme stays polished across learner, auth, settings, and admin shells
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/welcome");
   await expect(
-    page.getByRole("heading", { name: "Paste a video. Build real mastery." }),
+    page.getByRole("heading", {
+      name: "Paste a YouTube video. Build real mastery.",
+    }),
   ).toBeVisible();
   await capture(page, "dark-mobile-welcome");
   await page.goto("/");
@@ -722,9 +722,7 @@ test("tablet layout and target viewport sweep remain link-first without overflow
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await expect(
-      page.getByLabel("Paste a YouTube or bilibili link"),
-    ).toBeVisible();
+    await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
     const dimensions = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
       width: window.innerWidth,
@@ -741,36 +739,28 @@ test("tablet layout and target viewport sweep remain link-first without overflow
   ).toEqual([]);
 });
 
-test("manual YouTube and bilibili imports validate and recover from unavailable video", async ({
+test("YouTube-only imports validate and recover from unavailable video", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 850 });
   const scenario = await installMocks(page);
   await page.goto("/");
-  const input = page.getByLabel("Paste a YouTube or bilibili link");
+  const input = page.getByLabel("Paste a YouTube link");
 
   await input.fill("https://example.com/not-supported");
   await page.getByRole("button", { name: "Make my quest" }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "valid YouTube or bilibili",
-  );
+  await expect(page.getByRole("alert")).toContainText("valid public YouTube");
+
+  await input.fill("https://vimeo.com/123456789");
+  await page.getByRole("button", { name: "Make my quest" }).click();
+  await expect(page.getByRole("alert")).toContainText("valid public YouTube");
 
   scenario.importMode = "unavailable";
   await input.fill("https://www.youtube.com/watch?v=private-video");
   await expect(page.getByRole("alert")).toContainText("unavailable");
 
   scenario.importMode = "success";
-  await input.fill("https://www.bilibili.com/video/BV1clipquest");
-  await page.getByRole("button", { name: "Make my quest" }).click();
-  await expect(page).toHaveURL(new RegExp(`/create/${VIDEO_ID}$`));
-  await expect(page.getByText("Bilibili", { exact: true })).toBeVisible();
-
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "What do you want to master?" }),
-  ).toBeVisible();
-  const youtubeInput = page.getByLabel("Paste a YouTube or bilibili link");
-  await youtubeInput.fill(
+  await input.fill(
     "https://www.youtube.com/watch?v=clipquest-learning-science",
   );
   await expect(page).toHaveURL(new RegExp(`/create/${VIDEO_ID}$`));
@@ -1084,20 +1074,15 @@ async function installMocks(page: Page): Promise<Scenario> {
         );
         return;
       }
-      const body = request.postDataJSON() as { url?: string };
-      const bilibili = body.url?.includes("bilibili");
-      const usesExtensionCaptions =
-        scenario.extensionCaptionImport && !bilibili;
+      const usesExtensionCaptions = scenario.extensionCaptionImport;
       await json(route, {
         ...importedVideo,
         video: {
           ...importedVideo.video,
-          source: bilibili ? "bilibili" : "youtube",
-          sourceVideoId: bilibili
-            ? "BV1clipquest"
-            : usesExtensionCaptions
-              ? "SVb9OV0bLzI"
-              : importedVideo.video.sourceVideoId,
+          source: "youtube",
+          sourceVideoId: usesExtensionCaptions
+            ? "SVb9OV0bLzI"
+            : importedVideo.video.sourceVideoId,
           durationSeconds: usesExtensionCaptions
             ? 0
             : importedVideo.video.durationSeconds,

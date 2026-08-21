@@ -42,10 +42,7 @@ videosRouter.post("/import", async (c) => {
   });
   const input = await parseJson(c, VideoImportRequestSchema);
   const normalized = await normalizeSourceUrl(input.url);
-  const sourceVideoId =
-    normalized.source === "youtube"
-      ? parseYouTubeId(normalized.url)
-      : undefined;
+  const sourceVideoId = parseYouTubeId(normalized.url);
   console.info(
     JSON.stringify({
       scope: "video_import",
@@ -56,58 +53,24 @@ videosRouter.post("/import", async (c) => {
     }),
   );
 
-  let inspected: SourceVideo;
-  if (normalized.source === "youtube") {
-    inspected = await getSourceAdapter("youtube").inspect(normalized.url);
-    console.info(
-      JSON.stringify({
-        scope: "video_import",
-        event: "youtube_acquisition.completed",
-        requestId,
-        sourceVideoId,
-        acquisition: inspected.preferredCaptionSegments?.length
-          ? "server_captions"
-          : inspected.preferredCaptionSourceUrl
-            ? "browser_captions"
-            : "transient_audio_stream",
-        captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
-        elapsedMs: Date.now() - importStartedAt,
-      }),
-    );
-  } else {
-    const adapterStartedAt = Date.now();
-    try {
-      inspected = await getSourceAdapter(normalized.source).inspect(
-        normalized.url,
-      );
-      console.info(
-        JSON.stringify({
-          scope: "video_import",
-          event: "source_adapter.completed",
-          requestId,
-          source: normalized.source,
-          sourceVideoId: inspected.sourceVideoId,
-          elapsedMs: Date.now() - adapterStartedAt,
-          captionTrackCount: inspected.captionTracks.length,
-          captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
-        }),
-      );
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          scope: "video_import",
-          event: "source_adapter.failed",
-          requestId,
-          source: normalized.source,
-          sourceVideoId,
-          elapsedMs: Date.now() - adapterStartedAt,
-          errorCode: error instanceof ApiError ? error.code : "source_failed",
-          errorName: error instanceof Error ? error.name : "UnknownError",
-        }),
-      );
-      throw error;
-    }
-  }
+  const inspected: SourceVideo = await getSourceAdapter("youtube").inspect(
+    normalized.url,
+  );
+  console.info(
+    JSON.stringify({
+      scope: "video_import",
+      event: "youtube_acquisition.completed",
+      requestId,
+      sourceVideoId,
+      acquisition: inspected.preferredCaptionSegments?.length
+        ? "server_captions"
+        : inspected.preferredCaptionSourceUrl
+          ? "browser_captions"
+          : "transient_audio_stream",
+      captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
+      elapsedMs: Date.now() - importStartedAt,
+    }),
+  );
   const existing = await c.env.DB.prepare(
     "SELECT id, source, source_video_id, original_url, title, thumbnail_key, thumbnail_remote_url, duration_seconds, source_language FROM videos WHERE owner_id = ? AND source = ? AND source_video_id = ?",
   )
@@ -162,7 +125,7 @@ videosRouter.post("/import", async (c) => {
     (segment) => segment.text.trim().length > 0,
   );
   const browserCaptionLookup = Boolean(inspected.preferredCaptionSourceUrl);
-  const browserTextLookupAvailable = inspected.source === "youtube";
+  const browserTextLookupAvailable = true;
   const captionsAvailable = Boolean(
     preferredSegments?.length ||
     inspected.preferredCaptionSourceUrl ||

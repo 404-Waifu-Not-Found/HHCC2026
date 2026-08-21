@@ -50,14 +50,7 @@ export default function AdminLessonsScreen() {
             <RecordHeading
               title={lesson.video.title}
               subtitle={`${lesson.owner.name} · ${lesson.owner.email}`}
-              badge={
-                <StatusBadge
-                  label={
-                    lesson.video.source === "youtube" ? "YouTube" : "Bilibili"
-                  }
-                  tone="primary"
-                />
-              }
+              badge={<StatusBadge label="YouTube" tone="primary" />}
             />
             <RecordMeta
               items={[
