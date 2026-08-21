@@ -46,6 +46,7 @@ export default function SignInScreen() {
 
   return (
     <AuthShell
+      variant="split"
       title={t("welcomeBack")}
       subtitle={t("welcomeBackSubtitle")}
       footer={

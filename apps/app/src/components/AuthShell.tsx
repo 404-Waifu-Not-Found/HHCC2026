@@ -11,7 +11,7 @@ import { breakpoints, spacing, typography } from "../theme/tokens";
 import { LearningPrism } from "./LearningPrism";
 import { Screen } from "./Screen";
 
-type AuthShellVariant = "form" | "welcome";
+type AuthShellVariant = "form" | "welcome" | "split";
 
 export function AuthShell({
   title,
@@ -29,66 +29,142 @@ export function AuthShell({
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
   const welcome = variant === "welcome";
+  const splitDesktop = variant === "split" && desktop;
+
+  const formColumn = (
+    <View style={[styles.formColumn, welcome && styles.welcomeColumn]}>
+      <Text
+        accessibilityRole="header"
+        style={[
+          styles.title,
+          !welcome && styles.formTitle,
+          { color: theme.text },
+        ]}
+      >
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text
+          style={[
+            styles.subtitle,
+            !welcome && styles.formSubtitle,
+            { color: theme.textMuted },
+          ]}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
+      <View style={styles.form}>{children}</View>
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
+    </View>
+  );
 
   return (
-    <Screen contentWidth={welcome ? "wide" : "auth"} centered>
+    <Screen
+      contentWidth={splitDesktop ? "full" : welcome ? "wide" : "auth"}
+      centered
+      padded={!splitDesktop}
+    >
       <View
         style={[
           styles.page,
           Platform.OS === "web" && styles.webNoSelection,
           welcome && styles.welcomePage,
           welcome && desktop && styles.welcomePageWide,
-          !welcome && styles.formPage,
+          !welcome && !splitDesktop && styles.formPage,
+          splitDesktop && styles.splitPage,
         ]}
       >
-        {welcome && desktop ? (
-          <View style={styles.intro}>
-            <LearningPrism size={292} variant="hero" />
-            <View style={styles.brandCopy}>
-              <Text style={[styles.kicker, { color: theme.primary }]}>
-                {t("appName")}
-              </Text>
-              <Text style={[styles.tagline, { color: theme.text }]}>
-                {t("authShellTagline")}
-              </Text>
-              <Text style={[styles.detail, { color: theme.textMuted }]}>
-                {t("authShellDetail")}
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View style={[styles.compactBrand, welcome && styles.welcomeBrand]}>
-            <LearningPrism size={welcome ? 72 : 64} />
-            <Text style={[styles.compactBrandName, { color: theme.primary }]}>
-              {t("appName")}
-            </Text>
-          </View>
-        )}
-        <View style={[styles.formColumn, welcome && styles.welcomeColumn]}>
-          <Text
-            accessibilityRole="header"
-            style={[
-              styles.title,
-              !welcome && styles.formTitle,
-              { color: theme.text },
-            ]}
-          >
-            {title}
-          </Text>
-          {subtitle ? (
-            <Text
+        {splitDesktop ? (
+          <>
+            <View
+              testID="auth-split-brand-pane"
               style={[
-                styles.subtitle,
-                !welcome && styles.formSubtitle,
-                { color: theme.textMuted },
+                styles.splitPane,
+                { backgroundColor: theme.surfaceSunken },
               ]}
             >
-              {subtitle}
-            </Text>
-          ) : null}
-          <View style={styles.form}>{children}</View>
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
-        </View>
+              <View style={styles.splitBrand}>
+                <LearningPrism size={220} variant="hero" />
+                <Text style={[styles.splitBrandName, { color: theme.primary }]}>
+                  {t("appName")}
+                </Text>
+              </View>
+            </View>
+            <View
+              testID="auth-split-divider"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              pointerEvents="none"
+              style={[
+                styles.splitDivider,
+                { backgroundColor: theme.divider },
+                Platform.OS === "web"
+                  ? {
+                      boxShadow:
+                        theme.mode === "dark"
+                          ? "0 0 34px 12px rgba(0, 0, 0, 0.42)"
+                          : "0 0 28px 8px rgba(25, 104, 58, 0.18)",
+                    }
+                  : {
+                      shadowColor:
+                        theme.mode === "dark"
+                          ? theme.surfaceSunken
+                          : theme.primaryPressed,
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 20,
+                      elevation: 8,
+                    },
+              ]}
+            />
+            <View
+              testID="auth-split-form-pane"
+              style={[
+                styles.splitPane,
+                {
+                  backgroundColor:
+                    theme.mode === "dark"
+                      ? theme.backgroundAccent
+                      : theme.background,
+                },
+              ]}
+            >
+              {formColumn}
+            </View>
+          </>
+        ) : (
+          <>
+            {welcome && desktop ? (
+              <View style={styles.intro}>
+                <LearningPrism size={292} variant="hero" />
+                <View style={styles.brandCopy}>
+                  <Text style={[styles.kicker, { color: theme.primary }]}>
+                    {t("appName")}
+                  </Text>
+                  <Text style={[styles.tagline, { color: theme.text }]}>
+                    {t("authShellTagline")}
+                  </Text>
+                  <Text style={[styles.detail, { color: theme.textMuted }]}>
+                    {t("authShellDetail")}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View
+                style={[styles.compactBrand, welcome && styles.welcomeBrand]}
+              >
+                <LearningPrism size={welcome ? 72 : 64} />
+                <Text
+                  style={[styles.compactBrandName, { color: theme.primary }]}
+                >
+                  {t("appName")}
+                </Text>
+              </View>
+            )}
+            {formColumn}
+          </>
+        )}
       </View>
     </Screen>
   );
@@ -116,6 +192,41 @@ const styles = StyleSheet.create({
   },
   formPage: {
     paddingVertical: spacing[10],
+  },
+  splitPage: {
+    position: "relative",
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  splitPane: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing[12],
+    paddingVertical: spacing[10],
+  },
+  splitDivider: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: "50%",
+    zIndex: 1,
+    width: 1,
+  },
+  splitBrand: {
+    width: "100%",
+    maxWidth: 440,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[5],
+  },
+  splitBrandName: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.bodyLarge,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
   intro: {
     flex: 1,

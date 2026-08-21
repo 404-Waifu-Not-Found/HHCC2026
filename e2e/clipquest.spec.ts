@@ -273,6 +273,75 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("sign-in splits on desktop and collapses cleanly on mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  await page.goto("/sign-in");
+
+  const brandPane = page.getByTestId("auth-split-brand-pane");
+  const formPane = page.getByTestId("auth-split-form-pane");
+  const divider = page.getByTestId("auth-split-divider");
+
+  await expect(brandPane).toBeVisible();
+  await expect(formPane).toBeVisible();
+  await expect(divider).toBeVisible();
+  await expect(
+    formPane.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+
+  const desktopLayout = await page.evaluate(() => {
+    const brand = document.querySelector<HTMLElement>(
+      '[data-testid="auth-split-brand-pane"]',
+    );
+    const form = document.querySelector<HTMLElement>(
+      '[data-testid="auth-split-form-pane"]',
+    );
+    const split = document.querySelector<HTMLElement>(
+      '[data-testid="auth-split-divider"]',
+    );
+    if (!brand || !form || !split) throw new Error("Missing sign-in split");
+    const brandRect = brand.getBoundingClientRect();
+    const formRect = form.getBoundingClientRect();
+    const dividerRect = split.getBoundingClientRect();
+    return {
+      brandWidth: brandRect.width,
+      formWidth: formRect.width,
+      dividerX: dividerRect.x,
+      brandBackground: getComputedStyle(brand).backgroundColor,
+      formBackground: getComputedStyle(form).backgroundColor,
+      dividerShadow: getComputedStyle(split).boxShadow,
+      hasOverflow:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth + 1,
+    };
+  });
+
+  expect(desktopLayout.brandWidth).toBeCloseTo(720, 0);
+  expect(desktopLayout.formWidth).toBeCloseTo(720, 0);
+  expect(desktopLayout.dividerX).toBeCloseTo(720, 0);
+  expect(desktopLayout.brandBackground).not.toBe(desktopLayout.formBackground);
+  expect(desktopLayout.dividerShadow).not.toBe("none");
+  expect(desktopLayout.hasOverflow).toBe(false);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("auth-split-brand-pane")).toHaveCount(0);
+  await expect(page.getByTestId("auth-split-form-pane")).toHaveCount(0);
+  await expect(page.getByTestId("auth-split-divider")).toHaveCount(0);
+  await expect(page.getByText("ClipQuest", { exact: true })).toBeVisible();
+
+  const mobileOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1,
+  );
+  expect(mobileOverflow).toBe(false);
+});
+
 test("requires the local caption extension and reconnects automatically", async ({
   page,
 }) => {
