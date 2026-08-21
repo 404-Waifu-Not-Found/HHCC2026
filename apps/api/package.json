@@ -20,14 +20,14 @@
     "@clipquest/contracts": "0.1.0",
     "better-auth": "1.6.25",
     "drizzle-orm": "0.45.2",
-    "hono": "4.13.1",
+    "hono": "4.13.2",
     "youtubei.js": "17.2.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260730.1",
+    "@cloudflare/workers-types": "5.20260817.1",
     "@types/node": "^25.0.3",
     "vitest": "3.2.7",
-    "wrangler": "4.115.0"
+    "wrangler": "4.123.0"
   }
 }
