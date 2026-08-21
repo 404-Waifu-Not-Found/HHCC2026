@@ -55,6 +55,10 @@ const emailSource = await readFile(
   new URL("../src/lib/email.ts", import.meta.url),
   "utf8",
 );
+const librarySource = await readFile(
+  new URL("../src/routes/library.ts", import.meta.url),
+  "utf8",
+);
 const workerErrorSources = await Promise.all(
   [
     "../src/routes/youtube.ts",
@@ -94,6 +98,14 @@ describe("security resource guards", () => {
       "TypeError",
     );
     expect(safeErrorName({ name: "SecretError" })).toBe("UnknownError");
+  });
+
+  it("does not serialize malformed Library row contents into Worker logs", () => {
+    expect(librarySource).not.toContain(
+      'console.error("Invalid library rows", parsed.error)',
+    );
+    expect(librarySource).toContain('event: "invalid_rows"');
+    expect(librarySource).toContain("issueCount: parsed.error.issues.length");
   });
 
   it("bounds push-token persistence and selects due reviews before tokens", () => {
