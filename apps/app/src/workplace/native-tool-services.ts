@@ -263,7 +263,6 @@ async function generateOwnedPracticeSet(
   let imported: VideoImportResponse | null = null;
   let videoId = "";
   for (const candidate of input.videoIds) {
-    // eslint-disable-next-line no-await-in-loop -- sequential owned-video probe, bounded by the tool's small argument array.
     const resolved = await resolveOwnedImportedVideo(
       config.userId,
       candidate,

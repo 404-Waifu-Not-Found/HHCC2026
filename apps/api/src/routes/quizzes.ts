@@ -135,6 +135,8 @@ const AttemptRowSchema = z.object({
   quiz_language: z.string(),
   quiz_session_length: z.enum(["short", "medium", "long"]),
   quiz_watched: z.number().int(),
+  quiz_origin: z.enum(["quest", "workplace"]).default("quest"),
+  quiz_affects_mastery: z.number().int().default(1),
   video_title: z.string().optional(),
 });
 type AttemptRow = z.infer<typeof AttemptRowSchema>;
@@ -583,14 +585,24 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       ]);
       requireAnswerCommit(results);
       reservationCommitted = true;
-      const mastery = await updateMastery(c.env.DB, {
-        userId: user.id,
-        videoId: attempt.video_id,
-        attemptId: attempt.id,
-        mode: attempt.mode,
-        score,
-        timestamp,
-      });
+      // Server-side mastery guardrail: mastery only moves for quizzes flagged
+      // as mastery-affecting. Workplace practice imports set affects_mastery to
+      // 1 only for a completed, single-video diagnostic (see the Workplace
+      // practice-import route); practice-only or multi-video sets carry 0 and
+      // can never change mastery here regardless of score. The UI never
+      // computes mastery itself, so this completion path is the sole place a
+      // Workplace diagnostic can affect mastery.
+      const mastery =
+        attempt.quiz_affects_mastery === 1
+          ? await updateMastery(c.env.DB, {
+              userId: user.id,
+              videoId: attempt.video_id,
+              attemptId: attempt.id,
+              mode: attempt.mode,
+              score,
+              timestamp,
+            })
+          : null;
       return c.json(
         AttemptAnswerResponseSchema.parse({
           correct: grade.correct,
@@ -696,7 +708,10 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
         question: null,
         completed: true,
         score: attempt.score,
-        mastery: attempt.mastery_state ?? "basic",
+        mastery:
+          attempt.quiz_affects_mastery === 1
+            ? (attempt.mastery_state ?? "basic")
+            : null,
         generation: readyGeneration(attempt.item_count),
       }),
     );
@@ -1435,7 +1450,7 @@ async function getAttempt(
 ): Promise<AttemptRow> {
   const row = await db
     .prepare(
-      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, q.pipeline_version AS quiz_pipeline_version, q.language AS quiz_language, q.session_length AS quiz_session_length, q.watched AS quiz_watched FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id AND ((q.pipeline_version = ? AND q.quality_status = 'passed') OR (q.pipeline_version = ? AND q.quality_status IN ('generating', 'passed'))) LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
+      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, q.pipeline_version AS quiz_pipeline_version, q.language AS quiz_language, q.session_length AS quiz_session_length, q.watched AS quiz_watched, q.origin AS quiz_origin, q.affects_mastery AS quiz_affects_mastery FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id AND ((q.pipeline_version = ? AND q.quality_status = 'passed') OR (q.pipeline_version = ? AND q.quality_status IN ('generating', 'passed'))) LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
     )
     .bind(
       LEGACY_LOCAL_QUIZ_PIPELINE_VERSION,

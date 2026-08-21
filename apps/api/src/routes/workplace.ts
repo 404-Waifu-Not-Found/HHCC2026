@@ -84,9 +84,9 @@ workplaceRouter.get("/suggestions", async (c) => {
   const result = await c.env.DB.prepare(WORKPLACE_SUGGESTION_CANDIDATES_SQL)
     .bind(LOCAL_QUIZ_PIPELINE_VERSION, user.id)
     .all();
-  const parsed = z.array(WorkplaceSuggestionRowSchema).safeParse(
-    result.results,
-  );
+  const parsed = z
+    .array(WorkplaceSuggestionRowSchema)
+    .safeParse(result.results);
   if (!parsed.success) {
     console.error(
       JSON.stringify({
@@ -363,9 +363,9 @@ workplaceRouter.get("/threads/:threadId/messages", async (c) => {
   )
     .bind(threadId, beforeOrdinal, beforeOrdinal, input.limit + 1)
     .all();
-  const parsedRows = z.array(WorkplaceMessageRowSchema).safeParse(
-    result.results,
-  );
+  const parsedRows = z
+    .array(WorkplaceMessageRowSchema)
+    .safeParse(result.results);
   if (!parsedRows.success) {
     throw new ApiError(
       500,
@@ -383,7 +383,9 @@ workplaceRouter.get("/threads/:threadId/messages", async (c) => {
   const messages = [...page]
     .reverse()
     .map((row) => rowToMessage(threadId, row));
-  return c.json(WorkplaceMessagesResponseSchema.parse({ messages, nextCursor }));
+  return c.json(
+    WorkplaceMessagesResponseSchema.parse({ messages, nextCursor }),
+  );
 });
 
 // A citation, tool-status citation, or practice-set video/citation embedded
@@ -489,7 +491,13 @@ export async function appendWorkplaceMessage(
       ),
     db
       .prepare(WORKPLACE_THREAD_STATS_UPDATE_SQL)
-      .bind(input.threadId, input.threadId, timestamp, input.threadId, input.userId),
+      .bind(
+        input.threadId,
+        input.threadId,
+        timestamp,
+        input.threadId,
+        input.userId,
+      ),
   ]);
   const insertedRows = (results[0]?.results ?? []) as {
     id: string;

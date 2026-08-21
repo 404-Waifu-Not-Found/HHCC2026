@@ -74,7 +74,10 @@ describe("selectWorkplaceSuggestions", () => {
 
   it("picks the most recently updated candidate as 'recent'", () => {
     const candidates = [
-      candidate({ videoId: "11111111-1111-1111-1111-111111111111", updatedAt: NOW }),
+      candidate({
+        videoId: "11111111-1111-1111-1111-111111111111",
+        updatedAt: NOW,
+      }),
       candidate({
         videoId: "22222222-2222-2222-2222-222222222222",
         updatedAt: NOW - DAY_MS,

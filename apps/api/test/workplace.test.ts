@@ -150,9 +150,10 @@ function execute(
   args: unknown[],
 ): { results: Record<string, unknown>[]; changes: number; lastRowId: number } {
   const stmt = sqliteDb.prepare(sql);
-  const results = stmt.all(
-    ...(args as (string | number | null)[]),
-  ) as Record<string, unknown>[];
+  const results = stmt.all(...(args as (string | number | null)[])) as Record<
+    string,
+    unknown
+  >[];
   const changes = (
     sqliteDb.prepare("SELECT changes() AS c").get() as { c: number }
   ).c;
@@ -238,8 +239,9 @@ function testApp(db: D1Database, userId: string) {
 }
 
 function insertUser(db: D1Database, userId: string) {
-  return (db.prepare("INSERT INTO user (id) VALUES (?)").bind(userId) as any)
-    .run();
+  return (
+    db.prepare("INSERT INTO user (id) VALUES (?)").bind(userId) as any
+  ).run();
 }
 
 function insertVideo(
@@ -398,9 +400,9 @@ describe("collectReferencedVideoIds", () => {
 
 describe("workplace messages cursor", () => {
   it("round-trips an ordinal", () => {
-    expect(decodeWorkplaceMessagesCursor(encodeWorkplaceMessagesCursor(42))).toBe(
-      42,
-    );
+    expect(
+      decodeWorkplaceMessagesCursor(encodeWorkplaceMessagesCursor(42)),
+    ).toBe(42);
   });
 
   it("rejects a non-numeric cursor", () => {
@@ -469,7 +471,11 @@ describe("workplace thread CRUD", () => {
 
     const response = await app.request(
       "/workplace/threads",
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      },
       env,
     );
     expect(response.status).toBe(201);
@@ -491,9 +497,7 @@ describe("workplace thread CRUD", () => {
     await createThread(other.app, other.env, "Someone else's thread");
 
     const response = await app.request("/workplace/threads", {}, env);
-    const body = WorkplaceThreadListResponseSchema.parse(
-      await response.json(),
-    );
+    const body = WorkplaceThreadListResponseSchema.parse(await response.json());
     expect(body.threads.map((t) => t.id)).toEqual([secondId, firstId]);
   });
 
@@ -591,7 +595,58 @@ describe("workplace thread CRUD", () => {
 
     const remainingMessages = await (
       db
-        .prepare("SELECT COUNT(*) AS c FROM workplace_messages WHERE thread_id = ?")
+        .prepare(
+          "SELECT COUNT(*) AS c FROM workplace_messages WHERE thread_id = ?",
+        )
+        .bind(threadId) as any
+    ).first();
+    expect(remainingMessages.c).toBe(0);
+  });
+
+  it("cascades to workplace_threads and workplace_messages when the owning account is deleted", async () => {
+    // Account deletion is enforced entirely by the `ON DELETE CASCADE` foreign
+    // keys declared in migration 0025 -- there is no bespoke Workplace cleanup
+    // code to run before/after `deleteUser`. This test exercises that
+    // contract directly against the real schema/constraints rather than
+    // trusting the migration file, so a future schema change that drops the
+    // cascade (e.g. a rewritten ALTER TABLE) fails a test instead of silently
+    // leaving orphaned rows.
+    const db = makeTestDb();
+    insertUser(db, USER_ID);
+    insertVideo(db, { id: VIDEO_ID, ownerId: USER_ID });
+    const { app, env } = testApp(db, USER_ID);
+    const threadId = await createThread(app, env);
+    await app.request(
+      `/workplace/threads/${threadId}/messages`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          threadId,
+          clientMessageId: "m1",
+          role: "user",
+          parts: [{ type: "text", text: "Hello" }],
+        }),
+      },
+      env,
+    );
+
+    (db.prepare("DELETE FROM user WHERE id = ?").bind(USER_ID) as any).run();
+
+    const remainingThreads = await (
+      db
+        .prepare(
+          "SELECT COUNT(*) AS c FROM workplace_threads WHERE user_id = ?",
+        )
+        .bind(USER_ID) as any
+    ).first();
+    expect(remainingThreads.c).toBe(0);
+
+    const remainingMessages = await (
+      db
+        .prepare(
+          "SELECT COUNT(*) AS c FROM workplace_messages WHERE thread_id = ?",
+        )
         .bind(threadId) as any
     ).first();
     expect(remainingMessages.c).toBe(0);
@@ -785,9 +840,7 @@ describe("workplace message append and pagination", () => {
           threadId,
           clientMessageId: "m1",
           role: "assistant",
-          parts: [
-            { type: "citation", citation: citation(OTHER_VIDEO_ID) },
-          ],
+          parts: [{ type: "citation", citation: citation(OTHER_VIDEO_ID) }],
         }),
       },
       env,

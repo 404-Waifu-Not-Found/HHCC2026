@@ -87,6 +87,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="workplace"
+        options={{
+          title: t("workplace"),
+          tabBarIcon: ({ color, size }) => (
+            <VoxelIcon name="workplace" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: t("settings"),

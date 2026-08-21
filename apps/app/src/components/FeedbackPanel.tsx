@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Text,
   useWindowDimensions,
-  View,
 } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import {
@@ -63,10 +62,7 @@ export function FeedbackPanel({
     >
       <ScrollView
         style={[styles.scroll, !compact && styles.scrollWide]}
-        contentContainerStyle={[
-          styles.inner,
-          compact && styles.innerCompact,
-        ]}
+        contentContainerStyle={[styles.inner, compact && styles.innerCompact]}
         showsVerticalScrollIndicator={compact}
       >
         <FeedbackMotion

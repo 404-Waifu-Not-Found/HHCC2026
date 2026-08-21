@@ -25,9 +25,7 @@ import {
 } from "@clipquest/local-quiz-engine";
 
 export type WorkplaceChatClientKind =
-  | "android_app"
-  | "ios_app"
-  | "chrome_extension";
+  "android_app" | "ios_app" | "chrome_extension";
 
 export type WorkplaceChatClientStatus =
   | { available: false }
@@ -66,8 +64,7 @@ export type WorkplaceChatClient = {
 };
 
 export type WorkplaceChatRequestErrorCode =
-  | "sign_in_required"
-  | "credential_required";
+  "sign_in_required" | "credential_required";
 
 /** Thrown before any DeepSeek call when the learner cannot run a Workplace
  * turn yet -- mirrors `LocalGenerationRequestError`'s Local AI UX so the same

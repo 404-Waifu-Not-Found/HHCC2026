@@ -103,3 +103,8 @@ export const iosWorkplaceChatClient: WorkplaceChatClient = {
   detectStatus: detectIosWorkplaceChatClient,
   subscribeToStatus: subscribeToIosWorkplaceChatClient,
 };
+
+/** Platform-neutral alias every `chat-client.*` implementation exports, so
+ * the UI can `import { workplaceChatClient } from "./chat-client"` without
+ * caring which platform file Metro resolved. */
+export const workplaceChatClient = iosWorkplaceChatClient;

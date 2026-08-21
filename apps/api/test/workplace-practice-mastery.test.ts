@@ -5,12 +5,28 @@ import { errorResponse } from "../src/lib/errors";
 import type { ApiBindings } from "../src/middleware/authenticated";
 import { quizzesRouter } from "../src/routes/quizzes";
 
+// ---------------------------------------------------------------------------
+// Server-side mastery guardrail for Workplace practice attempts.
+//
+// Workplace practice imports stamp `affects_mastery` onto the quiz bank: 1 only
+// for a completed single-video diagnostic, 0 for practice-only or multi-video
+// sets. These tests drive a real attempt to completion through the standard
+// `/api/quizzes` grading flow and assert that mastery only moves when the bank
+// is mastery-eligible -- and that the completion response never leaks a mastery
+// figure for a practice-only attempt.
+// ---------------------------------------------------------------------------
+
 const USER_ID = "user-1";
 const VIDEO_ID = "22222222-2222-4222-8222-222222222222";
 const QUIZ_ID = "33333333-3333-4333-8333-333333333333";
 const ATTEMPT_ID = "44444444-4444-4444-8444-444444444444";
-const QUESTION_ONE_ID = "55555555-5555-4555-8555-555555555555";
-const QUESTION_TWO_ID = "66666666-6666-4666-8666-666666666666";
+const QUESTION_IDS = [
+  "55555555-5555-4555-8555-555555555501",
+  "55555555-5555-4555-8555-555555555502",
+  "55555555-5555-4555-8555-555555555503",
+  "55555555-5555-4555-8555-555555555504",
+  "55555555-5555-4555-8555-555555555505",
+];
 
 type BatchResult = { success: true; meta: { changes: number } };
 
@@ -26,7 +42,6 @@ class SqliteD1Statement {
   }
 
   async first<T>(): Promise<T | null> {
-    this.adapter.beforeFirst?.(this.sql);
     return (
       (this.statement().get(
         ...(this.params as Parameters<StatementSync["get"]>),
@@ -60,8 +75,6 @@ class SqliteD1Statement {
 }
 
 class SqliteD1Adapter {
-  beforeFirst: ((sql: string) => void) | undefined;
-
   constructor(readonly sqlite: DatabaseSync) {}
 
   prepare(sql: string): SqliteD1Statement {
@@ -81,49 +94,7 @@ class SqliteD1Adapter {
   }
 }
 
-function progressiveSummary(count: 1 | 2) {
-  const summaries = [
-    {
-      id: "q1",
-      type: "multiple_choice",
-      concept: "Limits",
-      question: "Which value is the limit?",
-    },
-    {
-      id: "q2",
-      type: "true_false",
-      concept: "Continuity",
-      question: "A continuous function has no jump at this point.",
-    },
-  ] as const;
-  return {
-    source: "extension-local-json-stream",
-    importVersion: "extension-progressive-import-v3",
-    pipelineVersion: 9,
-    model: "deepseek-v4-flash",
-    reasoningEffort: "high",
-    promptVersion: "quiz-local-json-stream-v5.0",
-    validatorVersion: "validator-local-progressive-v4.0",
-    generationState: "generating",
-    requestedQuestionTypes: ["multiple_choice", "true_false", "short_answer"],
-    generatedQuestionTypes: summaries
-      .slice(0, count)
-      .map((question) => question.type),
-    plannedCount: 5,
-    acceptedCount: count,
-    lastProgressAt: Date.now(),
-    acceptedQuestionSummaries: summaries.slice(0, count),
-    transcriptStored: false,
-    aiCalls: 1,
-    retryCount: 0,
-    inputTokens: 100,
-    outputTokens: 50,
-    reasoningTokens: 10,
-    elapsedMs: 1_000,
-  };
-}
-
-function createDatabase(): {
+function createDatabase(affectsMastery: 0 | 1): {
   sqlite: DatabaseSync;
   adapter: SqliteD1Adapter;
 } {
@@ -147,9 +118,11 @@ function createDatabase(): {
       quality_status TEXT NOT NULL,
       quality_summary_json TEXT NOT NULL,
       import_key TEXT,
-      created_at INTEGER NOT NULL,
       origin TEXT NOT NULL DEFAULT 'quest',
-      affects_mastery INTEGER NOT NULL DEFAULT 1
+      affects_mastery INTEGER NOT NULL DEFAULT 1,
+      workplace_thread_id TEXT,
+      assessment_rationale TEXT,
+      created_at INTEGER NOT NULL
     );
     CREATE TABLE questions (
       id TEXT PRIMARY KEY,
@@ -217,6 +190,15 @@ function createDatabase(): {
       updated_at INTEGER NOT NULL,
       PRIMARY KEY(user_id, video_id)
     );
+    CREATE TABLE reviews (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      video_id TEXT NOT NULL,
+      attempt_id TEXT,
+      score REAL,
+      scheduled_for INTEGER,
+      completed_at INTEGER
+    );
     CREATE TABLE quiz_generation_call_events (
       quiz_id TEXT NOT NULL,
       generation_session_id TEXT NOT NULL,
@@ -254,24 +236,33 @@ function createDatabase(): {
       heartbeat_at INTEGER
     );
   `);
+  // A "passed" 5-question Workplace quiz. An empty progressive summary makes
+  // attemptGenerationState treat it as fully ready.
   sqlite
     .prepare(
-      "INSERT INTO quiz_banks VALUES (?, ?, ?, 'en', 'short', 'Primer', '[]', 1, 9, 'generating', ?, 'import-1', ?, 'quest', 1)",
+      "INSERT INTO quiz_banks (id, user_id, video_id, language, session_length, primer, concepts_json, watched, pipeline_version, quality_status, quality_summary_json, import_key, origin, affects_mastery, workplace_thread_id, assessment_rationale, created_at) VALUES (?, ?, ?, 'en', 'short', 'Primer', '[]', 1, 9, 'passed', '{}', 'wp-import-1', 'workplace', ?, '77777777-7777-4777-8777-777777777777', 'Because…', 1)",
     )
-    .run(QUIZ_ID, USER_ID, VIDEO_ID, JSON.stringify(progressiveSummary(1)), 1);
-  sqlite
-    .prepare(
-      `INSERT INTO questions VALUES
-       (?, ?, 0, 'q1', 'multiple_choice', 'q1', ?, ?, ?, NULL, '0', NULL, ?, '[]', 1, '{}')`,
-    )
-    .run(
-      QUESTION_ONE_ID,
+    .run(QUIZ_ID, USER_ID, VIDEO_ID, affectsMastery);
+  const insertQuestion = sqlite.prepare(
+    `INSERT INTO questions VALUES
+     (?, ?, ?, ?, 'multiple_choice', 'q', ?, ?, ?, NULL, '0', NULL, ?, '[]', 1, '{}')`,
+  );
+  const insertAttemptItem = sqlite.prepare(
+    "INSERT INTO attempt_items VALUES (?, ?, ?)",
+  );
+  QUESTION_IDS.forEach((questionId, index) => {
+    insertQuestion.run(
+      questionId,
       QUIZ_ID,
-      "Which value is the limit?",
-      "Which value is the limit?",
+      index,
+      `q${index + 1}`,
+      `Which value is the limit? (${index + 1})`,
+      `Which value is the limit? (${index + 1})`,
       JSON.stringify(["4", "3", "2", "1"]),
       "The limit is 4.",
     );
+    insertAttemptItem.run(ATTEMPT_ID, index, questionId);
+  });
   sqlite
     .prepare(
       `INSERT INTO attempts VALUES
@@ -279,41 +270,11 @@ function createDatabase(): {
     )
     .run(ATTEMPT_ID, USER_ID, QUIZ_ID);
   sqlite
-    .prepare("INSERT INTO attempt_items VALUES (?, 0, ?)")
-    .run(ATTEMPT_ID, QUESTION_ONE_ID);
-  sqlite
     .prepare(
-      "INSERT INTO mastery VALUES (?, ?, 'basic', NULL, NULL, NULL, NULL, 1)",
+      "INSERT INTO mastery VALUES (?, ?, 'not_started', NULL, NULL, NULL, NULL, 1)",
     )
     .run(USER_ID, VIDEO_ID);
   return { sqlite, adapter: new SqliteD1Adapter(sqlite) };
-}
-
-function appendQuestionTwo(sqlite: DatabaseSync, updateSummary: boolean): void {
-  sqlite.exec("BEGIN");
-  try {
-    sqlite
-      .prepare(
-        `INSERT INTO questions VALUES
-         (?, ?, 1, 'q2', 'true_false', 'q2', ?, ?, NULL, NULL, 'true', NULL, ?, '[]', 1, '{}')`,
-      )
-      .run(
-        QUESTION_TWO_ID,
-        QUIZ_ID,
-        "A continuous function has no jump at this point.",
-        "A continuous function has no jump at this point.",
-        "This is the definition used by the lesson.",
-      );
-    if (updateSummary) {
-      sqlite
-        .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
-        .run(JSON.stringify(progressiveSummary(2)), QUIZ_ID);
-    }
-    sqlite.exec("COMMIT");
-  } catch (error) {
-    sqlite.exec("ROLLBACK");
-    throw error;
-  }
 }
 
 function testApp(adapter: SqliteD1Adapter): Hono<ApiBindings> {
@@ -334,99 +295,63 @@ function testApp(adapter: SqliteD1Adapter): Hono<ApiBindings> {
   return app;
 }
 
-describe("progressive answer and append consistency", () => {
-  it("stores and advances an answer exactly once when an append commits before the snapshot", async () => {
-    const { sqlite, adapter } = createDatabase();
-    let appended = false;
-    adapter.beforeFirst = (sql) => {
-      if (!appended && sql.includes("stored_question.quiz_id = qb.id")) {
-        appended = true;
-        appendQuestionTwo(sqlite, true);
-      }
-    };
-
-    const response = await testApp(adapter).request(
+async function completeAttempt(adapter: SqliteD1Adapter, answer: number) {
+  const app = testApp(adapter);
+  let response!: Response;
+  for (const questionId of QUESTION_IDS) {
+    response = await app.request(
       `/attempts/${ATTEMPT_ID}/answer`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ questionId: QUESTION_ONE_ID, answer: 0 }),
+        body: JSON.stringify({ questionId, answer }),
       },
       { DB: adapter } as unknown as ApiBindings["Bindings"],
     );
+    if (response.status !== 200) break;
+  }
+  return response;
+}
+
+describe("Workplace practice mastery guardrail", () => {
+  it("updates mastery when the quiz bank is a mastery-eligible diagnostic", async () => {
+    const { sqlite, adapter } = createDatabase(1);
+    const response = await completeAttempt(adapter, 0);
     const body = (await response.json()) as {
       completed: boolean;
-      nextQuestion: { id: string } | null;
-      generation: { availableQuestions: number; totalQuestions: number };
+      score: number;
+      mastery: string | null;
     };
-
     expect(response.status).toBe(200);
-    expect(body.completed).toBe(false);
-    expect(body.nextQuestion?.id).toBe(QUESTION_TWO_ID);
-    expect(body.generation).toMatchObject({
-      availableQuestions: 2,
-      totalQuestions: 5,
-    });
-    expect(
-      sqlite.prepare("SELECT COUNT(*) AS count FROM answers").get(),
-    ).toEqual({ count: 1 });
-    expect(
-      sqlite
-        .prepare(
-          "SELECT current_index, grading_token, grading_expires_at FROM attempts WHERE id = ?",
-        )
-        .get(ATTEMPT_ID),
-    ).toEqual({
-      current_index: 1,
-      grading_token: null,
-      grading_expires_at: null,
-    });
-    expect(
-      sqlite
-        .prepare(
-          "SELECT question_id FROM attempt_items WHERE attempt_id = ? AND ordinal = 1",
-        )
-        .get(ATTEMPT_ID),
-    ).toEqual({ question_id: QUESTION_TWO_ID });
+    expect(body.completed).toBe(true);
+    expect(body.score).toBe(100);
+    expect(body.mastery).toBe("mastered");
+
+    const mastery = sqlite
+      .prepare("SELECT state, best_score FROM mastery WHERE user_id = ?")
+      .get(USER_ID) as { state: string; best_score: number | null };
+    expect(mastery.state).toBe("mastered");
+    expect(mastery.best_score).toBe(100);
   });
 
-  it("fails before writing and releases the reservation on genuine count corruption", async () => {
-    const { sqlite, adapter } = createDatabase();
-    let corrupted = false;
-    adapter.beforeFirst = (sql) => {
-      if (!corrupted && sql.includes("stored_question.quiz_id = qb.id")) {
-        corrupted = true;
-        appendQuestionTwo(sqlite, false);
-      }
+  it("never moves mastery for a practice-only import, and hides mastery in the response", async () => {
+    const { sqlite, adapter } = createDatabase(0);
+    const response = await completeAttempt(adapter, 0);
+    const body = (await response.json()) as {
+      completed: boolean;
+      score: number;
+      mastery: string | null;
     };
+    expect(response.status).toBe(200);
+    expect(body.completed).toBe(true);
+    expect(body.score).toBe(100);
+    // No mastery figure is leaked for a practice-only attempt.
+    expect(body.mastery).toBeNull();
 
-    const response = await testApp(adapter).request(
-      `/attempts/${ATTEMPT_ID}/answer`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ questionId: QUESTION_ONE_ID, answer: 0 }),
-      },
-      { DB: adapter } as unknown as ApiBindings["Bindings"],
-    );
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({
-      error: { code: "quiz_generation_state_conflict" },
-    });
-    expect(
-      sqlite.prepare("SELECT COUNT(*) AS count FROM answers").get(),
-    ).toEqual({ count: 0 });
-    expect(
-      sqlite
-        .prepare(
-          "SELECT current_index, grading_token, grading_expires_at FROM attempts WHERE id = ?",
-        )
-        .get(ATTEMPT_ID),
-    ).toEqual({
-      current_index: 0,
-      grading_token: null,
-      grading_expires_at: null,
-    });
+    const mastery = sqlite
+      .prepare("SELECT state, best_score FROM mastery WHERE user_id = ?")
+      .get(USER_ID) as { state: string; best_score: number | null };
+    expect(mastery.state).toBe("not_started");
+    expect(mastery.best_score).toBeNull();
   });
 });

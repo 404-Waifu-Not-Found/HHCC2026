@@ -233,7 +233,7 @@ describe("security resource guards", () => {
     );
     expect(quizSource).toContain("requireAnswerCommit(results)");
     expect(quizSource.indexOf("requireAnswerCommit(results)")).toBeLessThan(
-      quizSource.indexOf("const mastery = await updateMastery"),
+      quizSource.indexOf("await updateMastery(c.env.DB"),
     );
     expect(quizSource).not.toContain("gradeWrittenAnswer");
     expect(quizSource).not.toContain("transcripts/${attempt.user_id}");
