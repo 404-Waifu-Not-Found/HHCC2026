@@ -2222,6 +2222,15 @@ export const AttemptGenerationResponseSchema = z
         automaticRecoveryCount: z.number().int().min(0).max(24).optional(),
         retryOrdinals: RetryOrdinalsSchema.optional(),
         previousOutcome: LocalGenerationCallOutcomeSchema.optional(),
+        activeCall: z
+          .object({
+            lifecycleState: z.literal("started"),
+            callIndex: z.number().int().min(0).max(255),
+            startIndex: z.number().int().min(0).max(14),
+            ordinalAttempt: z.number().int().min(1).max(24),
+          })
+          .strict()
+          .optional(),
         questionPlan: LocalQuestionPlanSchema.optional(),
         claim: GenerationClaimSchema,
         acceptedQuestions: z
@@ -2259,6 +2268,20 @@ export const AttemptGenerationResponseSchema = z
         code: "custom",
         path: ["continuation", "retryOrdinals"],
         message: "Retry ordinals must belong to the missing suffix.",
+      });
+    }
+    if (
+      value.continuation.activeCall &&
+      (value.continuation.activeCall.startIndex !==
+        value.continuation.startIndex ||
+        value.continuation.nextCallIndex !==
+          value.continuation.activeCall.callIndex + 1)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation", "activeCall"],
+        message:
+          "An active lifecycle must describe the authoritative missing ordinal and next call index.",
       });
     }
     const typePlan =

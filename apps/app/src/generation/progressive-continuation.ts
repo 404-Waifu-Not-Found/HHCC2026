@@ -328,12 +328,25 @@ async function runAutomaticRecovery(
       questionPlan: continuation.questionPlan,
       claim: claim.claim,
       nextCallIndex: automatic ? continuation.nextCallIndex : 0,
-      nextOrdinalAttempt: continuation.nextOrdinalAttempt,
-      retryKind: continuation.retryKind,
+      nextOrdinalAttempt: continuation.activeCall
+        ? Math.min(24, continuation.activeCall.ordinalAttempt + 1)
+        : continuation.nextOrdinalAttempt,
+      retryKind: continuation.activeCall
+        ? "automatic_resume"
+        : continuation.retryKind,
       automaticRetryCount: continuation.automaticRetryCount,
       retryBudgetUsedCount: continuation.retryBudgetUsedCount,
-      retryOrdinals: continuation.retryOrdinals,
-      previousOutcome: continuation.previousOutcome,
+      retryOrdinals: continuation.activeCall
+        ? [
+            ...new Set([
+              ...(continuation.retryOrdinals ?? []),
+              continuation.activeCall.startIndex + 1,
+            ]),
+          ].sort((left, right) => left - right)
+        : continuation.retryOrdinals,
+      previousOutcome: continuation.activeCall
+        ? "network_interrupted"
+        : continuation.previousOutcome,
       acceptedQuestions: continuation.acceptedQuestions,
       promptFingerprint: continuation.promptFingerprint,
     },

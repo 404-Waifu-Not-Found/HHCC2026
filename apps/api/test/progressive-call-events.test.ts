@@ -1350,6 +1350,12 @@ describe("protocol-9 concept-first call lifecycles", () => {
     );
     expect(activeSnapshot.previousOutcome).toBeNull();
     expect(activeSnapshot.retryOrdinals).toEqual([]);
+    expect(activeSnapshot.activeCall).toEqual({
+      lifecycleState: "started",
+      callIndex: 0,
+      startIndex: 0,
+      ordinalAttempt: 1,
+    });
 
     expect((await putCall(app, env, completed)).status).toBe(200);
     expect((await putCall(app, env, completed)).status).toBe(200);
@@ -1390,6 +1396,90 @@ describe("protocol-9 concept-first call lifecycles", () => {
     expect(await conflict.json()).toMatchObject({
       error: { code: "generation_call_conflict" },
     });
+  });
+
+  it("abandons a stale dispatched call and permits one truthful automatic retry", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    const startedSecond = conceptFirstLifecycleEvent("started", {
+      callIndex: 1,
+      startIndex: 1,
+      acceptedCount: 0,
+    });
+    expect((await putCall(app, env, startedSecond)).status).toBe(201);
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      continuation: {
+        nextCallIndex: 2,
+        activeCall: {
+          lifecycleState: "started",
+          callIndex: 1,
+          startIndex: 1,
+          ordinalAttempt: 1,
+        },
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT lifecycle_state, outcome_code FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({
+      lifecycle_state: "abandoned",
+      outcome_code: "network_interrupted",
+    });
+
+    const retry = conceptFirstLifecycleEvent("started", {
+      callIndex: 2,
+      startIndex: 1,
+      ordinalAttempt: 2,
+      acceptedCount: 0,
+      classification: "automatic_retry",
+      retryKind: "automatic_resume",
+    });
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          { ...retry, recoverySessionId: SECOND_RECOVERY_SESSION_ID },
+          CLAIM_KEY,
+        )
+      ).status,
+    ).toBe(201);
   });
 
   it("rejects a terminal lifecycle that was never dispatched", async () => {

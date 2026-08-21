@@ -777,6 +777,9 @@ quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
                 summary.generationSessionId,
               recoverySessionId: summary.recoverySessionId,
               nextCallIndex: generationState.snapshot.nextCallIndex,
+              ...(generationState.snapshot.activeCall
+                ? { activeCall: generationState.snapshot.activeCall }
+                : {}),
               nextOrdinalAttempt: generationState.snapshot.nextOrdinalAttempt,
               retryKind: generationState.snapshot.nextRetryKind ?? undefined,
               automaticRetryCount:
@@ -903,13 +906,15 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
     ordinalAttempt: undefined,
     retryKind: undefined,
     retryDelayMs: undefined,
+    recoveryPhase: undefined,
+    activeCallIndex: undefined,
     nextRecoveryAt: undefined,
     stateChangedAt:
       summary.generationState === (automatic ? "recovering" : "retry_required")
         ? summary.stateChangedAt
         : timestamp,
   });
-  const results = await c.env.DB.batch([
+  const statements = [
     c.env.DB.prepare(
       `INSERT INTO quiz_generation_claims
          (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at, recovery_session_id, heartbeat_at)
@@ -936,6 +941,28 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       input.claimKey,
       input.recoverySessionId ?? null,
     ),
+    ...(generationState.snapshot.activeCall
+      ? [
+          c.env.DB.prepare(
+            `UPDATE quiz_generation_call_events
+               SET lifecycle_state = 'abandoned',
+                   outcome_code = 'network_interrupted',
+                   completed_at = ?,
+                   last_stream_activity_at = COALESCE(last_stream_activity_at, dispatched_at, created_at),
+                   elapsed_ms = MAX(elapsed_ms, MAX(0, ? - COALESCE(dispatched_at, created_at)))
+             WHERE quiz_id = ?
+               AND generation_session_id = ?
+               AND call_index = ?
+               AND lifecycle_state = 'started'`,
+          ).bind(
+            timestamp,
+            timestamp,
+            attempt.quiz_id,
+            input.generationSessionId,
+            generationState.snapshot.activeCall.callIndex,
+          ),
+        ]
+      : []),
     c.env.DB.prepare(
       `UPDATE quiz_banks SET import_key = ?, quality_summary_json = ?
          WHERE id = ? AND user_id = ? AND pipeline_version = ? AND quality_status = 'generating'
@@ -960,8 +987,17 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       input.recoverySessionId ?? null,
       timestamp,
     ),
-  ]);
-  if (results[0]?.meta.changes !== 1 || results[1]?.meta.changes !== 1) {
+  ];
+  const results = await c.env.DB.batch(statements);
+  const bankResult = results.at(-1);
+  const lifecycleResult = generationState.snapshot.activeCall
+    ? results[1]
+    : undefined;
+  if (
+    results[0]?.meta.changes !== 1 ||
+    bankResult?.meta.changes !== 1 ||
+    (generationState.snapshot.activeCall && lifecycleResult?.meta.changes !== 1)
+  ) {
     throw new ApiError(
       409,
       "generation_claim_conflict",

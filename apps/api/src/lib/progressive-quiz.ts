@@ -528,6 +528,28 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
     .default(null),
   latest_generation_session_id: z.string().uuid().nullable().default(null),
   next_call_index: z.coerce.number().int().min(0).max(128).default(0),
+  active_call_count: z.coerce.number().int().nonnegative().default(0),
+  active_call_index: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(255)
+    .nullable()
+    .default(null),
+  active_call_start_ordinal: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(14)
+    .nullable()
+    .default(null),
+  active_call_ordinal_attempt: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24)
+    .nullable()
+    .default(null),
   retry_ordinals_json: z.string().default("[]"),
   previous_outcome: LocalGenerationCallOutcomeSchema.nullable().default(null),
 });
@@ -700,6 +722,36 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
           LIMIT 1
         )
     ), 0) AS next_call_index
+    ,(
+      SELECT COUNT(*)
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+    ) AS active_call_count
+    ,(
+      SELECT event.call_index
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_index
+    ,(
+      SELECT event.start_ordinal
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_start_ordinal
+    ,(
+      SELECT COALESCE(event.ordinal_attempt, 1)
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_ordinal_attempt
     ,COALESCE((
       SELECT json_group_array(attempted.ordinal)
       FROM (
@@ -783,6 +835,12 @@ export type ProgressiveGenerationSnapshot = {
     | null;
   latestGenerationSessionId: string | null;
   nextCallIndex: number;
+  activeCall: {
+    lifecycleState: "started";
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+  } | null;
   retryOrdinals: number[];
   previousOutcome: LocalGenerationCallOutcome | null;
 };
@@ -805,6 +863,28 @@ export async function readProgressiveGenerationSnapshot(
   if (!row.success) {
     throw new ApiError(404, "quiz_not_found", "Quiz not found.");
   }
+  if (
+    row.data.active_call_count > 1 ||
+    (row.data.active_call_count === 1 &&
+      (row.data.active_call_index === null ||
+        row.data.active_call_start_ordinal === null ||
+        row.data.active_call_ordinal_attempt === null))
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_generation_state_conflict",
+      "The quiz has conflicting active generation lifecycles.",
+    );
+  }
+  const activeCall =
+    row.data.active_call_count === 1
+      ? {
+          lifecycleState: "started" as const,
+          callIndex: row.data.active_call_index!,
+          startIndex: row.data.active_call_start_ordinal!,
+          ordinalAttempt: row.data.active_call_ordinal_attempt!,
+        }
+      : null;
 
   const summary = tryProgressiveQuizSummary(row.data.quality_summary_json);
   const telemetry = {
@@ -842,6 +922,7 @@ export async function readProgressiveGenerationSnapshot(
       nextRetryKind: row.data.next_retry_kind,
       latestGenerationSessionId: row.data.latest_generation_session_id,
       nextCallIndex: row.data.next_call_index,
+      activeCall,
       retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
       previousOutcome: row.data.previous_outcome,
     };
@@ -895,6 +976,7 @@ export async function readProgressiveGenerationSnapshot(
     nextRetryKind: row.data.next_retry_kind,
     latestGenerationSessionId: row.data.latest_generation_session_id,
     nextCallIndex: row.data.next_call_index,
+    activeCall,
     retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
     previousOutcome: row.data.previous_outcome,
   };
