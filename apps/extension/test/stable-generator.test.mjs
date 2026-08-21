@@ -6241,20 +6241,14 @@ test("a formula question without a valid token structure uses only bounded autom
     ),
     (error) => error?.reasonCode === "schema_invalid",
   );
-  assert.equal(fetchCount, 5);
+  assert.equal(fetchCount, 3);
   assert.deepEqual(
     events.map((event) => event.classification),
-    [
-      "primary",
-      "automatic_retry",
-      "automatic_retry",
-      "automatic_retry",
-      "automatic_retry",
-    ],
+    ["primary", "automatic_retry", "automatic_retry"],
   );
   assert.deepEqual(
     events.slice(1).map((event) => event.retryKind),
-    ["content_repair", "content_repair", "content_repair", "content_repair"],
+    ["content_repair", "content_repair"],
   );
 });
 
@@ -6300,7 +6294,7 @@ for (const failure of [
         ? "empty_content"
         : "truncated_output";
   }
-  test(`${failure.name} exhausts exactly four bounded automatic retries`, async (context) => {
+  test(`${failure.name} exhausts exactly two bounded automatic repairs`, async (context) => {
     const originalFetch = globalThis.fetch;
     let fetchCount = 0;
     const events = [];
@@ -6322,33 +6316,19 @@ for (const failure of [
       ),
       (error) => error?.reasonCode === failure.expected,
     );
-    assert.equal(fetchCount, 5);
-    assert.equal(events.length, 5);
+    assert.equal(fetchCount, 3);
+    assert.equal(events.length, 3);
     assert.deepEqual(
       events.map((event) => event.classification),
-      [
-        "primary",
-        "automatic_retry",
-        "automatic_retry",
-        "automatic_retry",
-        "automatic_retry",
-      ],
+      ["primary", "automatic_retry", "automatic_retry"],
     );
     assert.deepEqual(
       events.map((event) => event.outcome),
-      [
-        failure.expected,
-        failure.expected,
-        failure.expected,
-        failure.expected,
-        failure.expected,
-      ],
+      [failure.expected, failure.expected, failure.expected],
     );
     assert.equal(events[1].retryKind, failure.retryKind);
     assert.equal(events[2].retryKind, failure.retryKind);
-    assert.equal(events[3].retryKind, failure.retryKind);
-    assert.equal(events[4].retryKind, failure.retryKind);
-    assert.equal(events[4].retryDelayMs, 0);
+    assert.equal(events[2].retryDelayMs, 0);
   });
 }
 
@@ -6462,7 +6442,7 @@ test("a confirmed transient failure retries only the missing singleton", async (
       (event) =>
         event.detail.status === "retrying" &&
         event.detail.attempt === 2 &&
-        event.detail.maxAttempts === 5 &&
+        event.detail.maxAttempts === 3 &&
         event.detail.retryDelayMs >= 800,
     ),
   );

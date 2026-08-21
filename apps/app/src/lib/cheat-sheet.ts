@@ -130,15 +130,31 @@ export async function exportCheatSheet(
 ): Promise<void> {
   const response = await apiBinaryRequest(`/api/cheat-sheets/${sheetId}/file`);
   const bytes = new Uint8Array(await response.arrayBuffer());
+  await exportCheatSheetPdf(bytes, title);
+}
+
+/**
+ * Export a locally rendered artifact without waiting for the private R2 sync.
+ * This keeps the completion action useful when the upload is slow or a
+ * transient sync error occurs; the server artifact can still be retried in the
+ * background without regenerating the notes.
+ */
+export async function exportCheatSheetPdf(
+  bytes: Uint8Array,
+  title: string,
+): Promise<void> {
   const filename = `${safeFilename(title).replace(/-cheat-sheet$/i, "") || "clipquest"}-cheat-sheet.pdf`;
   if (Platform.OS === "web") {
+    const blobBytes = new Uint8Array(bytes.byteLength);
+    blobBytes.set(bytes);
     const url = URL.createObjectURL(
-      new Blob([bytes], { type: "application/pdf" }),
+      new Blob([blobBytes.buffer as ArrayBuffer], { type: "application/pdf" }),
     );
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = filename;
     anchor.click();
+    anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1_000);
     return;
   }

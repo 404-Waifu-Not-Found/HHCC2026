@@ -1009,7 +1009,7 @@ describe("protocol-7 automatic recovery call events", () => {
     });
   });
 
-  it("allows four content retries for concept-first v5.8", async () => {
+  it("allows two content repairs for concept-first v5.8", async () => {
     const db = createConceptFirstDatabase();
     const { app, env } = testApp(db);
     expect(
@@ -1045,7 +1045,7 @@ describe("protocol-7 automatic recovery call events", () => {
         )
       ).status,
     ).toBe(200);
-    for (let retry = 1; retry <= 4; retry += 1) {
+    for (let retry = 1; retry <= 2; retry += 1) {
       expect(
         (
           await putCall(
@@ -1084,9 +1084,9 @@ describe("protocol-7 automatic recovery call events", () => {
       app,
       env,
       conceptFirstLifecycleEvent("started", {
-        callIndex: 6,
+        callIndex: 4,
         startIndex: 1,
-        ordinalAttempt: 5,
+        ordinalAttempt: 4,
         acceptedCount: 0,
         classification: "automatic_retry",
         retryKind: "content_repair",

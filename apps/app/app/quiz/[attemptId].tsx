@@ -36,6 +36,7 @@ import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
 import {
   exportCheatSheet,
+  exportCheatSheetPdf,
   generateCheatSheetDocumentWithLocalAi,
   loadCheatSheetContext,
   recordCheatSheetFailure,
@@ -85,6 +86,24 @@ import {
 } from "../../src/theme/tokens";
 
 type Answer = number | boolean | number[] | string;
+
+function learnerFeedbackDetail(
+  feedback: AttemptAnswerResponse,
+  localGrade: import("@clipquest/contracts").LocalAnswerGrade | undefined,
+  translate: (
+    key: "answerReason" | "answerMarkedCorrect" | "answerMarkedIncorrect",
+  ) => string,
+): string {
+  const localDecisionMatches =
+    localGrade !== undefined && localGrade.correct === feedback.correct;
+  const reason = localDecisionMatches
+    ? localGrade.reason
+    : feedback.explanation;
+  const verdict = feedback.correct
+    ? translate("answerMarkedCorrect")
+    : translate("answerMarkedIncorrect");
+  return `${translate("answerReason")}: ${reason}\n\n${verdict}`;
+}
 
 export default function QuizScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
@@ -589,6 +608,7 @@ export default function QuizScreen() {
     const mastered = mastery === "mastered";
     const showCompactCompletionStats =
       compactCompletion && completedTotal !== undefined;
+    const localCheatSheetReady = Boolean(pendingCheatSheetRef.current);
     return (
       <Screen contentWidth="lesson" centered>
         <FeedbackMotion signal={score} kind="success" style={styles.complete}>
@@ -679,11 +699,20 @@ export default function QuizScreen() {
               variant="secondary"
               disabled={
                 cheatSheetStatus === "preparing" ||
-                (!cheatSheetId && cheatSheetStatus !== "failed")
+                (!cheatSheetId &&
+                  !localCheatSheetReady &&
+                  cheatSheetStatus !== "failed")
               }
               onPress={() => {
                 if (cheatSheetId)
-                  void exportCheatSheet(cheatSheetId, cheatSheetTitle);
+                  void exportCheatSheet(cheatSheetId, cheatSheetTitle).catch(
+                    () => setCheatSheetStatus("failed"),
+                  );
+                else if (pendingCheatSheetRef.current)
+                  void exportCheatSheetPdf(
+                    pendingCheatSheetRef.current.pdf,
+                    cheatSheetTitle,
+                  ).catch(() => setCheatSheetStatus("failed"));
                 else if (cheatSheetContextRef.current) {
                   setCheatSheetStatus("preparing");
                   void prepareCheatSheet(
@@ -693,9 +722,9 @@ export default function QuizScreen() {
                 }
               }}
             >
-              {cheatSheetStatus === "failed"
+              {cheatSheetStatus === "failed" && !localCheatSheetReady
                 ? t("retryNotes")
-                : cheatSheetId
+                : cheatSheetId || localCheatSheetReady
                   ? t("exportNotes")
                   : t("preparingNotes")}
             </PrimaryButton>
@@ -838,9 +867,7 @@ export default function QuizScreen() {
       status={feedback.correct ? "correct" : "incorrect"}
       title={feedback.correct ? t("correct") : t("incorrect")}
       detail={presentQuizText(
-        localGrade
-          ? `${localGrade.reason}\n\n${feedback.explanation}`
-          : feedback.explanation,
+        learnerFeedbackDetail(feedback, localGrade, (key) => t(key)),
       )}
       action={
         <PrimaryButton onPress={next}>

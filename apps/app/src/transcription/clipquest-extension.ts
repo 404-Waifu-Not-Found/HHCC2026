@@ -53,7 +53,12 @@ const EXTRACTION_TIMEOUT_MS = 55_000;
 // before fetch is dispatched. Keep this watchdog long enough for slower mobile
 // browsers/extension service workers without changing the overall generation
 // timeout or blocking quiz navigation.
-const LOCAL_GENERATION_DISPATCH_TIMEOUT_MS = 60_000;
+// Dispatch should fail quickly enough to hand the accepted question prefix to
+// the bounded recovery path. DeepSeek's stream itself has a separate idle
+// watchdog; this timeout only covers the extension handoff before a call has
+// started.
+const LOCAL_GENERATION_DISPATCH_TIMEOUT_MS = 20_000;
+const LOCAL_GENERATION_IDLE_TIMEOUT_MS = 30_000;
 
 type ExtensionReadyMessage = {
   channel: typeof CHANNEL;
@@ -641,7 +646,7 @@ export async function requestExtensionLocalQuiz(
               ),
             ),
           ),
-        60_000,
+        LOCAL_GENERATION_IDLE_TIMEOUT_MS,
       );
     };
     const receive = (event: MessageEvent<unknown>) => {

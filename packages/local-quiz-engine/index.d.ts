@@ -33,6 +33,16 @@ export type LocalQuizEngineAdapters = {
   };
 };
 
+export const LOCAL_GENERATION_RETRY_POLICY: {
+  readonly maxTransportRetriesPerOrdinal: number;
+  readonly maxContentRetriesPerOrdinal: number;
+  readonly maxStructuralRetriesPerOrdinal: number;
+  readonly maxAutomaticRetries: number;
+  readonly maxHotRetriesPerRecoveryCycle: number;
+  readonly maxActiveRecoveryMs: number;
+  readonly streamIdleTimeoutMs: number;
+};
+
 export function generateLocalQuiz(
   context: LocalQuizContext,
   apiKey: string,

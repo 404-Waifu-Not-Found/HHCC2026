@@ -50,14 +50,16 @@ import type { ApiBindings } from "../middleware/authenticated";
 const QUIZ_IMPORT_VERSION = "extension-quiz-import-v3" as const;
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
-const MAX_V5_3_AUTOMATIC_RETRIES = 12;
-const MAX_V5_4_AUTOMATIC_RETRIES = 48;
-const MAX_V5_6_AUTOMATIC_RETRIES = 12;
-const MAX_V5_8_AUTOMATIC_RETRIES = 48;
-const MAX_V5_9_AUTOMATIC_RETRIES = 30;
-const MAX_V5_10_AUTOMATIC_RETRIES = 30;
-const MAX_V5_11_AUTOMATIC_RETRIES = 30;
-const MAX_V5_12_AUTOMATIC_RETRIES = 30;
+// Keep the authoritative Worker budget aligned with the local engine: one
+// primary call plus two automatic repairs for a failed ordinal.
+const MAX_V5_3_AUTOMATIC_RETRIES = 3;
+const MAX_V5_4_AUTOMATIC_RETRIES = 3;
+const MAX_V5_6_AUTOMATIC_RETRIES = 3;
+const MAX_V5_8_AUTOMATIC_RETRIES = 3;
+const MAX_V5_9_AUTOMATIC_RETRIES = 3;
+const MAX_V5_10_AUTOMATIC_RETRIES = 3;
+const MAX_V5_11_AUTOMATIC_RETRIES = 3;
+const MAX_V5_12_AUTOMATIC_RETRIES = 3;
 
 function versionAtLeast(actual: string, minimum: string): boolean {
   const left = actual.split(".").map(Number);
@@ -875,15 +877,11 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
                 ]),
         )
         .first<{ count: number }>();
-      const perOrdinalLimit =
-        promptFirst && input.retryKind === "structural"
-          ? 2
-          : promptFirst ||
-              snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8"
-            ? 4
-            : contentRetry
-              ? 2
-              : 4;
+      // Keep the server-side event budget aligned with the local engine: a
+      // primary request plus at most two repairs for one ordinal. This stops a
+      // stalled browser from multiplying a single bad question into a long
+      // retry loop.
+      const perOrdinalLimit = contentRetry || promptFirst ? 2 : 3;
       if (Number(ordinalRetries?.count ?? 0) >= perOrdinalLimit) {
         throw new ApiError(
           409,

@@ -155,7 +155,7 @@ export function replayGenerationOutboxEntries(
   recovered.continuation.startIndex = questionFrontier;
   recovered.continuation.nextCallIndex = callFrontier;
   recovered.continuation.automaticRetryCount = Math.min(
-    12,
+    3,
     (recovered.continuation.automaticRetryCount ?? 0) +
       replayedAutomaticRetryCalls.size,
   );
@@ -165,7 +165,7 @@ export function replayGenerationOutboxEntries(
     lastDeliveredCall.acceptedCount === 0
   ) {
     recovered.continuation.nextOrdinalAttempt = Math.min(
-      12,
+      3,
       lastDeliveredCall.ordinalAttempt + 1,
     );
     recovered.continuation.retryKind = "automatic_resume";

@@ -14,7 +14,21 @@ describe("gradeShortAnswerWithAi", () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          choices: [{ message: { content: '{"correct":true}' } }],
+          choices: [
+            {
+              message: {
+                content: "The response captures the required concept.",
+                tool_calls: [
+                  {
+                    function: {
+                      name: "grade_answer",
+                      arguments: JSON.stringify({ is_correct: true }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
         }),
         { status: 200 },
       ),
@@ -35,12 +49,16 @@ describe("gradeShortAnswerWithAi", () => {
           aliases: ["light"],
         },
       }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual({
+      correct: true,
+      reason: "The response captures the required concept.",
+    });
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(String(request.body)) as {
       model: string;
-      response_format: { type: string };
+      tools: { type: string }[];
+      tool_choice: { type: string; function: { name: string } };
       messages: { role: string; content: string }[];
     };
     const payload = JSON.parse(body.messages[1]!.content) as {
@@ -52,7 +70,8 @@ describe("gradeShortAnswerWithAi", () => {
 
     expect(body).toMatchObject({
       model: "deepseek-v4-flash",
-      response_format: { type: "json_object" },
+      tools: [{ type: "function" }],
+      tool_choice: { type: "function", function: { name: "grade_answer" } },
     });
     expect(body.messages[0]?.content).toContain("untrusted data");
     expect(payload).toMatchObject({
@@ -64,5 +83,57 @@ describe("gradeShortAnswerWithAi", () => {
         acceptableAlternatives: ["It absorbs light."],
       },
     });
+  });
+
+  it("lets DeepSeek reason from the validated rubric when no sample exists", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: "The answer identifies the required concept.",
+                tool_calls: [
+                  {
+                    function: {
+                      name: "grade_answer",
+                      arguments: JSON.stringify({ is_correct: true }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      gradeShortAnswerWithAi(env, {
+        question: "What does chlorophyll absorb?",
+        learnerAnswer: "It absorbs light.",
+        requiredIdeas: ["Chlorophyll absorbs light energy"],
+        acceptableAlternatives: ["It absorbs light."],
+      }),
+    ).resolves.toEqual({
+      correct: true,
+      reason: "The answer identifies the required concept.",
+    });
+
+    const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(request.body)) as {
+      messages: { role: string; content: string }[];
+    };
+    const payload = JSON.parse(body.messages[1]!.content) as Record<
+      string,
+      unknown
+    >;
+    expect(payload).not.toHaveProperty("sampleAnswer");
+    expect(body.messages[0]?.content).toContain(
+      "Do not invent a missing reference answer",
+    );
+    expect(body.messages[0]?.content).toContain("First write one concise");
   });
 });

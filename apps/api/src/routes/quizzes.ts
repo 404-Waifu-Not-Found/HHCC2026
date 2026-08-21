@@ -46,7 +46,7 @@ const QuestionTypeSchema = z.enum([
 ]);
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
-const AUTOMATIC_RECOVERY_RETRY_LIMIT = 12;
+const AUTOMATIC_RECOVERY_RETRY_LIMIT = 3;
 const AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
 const AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
 
@@ -1466,18 +1466,17 @@ async function gradeAnswer(
       RubricSchema,
       "short-answer rubric",
     );
-    // Older locally-generated banks may not persist a sample answer even
-    // though their rubric is valid. Keep those quizzes answerable by using a
-    // compact rubric-derived reference instead of failing the entire attempt.
-    // Newer banks still use the canonical sample answer when it is present.
+    // Some older locally-generated banks have no canonical sample answer. Do
+    // not synthesize one from rubric fragments: the AI grader must reason from
+    // the question and validated rubric instead of receiving fallback prose.
     const sampleAnswer = question.correct_answer_json
       ? parseStoredJson(
           question.correct_answer_json,
           z.string().trim().min(1).max(1_000),
           "short-answer sample answer",
         )
-      : rubric.requiredIdeas.join("; ");
-    const correct = await gradeShortAnswerWithAi(env, {
+      : undefined;
+    const grade = await gradeShortAnswerWithAi(env, {
       question: question.prompt,
       sampleAnswer,
       learnerAnswer: answer,
@@ -1485,10 +1484,7 @@ async function gradeAnswer(
       acceptableAlternatives: rubric.acceptableAlternatives,
       rubricV2: rubric.v2,
     });
-    return {
-      correct,
-      feedback: question.explanation,
-    };
+    return { correct: grade.correct, feedback: grade.reason };
   }
 
   const expected = parseStoredJson(

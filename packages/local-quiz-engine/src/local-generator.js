@@ -33,19 +33,34 @@ const GENERATION_PROFILE = "prompt_first_auto_v5_12";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
-const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 4;
-const MAX_CONTENT_RETRIES_PER_ORDINAL = 4;
-const MAX_STRUCTURAL_RETRIES_PER_ORDINAL = 4;
-const MAX_V5_3_AUTOMATIC_RETRIES = 12;
-const MAX_V5_4_AUTOMATIC_RETRIES = 48;
-const MAX_V5_6_AUTOMATIC_RETRIES = 12;
-const MAX_V5_8_AUTOMATIC_RETRIES = 48;
-const MAX_V5_9_AUTOMATIC_RETRIES = 30;
-const MAX_V5_10_AUTOMATIC_RETRIES = 30;
-const MAX_V5_11_AUTOMATIC_RETRIES = 30;
-const MAX_V5_12_AUTOMATIC_RETRIES = 30;
-const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 12;
-const MAX_ACTIVE_RECOVERY_MS = 15 * 60 * 1_000;
+// Keep recovery useful without turning a transient/local model problem into
+// dozens of repeated DeepSeek calls. One primary call plus at most two
+// repairs per ordinal is enough to recover normal transport or quality noise;
+// after that we fail closed and let the learner retry intentionally.
+const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 2;
+const MAX_CONTENT_RETRIES_PER_ORDINAL = 2;
+const MAX_STRUCTURAL_RETRIES_PER_ORDINAL = 2;
+const MAX_V5_3_AUTOMATIC_RETRIES = 3;
+const MAX_V5_4_AUTOMATIC_RETRIES = 3;
+const MAX_V5_6_AUTOMATIC_RETRIES = 3;
+const MAX_V5_8_AUTOMATIC_RETRIES = 3;
+const MAX_V5_9_AUTOMATIC_RETRIES = 3;
+const MAX_V5_10_AUTOMATIC_RETRIES = 3;
+const MAX_V5_11_AUTOMATIC_RETRIES = 3;
+const MAX_V5_12_AUTOMATIC_RETRIES = 3;
+const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 3;
+const MAX_ACTIVE_RECOVERY_MS = 5 * 60 * 1_000;
+const STREAM_IDLE_TIMEOUT_MS = 30 * 1_000;
+
+export const LOCAL_GENERATION_RETRY_POLICY = Object.freeze({
+  maxTransportRetriesPerOrdinal: MAX_TRANSPORT_RETRIES_PER_ORDINAL,
+  maxContentRetriesPerOrdinal: MAX_CONTENT_RETRIES_PER_ORDINAL,
+  maxStructuralRetriesPerOrdinal: MAX_STRUCTURAL_RETRIES_PER_ORDINAL,
+  maxAutomaticRetries: MAX_V5_12_AUTOMATIC_RETRIES,
+  maxHotRetriesPerRecoveryCycle: MAX_HOT_RETRIES_PER_RECOVERY_CYCLE,
+  maxActiveRecoveryMs: MAX_ACTIVE_RECOVERY_MS,
+  streamIdleTimeoutMs: STREAM_IDLE_TIMEOUT_MS,
+});
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
@@ -6638,7 +6653,7 @@ async function callDeepSeekJson(
     idleTimeout = setTimeout(() => {
       streamIdleTimedOut = true;
       controller.abort();
-    }, 45_000);
+    }, STREAM_IDLE_TIMEOUT_MS);
   };
   try {
     const responsePromise = input.fetchImpl(
@@ -6754,7 +6769,7 @@ async function callDeepSeekJson(
       }
       if (streamIdleTimedOut) {
         throw new GenerationFailure(
-          "DeepSeek stopped sending stream activity for 45 seconds.",
+          `DeepSeek stopped sending stream activity for ${Math.round(STREAM_IDLE_TIMEOUT_MS / 1_000)} seconds.`,
           "stream_idle_timeout",
           { transient: true },
         );
@@ -8565,13 +8580,14 @@ export async function gradeLocalAnswerWithDeepSeek(
     .replace(/<think>[\s\S]*?<\/think>/giu, "")
     .trim()
     .slice(0, 1_000);
+  if (!reason) {
+    throw new Error(
+      "DeepSeek did not return an AI-generated reason before the grading tool call.",
+    );
+  }
   return {
     ...decision,
-    reason:
-      reason ||
-      (decision.correct
-        ? "Your answer matches the core idea."
-        : "Your answer misses the core idea."),
+    reason,
     source: "deepseek_local",
   };
 }

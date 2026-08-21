@@ -11,6 +11,18 @@ test("Chrome and Android import the same generation engine", () => {
   );
 });
 
+test("local recovery uses a bounded three-attempt policy", () => {
+  assert.deepEqual(shared.LOCAL_GENERATION_RETRY_POLICY, {
+    maxTransportRetriesPerOrdinal: 2,
+    maxContentRetriesPerOrdinal: 2,
+    maxStructuralRetriesPerOrdinal: 2,
+    maxAutomaticRetries: 3,
+    maxHotRetriesPerRecoveryCycle: 3,
+    maxActiveRecoveryMs: 5 * 60 * 1_000,
+    streamIdleTimeoutMs: 30 * 1_000,
+  });
+});
+
 test("credential checks use the injected platform transport", async () => {
   let request;
   await shared.testDeepSeekKey("private-test-key", async (url, init) => {

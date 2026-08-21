@@ -82,3 +82,45 @@ test("local answer grading rejects a response without a valid tool decision", as
     /valid answer grading tool call/,
   );
 });
+
+test("local answer grading rejects a tool decision without an AI reason", async () => {
+  await assert.rejects(
+    gradeLocalAnswerWithDeepSeek(
+      {
+        question: "Is water wet?",
+        response: "Yes",
+        questionType: "true_false",
+      },
+      "sk-test-key",
+      undefined,
+      {
+        fetch: async () =>
+          new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    content: "",
+                    tool_calls: [
+                      {
+                        function: {
+                          name: "grade_answer",
+                          arguments: JSON.stringify({
+                            is_correct: true,
+                            confidence: "high",
+                            matched_ideas: ["water is wet"],
+                          }),
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+      },
+    ),
+    /AI-generated reason/,
+  );
+});
