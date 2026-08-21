@@ -1019,7 +1019,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
       );
       assert.match(
         request.task,
-        /distractors as exactly three concise strings/u,
+        /distractors as exactly six concise candidate strings/u,
       );
       assert.doesNotMatch(request.task, /Each whyWrong must/u);
       const schemaStart = request.task.indexOf("Exact JSON schema:");
@@ -1508,6 +1508,66 @@ test("v5.8 repairs a malformed MC stem locally when its grounded answer is a com
   assert.equal(
     result.quiz.questions[0].question,
     "Which statement correctly describes reaction energy trend?",
+  );
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    0,
+  );
+});
+
+test("v5.8 selects three safe distractors from a six-candidate pool without another request", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const requestBodies = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    requestBodies.push(JSON.parse(init.body));
+    return conceptFirstResponse(init.body, (value, task) => {
+      const question = value.questions[0];
+      if (question.type === "multiple_choice") {
+        question.distractors = [
+          question.answerText,
+          `${question.answerText}.`,
+          `reservoir${task.ordinal}`,
+          `barrier${task.ordinal}`,
+          `sink${task.ordinal}`,
+          `detour${task.ordinal}`,
+        ];
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.ok(
+    requestBodies.every((body) =>
+      /"distractors":\{"type":"array","minItems":6,"maxItems":6/u.test(
+        body.messages.at(-1).content,
+      ),
+    ),
+  );
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.choices.length === 4 &&
+        new Set(question.choices.map((choice) => choice.toLowerCase())).size ===
+          4 &&
+        !question.choices.includes(`${question.answer}.`),
+    ),
   );
   assert.equal(
     calls.filter((event) => event.classification === "automatic_retry").length,

@@ -1572,11 +1572,8 @@ export function groundedMultipleChoiceCandidate(
   const learnerAnswerIsUniquelyGrounded =
     (answerSupportedByEvidence(learnerAnswer, groundingSource) ||
       learnerAnswerHasSafeCaptionMatch) &&
-    supportCandidateDistractors.length === 3 &&
-    supportCandidateDistractors.every(
-      (distractor) =>
-        distractor && !answerSupportedByEvidence(distractor, groundingSource),
-    );
+    supportCandidateDistractors.length >= 3 &&
+    supportCandidateDistractors.length <= 6;
   const requestedAnswerIsGrounded =
     answerSupportedByEvidence(requestedAnswerSpan, groundingSource) ||
     requestedAnswerHasSafeCaptionMatch;
@@ -1636,7 +1633,8 @@ export function groundedMultipleChoiceCandidate(
       !learnerAnswerIsGrounded &&
       !requestedAnswerIsGrounded) ||
     !Array.isArray(candidate?.distractors) ||
-    candidate.distractors.length !== 3
+    candidate.distractors.length < 3 ||
+    candidate.distractors.length > 6
   ) {
     return null;
   }
