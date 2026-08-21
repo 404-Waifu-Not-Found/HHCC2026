@@ -44,6 +44,10 @@ The normal YouTube URL field remains available. The Android config plugin also r
 
 Verified HTTPS App Links cover password reset, email verification, Library, and quiz attempts. `/.well-known/assetlinks.json` intentionally returns an empty 503 response until `ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINT` contains the final EAS signing certificate's uppercase colon-separated SHA-256 fingerprint. Do not publish a local debug fingerprint.
 
+iOS uses the same HTTPS reset and verification routes through Associated Domains. `/.well-known/apple-app-site-association` remains unavailable until `IOS_APP_LINKS_TEAM_ID` contains the Apple Developer Team ID used to sign `cc.ccwu.clipquest`. Password-reset emails always use the HTTPS origin; the app rejects custom-scheme password-reset links so an unrelated app cannot claim a security-sensitive callback.
+
+Caption and generation recovery state is account-scoped. Ambiguous pre-upgrade caches and outboxes are deleted rather than migrated, and sign-out, account deletion, or an authenticated-user change clears only that account's current private state plus unowned legacy records.
+
 ## Mathematics and notifications
 
 Native quiz prose and formulas render through locally bundled KaTeX MathML in a locked-down, noninteractive, auto-height WebView. Model text is escaped; remote scripts, remote navigation, file access, universal access, DOM storage, and mixed content are disabled. Accessibility receives the original plain expression.

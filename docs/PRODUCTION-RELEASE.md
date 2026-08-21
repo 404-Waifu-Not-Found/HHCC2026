@@ -160,8 +160,9 @@ The Worker/app rollout may proceed before the private APK because the API additi
 3. Run `npx eas-cli build --platform android --profile internal` from `apps/app` at the exact pushed Git SHA.
 4. Verify the APK is release-signed, version 0.2.0/code 2, min API 29, target API 36, and contains no key, transcript fixture, environment secret, or signing material.
 5. Back up the EAS-managed keystore securely and configure its SHA-256 certificate fingerprint as `ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINT`.
-6. Verify `/.well-known/assetlinks.json`, notification delivery/tap routing, install and upgrade behavior, and the full API 29/API 36/physical-device matrix.
-7. Run and complete the ten-video Android matrix before sharing the restricted APK URL.
+6. Configure `IOS_APP_LINKS_TEAM_ID` from the production Apple signing identity and verify both `/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association` before treating HTTPS authentication links as native-ready.
+7. Verify notification delivery/tap routing, install and upgrade behavior, and the full API 29/API 36/physical-device matrix.
+8. Run and complete the ten-video Android matrix before sharing the restricted APK URL.
 
 Do not distribute a locally debug-signed Gradle artifact. See [Android private beta](./ANDROID-BETA.md) and the [current dated QA report](./QA-ANDROID-BETA-2026-08-16.md).
 
