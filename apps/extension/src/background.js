@@ -585,7 +585,15 @@ chrome.runtime.onConnect.addListener((port) => {
           });
         };
         const generationContext = message.context;
-        if (message.kind === "cheat-sheet") {
+        // Older injected bridge scripts did not forward the request kind.
+        // Cheat-sheet context is structurally distinct from quiz context, so
+        // infer it here as a compatibility guard instead of routing it into
+        // the transcript-based quiz generator.
+        const isCheatSheetRequest =
+          message.kind === "cheat-sheet" ||
+          (Array.isArray(generationContext?.questions) &&
+            typeof generationContext?.sourceRevision === "string");
+        if (isCheatSheetRequest) {
           return generateLocalCheatSheet(
             generationContext,
             apiKey,
@@ -640,6 +648,10 @@ chrome.runtime.onConnect.addListener((port) => {
       })
       .then(async (result) => {
         if (result === undefined) return;
+        const isCheatSheetRequest =
+          message.kind === "cheat-sheet" ||
+          (Array.isArray(message.context?.questions) &&
+            typeof message.context?.sourceRevision === "string");
         const outgoing = {
           type: "result",
           requestId,
@@ -647,11 +659,15 @@ chrome.runtime.onConnect.addListener((port) => {
             ok: true,
             result: {
               ...result,
-              client: {
-                kind: "chrome_extension",
-                version: chrome.runtime.getManifest().version,
-                capability: "question-stream-v7",
-              },
+              ...(isCheatSheetRequest
+                ? {}
+                : {
+                    client: {
+                      kind: "chrome_extension",
+                      version: chrome.runtime.getManifest().version,
+                      capability: "question-stream-v7",
+                    },
+                  }),
             },
           },
         };

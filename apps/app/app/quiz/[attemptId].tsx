@@ -237,6 +237,7 @@ export default function QuizScreen() {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         const context = await loadCheatSheetContext(quizId);
+        setCheatSheetTitle(context.title);
         const document = await generateCheatSheetDocumentWithLocalAi(context);
         const pdf = await renderCheatSheetPdf(document);
         pendingCheatSheetRef.current = { videoId, quizId, document, pdf };

@@ -8261,30 +8261,46 @@ export async function generateLocalCheatSheet(
   if (!parsed || typeof parsed !== "object")
     throw new Error("DeepSeek returned an invalid cheat sheet.");
   const bounded = {
-    title: String(parsed.title ?? context.title).slice(0, 240),
-    source: String(parsed.source ?? context.source).slice(0, 500),
-    summary: String(parsed.summary ?? context.primer).slice(0, 4_000),
-    keyConcepts: Array.isArray(parsed.keyConcepts)
-      ? parsed.keyConcepts.map(String).slice(0, 20)
-      : [],
+    title: String(parsed.title ?? context.title)
+      .trim()
+      .slice(0, 240),
+    source: String(parsed.source ?? context.source)
+      .trim()
+      .slice(0, 500),
+    summary: String(parsed.summary ?? context.primer)
+      .trim()
+      .slice(0, 4_000),
+    keyConcepts: boundedTextArray(parsed.keyConcepts, 20, 500),
     definitions: Array.isArray(parsed.definitions)
       ? parsed.definitions
           .filter((item) => item && typeof item === "object")
           .map((item) => ({
-            term: String(item.term ?? "").slice(0, 200),
-            definition: String(item.definition ?? "").slice(0, 1_000),
+            term: String(item.term ?? "")
+              .trim()
+              .slice(0, 200),
+            definition: String(item.definition ?? "")
+              .trim()
+              .slice(0, 1_000),
           }))
           .filter((item) => item.term && item.definition)
           .slice(0, 30)
       : [],
-    formulas: Array.isArray(parsed.formulas)
-      ? parsed.formulas.map(String).slice(0, 20)
-      : [],
-    rememberThis: Array.isArray(parsed.rememberThis)
-      ? parsed.rememberThis.map(String).slice(0, 10)
-      : [],
+    formulas: boundedTextArray(parsed.formulas, 20, 500),
+    rememberThis: boundedTextArray(parsed.rememberThis, 10, 500),
   };
   if (!bounded.summary)
     throw new Error("DeepSeek returned an empty cheat sheet.");
   return bounded;
+}
+
+function boundedTextArray(value, maxItems, maxLength) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) =>
+      String(item ?? "")
+        .trim()
+        .slice(0, maxLength),
+    )
+    .filter(Boolean)
+    .slice(0, maxItems);
 }
