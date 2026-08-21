@@ -656,11 +656,21 @@ export class YouTubeAdapter implements SourceAdapter {
             formatRequest.type === "video+audio"
               ? progressiveClient
               : signedAudioClient;
-          const format = await formatClient.getStreamingData(sourceVideoId, {
-            client: formatRequest.client,
-            type: formatRequest.type,
-            quality: "bestefficiency",
-          });
+          const format =
+            formatRequest.type === "video+audio"
+              ? (
+                  await progressiveClient.getBasicInfo(sourceVideoId, {
+                    client: formatRequest.client,
+                  })
+                ).chooseFormat({
+                  type: formatRequest.type,
+                  quality: "bestefficiency",
+                })
+              : await formatClient.getStreamingData(sourceVideoId, {
+                  client: formatRequest.client,
+                  type: formatRequest.type,
+                  quality: "bestefficiency",
+                });
           if (!format.url) throw new Error("audio_url_missing");
           const audioUrl = new URL(format.url);
           audioUrl.searchParams.set("cpn", createAudioClientParameter());
