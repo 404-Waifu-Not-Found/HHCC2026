@@ -3894,6 +3894,7 @@ test("v5.12 continuation normalizes a missing retry kind to a schema-safe struct
     nextOrdinalAttempt: 2,
     automaticRetryCount: 1,
     retryBudgetUsedCount: 1,
+    retryKind: "automatic_resume",
     retryOrdinals: [2],
     acceptedQuestions: [
       {

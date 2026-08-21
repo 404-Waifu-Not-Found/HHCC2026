@@ -7664,11 +7664,18 @@ async function generateAutomaticQuiz({
   const historicalRetryKind =
     automaticRetryKindForFailure(previousOutcome, input.promptFirstMode) ??
     (input.promptFirstMode ? "structural" : "automatic_resume");
+  const profileRetryKind =
+    input.promptFirstMode &&
+    initialRetryKind !== undefined &&
+    initialRetryKind !== "transport" &&
+    initialRetryKind !== "structural"
+      ? historicalRetryKind
+      : initialRetryKind;
   let lastFailureReason = previousOutcome;
   let lastRepairContext;
   let retryKind =
     ordinalAttempt > 1
-      ? (initialRetryKind ?? historicalRetryKind)
+      ? (profileRetryKind ?? historicalRetryKind)
       : retryOrdinals.has(acceptedQuestions.length + 1)
         ? historicalRetryKind
         : undefined;
