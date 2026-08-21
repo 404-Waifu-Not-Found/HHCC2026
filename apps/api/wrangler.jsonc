@@ -71,7 +71,7 @@
     "QUIZ_V5_2_ROLLOUT": "disabled",
     "QUIZ_V5_3_CANARY_USER_IDS": "",
     "QUIZ_V5_3_ROLLOUT": "disabled",
-    "QUIZ_V5_4_CANARY_USER_IDS": "TFu3AdSrGdHSjXMiCYaqvnBfJFOLYEf6,WC3GVPrC6dsnijm5VHVdtwFvBgtMeH5X",
+    "QUIZ_V5_4_CANARY_USER_IDS": "TFu3AdSrGdHSjXMiCYaqvnBfJFOLYEf6,WC3GVPrC6dsnijm5VHVdtwFvBgtMeH5X,LkLQd7NiZV5I1LQkfskwIXxR2OclmXcd",
     "QUIZ_V5_4_ROLLOUT": "canary",
     "RESEND_FROM": "ClipQuest <hello@clipquest.ccwu.cc>",
   },

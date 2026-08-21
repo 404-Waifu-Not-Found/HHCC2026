@@ -42,6 +42,7 @@ const LOGISTICS_PATTERNS = [
   /\b(?:who (?:is|was) (?:the )?(?:teacher|instructor|professor|presenter|speaker|teaching assistant|t\.?a\.?)|(?:teacher|instructor|professor|presenter|speaker|teaching assistant|t\.?a\.?).{0,50}(?:name|biography|background|degree|university|college|has taught|started teaching)|how long .{0,50}(?:taught|been teaching)|what (?:will|does) (?:the )?(?:(?:next|following) )?(?:course|class|unit|module) cover|what (?:is|was) covered (?:next|later)|how many (?:lessons?|videos?|weeks?|hours?) (?:are|were) in)\b/iu,
   /\b(?:course (?:aims?|goals?|objectives?|numbers?|codes?)|class (?:aims?|goals?|objectives?)|cross[- ]listed|attendance policy|due dates?|deadlines?|late (?:work|homework|assignments?|problem sets?)|problem set policy|submission policy|office location|contact information|how many (?:times|years?) .{0,60}(?:taught|teach|requested)|university admission|applied to (?:a |the )?(?:university|college)|popularity|request count|presentation order|first topic|last topic)\b/iu,
   /\b(?:(?:presenter|speaker|lecturer|narrator|instructor).{0,40}(?:jokes?|introduction|outro)|(?:jokes?|introduction|outro).{0,40}(?:presenter|speaker|lecturer|narrator|instructor)|recording metadata)\b/iu,
+  /\b(?:(?:this|the) (?:episode|video|recording) (?:was |is )?(?:filmed|recorded|produced|shot|made)|(?:filmed|recorded|produced|shot) (?:in|at|by)|(?:crash course|production|recording|film) studio|(?:episode|video) (?:number|title|series|channel))\b/iu,
   /\b(?:where did|when did|what (?:year|date|institution|university|college|city|country)|how many times)\b.{0,100}\b(?:apply|attend|graduate|study|teach|present|record|upload|request|live|born)\b/iu,
   /(?:课程安排|课程大纲|助教|办公时间|作业|评分|教材|投诉|订阅|赞助|推广|欢迎来到|讲师介绍|考试占比|考试权重|考试分值|单元占比|课程进度|考试时间|教师姓名|讲师姓名|教师简介|讲师简介|视频时长|上传日期)/u,
   /(?:课程目标|课程编号|交叉课程|出勤|截止日期|迟交|授课次数|大学申请|受欢迎程度|请求次数|讲解顺序)/u,
@@ -72,6 +73,7 @@ const SOURCE_FRAMING_PREFIX_PATTERNS = [
 
 const SOURCE_REFERENCE_PATTERNS = [
   /^\s*according to\b/iu,
+  /\baccording to (?:the )?(?:analogy|described (?:mechanism|process|relationship)|example|evidence|metaphor|weave metaphor)\b/iu,
   /\b(?:the )?(?:reference|reference material|material|evidence|excerpt|content)\s+(?:says?|states?|mentions?|lists?|shows?|describes?|provides?|indicates?)\b/iu,
   /\b(?:(?:according to|based on) (?:the )?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:lesson|video|lecture|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)(?: (?:explicitly|directly|clearly|specifically|also))? (?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|covers?|lists?|listed|supports?|describes?))\b/iu,
   /\b(?:in|from) (?:this|the|that) (?:lesson|video|lecture|transcript|presentation)\b/iu,
@@ -81,6 +83,7 @@ const SOURCE_REFERENCE_PATTERNS = [
   /\b(?:mentioned|shown|said|stated|covered|discussed|supported|described) (?:in|by) (?:the )?(?:lesson|video|lecture|transcript|presenter|instructor|teacher|professor|speaker|narrator)\b/iu,
   /\b(?:(?:according to|based on) (?:the )?source|the source (?:says?|states?|mentions?|explains?|shows?|describes?))\b/iu,
   /\b(?:according to (?:the )?described|(?:the )?(?:described|discussed|aforementioned) (?:mechanism|process|method|relationship|example)|as (?:described|discussed|shown|stated) (?:above|earlier|previously)|the (?:above|preceding|following) example|the evidence (?:says?|states?|shows?|supports?|indicates?))\b/iu,
+  /\b(?:biodiversity(?:'s)?\s+weave|biodiversity\s+strands?|strands?\s+of\s+biodiversity|cutting\s+(?:too\s+)?many\s+links?\s+in\s+biodiversity|(?:weave|tapestry)\s+of\s+biodiversity)\b/iu,
   /(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)|(?:课|课程|视频|讲座|讲解|老师|讲师|主讲人)(?:中|里)?(?:提到|说到|讲到|介绍|展示)/u,
 ];
 
@@ -138,9 +141,15 @@ function sentenceUnits(plainText) {
     .map((value) => value.trim())
     .filter(Boolean);
   if (sentences.length <= 1) {
+    // Auto-caption tracks frequently contain no sentence punctuation. A
+    // 700-character fallback unit can combine a strong mechanism with an
+    // unrelated statistic; excluding the statistic then discards the useful
+    // concept as collateral damage. Smaller units are recombined with their
+    // immediate neighbors below, preserving enough evidence context while
+    // allowing low-value spans to fail closed independently.
     return (
       normalized
-        .match(/[\s\S]{1,700}(?:\s|$)/g)
+        .match(/[\s\S]{1,120}(?:\s|$)/g)
         ?.map((value) => value.trim()) ?? [normalized]
     );
   }
@@ -232,11 +241,12 @@ export function questionTestsTaughtConcept(candidate) {
 
 function learnerVisibleCandidateText(candidate) {
   const claim = candidate?.claim;
+  // answerSpan and whyWrong are private validation aids. They are never
+  // persisted in a learner-visible question, so source-language evidence in
+  // those fields must not trigger a presentation-framing repair.
   const distractors = Array.isArray(candidate?.distractors)
-    ? candidate.distractors.flatMap((value) =>
-        value && typeof value === "object"
-          ? [value.text, value.whyWrong]
-          : [value],
+    ? candidate.distractors.map((value) =>
+        value && typeof value === "object" ? value.text : value,
       )
     : [];
   return [
@@ -245,7 +255,6 @@ function learnerVisibleCandidateText(candidate) {
     candidate?.explanation,
     candidate?.answer,
     candidate?.correctAnswer,
-    candidate?.answerSpan,
     candidate?.answerText,
     candidate?.correction,
     candidate?.supportedStatement,
@@ -277,16 +286,185 @@ const CONCEPTUAL_QUESTION_PATTERNS = [
   /(?:定义|条件|关系|原因|结果|为什么|如何|机制|过程|方法|公式|计算|推导|应用|比较|作用|功能|性质|原理|定理|导致)/u,
 ];
 
+// Presentation vehicles are not assessment concepts. Keep this deliberately
+// narrow so technical uses such as a network link or a DNA strand remain
+// available, while the production metaphors that previously leaked into
+// answer controls fail before storage.
+const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
+  /\b(?:weav(?:e|es|ing|en)|tapestr(?:y|ies)|unravel(?:s|ed|ing)?)\b/iu,
+  /\b(?:cut(?:ting)?\s+(?:too\s+)?many\s+links?|every\s+link\s+(?:provides|gives|adds)\s+stability)\b/iu,
+  /\b(?:entire\s+)?fabric\s+of\s+(?:the\s+)?(?:reef|ecosystem|community|life|nature)\b/iu,
+  /\bjacket\s+of\s+gases\b/iu,
+  /(?:编织|织网|织物|线头|解开整张网|生态系统的结构|生态网络|气体外套)/u,
+];
+
+const HOW_CAN_QUESTION_PATTERN = /^\s*how\s+(?:can|could|may|might)\b/iu;
+const CONCESSIVE_NON_ANSWER_PATTERN =
+  /^\s*(?:(?:it|they|this|that)\s+(?:can|could|may|might)\s+)?even\s+(?:without|despite|when|if)\b/iu;
+const MALFORMED_WH_ACTION_STEM_PATTERN =
+  /^\s*what\s+(?:condition|factor|cause|process|method)\s+(?:do|does|did|can|could|will|would)\b.{0,160}\b(?:provide|support|affect|influence|enable|allow)\b/iu;
+const PLURAL_HOW_SINGULAR_PRONOUN_PATTERN =
+  /^\s*how\s+(?:do|can|could|may|might)\b/iu;
+const HOW_CAN_MECHANISM_ANSWER_PATTERN =
+  /^(?:when|if|by|because|through|due\s+to|as\s+(?:a\s+result|\p{L}+\s+(?:declines?|falls?|rises?|increases?|decreases?)))\b|\b(?:loss|lack|reduction|removal|failure|disruption|decline|depletion|fragmentation|mutation|competition|pressure)\b.{0,120}\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|(?:当|如果|通过|因为|由于|随着|导致|使得?|削弱|降低|减少|破坏|增加)/iu;
+const HOW_OUTCOME_QUESTION_PATTERN =
+  /^\s*how\s+(?:does|do|did|can|could|will|would)\b.{0,220}\b(?:affect|contribute(?:s)?(?:\s+to)?|support|strengthen|weaken|protect|promote|improve|reduce|increase|decrease|influence|impact|help|enable|allow|cause|determine|relate|depend|secure)\b/iu;
+const OUTCOME_ANSWER_PATTERN =
+  /\b(?:by|because|through|thereby|so that|allow(?:s|ed|ing)?|enable(?:s|d|ing)?|help(?:s|ed|ing)?|support(?:s|ed|ing)?|stabili[sz](?:e|es|ed|ing)|strengthen(?:s|ed|ing)?|weaken(?:s|ed|ing)?|increase(?:s|d|ing)?|decrease(?:s|d|ing)?|reduce(?:s|d|ing)?|prevent(?:s|ed|ing)?|protect(?:s|ed|ing)?|provide(?:s|d|ing)?|create(?:s|d|ing)?|distribut(?:e|es|ed|ing)|maintain(?:s|ed|ing)?|cause(?:s|d|ing)?|lead(?:s|ing)?\s+to|result(?:s|ed|ing)?\s+in|make(?:s|ing)?|affect(?:s|ed|ing)?|influenc(?:e|es|ed|ing)|promot(?:e|es|ed|ing)|facilitat(?:e|es|ed|ing)|ensure(?:s|d|ing)?|depend(?:s|ed|ing)?|share(?:s|d|ing)?|correspond(?:s|ed|ing)?|relat(?:e|es|ed|ing)|associate(?:s|d|ing)?|determin(?:e|es|ed|ing)|change(?:s|d|ing)?|rise(?:s|n)?|fall(?:s|en)?|encrypt(?:s|ed|ing)?|decrypt(?:s|ed|ing)?|authenticat(?:e|es|ed|ing)|verif(?:y|ies|ied|ying)|sign(?:s|ed|ing)?)\b/iu;
+// A bounded cross-domain action vocabulary catches complete mechanisms that
+// do not use one of the causal connector verbs above. The previous list
+// falsely rejected valid answers such as "disperse their seeds" and "corals
+// form interdependent relationships". This still rejects bare factors and
+// component lists because a complete action verb must be present.
+const OUTCOME_ACTION_ANSWER_PATTERN =
+  /\b(?:absorb(?:s|ed|ing)?|adapt(?:s|ed|ing)?|amplif(?:y|ies|ied|ying)|attract(?:s|ed|ing)?|bind(?:s|ing|bound)?|block(?:s|ed|ing)?|break(?:s|ing)?\s+down|carry|carries|carried|carrying|circulat(?:e|es|ed|ing)|combin(?:e|es|ed|ing)|connect(?:s|ed|ing)?|consum(?:e|es|ed|ing)|convert(?:s|ed|ing)?|coordinat(?:e|es|ed|ing)|decompos(?:e|es|ed|ing)|detect(?:s|ed|ing)?|dispers(?:e|es|ed|ing)|dissolv(?:e|es|ed|ing)|exchange(?:s|d|ing)?|feed(?:s|ing)?|filter(?:s|ed|ing)?|form(?:s|ed|ing)?|generat(?:e|es|ed|ing)|grow(?:s|ing|n)?|interact(?:s|ed|ing)?|move(?:s|d|ing)?|organ(?:ize|izes|ized|izing|ise|ises|ised|ising)|produc(?:e|es|ed|ing)|recycl(?:e|es|ed|ing)|reflect(?:s|ed|ing)?|regulat(?:e|es|ed|ing)|release(?:s|d|ing)?|remove(?:s|d|ing)?|repel(?:s|led|ling)?|reproduc(?:e|es|ed|ing)|resist(?:s|ed|ing)?|route(?:s|d|ing)?|scatter(?:s|ed|ing)?|spread(?:s|ing)?|store(?:s|d|ing)?|surviv(?:e|es|ed|ing)|transfer(?:s|red|ring)?|transmit(?:s|ted|ting)?|transport(?:s|ed|ing)?|trap(?:s|ped|ping)?|trigger(?:s|ed|ing)?|withstand(?:s|ing)?)\b/iu;
+const OUTCOME_RELATION_PATTERN =
+  /\b(?:is|are|become(?:s)?|remain(?:s)?)\b.{0,100}\b(?:more|less|higher|lower|greater|smaller|larger|increased|decreased|reduced|vulnerable|resilient|stable|unstable|likely|unlikely|similar|different|dependent|independent)\b/iu;
+const CJK_OUTCOME_ANSWER_PATTERN =
+  /(?:通过|因为|因此|从而|使得?|导致|促进|支持|增强|减弱|提高|降低|减少|防止|保护|提供|产生|分配|维持|依赖|共享|对应|相关|决定|改变|上升|下降|加密|解密|验证)/u;
+
+/**
+ * Require an answer to supply the outcome, relationship, or mechanism promised
+ * by an explicit How-does/How-do question. Merely naming components or copying
+ * a descriptive fragment is not an answer to a causal/contribution stem.
+ */
+export function multipleChoiceOptionMatchesQuestionKind(question, answer) {
+  const prompt = String(question ?? "").trim();
+  const choice = String(answer ?? "").trim();
+  if (!prompt || !choice) return true;
+  if (
+    HOW_CAN_QUESTION_PATTERN.test(prompt) &&
+    !HOW_CAN_MECHANISM_ANSWER_PATTERN.test(choice) &&
+    !OUTCOME_ACTION_ANSWER_PATTERN.test(choice)
+  ) {
+    return false;
+  }
+  if (!HOW_OUTCOME_QUESTION_PATTERN.test(prompt)) return true;
+  if (formulaFingerprint(choice)) return true;
+  return (
+    OUTCOME_ANSWER_PATTERN.test(choice) ||
+    OUTCOME_ACTION_ANSWER_PATTERN.test(choice) ||
+    OUTCOME_RELATION_PATTERN.test(choice) ||
+    CJK_OUTCOME_ANSWER_PATTERN.test(choice)
+  );
+}
+
+const COMPLETE_MC_ASSERTION_PATTERN =
+  /(?:\b(?:is|are|was|were|will|would|can|could|has|have|had|causes?|caused|leads?|led|results?|resulted|increases?|increased|decreases?|decreased|rises?|rose|falls?|fell|traps?|trapped|absorbs?|absorbed|releases?|released|produces?|produced|converts?|converted|prevents?|prevented|protects?|protected|supports?|supported|depends?|depended)\b|(?:是|会|能够|导致|增加|减少|上升|下降|吸收|释放|产生|转换|防止|保护|支持|依赖))/iu;
+
+/**
+ * Repair only the stem when the model already supplied a complete, grounded
+ * assertion but paired it with an incompatible wh-form. This is not a content
+ * rewrite: the answer, evidence, distractors, and objective remain unchanged.
+ * Bare factors, component lists, concessive fragments, and tautologies still
+ * fail closed and consume the normal targeted repair budget.
+ */
+export function repairMultipleChoiceQuestionKind(candidate, answer) {
+  const concept = String(candidate?.concept ?? "")
+    .normalize("NFC")
+    .replace(/[.!?。！？]+$/gu, "")
+    .trim();
+  const assertion = String(answer ?? "")
+    .normalize("NFC")
+    .trim();
+  if (!concept || !assertion) return null;
+  if ((semanticTokens(assertion).size ?? 0) < 4) return null;
+  if (!COMPLETE_MC_ASSERTION_PATTERN.test(assertion)) return null;
+  if (CONCESSIVE_NON_ANSWER_PATTERN.test(assertion)) return null;
+  const normalizedConcept = normalizeGroundedText(concept);
+  const normalizedAssertion = normalizeGroundedText(assertion);
+  if (
+    normalizedConcept.length >= 12 &&
+    normalizedAssertion.length >= 12 &&
+    (normalizedConcept.includes(normalizedAssertion) ||
+      normalizedAssertion.includes(normalizedConcept))
+  ) {
+    return null;
+  }
+  if (
+    SOURCE_REFERENCE_PATTERNS.some((pattern) => pattern.test(concept)) ||
+    LOGISTICS_PATTERNS.some((pattern) => pattern.test(concept))
+  ) {
+    return null;
+  }
+  const objective = String(candidate?.objectiveCategory ?? "").toLowerCase();
+  const isChinese = /\p{Script=Han}/u.test(concept);
+  const lead = isChinese
+    ? objective === "definition"
+      ? "请选择正确定义"
+      : objective === "condition"
+        ? "请选择正确说明以下概念成立条件的陈述："
+        : objective === "mechanism"
+          ? "请选择正确解释以下机制的陈述："
+          : objective === "method"
+            ? "请选择正确描述以下方法的陈述："
+            : objective === "application"
+              ? "请选择正确应用"
+              : objective === "formula"
+                ? "请选择正确表示"
+                : "请选择正确描述"
+    : objective === "definition"
+      ? "Which statement correctly defines"
+      : objective === "condition"
+        ? "Which statement correctly identifies the condition for"
+        : objective === "mechanism"
+          ? "Which statement correctly explains the mechanism of"
+          : objective === "method"
+            ? "Which statement correctly describes the method for"
+            : objective === "application"
+              ? "Which statement correctly applies"
+              : objective === "formula"
+                ? "Which expression correctly represents"
+                : "Which statement correctly describes";
+  const question = isChinese
+    ? objective === "definition" || objective === "application"
+      ? `${lead}${concept}的陈述。`
+      : objective === "formula"
+        ? `${lead}${concept}的表达式。`
+        : objective === "condition" ||
+            objective === "mechanism" ||
+            objective === "method"
+          ? `${lead}${concept}。`
+          : `${lead}${concept}的陈述。`
+    : `${lead} ${concept}?`;
+  return questionConceptFailure({
+    ...candidate,
+    question,
+    answerText: assertion,
+    correctAnswer: assertion,
+  }) === null
+    ? question
+    : null;
+}
+
 const NUMERIC_RECALL_QUESTION_PATTERN =
   /^\s*(?:(?:what (?:percentage|percent|number|count|frequency|duration|amount|value|cost|price)|how (?:many|often|long|much))\b|(?:多少|几次|多久|百分之几|占比多少|价值多少|价格多少|成本多少))/iu;
 const NECESSARY_NUMERIC_OBJECTIVE_PATTERN =
   /\b(?:calculate|compute|derive|solve|formula|equation|law|threshold|limit|rate|ratio|minimum|required|maximum|mechanism|causes?|because|results? in|produces?)\b|(?:计算|推导|求解|公式|方程|定律|阈值|极限|速率|比率|最小|必须|最大|机制|导致|因为|产生)/iu;
 const NON_TRANSFERABLE_QUANTITATIVE_PATTERN =
-  /(?:\b(?:estimated|reported|surveyed|annual)\b.{0,60}\b(?:monetary|market|economic|financial)?\s*(?:value|worth|cost|price|output|total|amount|percentage|percent|count|frequency|figure|statistic)s?\b|\b(?:annual monetary value|monetary value|global economic output|market worth|economic estimate|survey percentage)\b|[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:trillion|billion|million|thousand)\s+(?:dollars?|euros?|pounds?|yen)\b|(?:估计|估算|报告|调查).{0,30}(?:货币价值|市场价值|经济产出|金额|百分比|数量|频率)|(?:货币价值|市场价值|经济产出).{0,30}(?:万亿|亿|万元|美元|人民币))/iu;
+  /(?:\b(?:estimated|reported|surveyed|annual)\b.{0,60}\b(?:monetary|market|economic|financial)?\s*(?:value|worth|cost|price|output|total|amount|percentage|percent|count|frequency|figure|statistic)s?\b|\b(?:projected|forecast|predicted|estimated|expected)\b.{0,90}\b(?:range|increase|decrease|change|temperature|amount|value|percentage|percent|count|frequency|figure|statistic)s?\b|\b(?:annual monetary value|monetary value|global economic output|market worth|economic estimate|survey percentage)\b|[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:trillion|billion|million|thousand)\s+(?:dollars?|euros?|pounds?|yen)\b|(?:估计|估算|报告|调查).{0,30}(?:货币价值|市场价值|经济产出|金额|百分比|数量|频率)|(?:货币价值|市场价值|经济产出).{0,30}(?:万亿|亿|万元|美元|人民币))/iu;
 const PRESENTATION_STATISTIC_ATTRIBUTION_PATTERN =
   /\baccording to\b.{0,80}\b(?:calculations?|estimates?|statistics?|surveys?|figures?|reported data)\b|(?:根据|按照).{0,30}(?:计算|估算|统计|调查|数据)/iu;
+const ATTRIBUTED_MEASUREMENT_SOURCE_PATTERN =
+  /\baccording to\b.{0,90}\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data|nasa|noaa|who|cdc)\b|\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data)\s+(?:from|by)\s+(?:nasa|noaa|who|cdc|the\s+\p{L}+(?:\s+\p{L}+){0,3})\b|\b(?:reports?|reported|records?|recorded|measures?|measured|observes?|observed|estimates?|estimated)\b.{0,100}\b(?:(?:1[5-9]|20)\d{2}|\d+(?:\.\d+)?\s*(?:%|percent))\b|(?:根据|按照).{0,40}(?:研究|报告|记录|测量|观测|数据)/iu;
+const NON_TRANSFERABLE_DATE_STATISTIC_SOURCE_PATTERN =
+  /\b(?:the\s+year|in)\s+(?:1[5-9]|20)\d{2}\b.{0,120}\b(?:warmest|coldest|highest|lowest|largest|smallest|most|least|recorded|reported|observed|measured|record)\b/iu;
 const QUANTITATIVE_ANSWER_PATTERN =
-  /(?:[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:%|percent|trillion|billion|million|thousand|dollars?|euros?|pounds?|yen|years?|times|devices?|people)\b|^(?:it is |they are )?(?:less|greater|higher|lower|more|fewer|equal|about half|roughly twice)\b|(?:万亿|亿|万元|美元|人民币|百分之|更少|更多|更高|更低))/iu;
+  /(?:[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:to|[-–—])\s*\d+(?:\.\d+)?\s*(?:degrees?(?:\s+(?:fahrenheit|celsius))?|°\s*[cf]|%|percent|years?|months?|days?|hours?|minutes?|seconds?)?\b|\b\d+(?:\.\d+)?\s*(?:degrees?(?:\s+(?:fahrenheit|celsius))?|°\s*[cf]|ppm|ppb|%|percent|trillion|billion|million|thousand|dollars?|euros?|pounds?|yen|years?|times|devices?|people)\b|^(?:it is |they are )?(?:less|greater|higher|lower|more|fewer|equal|about half|roughly twice)\b|(?:万亿|亿|万元|美元|人民币|百分之|更少|更多|更高|更低))/iu;
+const EXTERNAL_AUTHORITY_QUESTION_PATTERN =
+  /^\s*(?:what|which|how)\b.{0,120}\b(?:organizations?|agencies|experts?|scientists?|researchers?|analysts?)\b.{0,80}\b(?:advocate|recommend|suggest|say|state|report|predict|project|estimate)\b/iu;
+
+function isNonTransferableQuantitativeEvidence(value) {
+  const text = String(value ?? "");
+  if (NECESSARY_NUMERIC_OBJECTIVE_PATTERN.test(text)) return false;
+  return (
+    NON_TRANSFERABLE_QUANTITATIVE_PATTERN.test(text) ||
+    PRESENTATION_STATISTIC_ATTRIBUTION_PATTERN.test(text) ||
+    ATTRIBUTED_MEASUREMENT_SOURCE_PATTERN.test(text) ||
+    NON_TRANSFERABLE_DATE_STATISTIC_SOURCE_PATTERN.test(text) ||
+    QUANTITATIVE_ANSWER_PATTERN.test(text)
+  );
+}
 
 function hasSuppliedCalculationOperands(question) {
   return (String(question).match(/\b\d+(?:\.\d+)?\b/gu)?.length ?? 0) >= 2;
@@ -304,6 +482,16 @@ export function questionConceptFailure(candidate) {
   }
   if (LOGISTICS_PATTERNS.some((pattern) => pattern.test(inspected))) {
     return "course_logistics_invalid";
+  }
+  if (EXTERNAL_AUTHORITY_QUESTION_PATTERN.test(question)) {
+    return "source_framing_invalid";
+  }
+  if (
+    FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
+      pattern.test(inspected),
+    )
+  ) {
+    return "low_pedagogical_value";
   }
   if (
     LOW_VALUE_RECALL_PATTERNS.some((pattern) => pattern.test(question)) &&
@@ -359,6 +547,28 @@ export function questionConceptFailure(candidate) {
   ) {
     return "question_answer_kind_mismatch";
   }
+  // A concessive condition is not a mechanism. The production regression
+  // asked "How can an ecosystem become vulnerable ...?" but accepted "even
+  // without catastrophic events" as the answer. That phrase only repeats the
+  // stem's exception; it never explains how the outcome occurs.
+  if (
+    HOW_CAN_QUESTION_PATTERN.test(question) &&
+    CONCESSIVE_NON_ANSWER_PATTERN.test(directAnswerSource)
+  ) {
+    return "question_answer_kind_mismatch";
+  }
+  if (MALFORMED_WH_ACTION_STEM_PATTERN.test(question)) {
+    return "question_answer_kind_mismatch";
+  }
+  if (
+    PLURAL_HOW_SINGULAR_PRONOUN_PATTERN.test(question) &&
+    /^\s*(?:it|this)\b/iu.test(directAnswerSource)
+  ) {
+    return "question_answer_kind_mismatch";
+  }
+  if (!multipleChoiceOptionMatchesQuestionKind(question, directAnswerSource)) {
+    return "question_answer_kind_mismatch";
+  }
   return null;
 }
 
@@ -375,11 +585,10 @@ const HAN_SCRIPT_PATTERN = /\p{Script=Han}/u;
  * must never mix the source language into an answer control.
  */
 export function questionMatchesQuizLanguage(candidate, quizLanguage) {
+  // Distractor rationales remain extension-local and are not rendered.
   const distractors = Array.isArray(candidate?.distractors)
-    ? candidate.distractors.flatMap((entry) =>
-        entry && typeof entry === "object"
-          ? [entry.text, entry.whyWrong]
-          : [entry],
+    ? candidate.distractors.map((entry) =>
+        entry && typeof entry === "object" ? entry.text : entry,
       )
     : [];
   const values = [
@@ -416,6 +625,10 @@ export function questionMatchesQuizLanguage(candidate, quizLanguage) {
 function sentenceExcludedFromConceptFirst(value) {
   return (
     LOGISTICS_PATTERNS.some((pattern) => pattern.test(value)) ||
+    isNonTransferableQuantitativeEvidence(value) ||
+    FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
+      pattern.test(value),
+    ) ||
     /\b(?:hello|hi everyone|welcome(?: back)?|thanks for watching|see you next|subscribe|like and share|sponsor(?:ed)?|promo code|my name is|today i(?:'m| am) joined by)\b/iu.test(
       value,
     ) ||
@@ -445,12 +658,6 @@ function conceptFirstInstructionalScore(value, topicTokens) {
     score += 3;
   }
   if (/[=+*/^≤≥≈]|\b\w+\([^)]*\)/u.test(value)) score += 3;
-  if (
-    NON_TRANSFERABLE_QUANTITATIVE_PATTERN.test(value) &&
-    !NECESSARY_NUMERIC_OBJECTIVE_PATTERN.test(value)
-  ) {
-    score -= 8;
-  }
   score += Math.min(5, Math.floor(tokens.size / 8));
   if (value.length >= 45 && value.length <= 700) score += 2;
   return score;
@@ -486,7 +693,11 @@ export function buildConceptFirstInstructionalSelection(
 
   const safeByIndex = new Map(safe.map((entry) => [entry.index, entry]));
   const windows = safe.map((entry) => {
-    const neighbors = [-1, 0, 1]
+    // Lead with the scored center sentence so the model sees the selected
+    // objective before its supporting context. Neighboring sentences remain
+    // available for evidence, but cannot accidentally become the repeated
+    // headline claim of adjacent windows.
+    const neighbors = [0, -1, 1]
       .map((offset) => safeByIndex.get(entry.index + offset))
       .filter(Boolean);
     const text = neighbors
@@ -633,11 +844,46 @@ export function focusExcerptForOrdinal(
 ) {
   const excerpts = buildInstructionalExcerpts(plainText, options);
   if (!excerpts.length) return "";
-  if (options.conceptFirstV58 || options.strict) {
-    const repairStride = options.conceptFirstV58
-      ? Math.max(1, totalQuestions)
-      : 1;
-    const index = (ordinal + repairCycle * repairStride) % excerpts.length;
+  if (options.conceptFirstV58) {
+    // A very short source can yield fewer safe windows than requested
+    // questions. Rotate those windows immediately instead of pinning several
+    // early ordinals to q1's strongest focus. Reuse is unavoidable in this
+    // scarcity case, but adjacent primary calls still receive different
+    // evidence whenever at least two safe windows exist.
+    if (excerpts.length < totalQuestions) {
+      const boundedOrdinal = Math.max(0, Math.min(totalQuestions - 1, ordinal));
+      const index =
+        (boundedOrdinal + Math.max(0, repairCycle)) % excerpts.length;
+      return excerpts[index].slice(0, 2_400).trim();
+    }
+    // q1 keeps the strongest-ranked window. Spread later primary questions
+    // across the complete safe evidence set instead of walking adjacent
+    // high-scoring windows, which often describe the same objective. Each
+    // ordinal owns the range from its primary index up to (but excluding) the
+    // next ordinal's primary index. Repairs rotate only inside that range, so
+    // a q1 repair can never become q2's primary objective.
+    const boundedOrdinal = Math.max(0, Math.min(totalQuestions - 1, ordinal));
+    const rangeStart = Math.min(
+      excerpts.length - 1,
+      Math.floor(
+        (boundedOrdinal / Math.max(1, totalQuestions)) * excerpts.length,
+      ),
+    );
+    const nextRangeStart = Math.min(
+      excerpts.length,
+      Math.floor(
+        ((boundedOrdinal + 1) / Math.max(1, totalQuestions)) * excerpts.length,
+      ),
+    );
+    const rangeWidth = Math.max(1, nextRangeStart - rangeStart);
+    const index = Math.min(
+      excerpts.length - 1,
+      rangeStart + (Math.max(0, repairCycle) % rangeWidth),
+    );
+    return excerpts[index].slice(0, 2_400).trim();
+  }
+  if (options.strict) {
+    const index = (ordinal + repairCycle) % excerpts.length;
     return excerpts[index].slice(0, 2_400).trim();
   }
   const base = Math.min(
@@ -723,12 +969,40 @@ export function candidateDuplicatesAccepted(
   const cluster = conceptClusterForCandidate(candidate);
   if (!claimKey || !cluster) return true;
   if (accepted.some((question) => question.claimKey === claimKey)) return true;
+  const candidateAnswer =
+    candidate?.type === "multiple_choice"
+      ? (candidate?.correctAnswer ??
+        candidate?.answerText ??
+        candidate?.answerSpan)
+      : undefined;
+  if (
+    candidateAnswer &&
+    accepted.some(
+      (question) =>
+        question.type === "multiple_choice" &&
+        question.answer &&
+        conceptSimilarity(question.answer, candidateAnswer) >= 0.8,
+    )
+  ) {
+    return true;
+  }
   if (
     accepted.some(
       (question) =>
         question.claimKey &&
         conceptSimilarity(question.claimKey, claimKey) >= 0.65,
     )
+  ) {
+    return true;
+  }
+  if (
+    accepted.some((question) => {
+      const acceptedCluster = question.conceptCluster ?? question.concept ?? "";
+      return (
+        conceptSimilarity(acceptedCluster, cluster) >= 0.85 &&
+        conceptSimilarity(question.question, candidate.question) >= 0.5
+      );
+    })
   ) {
     return true;
   }
@@ -784,6 +1058,121 @@ export function answerSupportedByEvidence(answer, evidence) {
     if (evidenceTokens.has(token)) supportedTokens += 1;
   }
   return supportedTokens / answerTokens.size >= 0.75;
+}
+
+const DIRECTIONAL_SCOPE_TOKENS = new Set([
+  "absence",
+  "decreased",
+  "decreasing",
+  "fewer",
+  "greater",
+  "higher",
+  "increased",
+  "increasing",
+  "lack",
+  "less",
+  "loss",
+  "lower",
+  "more",
+  "reduced",
+  "reduction",
+]);
+
+const DIRECTIONAL_SCOPE_BOUNDARIES = new Set([
+  "are",
+  "be",
+  "became",
+  "become",
+  "becomes",
+  "can",
+  "cause",
+  "causes",
+  "could",
+  "had",
+  "has",
+  "have",
+  "is",
+  "lead",
+  "leads",
+  "make",
+  "makes",
+  "may",
+  "might",
+  "result",
+  "results",
+  "was",
+  "were",
+  "will",
+  "would",
+]);
+
+const RELATIONSHIP_QUESTION_PATTERN =
+  /\b(?:affect|contribute|effect|impact|influence|relationship|role|what happens|how do|how does|why do|why does)\b/iu;
+
+function directionalScopes(value) {
+  const tokens = normalizeGroundedText(value).split(/\s+/u).filter(Boolean);
+  const scopes = [];
+  for (let index = 0; index < tokens.length; index += 1) {
+    const modifier = tokens[index];
+    if (!DIRECTIONAL_SCOPE_TOKENS.has(modifier)) continue;
+    let nounStart = index + 1;
+    if (["absence", "lack", "loss", "reduction"].includes(modifier)) {
+      if (tokens[nounStart] !== "of") continue;
+      nounStart += 1;
+    }
+    const nounTokens = [];
+    for (
+      let cursor = nounStart;
+      cursor < tokens.length && nounTokens.length < 4;
+      cursor += 1
+    ) {
+      const token = tokens[cursor];
+      if (DIRECTIONAL_SCOPE_BOUNDARIES.has(token)) break;
+      nounTokens.push(token);
+    }
+    if (!nounTokens.length) continue;
+    const phrase = nounTokens.join(" ");
+    if (phrase.length >= 4) scopes.push({ modifier, phrase });
+  }
+  return scopes;
+}
+
+/**
+ * Reject a relationship answer that silently drops a directional qualifier
+ * from the evidence and then uses a pronoun as if the unqualified concept were
+ * the subject. For example, evidence about "less genetic diversity" cannot
+ * support "genetic diversity makes a species more vulnerable." The model may
+ * instead keep "less" in the stem or state the complete directional relation
+ * in the answer.
+ */
+export function multipleChoiceQuestionAnswerIsCoherent(
+  question,
+  answer,
+  evidence,
+) {
+  const normalizedQuestion = normalizeGroundedText(question);
+  const normalizedAnswer = normalizeGroundedText(answer);
+  if (!multipleChoiceOptionMatchesQuestionKind(question, answer)) {
+    return false;
+  }
+  if (
+    !normalizedQuestion ||
+    !normalizedAnswer ||
+    !RELATIONSHIP_QUESTION_PATTERN.test(question)
+  ) {
+    return true;
+  }
+  for (const { modifier, phrase } of directionalScopes(evidence)) {
+    if (!normalizedQuestion.includes(phrase)) continue;
+    const scopedPhrase = `${modifier} ${phrase}`;
+    const questionKeepsScope = normalizedQuestion.includes(scopedPhrase);
+    const answerKeepsScope =
+      normalizedAnswer.includes(scopedPhrase) ||
+      (normalizedAnswer.includes(phrase) &&
+        normalizedAnswer.split(/\s+/u).includes(modifier));
+    if (!questionKeepsScope && !answerKeepsScope) return false;
+  }
+  return true;
 }
 
 export function resolveUniqueEvidenceAnswerSpan(answerSpan, evidence) {
@@ -863,6 +1252,120 @@ function isVerifiedContradiction(source, replacement) {
   return (
     withoutNumber(normalizedSource) === withoutNumber(normalizedReplacement)
   );
+}
+
+function isOneSurfaceEditApart(left, right) {
+  if (left === right) return true;
+  if (Math.abs(left.length - right.length) > 1) return false;
+  const [shorter, longer] =
+    left.length <= right.length ? [left, right] : [right, left];
+  let shortIndex = 0;
+  let longIndex = 0;
+  let edits = 0;
+  while (shortIndex < shorter.length && longIndex < longer.length) {
+    if (shorter[shortIndex] === longer[longIndex]) {
+      shortIndex += 1;
+      longIndex += 1;
+      continue;
+    }
+    edits += 1;
+    if (edits > 1) return false;
+    if (shorter.length === longer.length) shortIndex += 1;
+    longIndex += 1;
+  }
+  if (longIndex < longer.length || shortIndex < shorter.length) edits += 1;
+  return edits <= 1;
+}
+
+function isSafeCaptionSurfaceCorrection(source, replacement) {
+  const sourceTokens = normalizeGroundedText(source)
+    .split(/\s+/u)
+    .filter(Boolean);
+  const replacementTokens = normalizeGroundedText(replacement)
+    .split(/\s+/u)
+    .filter(Boolean);
+  if (
+    !sourceTokens.length ||
+    sourceTokens.length !== replacementTokens.length
+  ) {
+    return false;
+  }
+  const differences = [];
+  for (let index = 0; index < sourceTokens.length; index += 1) {
+    if (sourceTokens[index] !== replacementTokens[index]) {
+      differences.push([sourceTokens[index], replacementTokens[index]]);
+    }
+  }
+  if (!differences.length || differences.length > 2) return false;
+  return differences.every(([from, to]) => {
+    if (
+      DIRECTIONAL_SCOPE_TOKENS.has(from) ||
+      DIRECTIONAL_SCOPE_TOKENS.has(to) ||
+      isVerifiedContradiction(from, to)
+    ) {
+      return false;
+    }
+    return isOneSurfaceEditApart(from, to);
+  });
+}
+
+function hasUniqueSafeCaptionSurfaceMatch(candidate, source) {
+  const candidateTokens = normalizeGroundedText(candidate)
+    .split(/\s+/u)
+    .filter(Boolean);
+  const sourceTokens = normalizeGroundedText(source)
+    .split(/\s+/u)
+    .filter(Boolean);
+  if (!candidateTokens.length || sourceTokens.length < candidateTokens.length) {
+    return false;
+  }
+  let matches = 0;
+  for (
+    let index = 0;
+    index <= sourceTokens.length - candidateTokens.length;
+    index += 1
+  ) {
+    const sourceWindow = sourceTokens
+      .slice(index, index + candidateTokens.length)
+      .join(" ");
+    if (
+      isSafeCaptionSurfaceCorrection(sourceWindow, candidateTokens.join(" "))
+    ) {
+      matches += 1;
+      if (matches > 1) return false;
+    }
+  }
+  return matches === 1;
+}
+
+function correctObviousCaptionPlural(value) {
+  const original = String(value ?? "").trim();
+  if (!original) return null;
+  const corrected = original.replace(
+    /\b(hundred|thousand|million|billion)\s+of\b/giu,
+    (match, magnitude, offset, source) => {
+      const previousToken = source
+        .slice(0, offset)
+        .match(/(?:^|\s)([\p{L}\p{N}]+)\s*$/u)?.[1]
+        ?.toLocaleLowerCase("en-US");
+      if (
+        previousToken &&
+        /^(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|several|many|few|\d+)$/u.test(
+          previousToken,
+        )
+      ) {
+        return match;
+      }
+      return `${magnitude}s of`;
+    },
+  );
+  if (
+    corrected === original ||
+    !isSafeCaptionSurfaceCorrection(original, corrected)
+  ) {
+    return null;
+  }
+  return corrected;
 }
 
 export function applyVerifiedMutation(supportedStatement, mutation) {
@@ -975,52 +1478,175 @@ export function constructConceptFirstTrueFalseQuestion(
   const supported = String(
     candidate?.supportedFact ?? candidate?.supportedStatement ?? "",
   ).trim();
-  if (
-    !evidenceAppearsInText(evidence, focusExcerpt) ||
-    !supported ||
-    !normalizeGroundedText(evidence).includes(normalizeGroundedText(supported))
-  ) {
+  const groundingSource = evidenceAppearsInText(evidence, focusExcerpt)
+    ? evidence
+    : focusExcerpt;
+  const exactSupported = resolveUniqueEvidenceAnswerSpan(
+    supported,
+    groundingSource,
+    groundingSource,
+  );
+  const resolvedSupported =
+    exactSupported ??
+    (answerSupportedByEvidence(supported, groundingSource)
+      ? supported.normalize("NFC").trim()
+      : null);
+  if (!resolvedSupported) {
     return null;
   }
   const directExplanation = String(candidate?.explanation ?? "").trim();
+  const explanation =
+    directExplanation &&
+    normalizeGroundedText(directExplanation) !==
+      normalizeGroundedText(resolvedSupported)
+      ? directExplanation
+      : `This statement is accurate: ${resolvedSupported}`;
   if (preferredPolarity === false) {
-    const mutation = localFalseMutation(supported);
+    const mutation = localFalseMutation(resolvedSupported);
     if (mutation) {
       return {
         question: mutation.question,
         answer: false,
-        correction: supported,
-        explanation: directExplanation || supported,
+        correction: resolvedSupported,
+        explanation,
         mutationKind: "local_allowlisted",
       };
     }
   }
   return {
-    question: supported,
+    question: resolvedSupported,
     answer: true,
-    correction: supported,
-    explanation: directExplanation || supported,
+    correction: resolvedSupported,
+    explanation,
     mutationKind: "none",
   };
 }
 
-export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
+export function groundedMultipleChoiceCandidate(
+  candidate,
+  focusExcerpt,
+  quizLanguage = "en",
+) {
   const evidence = String(
     candidate?.evidenceQuote ?? candidate?.sourceEvidence ?? "",
   ).trim();
-  const correctAnswer = resolveUniqueEvidenceAnswerSpan(
-    candidate?.answerSpan ?? candidate?.correctAnswer,
-    evidence,
-  );
+  const requestedAnswerSpan = String(
+    candidate?.answerSpan ?? candidate?.correctAnswer ?? "",
+  ).trim();
   const learnerAnswer = String(
     candidate?.answerText ?? candidate?.correctAnswer ?? "",
   ).trim();
+  // The model's private evidence quote is a useful hint, but it is not a
+  // grading-sensitive value. If it paraphrases the selected excerpt, resolve
+  // the answer span against the authoritative local focus instead of spending
+  // another model request merely to reproduce punctuation or sentence bounds.
+  // A candidate is still rejected unless one unique answer span is present in
+  // the eligible evidence.
+  const groundingSource = evidenceAppearsInText(evidence, focusExcerpt)
+    ? evidence
+    : focusExcerpt;
+  const exactRequestedAnswerSpan = resolveUniqueEvidenceAnswerSpan(
+    requestedAnswerSpan,
+    groundingSource,
+  );
+  const exactLearnerAnswerSpan = resolveUniqueEvidenceAnswerSpan(
+    learnerAnswer,
+    groundingSource,
+  );
+  const requestedAnswerHasSafeCaptionMatch =
+    !exactRequestedAnswerSpan &&
+    hasUniqueSafeCaptionSurfaceMatch(requestedAnswerSpan, groundingSource);
+  const learnerAnswerHasSafeCaptionMatch =
+    !exactLearnerAnswerSpan &&
+    hasUniqueSafeCaptionSurfaceMatch(learnerAnswer, groundingSource);
+  const safeCaptionRepresentationsAgree =
+    (requestedAnswerHasSafeCaptionMatch &&
+      learnerAnswerHasSafeCaptionMatch &&
+      normalizeGroundedText(requestedAnswerSpan) ===
+        normalizeGroundedText(learnerAnswer)) ||
+    (Boolean(exactRequestedAnswerSpan) &&
+      learnerAnswerHasSafeCaptionMatch &&
+      isSafeCaptionSurfaceCorrection(
+        exactRequestedAnswerSpan,
+        learnerAnswer,
+      )) ||
+    (requestedAnswerHasSafeCaptionMatch &&
+      Boolean(exactLearnerAnswerSpan) &&
+      isSafeCaptionSurfaceCorrection(
+        exactLearnerAnswerSpan,
+        requestedAnswerSpan,
+      ));
+  const supportCandidateDistractors = Array.isArray(candidate?.distractors)
+    ? candidate.distractors.map((entry) =>
+        typeof entry === "string" ? entry : String(entry?.text ?? "").trim(),
+      )
+    : [];
+  const learnerAnswerIsUniquelyGrounded =
+    (answerSupportedByEvidence(learnerAnswer, groundingSource) ||
+      learnerAnswerHasSafeCaptionMatch) &&
+    supportCandidateDistractors.length >= 3 &&
+    supportCandidateDistractors.length <= 6;
+  const requestedAnswerIsGrounded =
+    answerSupportedByEvidence(requestedAnswerSpan, groundingSource) ||
+    requestedAnswerHasSafeCaptionMatch;
+  const learnerAnswerIsGrounded =
+    answerSupportedByEvidence(learnerAnswer, groundingSource) ||
+    learnerAnswerHasSafeCaptionMatch;
+  const answerRepresentationsAgree =
+    Boolean(exactRequestedAnswerSpan) ||
+    (Boolean(exactLearnerAnswerSpan) && !requestedAnswerIsGrounded) ||
+    safeCaptionRepresentationsAgree ||
+    (!requestedAnswerIsGrounded && learnerAnswerIsUniquelyGrounded) ||
+    normalizeGroundedText(requestedAnswerSpan) ===
+      normalizeGroundedText(learnerAnswer) ||
+    choicesLikelyEquivalent(requestedAnswerSpan, learnerAnswer);
+  // DeepSeek occasionally paraphrases the private answerSpan even though the
+  // learner-facing answerText is copied exactly from the evidence. Preserve a
+  // valid exact source-language span for translated quizzes; otherwise resolve
+  // the benign mismatch locally only when both representations are equivalent
+  // and independently grounded. A wrong or unrelated answer is never repaired
+  // into acceptance.
+  const groundedAnswer =
+    exactRequestedAnswerSpan ??
+    exactLearnerAnswerSpan ??
+    (learnerAnswerHasSafeCaptionMatch ? learnerAnswer : null) ??
+    (requestedAnswerHasSafeCaptionMatch ? requestedAnswerSpan : null) ??
+    (learnerAnswerIsUniquelyGrounded ? learnerAnswer : null) ??
+    (answerRepresentationsAgree &&
+    requestedAnswerIsGrounded &&
+    learnerAnswerIsGrounded
+      ? requestedAnswerSpan
+      : null);
+  const safeLearnerSurfaceCorrection =
+    quizLanguage === "en" &&
+    (exactRequestedAnswerSpan ||
+      requestedAnswerHasSafeCaptionMatch ||
+      learnerAnswerHasSafeCaptionMatch) &&
+    learnerAnswerIsGrounded &&
+    learnerAnswerIsUniquelyGrounded &&
+    safeCaptionRepresentationsAgree &&
+    (learnerAnswerHasSafeCaptionMatch ||
+      (exactRequestedAnswerSpan &&
+        isSafeCaptionSurfaceCorrection(
+          exactRequestedAnswerSpan,
+          learnerAnswer,
+        )));
+  const localExactAnswerCorrection =
+    quizLanguage === "en"
+      ? correctObviousCaptionPlural(
+          exactRequestedAnswerSpan ?? exactLearnerAnswerSpan,
+        )
+      : null;
   if (
-    !evidenceAppearsInText(evidence, focusExcerpt) ||
-    !correctAnswer ||
+    !groundedAnswer ||
     !learnerAnswer ||
+    !answerRepresentationsAgree ||
+    (!exactRequestedAnswerSpan &&
+      !learnerAnswerIsGrounded &&
+      !requestedAnswerIsGrounded) ||
     !Array.isArray(candidate?.distractors) ||
-    candidate.distractors.length !== 3
+    candidate.distractors.length < 3 ||
+    candidate.distractors.length > 6
   ) {
     return null;
   }
@@ -1029,18 +1655,23 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
   );
   if (
     distractors.some(
-      (entry) =>
-        !entry ||
-        typeof entry.text !== "string" ||
-        !entry.text.trim() ||
-        typeof entry.whyWrong !== "string" ||
-        entry.whyWrong.trim().length < 8,
+      (entry) => !entry || typeof entry.text !== "string" || !entry.text.trim(),
     )
   ) {
     return null;
   }
+  const storedAnswer =
+    quizLanguage === "zh-CN"
+      ? learnerAnswer
+      : safeLearnerSurfaceCorrection
+        ? learnerAnswer
+        : localExactAnswerCorrection
+          ? localExactAnswerCorrection
+          : (exactRequestedAnswerSpan ??
+            exactLearnerAnswerSpan ??
+            groundedAnswer);
   return {
-    correctAnswer: learnerAnswer,
+    correctAnswer: storedAnswer,
     distractors: distractors.map((entry) => entry.text.trim()),
   };
 }

@@ -440,6 +440,7 @@ export const GenerationFailureCodeSchema = z.enum([
   "mc_distractor_duplicate",
   "mc_distractor_equivalent",
   "mc_answer_kind_mismatch",
+  "mc_question_answer_mismatch",
   "true_false_fact_invalid",
   "true_false_mutation_unavailable",
   "short_atomic_invalid",

@@ -2,6 +2,7 @@ import {
   AttemptGenerationResponseSchema,
   ExtensionQuizGenerationCallEventResponseSchema,
   ExtensionQuizProgressiveImportResponseSchema,
+  GenerationFailureCodeSchema,
   GenerationClaimResponseSchema,
   MediaResolveResponseSchema,
   VideoImportResponseSchema,
@@ -44,6 +45,7 @@ import {
   publishAttemptGeneration,
 } from "./progressive-coordinator";
 import {
+  authoritativeRecoveryFailureCode,
   groundedRecoveryCooldownMs,
   groundedRecoveryIsExhausted,
 } from "./automatic-recovery-policy";
@@ -362,6 +364,7 @@ async function runAutomaticRecovery(
   let retryBudgetUsedCount =
     continuation.retryBudgetUsedCount ?? automaticRetryCount;
   let latestOrdinalAttempt = continuation.nextOrdinalAttempt ?? 1;
+  let latestModelFailureReason: GenerationFailureCode | undefined;
   const stopLocalHeartbeat = startGenerationRecordHeartbeat(generationId);
 
   const enqueueCall = (event: LocalGenerationCallEvent) => {
@@ -377,6 +380,14 @@ async function runAutomaticRecovery(
         ExtensionQuizGenerationCallEventResponseSchema,
       );
       if ("lifecycleState" in event) {
+        if (
+          event.lifecycleState === "completed" &&
+          event.outcome !== "complete"
+        ) {
+          latestModelFailureReason = GenerationFailureCodeSchema.safeParse(
+            event.outcome,
+          ).data;
+        }
         latest = {
           ...latest,
           recoveryPhase:
@@ -512,10 +523,17 @@ async function runAutomaticRecovery(
   } catch (error) {
     await ingestion.catch(() => undefined);
     if (signal.aborted || isLeaseConflict(error)) return;
-    const reasonCode =
-      error instanceof LocalGenerationRequestError
-        ? error.reasonCode
-        : "local_state_conflict";
+    const reasonCode = authoritativeRecoveryFailureCode({
+      requestReasonCode:
+        error instanceof LocalGenerationRequestError
+          ? error.reasonCode
+          : undefined,
+      endedBeforeComplete:
+        error instanceof Error &&
+        error.message ===
+          "Automatic recovery ended before the bank was complete.",
+      latestModelFailureReason,
+    });
     const groundedExhausted =
       grounded &&
       groundedRecoveryIsExhausted({

@@ -13,9 +13,12 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  multipleChoiceOptionMatchesQuestionKind,
+  multipleChoiceQuestionAnswerIsCoherent,
   questionConceptFailure,
   questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
+  repairMultipleChoiceQuestionKind,
   stripQuestionSourceFraming,
 } from "../src/grounded-quality.js";
 import { formulaFingerprint } from "../src/math-expression.js";
@@ -32,6 +35,337 @@ test("instructional excerpts exclude course administration when lesson content e
   const focus = focusExcerptForOrdinal(transcript, 0, 5);
   assert.ok(excerpts.some((value) => value.includes("Average rate of change")));
   assert.doesNotMatch(focus, /complaints|office hours|grading/iu);
+});
+
+test("multiple-choice grounding resolves an equivalent private answer span locally", () => {
+  const evidence =
+    "Rising levels of greenhouse gases in the atmosphere trap more outgoing heat.";
+  const candidate = {
+    evidenceQuote: evidence,
+    answerSpan: "higher atmospheric greenhouse-gas levels",
+    answerText: "rising levels of greenhouse gases in the atmosphere",
+    distractors: [
+      {
+        text: "lower ocean salinity",
+        whyWrong: "It does not describe the heat-trapping mechanism.",
+      },
+      {
+        text: "faster plate movement",
+        whyWrong: "It is unrelated to atmospheric heat retention.",
+      },
+      {
+        text: "weaker solar radiation",
+        whyWrong: "It reverses the direction of the supported mechanism.",
+      },
+    ],
+  };
+
+  assert.deepEqual(groundedMultipleChoiceCandidate(candidate, evidence), {
+    correctAnswer: candidate.answerText,
+    distractors: candidate.distractors.map((entry) => entry.text),
+  });
+  assert.equal(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "lower ocean salinity",
+        answerText: "lower ocean salinity",
+      },
+      evidence,
+    ),
+    null,
+    "an unrelated private span must never be repaired into acceptance",
+  );
+});
+
+test("v5.8 accepts compact distractor strings but never trusts a mismatched learner answer", () => {
+  const evidence =
+    "Species that lack genetic diversity are much more vulnerable to environmental fluctuations.";
+  const base = {
+    evidenceQuote: evidence,
+    answerSpan:
+      "Species that lack genetic diversity are much more vulnerable to environmental fluctuations",
+    answerText:
+      "Species that lack genetic diversity are much more vulnerable to environmental fluctuations",
+    distractors: [
+      "Genetic diversity affects appearance but not survival.",
+      "Low genetic diversity makes a species more resilient.",
+      "Environmental fluctuations affect every species equally.",
+    ],
+  };
+  assert.deepEqual(groundedMultipleChoiceCandidate(base, evidence), {
+    correctAnswer: base.answerSpan,
+    distractors: base.distractors,
+  });
+  assert.deepEqual(
+    groundedMultipleChoiceCandidate(
+      {
+        ...base,
+        answerText: "High genetic diversity makes species vulnerable.",
+      },
+      evidence,
+    ),
+    { correctAnswer: base.answerSpan, distractors: base.distractors },
+    "the locally resolved exact span replaces a contradictory model answer",
+  );
+});
+
+test("v5.8 preserves directional scope between a relationship stem and its answer", () => {
+  const evidence =
+    "A species with less genetic diversity is much more vulnerable to fluctuations caused by climate change, disease, or habitat fragmentation.";
+  assert.equal(
+    multipleChoiceQuestionAnswerIsCoherent(
+      "What is the role of genetic diversity in a species' ability to cope with environmental changes?",
+      "It makes the species much more vulnerable to environmental fluctuations.",
+      evidence,
+    ),
+    false,
+  );
+  assert.equal(
+    multipleChoiceQuestionAnswerIsCoherent(
+      "How does less genetic diversity affect a species' ability to cope with environmental changes?",
+      "It makes the species much more vulnerable to environmental fluctuations.",
+      evidence,
+    ),
+    true,
+  );
+  assert.equal(
+    multipleChoiceQuestionAnswerIsCoherent(
+      "How does genetic diversity affect a species' ability to cope with environmental changes?",
+      "Less genetic diversity makes the species much more vulnerable to environmental fluctuations.",
+      evidence,
+    ),
+    true,
+  );
+});
+
+test("v5.8 requires How-does choices to state an outcome or mechanism", () => {
+  for (const [question, answer] of [
+    [
+      "How does the presence of interconnected species within an ecosystem contribute to its resilience?",
+      "each packed with interconnected species",
+    ],
+    [
+      "How does biodiversity contribute to an ecosystem's strength in the face of change?",
+      "Biodiversity is built out of ecosystem, species, and genetic diversity.",
+    ],
+  ]) {
+    assert.equal(
+      multipleChoiceOptionMatchesQuestionKind(question, answer),
+      false,
+    );
+    assert.equal(
+      questionConceptFailure({
+        concept: "ecosystem resilience",
+        question,
+        answerText: answer,
+        explanation: "Biodiversity supports resilience.",
+      }),
+      "question_answer_kind_mismatch",
+    );
+  }
+
+  for (const [question, answer] of [
+    [
+      "How does genetic diversity affect a species' vulnerability to environmental changes?",
+      "Species with less genetic diversity are much more vulnerable to environmental change.",
+    ],
+    [
+      "How do many organisms in a reef depend on coral?",
+      "Coral provides shelter, breeding grounds, and microhabitats.",
+    ],
+    [
+      "How does periodic position relate to recurring chemical properties?",
+      "Elements in the same group share similar chemical properties.",
+    ],
+    [
+      "How do herbivores such as tapirs and agoutis contribute to rainforest regeneration?",
+      "They disperse seeds throughout the forest so new trees can grow.",
+    ],
+    [
+      "How does coral support biodiversity?",
+      "Corals form interdependent relationships with fungi and bacteria.",
+    ],
+  ]) {
+    assert.equal(
+      multipleChoiceOptionMatchesQuestionKind(question, answer),
+      true,
+    );
+  }
+
+  assert.equal(
+    multipleChoiceOptionMatchesQuestionKind(
+      "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      "they're actually vulnerable to collapse",
+    ),
+    false,
+  );
+  assert.equal(
+    multipleChoiceOptionMatchesQuestionKind(
+      "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      "Loss of biodiversity weakens resilience and can lead to collapse.",
+    ),
+    true,
+  );
+  assert.equal(
+    multipleChoiceOptionMatchesQuestionKind(
+      "How does biodiversity affect an ecosystem's ability to withstand change?",
+      "biodiversity",
+    ),
+    false,
+  );
+  for (const [question, answer] of [
+    [
+      "What condition do liana vines provide for trees in the Amazon rainforest?",
+      "growing thick wooden stems that support these towering trees",
+    ],
+    [
+      "How do corals support other organisms in reef ecosystems?",
+      "It provides key microhabitats, shelter, and breeding grounds.",
+    ],
+  ]) {
+    assert.equal(
+      questionConceptFailure({
+        concept: "ecosystem support",
+        question,
+        answerText: answer,
+        explanation: "The organisms support one another.",
+      }),
+      "question_answer_kind_mismatch",
+    );
+  }
+});
+
+test("v5.8 corrects only bounded caption spelling in a grounded answer", () => {
+  const evidence =
+    "A keystone organism is one that many others depend on for their suvival.";
+  const candidate = {
+    evidenceQuote: evidence,
+    answerSpan: "one that many others depend on for their suvival",
+    answerText: "one that many others depend on for their survival",
+    distractors: [
+      "one that is always the most abundant",
+      "one that lives without other organisms",
+      "one that appears only after a disturbance",
+    ],
+  };
+  assert.deepEqual(groundedMultipleChoiceCandidate(candidate, evidence), {
+    correctAnswer: candidate.answerText,
+    distractors: candidate.distractors,
+  });
+
+  assert.deepEqual(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "one that many others depend on for their survival",
+      },
+      evidence,
+    ),
+    {
+      correctAnswer: candidate.answerText,
+      distractors: candidate.distractors,
+    },
+  );
+
+  assert.equal(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "one that no others depend on for their survival",
+        answerText: "one that no others depend on for their survival",
+      },
+      evidence,
+    ),
+    null,
+  );
+
+  assert.equal(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "one that many others depend on for their survival",
+        answerText: "A keystone organism",
+      },
+      evidence,
+    ),
+    null,
+    "a corrected private span must not authorize a different exact learner answer",
+  );
+});
+
+test("v5.8 repairs an obvious caption plural locally", () => {
+  const evidence =
+    "Coral supports biodiversity in reef ecosystems. It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks.";
+  const candidate = {
+    evidenceQuote: evidence,
+    answerSpan:
+      "It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks",
+    answerText:
+      "It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks",
+    distractors: [
+      "It reduces the number of species in the reef.",
+      "It competes with every other species for resources.",
+      "It provides food only for herbivorous fish.",
+    ],
+  };
+  assert.deepEqual(groundedMultipleChoiceCandidate(candidate, evidence), {
+    correctAnswer:
+      "It provides key microhabitats, shelter and breeding grounds for thousands of species of fish, crustaceans and mollusks",
+    distractors: candidate.distractors,
+  });
+
+  const quantifiedEvidence =
+    "The survey covers one hundred of the selected wetland sites.";
+  const quantifiedCandidate = {
+    ...candidate,
+    evidenceQuote: quantifiedEvidence,
+    answerSpan: "one hundred of the selected wetland sites",
+    answerText: "one hundred of the selected wetland sites",
+  };
+  assert.deepEqual(
+    groundedMultipleChoiceCandidate(quantifiedCandidate, quantifiedEvidence),
+    {
+      correctAnswer: "one hundred of the selected wetland sites",
+      distractors: candidate.distractors,
+    },
+  );
+});
+
+test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () => {
+  for (const question of [
+    "What condition strengthens biodiversity's weave in a rainforest?",
+    "How does the loss of biodiversity strands affect human well-being?",
+    "How does cutting too many links in biodiversity affect human survival?",
+  ]) {
+    assert.equal(
+      questionConceptFailure({
+        question,
+        concept: "ecosystem interdependence",
+        explanation: "Ecosystem interdependence supports resilience.",
+      }),
+      "source_framing_invalid",
+    );
+  }
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "What happens when a keystone species threatens the entire fabric of the reef?",
+      concept: "ecosystem interdependence",
+      explanation: "Ecosystem interdependence supports resilience.",
+    }),
+    "low_pedagogical_value",
+  );
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "How does biodiversity loss affect ecosystem resilience and human well-being?",
+      concept: "ecosystem interdependence",
+      explanation:
+        "Biodiversity loss weakens ecological interactions that support resilience and human well-being.",
+    }),
+    null,
+  );
 });
 
 test("instructional excerpts reject numeric course metadata without losing concepts", () => {
@@ -139,6 +473,71 @@ test("v5.8 source selection fails closed for logistics-only material", () => {
   assert.equal(selection.metrics.selectedWindowCount, 0);
 });
 
+test("v5.8 source selection excludes attributed and statistic-only measurements", () => {
+  const transcript = [
+    "Greenhouse gases absorb outgoing infrared radiation and slow the loss of heat from Earth.",
+    "The resulting energy imbalance raises surface temperature until incoming and outgoing energy balance again.",
+    "The year 2005 was one of the warmest years in the instrumental record.",
+    "According to NASA studies, the extent of Arctic sea ice declined about 10 percent over recent decades.",
+    "Fossil-fuel combustion adds carbon dioxide to the atmosphere because oxidation converts carbon in the fuel into carbon dioxide.",
+    "Warmer ocean water expands, which contributes to sea-level rise alongside water released by melting land ice.",
+  ].join(" ");
+  const options = {
+    conceptFirstV58: true,
+    topicHint: "Global warming and the greenhouse effect",
+  };
+  const selection = buildConceptFirstInstructionalSelection(transcript, {
+    topicHint: options.topicHint,
+  });
+  const allEvidence = selection.excerpts.join(" ");
+  assert.doesNotMatch(allEvidence, /2005|10 percent|according to NASA/iu);
+  assert.match(allEvidence, /infrared radiation|fossil-fuel combustion/iu);
+  assert.match(allEvidence, /ocean water expands|sea-level rise/iu);
+  const primaryFocuses = Array.from({ length: 5 }, (_, ordinal) =>
+    focusExcerptForOrdinal(transcript, ordinal, 5, 0, options),
+  );
+  assert.ok(new Set(primaryFocuses).size >= 2);
+  assert.notEqual(primaryFocuses[0], primaryFocuses[1]);
+  for (const focus of primaryFocuses) {
+    assert.doesNotMatch(focus, /2005|10 percent|according to NASA/iu);
+  }
+});
+
+test("v5.8 isolates statistics inside punctuation-free auto captions", () => {
+  const transcript = [
+    "Solar energy reaches Earth and the surface radiates energy back toward space",
+    "naturally occurring greenhouse gases absorb some outgoing infrared energy and slow heat loss",
+    "human activity intensifies this mechanism because burning fossil fuels adds carbon dioxide to the atmosphere",
+    "scientists report that 1998 was the warmest year in measured history with 2005 close behind",
+    "according to NASA studies the extent of Arctic sea ice declined about 10 percent in recent decades",
+    "warming melts land ice and warmer ocean water expands which together raise sea level",
+    "changing temperature and precipitation shift habitat ranges and threaten species that cannot adapt or migrate",
+    "energy efficiency reduces fossil fuel demand by providing the same service with less fuel combustion",
+    "renewable electricity avoids carbon dioxide emissions during operation by replacing fossil fuel generation",
+    "protecting forests keeps stored carbon out of the atmosphere and preserves carbon uptake by living trees",
+  ].join(" ");
+  const options = {
+    conceptFirstV58: true,
+    topicHint: "Global warming and the greenhouse effect",
+  };
+  const selection = buildConceptFirstInstructionalSelection(transcript, {
+    topicHint: options.topicHint,
+  });
+  assert.ok(selection.metrics.selectedWindowCount >= 5);
+  assert.match(
+    selection.excerpts[0] ?? "",
+    /greenhouse gases|infrared energy|carbon dioxide/iu,
+  );
+  assert.doesNotMatch(
+    selection.excerpts.join(" "),
+    /1998|2005|10 percent|according to NASA/iu,
+  );
+  const primaryFocuses = Array.from({ length: 5 }, (_, ordinal) =>
+    focusExcerptForOrdinal(transcript, ordinal, 5, 0, options),
+  );
+  assert.equal(new Set(primaryFocuses).size, 5);
+});
+
 test("v5.8 repair windows do not consume the next ordinal's primary focus", () => {
   const transcript = Array.from(
     { length: 18 },
@@ -149,6 +548,43 @@ test("v5.8 repair windows do not consume the next ordinal's primary focus", () =
   const repairedQ1 = focusExcerptForOrdinal(transcript, 0, 5, 1, options);
   const primaryQ2 = focusExcerptForOrdinal(transcript, 1, 5, 0, options);
   assert.notEqual(repairedQ1, primaryQ2);
+
+  const exactPartitionTranscript = Array.from(
+    { length: 25 },
+    (_, index) =>
+      `Partition ${index + 1} transfers energy through route${index + 1} because its distinct mechanism changes result ${index + 40}.`,
+  ).join(" ");
+  const exactRepair = focusExcerptForOrdinal(
+    exactPartitionTranscript,
+    0,
+    5,
+    1,
+    options,
+  );
+  const exactNextPrimary = focusExcerptForOrdinal(
+    exactPartitionTranscript,
+    1,
+    5,
+    0,
+    options,
+  );
+  assert.notEqual(exactRepair, exactNextPrimary);
+});
+
+test("v5.8 spreads primary ordinals across the ranked evidence set", () => {
+  const transcript = Array.from(
+    { length: 30 },
+    (_, index) =>
+      `Mechanism ${index + 1} transfers energy through pathway${index + 1} because its distinct condition changes output ${index + 20}.`,
+  ).join(" ");
+  const options = { conceptFirstV58: true, topicHint: "Energy mechanisms" };
+  const primaryFocuses = Array.from({ length: 5 }, (_, ordinal) =>
+    focusExcerptForOrdinal(transcript, ordinal, 5, 0, options),
+  );
+  assert.equal(new Set(primaryFocuses).size, 5);
+  for (let index = 1; index < primaryFocuses.length; index += 1) {
+    assert.notEqual(primaryFocuses[index], primaryFocuses[index - 1]);
+  }
 });
 
 test("v5.8 constructs true-false polarity locally from one supported fact", () => {
@@ -175,6 +611,56 @@ test("v5.8 constructs true-false polarity locally from one supported fact", () =
   );
   assert.equal(trueQuestion?.answer, true);
   assert.equal(trueQuestion?.question, evidence);
+});
+
+test("v5.8 resolves a concise supported fact from a longer evidence window", () => {
+  const evidence =
+    "Cytokines coordinate immune communication. They activate B and T cells before the adaptive response expands.";
+  const question = constructConceptFirstTrueFalseQuestion(
+    {
+      evidenceQuote: evidence,
+      supportedFact: "They activate B and T cells",
+    },
+    evidence,
+    true,
+  );
+  assert.equal(question?.answer, true);
+  assert.equal(question?.question, "They activate B and T cells");
+  assert.match(question?.explanation ?? "", /statement is accurate/iu);
+});
+
+test("v5.8 excludes production credits from instructional evidence", () => {
+  const transcript = [
+    "Cytokines activate B and T cells before the adaptive response expands.",
+    "This episode was filmed in the Doctor Cheryl C. Kinney Crash Course Studio.",
+    "MHC I proteins present short amino-acid chains made from proteins inside a cell.",
+  ].join(" ");
+  const selection = buildConceptFirstInstructionalSelection(transcript, {
+    topicHint: "Immune System",
+  });
+  assert.ok(selection.excerpts.length >= 1);
+  assert.ok(
+    selection.excerpts.every(
+      (excerpt) => !/episode|filmed|crash course studio/iu.test(excerpt),
+    ),
+  );
+  assert.equal(
+    questionConceptFailure({
+      concept: "immune response coordination",
+      question:
+        "This episode was filmed in the Doctor Cheryl C. Kinney Crash Course Studio.",
+      explanation: "The episode was produced in that studio.",
+      supportedFact:
+        "This episode was filmed in the Doctor Cheryl C. Kinney Crash Course Studio.",
+      claim: {
+        subject: "this episode",
+        relation: "was filmed in",
+        value: "the Doctor Cheryl C. Kinney Crash Course Studio",
+        cluster: "immune response coordination",
+      },
+    }),
+    "course_logistics_invalid",
+  );
 });
 
 test("source framing is removed without rewriting the concept question", () => {
@@ -321,6 +807,10 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     { question: "According to the lesson, what defines continuity?" },
     {
       question:
+        "How does biodiversity loss affect human survival according to the weave metaphor?",
+    },
+    {
+      question:
         "Which of the following is a method mentioned to reduce deforestation's environmental impact?",
     },
     { explanation: "The transcript says that all three conditions must hold." },
@@ -331,11 +821,6 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     { answer: "According to the presenter, all three conditions hold." },
     { correctAnswer: "The answer stated in the video" },
     { choices: ["The lecturer's account", "A", "B", "C"] },
-    {
-      distractors: [
-        { text: "A", whyWrong: "The narrator said a different answer." },
-      ],
-    },
     { rubricIdeas: ["what the source states"] },
     { acceptableAnswers: ["As mentioned in the lecture, all conditions"] },
     { claim: { subject: "the speaker's explanation" } },
@@ -346,6 +831,19 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       "source_framing_invalid",
     );
   }
+
+  expectConceptFailure(
+    mergeConceptCandidate(directConcept, {
+      answerSpan: "According to the lesson, the supported answer",
+      distractors: [
+        {
+          text: "A different mechanism",
+          whyWrong: "The evidence states a different relationship.",
+        },
+      ],
+    }),
+    null,
+  );
 
   const logistics = [
     "What percentage of the exam covers limits?",
@@ -371,6 +869,7 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     "How many devices used the older protocol?",
     "What is the estimated annual monetary value of the services that ecosystems provide for humanity, according to economic calculations?",
     "How does the estimated annual monetary value of ecosystem services compare to the annual output of the global economy?",
+    "What is the projected range of temperature increase by the end of the century?",
   ];
   for (const question of lowValue) {
     expectConceptFailure(
@@ -378,6 +877,14 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       "low_pedagogical_value",
     );
   }
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "What method do many organizations advocate to reduce the impact of global warming?",
+    },
+    "source_framing_invalid",
+  );
   expectConceptFailure(
     { ...directConcept, question: "根据本课，连续的条件是什么？" },
     "source_framing_invalid",
@@ -403,6 +910,61 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     },
     "question_tautology_invalid",
   );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      answer: "even without cataclysmic events, like volcanoes and asteroids",
+    },
+    "question_answer_kind_mismatch",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      answer: "when biodiversity becomes too low to maintain resilience",
+    },
+    null,
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "ecosystem resilience",
+      objectiveCategory: "mechanism",
+      question:
+        "How does biodiversity influence an ecosystem's ability to withstand change?",
+      answerText: "The answer, to a large extent, is biodiversity.",
+    },
+    "question_answer_kind_mismatch",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "ecosystem resilience",
+      objectiveCategory: "relationship",
+      question:
+        "What factor largely determines whether an ecosystem is strong or weak in the face of change?",
+      answerText: "biodiversity",
+    },
+    null,
+  );
+
+  for (const answer of [
+    "Every link provides stability to the next",
+    "Cut too many links, and we risk unraveling it all.",
+    "a jacket of gases",
+  ]) {
+    expectConceptFailure(
+      {
+        ...directConcept,
+        question: "How does biodiversity support ecosystem stability?",
+        answer,
+      },
+      "low_pedagogical_value",
+    );
+  }
 
   expectConceptFailure(
     {
@@ -421,6 +983,30 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       answer: "4 m/s^2",
     },
     null,
+  );
+});
+
+test("v5.8 source selection excludes figurative presentation scaffolding", () => {
+  const selection = buildConceptFirstInstructionalSelection(
+    [
+      "Biodiversity is like a tapestry woven from many strands.",
+      "Every link provides stability to the next.",
+      "Cut too many links and the ecosystem may unravel.",
+      "Genetic diversity increases the range of traits available for adaptation.",
+      "Greater trait variation makes it more likely that some organisms survive environmental change.",
+      "Interacting species distribute ecological functions across the community.",
+    ].join(" "),
+    { topicHint: "biodiversity and ecosystem resilience" },
+  );
+
+  assert.ok(selection.excerpts.length > 0);
+  assert.doesNotMatch(
+    selection.excerpts.join(" "),
+    /tapestry|woven|strands|every link|unravel/iu,
+  );
+  assert.match(
+    selection.excerpts.join(" "),
+    /genetic diversity|trait variation/iu,
   );
 });
 
@@ -585,6 +1171,19 @@ test("learner-visible quiz language may differ from private evidence language", 
     ],
   };
   assert.equal(questionMatchesQuizLanguage(englishCandidate, "en"), true);
+  assert.equal(
+    questionMatchesQuizLanguage(
+      {
+        ...englishCandidate,
+        distractors: englishCandidate.distractors.map((entry) => ({
+          ...entry,
+          whyWrong: "الدليل الخاص يدعم إجابة مختلفة.",
+        })),
+      },
+      "en",
+    ),
+    true,
+  );
   assert.equal(
     questionMatchesQuizLanguage(
       {
@@ -791,6 +1390,108 @@ test("resolved answer propositions block the live climate projection paraphrase"
           value: "condition for climate projections",
           cluster: "condition for climate projections",
         },
+      },
+      accepted,
+      5,
+    ),
+    true,
+  );
+});
+
+test("same climate-cause objective cannot pass under condition and relationship wording", () => {
+  const first = {
+    type: "multiple_choice",
+    concept: "cause of global warming",
+    question:
+      "What condition is identified as the cause of the recent rise in global temperatures?",
+    correctAnswer:
+      "human factories power plants and eventually cars have burned fossil fuels",
+  };
+  const accepted = [
+    {
+      ...first,
+      answer: first.correctAnswer,
+      claimKey: claimKeyForCandidate(first),
+      conceptCluster: conceptClusterForCandidate(first),
+    },
+  ];
+  assert.equal(
+    candidateDuplicatesAccepted(
+      {
+        type: "multiple_choice",
+        concept: "cause of global warming",
+        question: "What is driving the recent rise in global temperatures?",
+        correctAnswer: "human activity",
+      },
+      accepted,
+      5,
+    ),
+    true,
+  );
+});
+
+test("a complete grounded assertion can receive a deterministic safe MC stem", () => {
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      {
+        concept: "greenhouse gas concentration trend",
+        objectiveCategory: "relationship",
+        question:
+          "What condition do industrialized nations provide for greenhouse gases?",
+      },
+      "The concentration of greenhouse gases in the atmosphere will continue to rise.",
+    ),
+    "Which statement correctly describes greenhouse gas concentration trend?",
+  );
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      { concept: "language variation", objectiveCategory: "relationship" },
+      "degrees of variation among speakers",
+    ),
+    null,
+  );
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      { concept: "ecosystem vulnerability", objectiveCategory: "mechanism" },
+      "even without catastrophic events",
+    ),
+    null,
+  );
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      { concept: "温室气体浓度变化", objectiveCategory: "relationship" },
+      "温室气体的浓度会继续上升。",
+    ),
+    "请选择正确描述温室气体浓度变化的陈述。",
+  );
+});
+
+test("resolved answer propositions block the live coral habitat duplicate", () => {
+  const first = {
+    type: "multiple_choice",
+    concept: "coral reef biodiversity support",
+    objectiveCategory: "mechanism",
+    question: "How does coral support biodiversity in reef ecosystems?",
+    correctAnswer:
+      "It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks.",
+  };
+  const accepted = [
+    {
+      ...first,
+      answer: first.correctAnswer,
+      claimKey: claimKeyForCandidate(first),
+      conceptCluster: conceptClusterForCandidate(first),
+    },
+  ];
+  assert.equal(
+    candidateDuplicatesAccepted(
+      {
+        type: "multiple_choice",
+        concept: "coral reef interdependence",
+        objectiveCategory: "method",
+        question: "How do corals support other organisms in reef ecosystems?",
+        correctAnswer:
+          "It provides key microhabitats, shelter and breeding grounds for thousands of species of fish, crustaceans and mollusks.",
       },
       accepted,
       5,

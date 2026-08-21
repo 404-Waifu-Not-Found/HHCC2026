@@ -1334,6 +1334,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
     ["mc_distractor_duplicate", "answer_repair"],
     ["mc_distractor_equivalent", "answer_repair"],
     ["mc_answer_kind_mismatch", "answer_repair"],
+    ["mc_question_answer_mismatch", "answer_repair"],
     ["true_false_fact_invalid", "answer_repair"],
     ["true_false_mutation_unavailable", "answer_repair"],
     ["short_atomic_invalid", "answer_repair"],
@@ -1421,6 +1422,36 @@ describe("protocol-9 concept-first call lifecycles", () => {
         )
       ).status,
     ).toBe(201);
+  });
+
+  it("accepts buffered q1 telemetry after learner-facing questions advance", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    db.sqlite
+      .prepare("INSERT INTO questions VALUES ('question-2', ?)")
+      .run(QUIZ_ID);
+    const stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    const bankSummary = JSON.parse(stored.quality_summary_json);
+    bankSummary.acceptedCount = 2;
+    bankSummary.generatedQuestionTypes = ["multiple_choice", "multiple_choice"];
+    bankSummary.acceptedQuestionSummaries.push({
+      id: "q2",
+      type: "multiple_choice",
+      concept: "Second concept",
+      question: "Which second result is supported?",
+    });
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(JSON.stringify(bankSummary), QUIZ_ID);
+
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
   });
 
   it("records one dispatched request and finalizes the same row exactly once", async () => {

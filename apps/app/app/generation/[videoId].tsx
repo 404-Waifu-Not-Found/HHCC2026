@@ -117,7 +117,7 @@ export default function GenerationScreen() {
     questionTypes?: string;
   }>();
   const { locale, t, theme } = useSettings();
-  const { data: session } = useAppSession();
+  const { data: session, isPending: sessionPending } = useAppSession();
   const { width } = useWindowDimensions();
   const [stage, setStage] = useState<GenerationStage>("getting_video");
   const [error, setError] = useState<string>();
@@ -485,12 +485,17 @@ export default function GenerationScreen() {
         transcriptLanguage: language,
         segments,
       };
-      let ingestion = Promise.resolve();
+      // Persist learner-facing questions independently from privacy-safe call
+      // telemetry. A slow call-event write must never postpone attempt start.
+      let questionIngestion = Promise.resolve();
+      let callIngestion = Promise.resolve();
       let lastProgressKey: string | undefined;
       const pendingCallEvents: LocalGenerationCallEvent[] = [];
+      let callEventsReady = Boolean(progressiveQuizId);
+      let pendingStartedCall: LocalGenerationCallEvent | undefined;
 
       const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
-        if (!progressiveQuizId) {
+        if (!progressiveQuizId || !callEventsReady) {
           pendingCallEvents.push(event);
           return;
         }
@@ -523,15 +528,26 @@ export default function GenerationScreen() {
         });
       };
 
+      const schedulePendingCallFlush = () => {
+        callIngestion = callIngestion.then(async () => {
+          callEventsReady = true;
+          if (pendingStartedCall) {
+            await uploadCallEvent(pendingStartedCall);
+            pendingStartedCall = undefined;
+          }
+          while (pendingCallEvents.length) {
+            await uploadCallEvent(pendingCallEvents.shift()!);
+          }
+        });
+        void callIngestion.catch(() => undefined);
+      };
+
       const publishStoredState = async (
         response: ExtensionQuizProgressiveImportResponse,
       ) => {
         progressiveQuizId = response.quizId;
         latestGeneration = response.generation;
         await persistState();
-        while (pendingCallEvents.length) {
-          await uploadCallEvent(pendingCallEvents.shift()!);
-        }
         if (attemptId) {
           publish({
             quizId: response.quizId,
@@ -542,7 +558,7 @@ export default function GenerationScreen() {
       };
 
       const enqueueQuestion = (chunk: LocalConceptQuizQuestionChunk) => {
-        ingestion = ingestion.then(async () => {
+        questionIngestion = questionIngestion.then(async () => {
           const response = progressiveQuizId
             ? await apiRequest(
                 `/api/quiz-imports/${progressiveQuizId}/questions`,
@@ -627,22 +643,41 @@ export default function GenerationScreen() {
           }
           lastProgressKey = undefined;
           if (!attemptId) await startAttempt(response.quizId);
+          if (!callEventsReady) schedulePendingCallFlush();
         });
-        void ingestion.catch(() => undefined);
+        void questionIngestion.catch(() => undefined);
       };
 
       const enqueueCall = (event: LocalGenerationCallEvent) => {
-        ingestion = ingestion.then(async () => {
+        if (
+          "lifecycleState" in event &&
+          event.lifecycleState === "started" &&
+          !progressiveQuizId
+        ) {
+          pendingStartedCall = event;
+          return;
+        }
+        const bufferedStarted =
+          "lifecycleState" in event &&
+          event.lifecycleState !== "started" &&
+          pendingStartedCall?.generationSessionId ===
+            event.generationSessionId &&
+          pendingStartedCall.callIndex === event.callIndex
+            ? pendingStartedCall
+            : undefined;
+        if (bufferedStarted) pendingStartedCall = undefined;
+        callIngestion = callIngestion.then(async () => {
+          if (bufferedStarted) await uploadCallEvent(bufferedStarted);
           await uploadCallEvent(event);
         });
-        void ingestion.catch(() => undefined);
+        void callIngestion.catch(() => undefined);
       };
 
       const enqueueRetrying = (detail: LocalGenerationProgress) => {
         const progressKey = `retrying:${detail.retryOrdinal ?? 0}:${detail.ordinalAttempt ?? detail.attempt ?? 0}`;
         if (lastProgressKey === progressKey) return;
         lastProgressKey = progressKey;
-        ingestion = ingestion.then(async () => {
+        callIngestion = callIngestion.then(async () => {
           if (!progressiveQuizId) return;
           if (
             isAutomaticGenerationProfile(rolloutProfile.generationProfile) &&
@@ -686,7 +721,7 @@ export default function GenerationScreen() {
           }
           await publishStoredState(response);
         });
-        void ingestion.catch(() => undefined);
+        void callIngestion.catch(() => undefined);
       };
       const stopHeartbeat = startGenerationRecordHeartbeat(
         generationRecord.generationId,
@@ -721,20 +756,22 @@ export default function GenerationScreen() {
           (nextStage, _progress, detail) => {
             updateStage(nextStage);
             if (detail.status === "retrying") {
-              setRetryEtaPhase((current) =>
-                updateFirstQuestionRetryEtaPhase(
-                  current,
-                  detail,
-                  retryBaseEstimateMs,
-                ),
-              );
+              if (!attemptId && detail.retryOrdinal === 1) {
+                setRetryEtaPhase((current) =>
+                  updateFirstQuestionRetryEtaPhase(
+                    current,
+                    detail,
+                    retryBaseEstimateMs,
+                  ),
+                );
+              }
               enqueueRetrying(detail);
             }
           },
           enqueueQuestion,
           enqueueCall,
         );
-        await ingestion;
+        await Promise.all([questionIngestion, callIngestion]);
         if (!latestGeneration || latestGeneration.state !== "ready") {
           throw new Error(
             "DeepSeek finished before every planned question was stored.",
@@ -743,7 +780,7 @@ export default function GenerationScreen() {
         updateStage("complete");
         await clearGenerationRecord(generationRecord.generationId);
       } catch (cause) {
-        await ingestion.catch(() => undefined);
+        await Promise.allSettled([questionIngestion, callIngestion]);
         const reasonCode =
           cause instanceof LocalGenerationRequestError
             ? cause.reasonCode
@@ -832,6 +869,7 @@ export default function GenerationScreen() {
   );
 
   useEffect(() => {
+    if (sessionPending) return;
     taskKeyRef.current = taskKey;
     const task = getOrStartProgressiveGenerationTask(taskKey, execute);
     const unsubscribe = task.subscribe((snapshot) => {
@@ -872,7 +910,14 @@ export default function GenerationScreen() {
       active = false;
       unsubscribe();
     };
-  }, [execute, params.generationId, setEstimatedProgress, t, taskKey]);
+  }, [
+    execute,
+    params.generationId,
+    sessionPending,
+    setEstimatedProgress,
+    t,
+    taskKey,
+  ]);
 
   useEffect(() => {
     if (!configurationRequired) return;

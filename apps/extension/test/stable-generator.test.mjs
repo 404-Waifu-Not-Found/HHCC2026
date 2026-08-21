@@ -6,6 +6,7 @@ import {
   boundedRetryDelayMilliseconds,
   buildQuestionTypePlanFromSeed,
   buildTrueFalseAnswerPlanFromSeed,
+  CONCEPT_FIRST_SYSTEM_PROMPT,
   generateQuizFromPlainText,
   normalizeGeneratedQuestion,
   serializeFormulaTokens,
@@ -925,8 +926,9 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
     return conceptFirstResponse(init.body);
   };
 
+  const input = conceptFirstInput();
   const result = await generateQuizFromPlainText(
-    conceptFirstInput(),
+    input,
     "sk-local-test",
     () => undefined,
     undefined,
@@ -960,6 +962,14 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
       /Never ask learners to recall an estimate/u,
     );
     assert.match(
+      request.body.messages[0].content,
+      /the first word of question must be one of/u,
+    );
+    assert.match(
+      request.body.messages[0].content,
+      /copy one unique answerSpan character-for-character/u,
+    );
+    assert.match(
       request.body.messages[2].content,
       /estimated annual monetary value of ecosystem services/u,
     );
@@ -967,12 +977,63 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
       request.body.messages[2].content,
       /The reference gives a direct relationship/u,
     );
-    assert.match(
+    assert.match(request.body.messages[1].content, /Context boundary/iu);
+    assert.doesNotMatch(
       request.body.messages[1].content,
       /Private reference material — never mention this source/u,
     );
+    assert.doesNotMatch(
+      request.body.messages[1].content,
+      /pathway\d+/iu,
+      "v5.8 never sends the complete transcript in its stable prefix",
+    );
+    assert.match(request.task, /Preferred objective category/iu);
+    assert.match(request.task, /never invent a mechanism/iu);
+    if (request.type === "multiple_choice") {
+      assert.match(
+        request.task,
+        /If answerText is only a term, name, noun phrase, or factor/iu,
+      );
+    }
+    const unsentTranscriptSentence = input.plainText
+      .split(/(?<=[.!?。！？])\s+/u)
+      .find((sentence) => !request.focusExcerpt.includes(sentence));
+    assert.ok(
+      unsentTranscriptSentence,
+      "fixture contains transcript material outside the selected focus",
+    );
+    assert.ok(
+      !request.body.messages.some((message) =>
+        message.content.includes(unsentTranscriptSentence),
+      ),
+      "v5.8 sends only the locally selected evidence window",
+    );
     assert.match(request.task, /Exact JSON schema/u);
+    assert.match(request.task, /Final learner-copy gate/u);
     assert.doesNotMatch(request.task, /Mandatory slot plan/u);
+    if (request.type === "multiple_choice") {
+      assert.match(request.task, /answerText must equal answerSpan except/u);
+      assert.match(
+        request.task,
+        /do not paraphrase, summarize, change morphology/u,
+      );
+      assert.match(
+        request.task,
+        /distractors as exactly six concise candidate strings/u,
+      );
+      assert.doesNotMatch(request.task, /Each whyWrong must/u);
+      const schemaStart = request.task.indexOf("Exact JSON schema:");
+      const schemaText = request.task.slice(schemaStart);
+      assert.ok(
+        schemaText.indexOf('"evidenceQuote"') <
+          schemaText.indexOf('"answerSpan"'),
+        "v5.8 schema locks evidence before the answer span",
+      );
+      assert.ok(
+        schemaText.indexOf('"answerSpan"') < schemaText.indexOf('"question"'),
+        "v5.8 schema locks the answer before drafting the question",
+      );
+    }
   }
   const sentSystemFingerprints = new Set(
     requests.map((request) =>
@@ -985,7 +1046,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
   assert.deepEqual(
     [...new Set(requests.map((request) => request.body.messages[1].content))],
     [requests[0].body.messages[1].content],
-    "the private-reference prefix remains byte-identical for prefix caching",
+    "the context-boundary prefix remains byte-identical",
   );
   assert.notEqual(
     requests[0].body.messages[2].content,
@@ -1013,6 +1074,260 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
         question.shortAnswerMode === "atomic_term" &&
         question.rubricV2?.mode === "atomic_term",
     ),
+  );
+});
+
+test("v5.8 does not retry source wording confined to private MC validation aids", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value) => {
+      value.questions[0].distractors[0].whyWrong =
+        "The evidence states that a different pathway carries energy.";
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    calls
+      .filter((event) => event.lifecycleState === "completed")
+      .every(
+        (event) =>
+          event.classification === "primary" && event.outcome === "complete",
+      ),
+  );
+});
+
+test("v5.8 rejects a pre-release continuation with a different prompt fingerprint before dispatch", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async () => {
+    httpCalls += 1;
+    throw new Error("The mismatched continuation must not dispatch.");
+  };
+  await assert.rejects(
+    () =>
+      generateQuizFromPlainText(
+        {
+          ...conceptFirstInput(),
+          continuation: {
+            startIndex: 1,
+            resultProtocolVersion: 9,
+            promptVersion: "quiz-local-json-stream-v5.8",
+            validatorVersion: "validator-local-progressive-v4.7",
+            promptFingerprint: "0".repeat(64),
+            generationProfile: "concept_first_auto_v5_8",
+            acceptedQuestions: [
+              {
+                id: "q1",
+                type: "multiple_choice",
+                concept: "Stored concept",
+                question: "Which pathway carries energy?",
+              },
+            ],
+          },
+        },
+        "sk-local-test",
+      ),
+    (error) =>
+      error?.reasonCode === "local_state_conflict" &&
+      /different concept-first prompt fingerprint/iu.test(error.message),
+  );
+  assert.equal(httpCalls, 0);
+});
+
+test("v5.8 resolves grading-sensitive values against the local focus when a private evidence quote is paraphrased", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value) => {
+      value.questions[0].evidenceQuote =
+        "A concise private paraphrase that does not reproduce the instructional sentence.";
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice", "true_false", "short_answer"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    calls
+      .filter((event) => event.lifecycleState === "completed")
+      .every(
+        (event) =>
+          event.classification === "primary" && event.outcome === "complete",
+      ),
+  );
+});
+
+test("v5.8 accepts one uniquely grounded learner answer when the private MC span is malformed", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value) => {
+      const question = value.questions[0];
+      const pathway = question.answerText;
+      question.evidenceQuote =
+        "A private paraphrase that does not reproduce the instructional sentence.";
+      question.answerSpan = "an unsupported private span hint";
+      question.answerText = `${pathway} energy`;
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    result.quiz.questions.every((question) =>
+      question.choices.includes(question.answer),
+    ),
+  );
+  assert.ok(
+    calls
+      .filter((event) => event.lifecycleState === "completed")
+      .every(
+        (event) =>
+          event.classification === "primary" && event.outcome === "complete",
+      ),
+  );
+});
+
+test("v5.8 repairs a relationship answer that drops its directional qualifier", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const chunks = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 5 && httpCalls === 1) {
+        const question = value.questions[0];
+        question.evidenceQuote = task.focusExcerpt
+          .split(/(?<=[.!?。！？])\s+/u)
+          .find((sentence) => /less genetic diversity/iu.test(sentence));
+        question.question =
+          "What is the role of genetic diversity in a species' ability to cope with environmental changes?";
+        question.answerSpan = "much more vulnerable";
+        question.answerText =
+          "It makes the species much more vulnerable to environmental fluctuations.";
+      }
+      return value;
+    });
+  };
+
+  const input = conceptFirstInput(5, ["multiple_choice"]);
+  input.plainText = Array.from(
+    { length: 5 },
+    (_, index) =>
+      `Species ${index + 1} uses pathway${index + 1} during objectiveadaptation${index + 1} because less genetic diversity is much more vulnerable to environmental fluctuation ${index + 11}; the defined mechanism links variation to a distinct adaptive response.`,
+  ).join(" ");
+  input.continuation = {
+    startIndex: 4,
+    resultProtocolVersion: 9,
+    promptVersion: "quiz-local-json-stream-v5.8",
+    validatorVersion: "validator-local-progressive-v4.7",
+    promptFingerprint: createHash("sha256")
+      .update(CONCEPT_FIRST_SYSTEM_PROMPT)
+      .digest("hex"),
+    generationProfile: "concept_first_auto_v5_8",
+    questionPlan: {
+      seed: "a".repeat(64),
+      types: Array.from({ length: 5 }, () => "multiple_choice"),
+    },
+    nextCallIndex: 0,
+    nextOrdinalAttempt: 1,
+    automaticRetryCount: 0,
+    retryBudgetUsedCount: 0,
+    acceptedQuestions: Array.from({ length: 4 }, (_, index) => ({
+      id: `q${index + 1}`,
+      type: "multiple_choice",
+      concept: `Immutable accepted concept ${index + 1}`,
+      question: `Which distinct mechanism explains accepted concept ${index + 1}?`,
+      claimKey: `immutable accepted claim ${index + 1}`,
+      conceptCluster: `immutable cluster ${index + 1}`,
+    })),
+  };
+  const result = await generateQuizFromPlainText(
+    input,
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    (chunk) => chunks.push(chunk),
+    (event) => calls.push(event),
+  );
+
+  assert.equal(
+    httpCalls,
+    2,
+    JSON.stringify(
+      calls
+        .filter((event) => event.lifecycleState === "completed")
+        .map((event) => ({
+          ordinal: event.startIndex,
+          classification: event.classification,
+          outcome: event.outcome,
+        })),
+    ),
+  );
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(calls[1]?.outcome, "mc_question_answer_mismatch");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "answer_repair");
+  assert.doesNotMatch(
+    chunks[0]?.question.question,
+    /role of genetic diversity/iu,
   );
 });
 
@@ -1062,6 +1377,247 @@ test("v5.8 rejects presentation statistics before storage and repairs only that 
   assert.equal(calls[2]?.classification, "automatic_retry");
   assert.equal(calls[2]?.retryKind, "content_repair");
   assert.doesNotMatch(result.quiz.questions[0].question, /monetary value/iu);
+});
+
+test("v5.8 repairs the production how-can non-answer and figurative scaffolding", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        const question = value.questions[0];
+        question.concept = "ecosystem collapse without catastrophes";
+        question.question =
+          "How can an ecosystem become vulnerable to collapse even without catastrophic events?";
+        question.answerSpan =
+          "even without cataclysmic events, like volcanoes and asteroids";
+        question.answerText = question.answerSpan;
+        question.evidenceQuote = `${question.answerSpan}. ${task.focusExcerpt}`;
+        question.explanation =
+          "Cut too many links, and the ecosystem can unravel.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(calls[1]?.outcome, "low_pedagogical_value");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "content_repair");
+  assert.doesNotMatch(
+    JSON.stringify(result.quiz.questions[0]),
+    /even without|cataclysmic|cut too many links|unravel/iu,
+  );
+});
+
+test("v5.8 repairs a how-can answer that merely repeats the outcome", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        const question = value.questions[0];
+        question.concept = "ecosystem vulnerability";
+        question.question =
+          "How can an ecosystem become vulnerable to collapse even without catastrophic events?";
+        question.answerSpan = "they're actually vulnerable to collapse";
+        question.answerText = question.answerSpan;
+        question.explanation =
+          "Loss of biodiversity weakens the resilience of the ecosystem.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(calls[1]?.outcome, "question_answer_kind_mismatch");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "answer_repair");
+  assert.notEqual(
+    result.quiz.questions[0].answer,
+    "they're actually vulnerable to collapse",
+  );
+});
+
+test("v5.8 repairs a malformed MC stem locally when its grounded answer is a complete assertion", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1) {
+        const question = value.questions[0];
+        const assertion = task.focusExcerpt.split(/(?<=[.!?])\s+/u)[0];
+        question.concept = "reaction energy trend";
+        question.objectiveCategory = "relationship";
+        question.question =
+          "What condition do catalysts provide for reaction energy?";
+        question.answerSpan = assertion;
+        question.answerText = assertion;
+        question.explanation = assertion;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(
+    result.quiz.questions[0].question,
+    "Which statement correctly describes reaction energy trend?",
+  );
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    0,
+  );
+});
+
+test("v5.8 selects three safe distractors from a six-candidate pool without another request", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const requestBodies = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    requestBodies.push(JSON.parse(init.body));
+    return conceptFirstResponse(init.body, (value, task) => {
+      const question = value.questions[0];
+      if (question.type === "multiple_choice") {
+        question.distractors = [
+          question.answerText,
+          `${question.answerText}.`,
+          `reservoir${task.ordinal}`,
+          `barrier${task.ordinal}`,
+          `sink${task.ordinal}`,
+          `detour${task.ordinal}`,
+        ];
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.ok(
+    requestBodies.every((body) =>
+      /"distractors":\{"type":"array","minItems":6,"maxItems":6/u.test(
+        body.messages.at(-1).content,
+      ),
+    ),
+  );
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.choices.length === 4 &&
+        new Set(question.choices.map((choice) => choice.toLowerCase())).size ===
+          4 &&
+        !question.choices.includes(`${question.answer}.`),
+    ),
+  );
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    0,
+  );
+});
+
+test("v5.8 repairs How-does component lists before storing the singleton", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        const question = value.questions[0];
+        question.concept = "biodiversity and ecosystem resilience";
+        question.question =
+          "How does biodiversity contribute to ecosystem resilience?";
+        question.answerSpan =
+          "Biodiversity includes ecosystem, species, and genetic diversity";
+        question.answerText = question.answerSpan;
+        question.evidenceQuote = `${question.answerSpan}. ${task.focusExcerpt}`;
+        question.explanation = "These three components define biodiversity.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(httpCalls, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(calls[1]?.outcome, "question_answer_kind_mismatch");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "answer_repair");
+  assert.notEqual(
+    result.quiz.questions[0].answer,
+    "Biodiversity includes ecosystem, species, and genetic diversity",
+  );
 });
 
 test("v5.8 repairs learner-visible source-language leakage before storing a question", async (context) => {

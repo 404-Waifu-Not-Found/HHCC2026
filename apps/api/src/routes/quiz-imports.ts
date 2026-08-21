@@ -1664,7 +1664,11 @@ async function assertAutomaticGenerationCallSequence(
     event.startIndex === 0 &&
     event.acceptedCount === 0 &&
     acceptedQuestionCount === 1;
-  if (acceptedQuestionCount !== eventFrontier && !bufferedFailedFirstCall) {
+  // Call telemetry is intentionally off the learner-facing upload path. The
+  // authoritative question frontier may therefore be ahead by the time a
+  // buffered lifecycle reaches D1, but it may never be behind an event that
+  // claims to have accepted a question.
+  if (acceptedQuestionCount < eventFrontier && !bufferedFailedFirstCall) {
     throw new ApiError(
       409,
       "generation_call_progress_conflict",
@@ -1802,6 +1806,7 @@ async function materializeGenerationTelemetry(
     const summary = snapshot.summary;
     if (!summary?.telemetryAvailable) return;
 
+    const ready = summary.generationState === "ready";
     const nextSummary = ProgressiveQuizSummarySchema.parse({
       ...summary,
       aiCalls: snapshot.telemetry.callCount,
@@ -1810,7 +1815,7 @@ async function materializeGenerationTelemetry(
       outputTokens: snapshot.telemetry.outputTokens,
       reasoningTokens: snapshot.telemetry.reasoningTokens,
       elapsedMs: Math.max(1, snapshot.telemetry.elapsedMs),
-      ...(callEvent && isLifecycleCallEvent(callEvent)
+      ...(callEvent && isLifecycleCallEvent(callEvent) && !ready
         ? callEvent.lifecycleState === "started"
           ? {
               recoveryPhase: "dispatched" as const,
