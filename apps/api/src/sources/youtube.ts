@@ -8,7 +8,6 @@ import { parseYouTubeId } from "./url";
 const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
-const MAX_CAPTION_BYTES = 8 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 180 * 1024 * 1024;
 
 type YouTubeCaptionTrack = {
@@ -363,24 +362,23 @@ export function parseYouTubeTimedText(
   return characters >= 20 ? segments : [];
 }
 
-async function fetchCaptionSegments(
+function prepareCaptionSourceUrl(
   track: YouTubeCaptionTrack | undefined,
-): Promise<TranscriptSegment[]> {
-  if (!track) return [];
+): string | undefined {
+  if (!track) return undefined;
   try {
     const url = new URL(track.base_url);
+    if (
+      url.protocol !== "https:" ||
+      (url.hostname !== "youtube.com" &&
+        !url.hostname.endsWith(".youtube.com"))
+    ) {
+      return undefined;
+    }
     url.searchParams.set("fmt", "json3");
-    const response = await fetch(url, {
-      headers: { Accept: "application/json", "Cache-Control": "no-store" },
-    });
-    if (!response.ok) return [];
-    const declaredLength = Number(response.headers.get("content-length") ?? 0);
-    if (declaredLength > MAX_CAPTION_BYTES) return [];
-    const body = await response.text();
-    if (new TextEncoder().encode(body).byteLength > MAX_CAPTION_BYTES) return [];
-    return parseYouTubeTimedText(JSON.parse(body) as TimedTextPayload);
+    return url.toString();
   } catch {
-    return [];
+    return undefined;
   }
 }
 
@@ -445,8 +443,19 @@ export class YouTubeAdapter implements SourceAdapter {
         }
       }
 
-      let preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
-      const preferredCaptionSegments = await fetchCaptionSegments(preferredTrack);
+      const preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
+      const preferredCaptionSourceUrl = prepareCaptionSourceUrl(preferredTrack);
+      console.info(
+        JSON.stringify({
+          scope: "youtube_captions",
+          event: preferredCaptionSourceUrl
+            ? "browser_source.available"
+            : "browser_source.unavailable",
+          sourceVideoId,
+          captionTrackCount: inspected.tracks.length,
+          language: preferredTrack?.language_code ?? null,
+        }),
+      );
       const captionTracks = inspected.tracks.map((track) => ({
         language: track.language_code,
         label: track.label || track.language_code,
@@ -466,8 +475,8 @@ export class YouTubeAdapter implements SourceAdapter {
           inspected.tracks[0]?.language_code ??
           null,
         captionTracks,
-        ...(preferredCaptionSegments.length
-          ? { preferredCaptionSegments }
+        ...(preferredCaptionSourceUrl
+          ? { preferredCaptionSourceUrl }
           : {}),
       };
     } catch (error) {

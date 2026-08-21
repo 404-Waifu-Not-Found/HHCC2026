@@ -1,4 +1,5 @@
 import {
+  CaptionResolveResponseSchema,
   GenerationStatusSchema,
   MediaResolveResponseSchema,
   QuizStartResponseSchema,
@@ -35,6 +36,7 @@ import {
 } from "../../src/state/creation";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
+import { downloadYouTubeCaptions } from "../../src/transcription/youtube-captions";
 import {
   breakpoints,
   layout,
@@ -76,7 +78,7 @@ export default function GenerationScreen() {
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
       importedRef.current = imported;
-      setLocalTranscription(!imported.captions.preferredSegments?.length);
+      setLocalTranscription(imported.transcriptionMode === "device_media");
       let storedGeneration = await loadGenerationState(imported.video.id);
       if (!storedGeneration) {
         storedGeneration = { idempotencyKey: Crypto.randomUUID() };
@@ -133,6 +135,45 @@ export default function GenerationScreen() {
         setProgress(1);
         segments = imported.captions.preferredSegments;
       } else {
+        if (
+          imported.video.source === "youtube" &&
+          imported.captions.browserSourceAvailable
+        ) {
+          try {
+            setStage("preparing_audio");
+            setProgress(0.15);
+            const captionSource = await apiRequest(
+              `/api/videos/${encodeURIComponent(imported.video.id)}/captions/resolve`,
+              { method: "POST", signal },
+              CaptionResolveResponseSchema,
+            );
+            setProgress(0.45);
+            segments = await downloadYouTubeCaptions(
+              captionSource.captionUrl,
+              signal,
+            );
+            language = captionSource.language;
+            setProgress(1);
+          } catch (captionError) {
+            if (signal.aborted) throw captionError;
+            console.warn("YouTube browser captions failed; using audio fallback", {
+              errorName:
+                captionError instanceof Error
+                  ? captionError.name
+                  : "UnknownError",
+              errorMessage:
+                captionError instanceof Error
+                  ? captionError.message
+                  : "Caption download failed",
+            });
+            segments = [];
+          }
+        } else {
+          segments = [];
+        }
+      }
+      if (!segments.length) {
+        setLocalTranscription(true);
         const media = await apiRequest(
           "/api/media/resolve",
           {

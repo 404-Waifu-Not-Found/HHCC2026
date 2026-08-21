@@ -1,4 +1,5 @@
 import {
+  CaptionResolveResponseSchema,
   VideoImportRequestSchema,
   VideoImportResponseSchema,
   type VideoSource,
@@ -65,7 +66,9 @@ videosRouter.post("/import", async (c) => {
         requestId,
         sourceVideoId,
         acquisition: inspected.preferredCaptionSegments?.length
-          ? "youtube_captions"
+          ? "server_captions"
+          : inspected.preferredCaptionSourceUrl
+            ? "browser_captions"
           : "transient_audio_stream",
         captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
         elapsedMs: Date.now() - importStartedAt,
@@ -158,6 +161,9 @@ videosRouter.post("/import", async (c) => {
   const preferredSegments = inspected.preferredCaptionSegments?.filter(
     (segment) => segment.text.trim().length > 0,
   );
+  const captionsAvailable = Boolean(
+    preferredSegments?.length || inspected.preferredCaptionSourceUrl,
+  );
   const response = VideoImportResponseSchema.parse({
     video: {
       id: videoId,
@@ -169,18 +175,19 @@ videosRouter.post("/import", async (c) => {
       sourceLanguage,
     },
     captions: {
-      available: Boolean(preferredSegments?.length),
+      available: captionsAvailable,
       tracks: inspected.captionTracks,
       ...(preferredSegments?.length ? { preferredSegments } : {}),
+      browserSourceAvailable: Boolean(inspected.preferredCaptionSourceUrl),
     },
-    transcriptionMode: preferredSegments?.length
+    transcriptionMode: captionsAvailable
       ? "captions"
       : "device_media",
     capture: {
       expectedDurationSeconds: durationSeconds,
       requiresUserGesture: false,
     },
-    requiresLocalTranscription: !preferredSegments?.length,
+    requiresLocalTranscription: !captionsAvailable,
   });
   console.info(
     JSON.stringify({
@@ -192,11 +199,88 @@ videosRouter.post("/import", async (c) => {
       existingVideo: Boolean(existing),
       captionTrackCount: inspected.captionTracks.length,
       captionSegmentCount: preferredSegments?.length ?? 0,
-      requiresLocalTranscription: !preferredSegments?.length,
+      browserCaptionSourceAvailable: Boolean(
+        inspected.preferredCaptionSourceUrl,
+      ),
+      requiresLocalTranscription: !captionsAvailable,
       elapsedMs: Date.now() - importStartedAt,
     }),
   );
   return c.json(response, 201);
+});
+
+videosRouter.post("/:videoId/captions/resolve", async (c) => {
+  const startedAt = Date.now();
+  const requestId = crypto.randomUUID();
+  const user = c.get("user");
+  const videoId = c.req.param("videoId");
+  const video = await c.env.DB.prepare(
+    "SELECT source, source_video_id, original_url FROM videos WHERE id = ? AND owner_id = ?",
+  )
+    .bind(videoId, user.id)
+    .first<{
+      source: VideoSource;
+      source_video_id: string;
+      original_url: string;
+    }>();
+  if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
+  if (video.source !== "youtube") {
+    throw new ApiError(
+      422,
+      "caption_source_unsupported",
+      "Browser caption download is available for YouTube videos only.",
+    );
+  }
+  let inspected = await getSourceAdapter("youtube").inspect(
+    new URL(video.original_url),
+  );
+  if (!inspected.preferredCaptionSourceUrl) {
+    console.info(
+      JSON.stringify({
+        scope: "youtube_captions",
+        event: "browser_resolve.retrying",
+        requestId,
+        sourceVideoId: video.source_video_id,
+        attempt: 1,
+      }),
+    );
+    inspected = await getSourceAdapter("youtube").inspect(
+      new URL(video.original_url),
+    );
+  }
+  if (!inspected.preferredCaptionSourceUrl || !inspected.sourceLanguage) {
+    console.info(
+      JSON.stringify({
+        scope: "youtube_captions",
+        event: "browser_resolve.unavailable",
+        requestId,
+        sourceVideoId: video.source_video_id,
+        elapsedMs: Date.now() - startedAt,
+      }),
+    );
+    throw new ApiError(
+      404,
+      "youtube_captions_unavailable",
+      "YouTube did not provide captions for this video.",
+    );
+  }
+  const response = CaptionResolveResponseSchema.parse({
+    captionUrl: inspected.preferredCaptionSourceUrl,
+    format: "json3",
+    language: inspected.sourceLanguage,
+  });
+  c.header("Cache-Control", "no-store");
+  console.info(
+    JSON.stringify({
+      scope: "youtube_captions",
+      event: "browser_resolve.completed",
+      requestId,
+      sourceVideoId: video.source_video_id,
+      language: inspected.sourceLanguage,
+      elapsedMs: Date.now() - startedAt,
+    }),
+  );
+  return c.json(response);
 });
 
 thumbnailRouter.get("/:videoId/thumbnail", async (c) => {

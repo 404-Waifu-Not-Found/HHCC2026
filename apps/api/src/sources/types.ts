@@ -10,6 +10,7 @@ export type SourceVideo = {
   sourceLanguage: string | null;
   captionTracks: CaptionTrack[];
   preferredCaptionSegments?: TranscriptSegment[];
+  preferredCaptionSourceUrl?: string;
 };
 
 export type AudioStream = {
@@ -24,4 +25,3 @@ export interface SourceAdapter {
   inspect(url: URL): Promise<SourceVideo>;
   streamAudio(sourceVideoId: string, request: Request): Promise<AudioStream>;
 }
-

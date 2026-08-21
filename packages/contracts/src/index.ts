@@ -85,6 +85,7 @@ export const VideoImportResponseSchema = z.object({
     available: z.boolean(),
     tracks: z.array(CaptionTrackSchema),
     preferredSegments: z.array(TranscriptSegmentSchema).optional(),
+    browserSourceAvailable: z.boolean().optional(),
   }),
   transcriptionMode: TranscriptionModeSchema,
   capture: z.object({
@@ -94,6 +95,15 @@ export const VideoImportResponseSchema = z.object({
   requiresLocalTranscription: z.boolean(),
 });
 export type VideoImportResponse = z.infer<typeof VideoImportResponseSchema>;
+
+export const CaptionResolveResponseSchema = z.object({
+  captionUrl: z.string().url(),
+  format: z.literal("json3"),
+  language: z.string().min(2).max(35),
+});
+export type CaptionResolveResponse = z.infer<
+  typeof CaptionResolveResponseSchema
+>;
 
 export const MediaResolveRequestSchema = z.object({
   videoId: z.string().uuid(),
