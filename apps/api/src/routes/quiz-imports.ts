@@ -8,9 +8,12 @@ import {
   ExtensionQuizProgressiveImportRequestSchema,
   ExtensionQuizProgressiveImportResponseSchema,
   AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
+  LOCAL_QUIZ_PROMPT_VERSION,
   LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION,
   LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  LOCAL_QUIZ_VALIDATOR_VERSION,
   type ExtensionQuizImportRequest,
   type ExtensionQuizProgressiveImportRequest,
   type LocalGenerationCallEvent,
@@ -73,6 +76,31 @@ function expectedAutomaticProtocol(
 
 export const quizImportsRouter = new Hono<ApiBindings>();
 
+export function currentGroundedNewBankMetadataMatches(
+  chunk: Pick<
+    LocalConceptQuizQuestionChunk,
+    | "generationProfile"
+    | "model"
+    | "pipelineVersion"
+    | "promptVersion"
+    | "validatorVersion"
+    | "protocolVersion"
+    | "importVersion"
+  >,
+): boolean {
+  if (chunk.generationProfile !== "evidence_grounded_auto_v5_4") {
+    return true;
+  }
+  return (
+    chunk.model === LOCAL_QUIZ_MODEL &&
+    chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+    chunk.promptVersion === LOCAL_QUIZ_PROMPT_VERSION &&
+    chunk.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
+    chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+  );
+}
+
 quizImportsRouter.post("/progressive", async (c) => {
   const user = c.get("user");
   const importKey = requireIdempotencyKey(c);
@@ -107,6 +135,13 @@ quizImportsRouter.post("/progressive", async (c) => {
       403,
       "quiz_generation_profile_disabled",
       "The stable generation profile is not enabled for this account yet.",
+    );
+  }
+  if (!currentGroundedNewBankMetadataMatches(input.chunk)) {
+    throw new ApiError(
+      403,
+      "quiz_generation_profile_disabled",
+      "Install the current ClipQuest Local AI release before creating a new grounded quiz.",
     );
   }
   if (input.chunk.startIndex !== 0) {
@@ -483,6 +518,7 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       .first<{ count: number }>();
     const retryLimit = automaticEvent
       ? legacyAutomaticRecovery ||
+        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.7" ||
         snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
         ? MAX_V5_6_AUTOMATIC_RETRIES
         : snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4"
@@ -809,7 +845,8 @@ async function persistProgressiveQuiz(input: {
     source: "extension-local-json-stream",
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+      (chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.4"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
@@ -843,7 +880,8 @@ async function persistProgressiveQuiz(input: {
       chunk.promptVersion === "quiz-local-json-stream-v5.3" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.4" ||
       chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.6",
+      chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.7",
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]
       : [],

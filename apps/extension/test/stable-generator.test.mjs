@@ -55,7 +55,7 @@ function taskFromRequest(request) {
   const body = typeof request === "string" ? JSON.parse(request) : request;
   const task = body.messages.at(-1).content;
   const planText = task.match(
-    /Mandatory slot plan:\n([\s\S]*?)\n\n(?:Primary source focus|Already accepted questions)/,
+    /Mandatory slot plan:\n([\s\S]*?)\n\n(?:Primary source focus|Eligible instructional evidence|Already accepted questions)/,
   )?.[1];
   assert.ok(planText, "request contains a bounded slot plan");
   const slots = planText.split("\n").map((line) => {
@@ -70,7 +70,7 @@ function taskFromRequest(request) {
     };
   });
   const focusExcerpt = task.match(
-    /Primary source focus for this slot; use only instructional claims copied from this excerpt:\n([\s\S]*?)\n\nAlready accepted questions/,
+    /(?:Primary source focus for this slot; use only instructional claims copied from this excerpt|Eligible instructional evidence; only this excerpt may ground the learner-facing content):\n([\s\S]*?)\n\nAlready accepted questions/,
   )?.[1];
   return { body, task, slots, focusExcerpt };
 }
@@ -96,7 +96,7 @@ function groundedQuestionForSlot(slot, focusExcerpt) {
     id: `q${slot.ordinal}`,
     type: slot.type,
     concept: `Grounded measurement ${slot.ordinal}`,
-    explanation: `The source evidence explicitly states ${correctAnswer}.`,
+    explanation: `${correctAnswer} is the measured relationship.`,
     sourceEvidence: evidence,
     claim: {
       subject: `instructional claim ${slot.ordinal}`,
@@ -120,7 +120,11 @@ function groundedQuestionForSlot(slot, focusExcerpt) {
       question: prompts[(slot.ordinal - 1) % prompts.length],
       answer: correctAnswer,
       rubricIdeas: [correctAnswer],
-      acceptableAnswers: [],
+      acceptableAnswers: [
+        correctAnswer,
+        `The measurement is ${correctAnswer}.`,
+        `For claim ${slot.ordinal}, ${correctAnswer}.`,
+      ],
     };
   }
   return {
@@ -473,7 +477,7 @@ test("v5.3 uses singleton primary calls and local answer mapping", async (contex
   );
 });
 
-test("v5.6 streams concept-only grounded singleton calls with protocol 8 telemetry", async (context) => {
+test("v5.7 streams concept-only grounded singleton calls with protocol 8 telemetry", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
   context.after(() => {
@@ -491,8 +495,8 @@ test("v5.6 streams concept-only grounded singleton calls with protocol 8 telemet
   );
 
   assert.equal(result.protocolVersion, 8);
-  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.6");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.5");
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.7");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.6");
   assert.equal(result.importVersion, "extension-progressive-import-v6");
   assert.equal(result.generationProfile, "evidence_grounded_auto_v5_4");
   assert.equal(calls.length, 5);
@@ -582,15 +586,17 @@ test("v5.5 grants content repair budgets independently to each ordinal", async (
   );
 });
 
-test("v5.6 rejects raw lesson framing and repairs only that singleton", async (context) => {
+test("v5.7 rejects raw lesson framing and repairs only that singleton", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
+  const focuses = [];
   let q1Attempts = 0;
   context.after(() => {
     globalThis.fetch = originalFetch;
   });
   globalThis.fetch = async (_url, init) =>
     responseForRequest(init.body, (value, task) => {
+      focuses.push(task.focusExcerpt);
       if (task.slots[0].ordinal === 1 && ++q1Attempts === 1) {
         value.questions[0].question =
           "According to the lesson, what exact supported value is reported for instructional claim 1?";
@@ -619,14 +625,137 @@ test("v5.6 rejects raw lesson framing and repairs only that singleton", async (c
     result.quiz.questions[0].question,
     "What exact supported value is reported for instructional claim 1?",
   );
-  assert.equal(calls[0]?.outcome, "schema_invalid");
+  assert.equal(calls[0]?.outcome, "source_framing_invalid");
   assert.equal(calls[1]?.classification, "automatic_retry");
   assert.equal(calls[1]?.retryKind, "content_repair");
   assert.equal(calls[0]?.startIndex, 0);
   assert.equal(calls[1]?.startIndex, 0);
+  assert.equal(focuses[0], focuses[1]);
 });
 
-test("v5.5 automatically repairs a grounded course-trivia question before storage", async (context) => {
+test("v5.7 uses private-evidence prompt labels and concept-first quality checks", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = taskFromRequest(init.body);
+    requests.push(task.body);
+    return responseForRequest(init.body);
+  };
+
+  await generateQuizFromPlainText(groundedInput(5), "sk-local-test");
+
+  const [systemMessage, referenceMessage, taskMessage] = requests[0].messages;
+  assert.match(systemMessage.content, /direct assessment items/iu);
+  assert.match(
+    systemMessage.content,
+    /remains meaningful without the source/iu,
+  );
+  assert.match(
+    referenceMessage.content,
+    /Topic hint — never test this label/iu,
+  );
+  assert.match(
+    referenceMessage.content,
+    /Private reference material — never mention this source/iu,
+  );
+  assert.doesNotMatch(referenceMessage.content, /Lesson title:/u);
+  assert.doesNotMatch(
+    referenceMessage.content,
+    /Complete plain-text lesson transcript:/u,
+  );
+  assert.match(taskMessage.content, /Eligible instructional evidence/iu);
+  assert.match(taskMessage.content, /structure only/iu);
+  assert.match(systemMessage.content, /Where did Mendeleev apply/iu);
+  assert.match(systemMessage.content, /How do limits determine/iu);
+});
+
+test("v5.7 repairs an overlapping short-answer rubric with its specific outcome", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const requests = [];
+  let q1Attempts = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests.push(JSON.parse(init.body));
+    return responseForRequest(init.body, (value, task) => {
+      if (task.slots[0].ordinal === 1 && ++q1Attempts === 1) {
+        const answer = value.questions[0].answer;
+        value.questions[0].rubricIdeas = [answer, `The ${answer}`];
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5, ["short_answer"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(q1Attempts, 2);
+  assert.equal(calls[0]?.outcome, "rubric_invalid");
+  assert.equal(calls[1]?.classification, "automatic_retry");
+  assert.equal(calls[1]?.retryKind, "content_repair");
+  assert.match(
+    requests[1].messages.at(-1).content,
+    /independent indispensable ideas/iu,
+  );
+  assert.match(
+    requests[1].messages.at(-1).content,
+    /shortest full-credit answer first/iu,
+  );
+  assert.match(
+    requests[1].messages.at(-1).content,
+    /Repair context from the rejected model candidate/iu,
+  );
+  assert.match(requests[1].messages.at(-1).content, /"question":/u);
+  assert.equal(
+    taskFromRequest(requests[0]).focusExcerpt,
+    taskFromRequest(requests[1]).focusExcerpt,
+  );
+});
+
+test("v5.7 fails a logistics-only source before any DeepSeek request", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    throw new Error(
+      "DeepSeek must not be called for a non-instructional source",
+    );
+  };
+  const input = {
+    ...groundedInput(5),
+    plainText: [
+      "Welcome to the course and subscribe to the channel.",
+      "Unit 1 weighs 10 percent of the AP Calculus BC exam.",
+      "Late assignments must be submitted through the course website.",
+      "The instructor has taught this course for twelve years.",
+    ]
+      .join(" ")
+      .repeat(3),
+  };
+
+  await assert.rejects(
+    generateQuizFromPlainText(input, "sk-local-test"),
+    (error) => error?.reasonCode === "non_instructional_source",
+  );
+  assert.equal(fetchCount, 0);
+});
+
+test("v5.7 classifies and repairs grounded course trivia before storage", async (context) => {
   const originalFetch = globalThis.fetch;
   const attempts = new Map();
   const calls = [];
@@ -668,7 +797,7 @@ test("v5.5 automatically repairs a grounded course-trivia question before storag
     result.metrics.retryCount,
     calls.filter((event) => event.classification === "automatic_retry").length,
   );
-  assert.equal(calls[0]?.outcome, "schema_invalid");
+  assert.equal(calls[0]?.outcome, "course_logistics_invalid");
   assert.ok(
     result.quiz.questions.every(
       (question) =>

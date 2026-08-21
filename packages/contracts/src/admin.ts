@@ -278,15 +278,15 @@ export const AdminSystemResponseSchema = z.object({
       validatorVersion: z.string(),
       rolloutMode: z.enum(["disabled", "canary", "enabled"]),
       supportedProfile: z.literal("evidence_grounded_auto_v5_4"),
-      supportedPromptVersion: z.literal("quiz-local-json-stream-v5.6"),
-      supportedValidatorVersion: z.literal("validator-local-progressive-v4.5"),
+      supportedPromptVersion: z.literal("quiz-local-json-stream-v5.7"),
+      supportedValidatorVersion: z.literal("validator-local-progressive-v4.6"),
       effectiveDefaultProfile: z.enum([
         "legacy_reasoning_v5_1",
         "stable_non_thinking_v5_2",
         "stable_auto_recovery_v5_3",
         "evidence_grounded_auto_v5_4",
       ]),
-      requiredExtensionVersion: z.literal("0.8.6"),
+      requiredExtensionVersion: z.literal("0.8.7"),
       requiredCapability: z.literal("question-stream-v5"),
       states: z.object({
         generating: z.number().int().nonnegative(),

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { storedQuestionFields } from "../src/routes/quiz-imports";
+import {
+  currentGroundedNewBankMetadataMatches,
+  storedQuestionFields,
+} from "../src/routes/quiz-imports";
 
 const common = {
   id: "q1",
@@ -52,5 +55,36 @@ describe("extension mixed-question persistence", () => {
         '{"requiredIdeas":["Required idea"],"acceptableAlternatives":["Reference answer","Equivalent answer"]}',
       explanation: common.explanation,
     });
+  });
+
+  it("accepts only current v5.7 metadata for a newly assigned grounded bank", () => {
+    const current = {
+      generationProfile: "evidence_grounded_auto_v5_4" as const,
+      model: "deepseek-v4-flash" as const,
+      pipelineVersion: 9 as const,
+      promptVersion: "quiz-local-json-stream-v5.7" as const,
+      validatorVersion: "validator-local-progressive-v4.6" as const,
+      protocolVersion: 8 as const,
+      importVersion: "extension-progressive-import-v6" as const,
+    };
+    expect(currentGroundedNewBankMetadataMatches(current)).toBe(true);
+    for (const stale of [
+      {
+        ...current,
+        promptVersion: "quiz-local-json-stream-v5.6" as const,
+        validatorVersion: "validator-local-progressive-v4.5" as const,
+      },
+      { ...current, protocolVersion: 5 as const },
+      {
+        ...current,
+        importVersion: "extension-progressive-import-v5" as const,
+      },
+    ]) {
+      expect(
+        currentGroundedNewBankMetadataMatches(
+          stale as Parameters<typeof currentGroundedNewBankMetadataMatches>[0],
+        ),
+      ).toBe(false);
+    }
   });
 });

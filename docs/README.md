@@ -9,6 +9,7 @@ This index separates current operating guidance from dated design and QA evidenc
 - [Operations console](./ADMIN-CONSOLE.md): roles, read-only Generation streams, safe telemetry, System metadata, and admin API surface.
 - [Production quiz-generation QA — extension 0.8.5](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md): latest official-site ten-video, 100-question learner run and current defects.
 - [Run 8 recovery and extension 0.8.6 implementation evidence](../qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-11.md): local compatibility-recovery, concept-validation, presentation, telemetry, and release-gate evidence. It is not a live rollout report.
+- [Concept-first extension 0.8.7 implementation evidence](../qa-results/concept-first-extension-0.8.7-implementation-2026-08-11.md): local prompt, strict evidence selection, targeted validation, rubric, and deterministic-grader evidence. It is not a benchmark or live rollout report.
 
 ## Current verified snapshot
 
@@ -25,9 +26,9 @@ This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 mi
 
 ## Current source candidate
 
-The local source now identifies the next candidate as extension `0.8.6`, result protocol `8`, capability `question-stream-v5`, prompt `quiz-local-json-stream-v5.6`, validator `validator-local-progressive-v4.5`, pipeline `9`, progressive import `v6`, and profile `evidence_grounded_auto_v5_4`.
+The local source now identifies the next candidate as extension `0.8.7`, result protocol `8`, capability `question-stream-v5`, prompt `quiz-local-json-stream-v5.7`, validator `validator-local-progressive-v4.6`, pipeline `9`, progressive import `v6`, and profile `evidence_grounded_auto_v5_4`.
 
-Automated regression coverage reclaims the same legacy 11/15 bank, preserves q1-q11, classifies previously attempted q12-q13 as singleton `automatic_retry` calls, classifies unseen q14-q15 as `primary`, and reaches 15/15 on the original attempt. Raw concept validation rejects source framing and course logistics before storage, while the legacy presentation guard preserves possessives and removes only complete anchored attribution clauses.
+Automated regression coverage retains the 0.8.6 Run 8 recovery behavior and adds v5.7 private-evidence prompting, strict fail-closed excerpt selection, checks across every learner-visible field, distinct content-repair outcomes, bounded non-overlapping rubrics, and the observed sensory-neuron grading case with shallow-answer controls. The legacy presentation guard still preserves possessives and removes only complete anchored attribution clauses.
 
 These are source and automated-test results only. Production remains on the verified 0.8.5 baseline until the exact committed artifact is pushed, deployed with rollout disabled, installed in Chrome, benchmarked, canaried for `unoxyrich`, and deliberately enabled.
 

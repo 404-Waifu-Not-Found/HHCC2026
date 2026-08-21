@@ -9,6 +9,7 @@ import {
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
+  questionConceptFailure,
   questionTestsTaughtConcept,
   stripQuestionSourceFraming,
 } from "../src/grounded-quality.js";
@@ -50,6 +51,55 @@ test("a source containing only course metadata yields no quiz focus", () => {
   ].join(" ");
   assert.deepEqual(buildInstructionalExcerpts(transcript), []);
   assert.equal(focusExcerptForOrdinal(transcript, 0, 5), "");
+});
+
+test("strict v5.7 excerpts fail closed and never promote score-zero title matches", () => {
+  const generic =
+    "ClipQuest review session introduces several topics and shares background context.";
+  assert.ok(buildInstructionalExcerpts(generic).length > 0);
+  assert.deepEqual(
+    buildInstructionalExcerpts(generic, {
+      strict: true,
+      topicHint: "ClipQuest review session",
+    }),
+    [],
+  );
+
+  const mixed = [
+    "Welcome to the continuity review session.",
+    "Unit 1 weighs 10 percent of the AP Calculus BC exam.",
+    "A function is continuous at x = c when f(c) exists, the limit exists, and the limit equals f(c).",
+    "Remember to submit late assignments through the course website.",
+  ].join(" ");
+  const strict = buildInstructionalExcerpts(mixed, {
+    strict: true,
+    topicHint: "Unit 1 continuity review",
+  }).join(" ");
+  assert.match(strict, /function is continuous/iu);
+  assert.doesNotMatch(
+    strict,
+    /welcome|10 percent|late assignments|course website/iu,
+  );
+});
+
+test("strict v5.7 ranks the strongest instructional evidence first", () => {
+  const transcript = [
+    "The atom contains several components.",
+    "A derivative represents instantaneous rate of change and is calculated as the limit of a difference quotient.",
+    "A function is useful in mathematics.",
+  ].join(" ");
+  const excerpts = buildInstructionalExcerpts(transcript, {
+    strict: true,
+    topicHint: "Derivatives",
+  });
+  assert.match(excerpts[0] ?? "", /instantaneous rate of change/iu);
+  assert.match(
+    focusExcerptForOrdinal(transcript, 0, 5, 0, {
+      strict: true,
+      topicHint: "Derivatives",
+    }),
+    /instantaneous rate of change/iu,
+  );
 });
 
 test("source framing is removed without rewriting the concept question", () => {
@@ -169,6 +219,122 @@ test("question focus gate rejects source and course trivia but accepts taught co
     );
   }
 });
+
+test("v5.7 reports precise framing, logistics, and low-value failures", () => {
+  const directConcept = {
+    concept: "continuity conditions",
+    question:
+      "What conditions must hold for a function to be continuous at a point?",
+    explanation:
+      "The function value and limit must exist, and the limit must equal the value.",
+    answer:
+      "The value and limit exist at the point, and the limit equals the value.",
+    rubricIdeas: ["the value and limit exist", "the limit equals the value"],
+    acceptableAnswers: [
+      "The value and limit exist, and the limit equals the value.",
+    ],
+    claim: {
+      subject: "continuity",
+      relation: "requires",
+      value: "an existing value and matching limit",
+      cluster: "continuity conditions",
+    },
+  };
+  expectConceptFailure(directConcept, null);
+
+  const sourceFraming = [
+    { question: "According to the lesson, what defines continuity?" },
+    { explanation: "The transcript says that all three conditions must hold." },
+    { answer: "According to the presenter, all three conditions hold." },
+    { correctAnswer: "The answer stated in the video" },
+    { choices: ["The lecturer's account", "A", "B", "C"] },
+    {
+      distractors: [
+        { text: "A", whyWrong: "The narrator said a different answer." },
+      ],
+    },
+    { rubricIdeas: ["what the source states"] },
+    { acceptableAnswers: ["As mentioned in the lecture, all conditions"] },
+    { claim: { subject: "the speaker's explanation" } },
+  ];
+  for (const override of sourceFraming) {
+    expectConceptFailure(
+      mergeConceptCandidate(directConcept, override),
+      "source_framing_invalid",
+    );
+  }
+
+  const logistics = [
+    "What percentage of the exam covers limits?",
+    "What joke did the presenter make during the introduction?",
+    "How many years has the instructor taught this course?",
+    "Where did Mendeleev apply to university?",
+    "Which department cross-listed the course?",
+    "What is the late assignment policy?",
+    "How many times was this topic requested by viewers?",
+  ];
+  for (const question of logistics) {
+    expectConceptFailure(
+      { ...directConcept, question },
+      "course_logistics_invalid",
+    );
+  }
+
+  const lowValue = [
+    "Who discovered the element?",
+    "When was the experiment first performed?",
+    "What institution stored the sample?",
+  ];
+  for (const question of lowValue) {
+    expectConceptFailure(
+      { ...directConcept, question },
+      "low_pedagogical_value",
+    );
+  }
+  expectConceptFailure(
+    { ...directConcept, question: "根据本课，连续的条件是什么？" },
+    "source_framing_invalid",
+  );
+  expectConceptFailure(
+    { ...directConcept, question: "这门课程的考试占比是多少？" },
+    "course_logistics_invalid",
+  );
+});
+
+test("v5.7 preserves direct concept questions across disciplines", () => {
+  const questions = [
+    "What conditions must hold for a function to be continuous at a point?",
+    "How does the derivative describe instantaneous rate of change?",
+    "How do sensory neurons transfer signals toward the central nervous system?",
+    "How does periodic position relate to recurring chemical properties?",
+    "What role does CRISPR-Cas9 play in targeted gene editing?",
+    "How did resource competition contribute to the conflict?",
+    "Where are protons and neutrons located in an atom?",
+    "为什么极限决定函数在一点是否连续？",
+  ];
+  for (const question of questions) {
+    expectConceptFailure(
+      {
+        concept: "transferable concept",
+        question,
+        explanation: "This directly explains the relevant relationship.",
+      },
+      null,
+    );
+  }
+});
+
+function mergeConceptCandidate(base, override) {
+  return {
+    ...base,
+    ...override,
+    ...(override.claim ? { claim: { ...base.claim, ...override.claim } } : {}),
+  };
+}
+
+function expectConceptFailure(candidate, expected) {
+  assert.equal(questionConceptFailure(candidate), expected, candidate.question);
+}
 
 test("true false answer is constructed from exact evidence instead of model polarity", () => {
   const evidence =

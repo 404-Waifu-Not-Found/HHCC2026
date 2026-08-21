@@ -17,6 +17,7 @@ import {
   type AttemptGenerationAvailability,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
+  type LocalGenerationCallOutcome,
 } from "@clipquest/contracts";
 import { z } from "zod";
 import { ApiError } from "./errors";
@@ -47,7 +48,12 @@ const ENGLISH_STOP_WORDS = new Set([
   "or",
   "that",
   "the",
+  "their",
+  "them",
+  "these",
+  "they",
   "this",
+  "those",
   "to",
   "was",
   "what",
@@ -87,6 +93,27 @@ const TOKEN_ALIASES = new Map([
   ["quotient", "ratio"],
   ["smaller", "small"],
   ["tiny", "small"],
+  ["carry", "transfer"],
+  ["carried", "transfer"],
+  ["transmit", "transfer"],
+  ["transmitt", "transfer"],
+  ["relay", "transfer"],
+  ["send", "transfer"],
+  ["sent", "transfer"],
+  ["information", "signal"],
+  ["data", "signal"],
+  ["signal", "signal"],
+  ["analyze", "process"],
+  ["analyse", "process"],
+  ["analyz", "process"],
+  ["analysis", "process"],
+  ["interpret", "process"],
+  ["process", "process"],
+  ["activate", "detect"],
+  ["activat", "detect"],
+  ["detect", "detect"],
+  ["sense", "detect"],
+  ["sens", "detect"],
 ]);
 
 export const ProgressiveQuizSummarySchema = z
@@ -295,10 +322,11 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
+    const groundedV57 = value.promptVersion === "quiz-local-json-stream-v5.7";
     const groundedV56 = value.promptVersion === "quiz-local-json-stream-v5.6";
     const groundedV55 = value.promptVersion === "quiz-local-json-stream-v5.5";
     const groundedV54 = value.promptVersion === "quiz-local-json-stream-v5.4";
-    const grounded = groundedV56 || groundedV55 || groundedV54;
+    const grounded = groundedV57 || groundedV56 || groundedV55 || groundedV54;
     const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
     const metadataMatches = grounded
@@ -306,11 +334,13 @@ export const ProgressiveQuizSummarySchema = z
         value.importVersion === "extension-progressive-import-v6" &&
         value.reasoningEffort === "none" &&
         value.validatorVersion ===
-          (groundedV56
-            ? "validator-local-progressive-v4.5"
-            : groundedV55
-              ? "validator-local-progressive-v4.4"
-              : "validator-local-progressive-v4.3") &&
+          (groundedV57
+            ? "validator-local-progressive-v4.6"
+            : groundedV56
+              ? "validator-local-progressive-v4.5"
+              : groundedV55
+                ? "validator-local-progressive-v4.4"
+                : "validator-local-progressive-v4.3") &&
         value.generationProfile === "evidence_grounded_auto_v5_4" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
@@ -722,26 +752,7 @@ export type ProgressiveGenerationSnapshot = {
   latestGenerationSessionId: string | null;
   nextCallIndex: number;
   retryOrdinals: number[];
-  previousOutcome:
-    | "complete"
-    | "partial_accepted"
-    | "transient_http"
-    | "network_interrupted"
-    | "timeout"
-    | "empty_content"
-    | "truncated_json"
-    | "finish_length"
-    | "schema_invalid"
-    | "type_or_order_mismatch"
-    | "duplicate_question"
-    | "answer_mapping_invalid"
-    | "credential_required"
-    | "billing_required"
-    | "local_state_conflict"
-    | "append_conflict"
-    | "source_unavailable"
-    | "recovery_budget_exhausted"
-    | null;
+  previousOutcome: LocalGenerationCallOutcome | null;
 };
 
 /**
@@ -991,7 +1002,7 @@ export function gradeProgressiveShortAnswer(input: {
 
   const normalizedAnswer = normalizeRubricText(input.answer);
   const answerTokens = rubricTokens(input.answer);
-  if (!normalizedAnswer || answerTokens.size === 0) return false;
+  if (!normalizedAnswer || answerTokens.size < 2) return false;
 
   const matchesAlternative = input.acceptableAlternatives.some(
     (alternative) => {
@@ -1017,6 +1028,11 @@ function normalizeRubricText(value: string): string {
   return value
     .normalize("NFKC")
     .toLocaleLowerCase("en-US")
+    .replace(/\bcentral nervous system\b/gu, " cns ")
+    .replace(/\bperipheral nervous system\b/gu, " pns ")
+    .replace(/\bdeoxyribonucleic acid\b/gu, " dna ")
+    .replace(/\bribonucleic acid\b/gu, " rna ")
+    .replace(/\bpick(?:s|ed|ing)?\s+up\b/gu, " detect ")
     .replace(/[’']/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
@@ -1081,7 +1097,7 @@ function tokenCoverage(
   for (const token of expectedTokens) {
     if (answerTokens.has(token)) matching += 1;
   }
-  const minimumMatches = expectedTokens.size === 1 ? 1 : 2;
+  const minimumMatches = 2;
   return (
     matching >= minimumMatches &&
     matching / expectedTokens.size >= requiredCoverage

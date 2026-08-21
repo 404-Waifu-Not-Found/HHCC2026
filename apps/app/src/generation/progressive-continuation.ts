@@ -329,7 +329,8 @@ async function runAutomaticRecovery(
       );
       if (event.classification === "automatic_retry") {
         automaticRetryCount = Math.min(
-          continuation.promptVersion === "quiz-local-json-stream-v5.6" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.6" ||
             legacyAutomaticRecovery
             ? 12
             : grounded
@@ -460,6 +461,7 @@ async function runAutomaticRecovery(
         automaticRetryCount,
         ordinalAttempt: latestOrdinalAttempt,
         strictBudget:
+          continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
           continuation.promptVersion === "quiz-local-json-stream-v5.6",
       });
     const compatibilityExhausted =

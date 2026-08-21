@@ -40,7 +40,11 @@ const LOGISTICS_PATTERNS = [
   /\b(?:ap\s+(?:calculus\s+)?(?:ab\/?bc|ab|bc)?\s*exam|exam|test|assessment|course|class|unit\s*\d+|module\s*\d+)\b.{0,90}\b(?:weight(?:ing)?|weighs?|worth|percentage|percent|points?|score|grade|duration|weeks?|hours?)\b/iu,
   /\b(?:weight(?:ing)?|weighs?|worth|percentage|percent|points?|score|grade)\b.{0,90}\b(?:ap\s+(?:calculus\s+)?(?:ab\/?bc|ab|bc)?\s*exam|exam|test|assessment|course|class|unit\s*\d+|module\s*\d+)\b/iu,
   /\b(?:who (?:is|was) (?:the )?(?:teacher|instructor|professor|presenter|speaker|teaching assistant|t\.?a\.?)|(?:teacher|instructor|professor|presenter|speaker|teaching assistant|t\.?a\.?).{0,50}(?:name|biography|background|degree|university|college|has taught|started teaching)|how long .{0,50}(?:taught|been teaching)|what (?:will|does) (?:the )?(?:(?:next|following) )?(?:course|class|unit|module) cover|what (?:is|was) covered (?:next|later)|how many (?:lessons?|videos?|weeks?|hours?) (?:are|were) in)\b/iu,
+  /\b(?:course (?:aims?|goals?|objectives?|numbers?|codes?)|class (?:aims?|goals?|objectives?)|cross[- ]listed|attendance policy|due dates?|deadlines?|late (?:work|homework|assignments?|problem sets?)|problem set policy|submission policy|office location|contact information|how many (?:times|years?) .{0,60}(?:taught|teach|requested)|university admission|applied to (?:a |the )?(?:university|college)|popularity|request count|presentation order|first topic|last topic)\b/iu,
+  /\b(?:(?:presenter|speaker|lecturer|narrator|instructor).{0,40}(?:jokes?|introduction|outro)|(?:jokes?|introduction|outro).{0,40}(?:presenter|speaker|lecturer|narrator|instructor)|recording metadata)\b/iu,
+  /\b(?:where did|when did|what (?:year|date|institution|university|college|city|country)|how many times)\b.{0,100}\b(?:apply|attend|graduate|study|teach|present|record|upload|request|live|born)\b/iu,
   /(?:课程安排|课程大纲|助教|办公时间|作业|评分|教材|投诉|订阅|赞助|推广|欢迎来到|讲师介绍|考试占比|考试权重|考试分值|单元占比|课程进度|考试时间|教师姓名|讲师姓名|教师简介|讲师简介|视频时长|上传日期)/u,
+  /(?:课程目标|课程编号|交叉课程|出勤|截止日期|迟交|授课次数|大学申请|受欢迎程度|请求次数|讲解顺序)/u,
 ];
 
 const INSTRUCTIONAL_PATTERNS = [
@@ -51,7 +55,7 @@ const INSTRUCTIONAL_PATTERNS = [
 const SAFE_INTERROGATIVE_LOOKAHEAD =
   "(?=what|which|how|why|when|where|who|is|are|does|do|can|should|explain|describe|identify|calculate|determine|define)";
 const SOURCE_NOUN =
-  "(?:lesson|video|lecture|lecturer|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)";
+  "(?:lesson|video|lecture|lecturer|course|class|transcript|source|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)";
 const SAFE_DELIMITER = "(?:\\s*[,;:\\-–—]\\s*|\\s+)";
 const SOURCE_FRAMING_PREFIX_PATTERNS = [
   new RegExp(
@@ -74,6 +78,7 @@ const SOURCE_REFERENCE_PATTERNS = [
   /\b(?:lecturer|presenter|narrator|speaker)\s+(?:says?|said|states?|stated|mentions?|mentioned|explains?|explained|shows?|showed|demonstrates?|demonstrated|teaches?|taught|calls?|called|describes?|described)\b/iu,
   /\b(?:what|which|how) (?:did|does|was|were) (?:the )?(?:lesson|video|lecture|presenter|instructor|teacher|professor|speaker|narrator).{0,80}\b(?:say|state|mention|show|explain|call|name|cover|teach|discuss)\b/iu,
   /\b(?:mentioned|shown|said|stated|covered|discussed|supported|described) (?:in|by) (?:the )?(?:lesson|video|lecture|transcript|presenter|instructor|teacher|professor|speaker|narrator)\b/iu,
+  /\b(?:(?:according to|based on) (?:the )?source|the source (?:says?|states?|mentions?|explains?|shows?|describes?))\b/iu,
   /(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)|(?:课|课程|视频|讲座|讲解|老师|讲师|主讲人)(?:中|里)?(?:提到|说到|讲到|介绍|展示)/u,
 ];
 
@@ -218,49 +223,152 @@ export function questionTestsTaughtConcept(candidate) {
   return !LOGISTICS_PATTERNS.some((pattern) => pattern.test(inspected));
 }
 
+function learnerVisibleCandidateText(candidate) {
+  const claim = candidate?.claim;
+  const distractors = Array.isArray(candidate?.distractors)
+    ? candidate.distractors.flatMap((value) =>
+        value && typeof value === "object"
+          ? [value.text, value.whyWrong]
+          : [value],
+      )
+    : [];
+  return [
+    candidate?.question,
+    candidate?.concept,
+    candidate?.explanation,
+    candidate?.answer,
+    candidate?.correctAnswer,
+    candidate?.correction,
+    candidate?.supportedStatement,
+    ...(Array.isArray(candidate?.choices) ? candidate.choices : []),
+    ...distractors,
+    ...(Array.isArray(candidate?.rubricIdeas) ? candidate.rubricIdeas : []),
+    ...(Array.isArray(candidate?.acceptableAnswers)
+      ? candidate.acceptableAnswers
+      : []),
+    claim?.subject,
+    claim?.relation,
+    claim?.value,
+    claim?.cluster,
+  ]
+    .filter((value) => typeof value === "string" && value.trim())
+    .join(" ");
+}
+
+const LOW_VALUE_RECALL_PATTERNS = [
+  /^\s*(?:who|when|how many times|what (?:year|date|institution|university|college|city|country|name))\b/iu,
+  /^\s*where did\b/iu,
+  /\b(?:biography|alma mater|university admission|course number|course code|cross[- ]listed|request count|popularity)\b/iu,
+  /^(?:谁|何时|哪一年|哪个日期|哪所大学|哪个学院|哪个城市|哪个国家|多少次|在哪里申请)/u,
+];
+
+const CONCEPTUAL_QUESTION_PATTERNS = [
+  /\b(?:define|definition|condition|relationship|relate|cause|effect|why|how does|how do|mechanism|process|method|formula|calculate|derive|apply|compare|role|function|property|principle|theorem|evidence for|results? in)\b/iu,
+  /(?:定义|条件|关系|原因|结果|为什么|如何|机制|过程|方法|公式|计算|推导|应用|比较|作用|功能|性质|原理|定理|导致)/u,
+];
+
+export function questionConceptFailure(candidate) {
+  const question = String(candidate?.question ?? "").trim();
+  if (!question) return "low_pedagogical_value";
+  const inspected = learnerVisibleCandidateText(candidate);
+  if (SOURCE_REFERENCE_PATTERNS.some((pattern) => pattern.test(inspected))) {
+    return "source_framing_invalid";
+  }
+  if (LOGISTICS_PATTERNS.some((pattern) => pattern.test(inspected))) {
+    return "course_logistics_invalid";
+  }
+  if (
+    LOW_VALUE_RECALL_PATTERNS.some((pattern) => pattern.test(question)) &&
+    !CONCEPTUAL_QUESTION_PATTERNS.some((pattern) => pattern.test(question))
+  ) {
+    return "low_pedagogical_value";
+  }
+  return null;
+}
+
 /**
  * Build bounded lesson excerpts while filtering administrative and promotional
  * transcript material. The original transcript remains the authoritative
  * prompt prefix; these excerpts are the only spans grounded questions may cite.
  */
-export function buildInstructionalExcerpts(plainText) {
+export function buildInstructionalExcerpts(
+  plainText,
+  { strict = false, topicHint = "" } = {},
+) {
   const rawSentences = sentenceUnits(plainText);
-  const scoredSentences = rawSentences.map((text) => ({
-    text,
-    score: instructionalScore(text),
-  }));
+  const topicTokens = semanticTokens(topicHint);
+  const scoredSentences = rawSentences.map((text, index) => {
+    const baseScore = instructionalScore(text);
+    const sentenceTokens = semanticTokens(text);
+    let topicMatches = 0;
+    if (baseScore > 0) {
+      for (const token of topicTokens) {
+        if (sentenceTokens.has(token)) topicMatches += 1;
+      }
+    }
+    return {
+      text,
+      index,
+      score: baseScore + Math.min(4, topicMatches),
+    };
+  });
   const hasInstructionalMaterial = scoredSentences.some(
     (entry) => entry.score > 0,
   );
-  const sentences = hasInstructionalMaterial
-    ? scoredSentences
-        .filter((entry) => entry.score >= 0)
-        .map((entry) => entry.text)
-    : rawSentences;
+  const sentences = strict
+    ? scoredSentences.filter((entry) => entry.score > 0)
+    : hasInstructionalMaterial
+      ? scoredSentences.filter((entry) => entry.score >= 0)
+      : scoredSentences;
+  if (!sentences.length) return [];
   const groups = [];
   let current = [];
   let currentLength = 0;
   for (const sentence of sentences) {
-    if (current.length && currentLength + sentence.length > 900) {
-      groups.push(current.join(" "));
+    if (current.length && currentLength + sentence.text.length > 900) {
+      groups.push(current);
       current = [];
       currentLength = 0;
     }
     current.push(sentence);
-    currentLength += sentence.length + 1;
+    currentLength += sentence.text.length + 1;
     if (currentLength >= 360) {
-      groups.push(current.join(" "));
+      groups.push(current);
       current = [];
       currentLength = 0;
     }
   }
-  if (current.length) groups.push(current.join(" "));
+  if (current.length) groups.push(current);
   const ranked = groups
-    .map((text, index) => ({ text, index, score: instructionalScore(text) }))
-    .filter((entry) => entry.score > -8);
-  return ranked
-    .sort((left, right) => left.index - right.index)
-    .map((entry) => entry.text.slice(0, 1_200));
+    .map((entries) => {
+      const text = entries.map((entry) => entry.text).join(" ");
+      return {
+        text,
+        index: entries[0]?.index ?? 0,
+        score:
+          entries.reduce((total, entry) => total + entry.score, 0) +
+          instructionalScore(text),
+      };
+    })
+    .filter((entry) => (strict ? entry.score > 0 : entry.score > -8));
+  if (!strict) {
+    return ranked
+      .sort((left, right) => left.index - right.index)
+      .map((entry) => entry.text.slice(0, 1_200));
+  }
+  const diverse = [];
+  for (const entry of ranked.sort(
+    (left, right) => right.score - left.score || left.index - right.index,
+  )) {
+    if (
+      diverse.every(
+        (selected) => conceptSimilarity(selected.text, entry.text) < 0.9,
+      )
+    ) {
+      diverse.push(entry);
+    }
+  }
+  return diverse.map((entry) => entry.text.slice(0, 1_200));
 }
 
 export function focusExcerptForOrdinal(
@@ -268,9 +376,14 @@ export function focusExcerptForOrdinal(
   ordinal,
   totalQuestions,
   repairCycle = 0,
+  options = {},
 ) {
-  const excerpts = buildInstructionalExcerpts(plainText);
+  const excerpts = buildInstructionalExcerpts(plainText, options);
   if (!excerpts.length) return "";
+  if (options.strict) {
+    const index = (ordinal + repairCycle) % excerpts.length;
+    return excerpts[index].slice(0, 2_400).trim();
+  }
   const base = Math.min(
     excerpts.length - 1,
     Math.floor(

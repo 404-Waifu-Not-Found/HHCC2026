@@ -8,6 +8,7 @@ import {
   AttemptGenerationResponseSchema,
   ExtensionQuizImportRequestSchema,
   ExtensionQuizProgressiveImportRequestSchema,
+  GenerationFailureCodeSchema,
   GenerationRecordV2Schema,
   GenerationRecordV3Schema,
   LibraryCardSchema,
@@ -66,10 +67,10 @@ describe("admin contracts", () => {
           validatorVersion: "validator-local-progressive-v4.0",
           rolloutMode: "disabled",
           supportedProfile: "evidence_grounded_auto_v5_4",
-          supportedPromptVersion: "quiz-local-json-stream-v5.6",
-          supportedValidatorVersion: "validator-local-progressive-v4.5",
+          supportedPromptVersion: "quiz-local-json-stream-v5.7",
+          supportedValidatorVersion: "validator-local-progressive-v4.6",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.6",
+          requiredExtensionVersion: "0.8.7",
           requiredCapability: "question-stream-v5",
           states: {
             generating: 1,
@@ -715,6 +716,57 @@ describe("generated questions", () => {
         reasonCode: undefined,
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts only coherent v5.7 grounded metadata and bounded repair outcomes", () => {
+    const questionPlan = {
+      seed: "c".repeat(64),
+      types: Array(5).fill("multiple_choice"),
+    } as const;
+    const chunk = {
+      protocolVersion: 8,
+      pipelineVersion: 9,
+      model: "deepseek-v4-flash",
+      reasoningEffort: "none",
+      promptVersion: "quiz-local-json-stream-v5.7",
+      validatorVersion: "validator-local-progressive-v4.6",
+      importVersion: "extension-progressive-import-v6",
+      generationProfile: "evidence_grounded_auto_v5_4",
+      generationId: "11111111-1111-4111-8111-111111111111",
+      generationSessionId: "22222222-2222-4222-8222-222222222222",
+      recoverySessionId: "33333333-3333-4333-8333-333333333333",
+      questionPlan,
+      title: "Trusted source title",
+      startIndex: 0,
+      totalQuestions: 5,
+      question: localQuestion("multiple_choice", 0),
+      metrics: {
+        aiCalls: 0,
+        retryCount: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: 0,
+        elapsedMs: 1,
+      },
+    } as const;
+    expect(LocalConceptQuizQuestionChunkSchema.safeParse(chunk).success).toBe(
+      true,
+    );
+    expect(
+      LocalConceptQuizQuestionChunkSchema.safeParse({
+        ...chunk,
+        promptVersion: "quiz-local-json-stream-v5.6",
+      }).success,
+    ).toBe(false);
+    for (const outcome of [
+      "source_framing_invalid",
+      "course_logistics_invalid",
+      "low_pedagogical_value",
+      "rubric_invalid",
+      "non_instructional_source",
+    ]) {
+      expect(GenerationFailureCodeSchema.safeParse(outcome).success).toBe(true);
+    }
   });
 });
 

@@ -319,11 +319,12 @@ export const LocalQuizPromptVersionSchema = z.enum([
   "quiz-local-json-stream-v5.4",
   "quiz-local-json-stream-v5.5",
   "quiz-local-json-stream-v5.6",
+  "quiz-local-json-stream-v5.7",
 ]);
 export type LocalQuizPromptVersion = z.infer<
   typeof LocalQuizPromptVersionSchema
 >;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.6" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.7" as const;
 export const LocalQuizValidatorVersionSchema = z.enum([
   "validator-local-progressive-v4.0",
   "validator-local-progressive-v4.1",
@@ -331,12 +332,13 @@ export const LocalQuizValidatorVersionSchema = z.enum([
   "validator-local-progressive-v4.3",
   "validator-local-progressive-v4.4",
   "validator-local-progressive-v4.5",
+  "validator-local-progressive-v4.6",
 ]);
 export type LocalQuizValidatorVersion = z.infer<
   typeof LocalQuizValidatorVersionSchema
 >;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
-  "validator-local-progressive-v4.5" as const;
+  "validator-local-progressive-v4.6" as const;
 export const LocalQuizProgressiveImportVersionSchema = z.enum([
   "extension-progressive-import-v3",
   "extension-progressive-import-v4",
@@ -386,6 +388,11 @@ export const GenerationFailureCodeSchema = z.enum([
   "append_conflict",
   "source_unavailable",
   "recovery_budget_exhausted",
+  "source_framing_invalid",
+  "course_logistics_invalid",
+  "low_pedagogical_value",
+  "rubric_invalid",
+  "non_instructional_source",
 ]);
 export const LocalGenerationFailureCodeSchema = GenerationFailureCodeSchema;
 export type GenerationFailureCode = z.infer<typeof GenerationFailureCodeSchema>;
@@ -474,6 +481,7 @@ export const QuizGenerationProfileResponseSchema = z
       "0.8.4",
       "0.8.5",
       "0.8.6",
+      "0.8.7",
     ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -487,7 +495,7 @@ export const QuizGenerationProfileResponseSchema = z
   .superRefine((value, context) => {
     const expected =
       value.generationProfile === "evidence_grounded_auto_v5_4"
-        ? ["0.8.6", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        ? ["0.8.7", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
         : value.generationProfile === "stable_auto_recovery_v5_3"
           ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
           : value.generationProfile === "stable_non_thinking_v5_2"
@@ -1445,21 +1453,24 @@ function validateLocalGenerationMetadata(
   value: LocalGenerationMetadata,
   context: z.RefinementCtx,
 ): void {
+  const groundedV57 = value.promptVersion === "quiz-local-json-stream-v5.7";
   const groundedV56 = value.promptVersion === "quiz-local-json-stream-v5.6";
   const groundedV55 = value.promptVersion === "quiz-local-json-stream-v5.5";
   const groundedV54 = value.promptVersion === "quiz-local-json-stream-v5.4";
-  const grounded = groundedV56 || groundedV55 || groundedV54;
+  const grounded = groundedV57 || groundedV56 || groundedV55 || groundedV54;
   const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
   const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
   const valid = grounded
     ? value.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
       value.reasoningEffort === "none" &&
       value.validatorVersion ===
-        (groundedV56
+        (groundedV57
           ? LOCAL_QUIZ_VALIDATOR_VERSION
-          : groundedV55
-            ? "validator-local-progressive-v4.4"
-            : "validator-local-progressive-v4.3") &&
+          : groundedV56
+            ? "validator-local-progressive-v4.5"
+            : groundedV55
+              ? "validator-local-progressive-v4.4"
+              : "validator-local-progressive-v4.3") &&
       value.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION &&
       value.generationProfile === "evidence_grounded_auto_v5_4" &&
       Boolean(value.generationId) &&

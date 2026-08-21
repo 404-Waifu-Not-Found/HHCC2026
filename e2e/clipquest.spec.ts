@@ -196,7 +196,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.6",
+            version: outdated ? "0.7.9" : "0.8.7",
             configured: true,
             capabilities: outdated
               ? []
@@ -287,8 +287,8 @@ test.beforeEach(async ({ page }) => {
               pipelineVersion: 9,
               model: "deepseek-v4-flash",
               reasoningEffort: "none",
-              promptVersion: "quiz-local-json-stream-v5.6",
-              validatorVersion: "validator-local-progressive-v4.5",
+              promptVersion: "quiz-local-json-stream-v5.7",
+              validatorVersion: "validator-local-progressive-v4.6",
               importVersion: "extension-progressive-import-v6",
               generationProfile: "evidence_grounded_auto_v5_4",
               generationId: event.data.context.generationId,
@@ -679,7 +679,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.6 or newer", { exact: false }),
+    page.getByText("0.8.7 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -1857,14 +1857,14 @@ async function installMocks(page: Page): Promise<Scenario> {
           extensionRequired: true,
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
-          promptVersion: "quiz-local-json-stream-v5.6",
-          validatorVersion: "validator-local-progressive-v4.5",
+          promptVersion: "quiz-local-json-stream-v5.7",
+          validatorVersion: "validator-local-progressive-v4.6",
           rolloutMode: "disabled",
           supportedProfile: "evidence_grounded_auto_v5_4",
-          supportedPromptVersion: "quiz-local-json-stream-v5.6",
-          supportedValidatorVersion: "validator-local-progressive-v4.5",
+          supportedPromptVersion: "quiz-local-json-stream-v5.7",
+          supportedValidatorVersion: "validator-local-progressive-v4.6",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.6",
+          requiredExtensionVersion: "0.8.7",
           requiredCapability: "question-stream-v5",
           states: {
             generating: 2,
@@ -1960,7 +1960,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     if (path === "/api/local-ai/profile" && request.method() === "GET") {
       await json(route, {
         generationProfile: "evidence_grounded_auto_v5_4",
-        minimumExtensionVersion: "0.8.6",
+        minimumExtensionVersion: "0.8.7",
         requiredCapability: "question-stream-v5",
       });
       return;

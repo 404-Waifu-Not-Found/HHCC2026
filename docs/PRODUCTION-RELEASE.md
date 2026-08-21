@@ -22,11 +22,11 @@ The current [ten-video production report](../qa-results/live-production-quiz-gen
 
 This table is a dated observation, not a substitute for checking the live service before the next release.
 
-## Pending 0.8.6 candidate
+## Pending 0.8.7 candidate
 
-The current local source candidate uses extension `0.8.6`, result protocol `8`, capability `question-stream-v5`, pipeline `9`, prompt `quiz-local-json-stream-v5.6`, validator `validator-local-progressive-v4.5`, progressive import `v6`, and generation profile `evidence_grounded_auto_v5_4`.
+The current local source candidate uses extension `0.8.7`, result protocol `8`, capability `question-stream-v5`, pipeline `9`, prompt `quiz-local-json-stream-v5.7`, validator `validator-local-progressive-v4.6`, progressive import `v6`, and generation profile `evidence_grounded_auto_v5_4`.
 
-Its compatibility path preserves accepted legacy prefixes and uses the original bank and attempt. Previously failed ordinals are retried as singleton `automatic_retry` requests; never-attempted ordinals remain `primary`. New `manual_continuation` inserts are rejected after the exact historical replay check, but existing rows remain immutable evidence. Prompt v5.6 rejects source framing and course logistics before storage, and the display compatibility guard removes only complete grammar-safe source-attribution clauses from old prompts.
+Its compatibility path preserves accepted legacy prefixes and uses the original bank and attempt. Previously failed ordinals are retried as singleton `automatic_retry` requests; never-attempted ordinals remain `primary`. New `manual_continuation` inserts are rejected after the exact historical replay check, but existing rows remain immutable evidence. Prompt v5.7 treats the transcript as private evidence, fails closed when no positively scored instructional excerpt exists, rejects source framing, logistics, presentation metadata, and low-value recall across every learner-visible field, and repairs only the affected singleton. The display compatibility guard removes only complete grammar-safe source-attribution clauses from old prompts. Prose short-answer rubrics are bounded to independent propositions and complete paraphrases, while the deterministic grader adds conservative alias and acronym normalization without lowering its threshold.
 
 This change requires no D1 migration. The existing `0018_automatic_generation_recovery.sql` and `0019_grounded_generation_telemetry.sql` columns are sufficient. The candidate has not been pushed, deployed, installed for acceptance, benchmarked, canaried, or enabled merely because it exists in the local source tree.
 
@@ -136,14 +136,14 @@ Health metadata alone is insufficient for a generation-profile release. Create a
 
 ## Generation rollout gate
 
-Do not enable `QUIZ_V5_4_ROLLOUT` merely because extension 0.8.6 is installed or `/health` advertises prompt v5.6. Source-level regression tests are necessary but do not clear the canary or production gate. Before canary or general enablement:
+Do not enable `QUIZ_V5_4_ROLLOUT` merely because extension 0.8.7 is installed or `/health` advertises prompt v5.7. Source-level regression tests are necessary but do not clear the canary or production gate. Before canary or general enablement:
 
-1. Deploy one immutable pushed 0.8.6 Worker/app candidate with the grounded rollout still disabled and install the matching extension ZIP.
+1. Deploy one immutable pushed 0.8.7 Worker/app candidate with the grounded rollout still disabled and install the matching extension ZIP.
 2. Verify the authenticated `/api/local-ai/profile` assignment, capability handshake, and one newly persisted bank—not only the supported versions advertised by `/health`.
 3. Run at least 100 complete healthy banks across 5/10/15 lengths, all question-type combinations, English/CJK, short/long captions, formula-heavy lessons, and manual/automatic captions.
 4. Require at least 99% healthy first-pass completion, 100% eligible completion without learner recovery actions, zero new `manual_continuation` rows, exact HTTP-call/event reconciliation, no shortened completion, and no accepted-question replacement.
 5. Set the grounded rollout to canary for `unoxyrich`, then run one immutable enabled-profile artifact across ten different real YouTube videos and complete all 100 learner questions.
-6. Require question 1 before the remaining bank, 10/10 first-attempt completion, truthful retry totals, prompt v5.6/validator v4.5/protocol 8 on every new bank, no source framing or logistics trivia, and no compatibility-presentation corruption.
+6. Require question 1 before the remaining bank, 10/10 first-attempt completion, truthful retry totals, prompt v5.7/validator v4.6/protocol 8 on every new bank, no source framing, logistics trivia, low-value recall, rubric corruption, or compatibility-presentation corruption.
 7. Revisit a recoverable legacy failed bank or reproduce Run 8's q12-q13 failure; require automatic completion of the same bank without replacing its accepted prefix.
 8. Confirm the page bridge and Worker requests contain no API key, captions, transcript, generation instructions, or raw DeepSeek response.
 9. Enable the grounded profile generally only after every benchmark and canary gate passes.
