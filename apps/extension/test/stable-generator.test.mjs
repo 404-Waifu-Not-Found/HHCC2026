@@ -1022,6 +1022,17 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
         /distractors as exactly three concise strings/u,
       );
       assert.doesNotMatch(request.task, /Each whyWrong must/u);
+      const schemaStart = request.task.indexOf("Exact JSON schema:");
+      const schemaText = request.task.slice(schemaStart);
+      assert.ok(
+        schemaText.indexOf('"evidenceQuote"') <
+          schemaText.indexOf('"answerSpan"'),
+        "v5.8 schema locks evidence before the answer span",
+      );
+      assert.ok(
+        schemaText.indexOf('"answerSpan"') < schemaText.indexOf('"question"'),
+        "v5.8 schema locks the answer before drafting the question",
+      );
     }
   }
   const sentSystemFingerprints = new Set(

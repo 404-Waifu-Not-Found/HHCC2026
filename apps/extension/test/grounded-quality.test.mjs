@@ -177,6 +177,14 @@ test("v5.8 requires How-does choices to state an outcome or mechanism", () => {
       "How does periodic position relate to recurring chemical properties?",
       "Elements in the same group share similar chemical properties.",
     ],
+    [
+      "How do herbivores such as tapirs and agoutis contribute to rainforest regeneration?",
+      "They disperse seeds throughout the forest so new trees can grow.",
+    ],
+    [
+      "How does coral support biodiversity?",
+      "Corals form interdependent relationships with fungi and bacteria.",
+    ],
   ]) {
     assert.equal(
       multipleChoiceOptionMatchesQuestionKind(question, answer),
@@ -197,6 +205,13 @@ test("v5.8 requires How-does choices to state an outcome or mechanism", () => {
       "Loss of biodiversity weakens resilience and can lead to collapse.",
     ),
     true,
+  );
+  assert.equal(
+    multipleChoiceOptionMatchesQuestionKind(
+      "How does biodiversity affect an ecosystem's ability to withstand change?",
+      "biodiversity",
+    ),
+    false,
   );
   for (const [question, answer] of [
     [

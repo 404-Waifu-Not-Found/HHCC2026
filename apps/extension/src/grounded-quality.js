@@ -304,6 +304,13 @@ const HOW_OUTCOME_QUESTION_PATTERN =
   /^\s*how\s+(?:does|do|did|can|could|will|would)\b.{0,220}\b(?:affect|contribute(?:s)?(?:\s+to)?|support|strengthen|weaken|protect|promote|improve|reduce|increase|decrease|influence|impact|help|enable|allow|cause|determine|relate|depend|secure)\b/iu;
 const OUTCOME_ANSWER_PATTERN =
   /\b(?:by|because|through|thereby|so that|allow(?:s|ed|ing)?|enable(?:s|d|ing)?|help(?:s|ed|ing)?|support(?:s|ed|ing)?|stabili[sz](?:e|es|ed|ing)|strengthen(?:s|ed|ing)?|weaken(?:s|ed|ing)?|increase(?:s|d|ing)?|decrease(?:s|d|ing)?|reduce(?:s|d|ing)?|prevent(?:s|ed|ing)?|protect(?:s|ed|ing)?|provide(?:s|d|ing)?|create(?:s|d|ing)?|distribut(?:e|es|ed|ing)|maintain(?:s|ed|ing)?|cause(?:s|d|ing)?|lead(?:s|ing)?\s+to|result(?:s|ed|ing)?\s+in|make(?:s|ing)?|affect(?:s|ed|ing)?|influenc(?:e|es|ed|ing)|promot(?:e|es|ed|ing)|facilitat(?:e|es|ed|ing)|ensure(?:s|d|ing)?|depend(?:s|ed|ing)?|share(?:s|d|ing)?|correspond(?:s|ed|ing)?|relat(?:e|es|ed|ing)|associate(?:s|d|ing)?|determin(?:e|es|ed|ing)|change(?:s|d|ing)?|rise(?:s|n)?|fall(?:s|en)?|encrypt(?:s|ed|ing)?|decrypt(?:s|ed|ing)?|authenticat(?:e|es|ed|ing)|verif(?:y|ies|ied|ying)|sign(?:s|ed|ing)?)\b/iu;
+// A bounded cross-domain action vocabulary catches complete mechanisms that
+// do not use one of the causal connector verbs above. The previous list
+// falsely rejected valid answers such as "disperse their seeds" and "corals
+// form interdependent relationships". This still rejects bare factors and
+// component lists because a complete action verb must be present.
+const OUTCOME_ACTION_ANSWER_PATTERN =
+  /\b(?:absorb(?:s|ed|ing)?|adapt(?:s|ed|ing)?|amplif(?:y|ies|ied|ying)|attract(?:s|ed|ing)?|bind(?:s|ing|bound)?|block(?:s|ed|ing)?|break(?:s|ing)?\s+down|carry|carries|carried|carrying|circulat(?:e|es|ed|ing)|combin(?:e|es|ed|ing)|connect(?:s|ed|ing)?|consum(?:e|es|ed|ing)|convert(?:s|ed|ing)?|coordinat(?:e|es|ed|ing)|decompos(?:e|es|ed|ing)|detect(?:s|ed|ing)?|dispers(?:e|es|ed|ing)|dissolv(?:e|es|ed|ing)|exchange(?:s|d|ing)?|feed(?:s|ing)?|filter(?:s|ed|ing)?|form(?:s|ed|ing)?|generat(?:e|es|ed|ing)|grow(?:s|ing|n)?|interact(?:s|ed|ing)?|move(?:s|d|ing)?|organ(?:ize|izes|ized|izing|ise|ises|ised|ising)|produc(?:e|es|ed|ing)|recycl(?:e|es|ed|ing)|reflect(?:s|ed|ing)?|regulat(?:e|es|ed|ing)|release(?:s|d|ing)?|remove(?:s|d|ing)?|repel(?:s|led|ling)?|reproduc(?:e|es|ed|ing)|resist(?:s|ed|ing)?|route(?:s|d|ing)?|scatter(?:s|ed|ing)?|spread(?:s|ing)?|store(?:s|d|ing)?|surviv(?:e|es|ed|ing)|transfer(?:s|red|ring)?|transmit(?:s|ted|ting)?|transport(?:s|ed|ing)?|trap(?:s|ped|ping)?|trigger(?:s|ed|ing)?|withstand(?:s|ing)?)\b/iu;
 const OUTCOME_RELATION_PATTERN =
   /\b(?:is|are|become(?:s)?|remain(?:s)?)\b.{0,100}\b(?:more|less|higher|lower|greater|smaller|larger|increased|decreased|reduced|vulnerable|resilient|stable|unstable|likely|unlikely|similar|different|dependent|independent)\b/iu;
 const CJK_OUTCOME_ANSWER_PATTERN =
@@ -320,7 +327,8 @@ export function multipleChoiceOptionMatchesQuestionKind(question, answer) {
   if (!prompt || !choice) return true;
   if (
     HOW_CAN_QUESTION_PATTERN.test(prompt) &&
-    !HOW_CAN_MECHANISM_ANSWER_PATTERN.test(choice)
+    !HOW_CAN_MECHANISM_ANSWER_PATTERN.test(choice) &&
+    !OUTCOME_ACTION_ANSWER_PATTERN.test(choice)
   ) {
     return false;
   }
@@ -328,6 +336,7 @@ export function multipleChoiceOptionMatchesQuestionKind(question, answer) {
   if (formulaFingerprint(choice)) return true;
   return (
     OUTCOME_ANSWER_PATTERN.test(choice) ||
+    OUTCOME_ACTION_ANSWER_PATTERN.test(choice) ||
     OUTCOME_RELATION_PATTERN.test(choice) ||
     CJK_OUTCOME_ANSWER_PATTERN.test(choice)
   );
