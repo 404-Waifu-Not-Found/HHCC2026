@@ -67,7 +67,7 @@ const STATE_EXPRESSION =
   "json_extract(q.quality_summary_json, '$.generationState')";
 const PROFILE_EXPRESSION =
   "COALESCE(json_extract(q.quality_summary_json, '$.generationProfile'), 'legacy_reasoning_v5_1')";
-const AUTOMATIC_PROFILE_EXPRESSION = `${PROFILE_EXPRESSION} IN ('stable_auto_recovery_v5_3', 'evidence_grounded_auto_v5_4')`;
+const AUTOMATIC_PROFILE_EXPRESSION = `${PROFILE_EXPRESSION} IN ('stable_auto_recovery_v5_3', 'evidence_grounded_auto_v5_4', 'concept_first_auto_v5_8')`;
 const AUTOMATIC_RECOVERY_EXPRESSION = `(
   ${AUTOMATIC_PROFILE_EXPRESSION}
   OR (

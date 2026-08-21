@@ -3,9 +3,11 @@ import test from "node:test";
 import {
   answerSupportedByEvidence,
   applyVerifiedMutation,
+  buildConceptFirstInstructionalSelection,
   buildInstructionalExcerpts,
   candidateDuplicatesAccepted,
   choicesLikelyEquivalent,
+  constructConceptFirstTrueFalseQuestion,
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
   groundedTrueFalseQuestion,
@@ -100,6 +102,64 @@ test("strict v5.7 ranks the strongest instructional evidence first", () => {
     }),
     /instantaneous rate of change/iu,
   );
+});
+
+test("v5.8 source selection uses safe neighboring concept windows and aggregate metrics", () => {
+  const transcript = [
+    "Welcome to the channel and subscribe for future uploads.",
+    "The midterm is worth 30 percent and late work loses five points.",
+    "Greenhouse gases absorb outgoing infrared radiation, which slows heat loss from Earth.",
+    "As greenhouse-gas concentration increases, more outgoing energy is retained in the lower atmosphere.",
+    "This energy imbalance raises the average surface temperature until outgoing and incoming energy balance again.",
+    "The presenter studied at Example University for four years.",
+  ].join(" ");
+  const selection = buildConceptFirstInstructionalSelection(transcript, {
+    topicHint: "Greenhouse effect",
+  });
+  assert.ok(selection.excerpts.length > 0);
+  assert.match(selection.excerpts[0], /infrared radiation|energy imbalance/iu);
+  assert.doesNotMatch(
+    selection.excerpts.join(" "),
+    /subscribe|midterm|late work|university/iu,
+  );
+  assert.ok(selection.metrics.candidateWindowCount >= 1);
+  assert.ok(selection.metrics.selectedWindowCount >= 1);
+  assert.equal("text" in selection.metrics, false);
+});
+
+test("v5.8 source selection fails closed for logistics-only material", () => {
+  const selection = buildConceptFirstInstructionalSelection(
+    "Welcome to the course. The exam is worth 40 percent. Office hours begin at noon. Subscribe for updates.",
+    { topicHint: "Course introduction" },
+  );
+  assert.deepEqual(selection.excerpts, []);
+  assert.equal(selection.metrics.selectedWindowCount, 0);
+});
+
+test("v5.8 constructs true-false polarity locally from one supported fact", () => {
+  const evidence =
+    "Increasing the resistance decreases current when voltage remains fixed.";
+  const falseQuestion = constructConceptFirstTrueFalseQuestion(
+    {
+      evidenceQuote: evidence,
+      supportedFact: evidence,
+      explanation:
+        "At fixed voltage, current and resistance vary in opposite directions.",
+    },
+    evidence,
+    false,
+  );
+  assert.equal(falseQuestion?.answer, false);
+  assert.match(falseQuestion?.question ?? "", /increases current/iu);
+  assert.equal(falseQuestion?.correction, evidence);
+
+  const trueQuestion = constructConceptFirstTrueFalseQuestion(
+    { evidenceQuote: evidence, supportedFact: evidence },
+    evidence,
+    true,
+  );
+  assert.equal(trueQuestion?.answer, true);
+  assert.equal(trueQuestion?.question, evidence);
 });
 
 test("source framing is removed without rewriting the concept question", () => {
@@ -284,6 +344,8 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     "Who discovered the element?",
     "When was the experiment first performed?",
     "What institution stored the sample?",
+    "What percentage of viewers use 5 GHz WiFi?",
+    "How many devices used the older protocol?",
   ];
   for (const question of lowValue) {
     expectConceptFailure(
@@ -298,6 +360,33 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
   expectConceptFailure(
     { ...directConcept, question: "这门课程的考试占比是多少？" },
     "course_logistics_invalid",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question: "Which factor shapes language variation?",
+      answer: "Degrees of variation among speakers",
+    },
+    "question_answer_kind_mismatch",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "socialization",
+      question: "Which process is called socialization?",
+      answer: "socialization",
+    },
+    "question_tautology_invalid",
+  );
+
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "What minimum percentage is required by the defined safety threshold?",
+      answer: "75 percent",
+    },
+    null,
   );
 });
 
@@ -442,6 +531,83 @@ test("grounded multiple choice requires exact local evidence and reasons", () =>
     ),
     null,
   );
+});
+
+test("v5.8 locally resolves the prior greenhouse, vaccine, cryptography, and photosynthesis answers", () => {
+  const cases = [
+    {
+      evidence:
+        "Greenhouse gases absorb outgoing infrared radiation and slow the loss of heat to space.",
+      answer: "absorb outgoing infrared radiation",
+      distractors: [
+        "reflect all visible sunlight",
+        "create energy from nothing",
+        "stop atmospheric circulation",
+      ],
+    },
+    {
+      evidence:
+        "Vaccination exposes the immune system to a safe antigen so memory cells can respond faster later.",
+      answer: "memory cells can respond faster later",
+      distractors: [
+        "every pathogen is removed immediately",
+        "the body no longer needs immune cells",
+        "antibiotics become permanently active",
+      ],
+    },
+    {
+      evidence:
+        "Public-key cryptography uses a public key for encryption while the matching private key performs decryption.",
+      answer: "the matching private key performs decryption",
+      distractors: [
+        "the public key must remain secret",
+        "both keys are discarded before transmission",
+        "encryption requires publishing the private key",
+      ],
+    },
+    {
+      evidence:
+        "Photosynthesis converts light energy into chemical energy stored in sugars.",
+      answer: "chemical energy stored in sugars",
+      distractors: [
+        "heat energy stored in oxygen",
+        "sound energy stored in roots",
+        "motion energy stored in minerals",
+      ],
+    },
+  ];
+
+  for (const item of cases) {
+    const candidate = groundedMultipleChoiceCandidate(
+      {
+        sourceEvidence: item.evidence,
+        correctAnswer: item.answer,
+        distractors: item.distractors.map((text) => ({
+          text,
+          whyWrong: "It contradicts the supported mechanism.",
+        })),
+      },
+      item.evidence,
+    );
+    assert.equal(candidate?.correctAnswer, item.answer);
+    assert.deepEqual(candidate?.distractors, item.distractors);
+  }
+});
+
+test("v5.8 retains instructional supply-and-demand windows without raw transcript fallback", () => {
+  const selection = buildConceptFirstInstructionalSelection(
+    [
+      "Welcome to the channel and remember to subscribe.",
+      "When demand increases while supply stays fixed, buyers compete for the available quantity.",
+      "That competition raises the market price, which encourages producers to offer more output.",
+      "A higher price can therefore coordinate buyer choices with producer incentives.",
+      "Thanks for watching and see you next time.",
+    ].join(" "),
+    { topicHint: "Supply and demand" },
+  );
+  assert.ok(selection);
+  assert.match(selection.excerpts[0], /demand|market price|producer/iu);
+  assert.doesNotMatch(selection.excerpts.join(" "), /subscribe|watching/iu);
 });
 
 test("semantic and formula equivalence reject the live QA distractors", () => {

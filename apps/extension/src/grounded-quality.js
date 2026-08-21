@@ -79,6 +79,7 @@ const SOURCE_REFERENCE_PATTERNS = [
   /\b(?:what|which|how) (?:did|does|was|were) (?:the )?(?:lesson|video|lecture|presenter|instructor|teacher|professor|speaker|narrator).{0,80}\b(?:say|state|mention|show|explain|call|name|cover|teach|discuss)\b/iu,
   /\b(?:mentioned|shown|said|stated|covered|discussed|supported|described) (?:in|by) (?:the )?(?:lesson|video|lecture|transcript|presenter|instructor|teacher|professor|speaker|narrator)\b/iu,
   /\b(?:(?:according to|based on) (?:the )?source|the source (?:says?|states?|mentions?|explains?|shows?|describes?))\b/iu,
+  /\b(?:according to (?:the )?described|(?:the )?(?:described|discussed|aforementioned) (?:mechanism|process|method|relationship|example)|as (?:described|discussed|shown|stated) (?:above|earlier|previously)|the (?:above|preceding|following) example|the evidence (?:says?|states?|shows?|supports?|indicates?))\b/iu,
   /(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)|(?:课|课程|视频|讲座|讲解|老师|讲师|主讲人)(?:中|里)?(?:提到|说到|讲到|介绍|展示)/u,
 ];
 
@@ -238,8 +239,10 @@ function learnerVisibleCandidateText(candidate) {
     candidate?.explanation,
     candidate?.answer,
     candidate?.correctAnswer,
+    candidate?.answerSpan,
     candidate?.correction,
     candidate?.supportedStatement,
+    candidate?.supportedFact,
     ...(Array.isArray(candidate?.choices) ? candidate.choices : []),
     ...distractors,
     ...(Array.isArray(candidate?.rubricIdeas) ? candidate.rubricIdeas : []),
@@ -267,6 +270,11 @@ const CONCEPTUAL_QUESTION_PATTERNS = [
   /(?:定义|条件|关系|原因|结果|为什么|如何|机制|过程|方法|公式|计算|推导|应用|比较|作用|功能|性质|原理|定理|导致)/u,
 ];
 
+const NUMERIC_RECALL_QUESTION_PATTERN =
+  /^\s*(?:(?:what (?:percentage|percent|number|count|frequency|duration)|how (?:many|often|long))\b|(?:多少|几次|多久|百分之几|占比多少))/iu;
+const NECESSARY_NUMERIC_OBJECTIVE_PATTERN =
+  /\b(?:calculate|compute|derive|formula|equation|law|threshold|limit|rate|ratio|minimum|required|maximum|relationship|effect|mechanism)\b|(?:计算|推导|公式|方程|定律|阈值|极限|速率|比率|最小|必须|最大|关系|影响|机制)/iu;
+
 export function questionConceptFailure(candidate) {
   const question = String(candidate?.question ?? "").trim();
   if (!question) return "low_pedagogical_value";
@@ -283,7 +291,155 @@ export function questionConceptFailure(candidate) {
   ) {
     return "low_pedagogical_value";
   }
+  if (
+    NUMERIC_RECALL_QUESTION_PATTERN.test(question) &&
+    !NECESSARY_NUMERIC_OBJECTIVE_PATTERN.test(question)
+  ) {
+    return "low_pedagogical_value";
+  }
+  const questionValue = normalizeGroundedText(question);
+  const directAnswer = normalizeGroundedText(
+    candidate?.answerSpan ?? candidate?.correctAnswer ?? candidate?.answer,
+  );
+  if (
+    directAnswer.length >= 4 &&
+    questionValue.includes(directAnswer) &&
+    /^(?:what|which)\b/iu.test(question)
+  ) {
+    return "question_tautology_invalid";
+  }
+  if (
+    /^(?:what|which)\s+(?:factor|cause|process|method|term|concept|quantity)\b/iu.test(
+      question,
+    ) &&
+    /^(?:most|least|more|less|highly|slightly|very|degrees?|levels?|amounts?|variations?)\b/iu.test(
+      String(
+        candidate?.answerSpan ??
+          candidate?.correctAnswer ??
+          candidate?.answer ??
+          "",
+      ),
+    )
+  ) {
+    return "question_answer_kind_mismatch";
+  }
   return null;
+}
+
+function sentenceExcludedFromConceptFirst(value) {
+  return (
+    LOGISTICS_PATTERNS.some((pattern) => pattern.test(value)) ||
+    /\b(?:hello|hi everyone|welcome(?: back)?|thanks for watching|see you next|subscribe|like and share|sponsor(?:ed)?|promo code|my name is|today i(?:'m| am) joined by)\b/iu.test(
+      value,
+    ) ||
+    /(?:大家好|欢迎|感谢观看|下期再见|订阅|点赞|赞助|推广)/u.test(value)
+  );
+}
+
+function conceptFirstInstructionalScore(value, topicTokens) {
+  if (sentenceExcludedFromConceptFirst(value)) return Number.NEGATIVE_INFINITY;
+  let score = instructionalScore(value);
+  const tokens = semanticTokens(value);
+  let titleOverlap = 0;
+  for (const token of topicTokens) if (tokens.has(token)) titleOverlap += 1;
+  score += Math.min(5, titleOverlap);
+  if (
+    /\b(?:because|therefore|so that|leads? to|results? in|depends? on|if|when|whereas|in contrast|by means of)\b/iu.test(
+      value,
+    )
+  ) {
+    score += 4;
+  }
+  if (
+    /\b(?:step|method|procedure|calculate|solve|derive|apply|example|for instance)\b/iu.test(
+      value,
+    )
+  ) {
+    score += 3;
+  }
+  if (/[=+*/^≤≥≈]|\b\w+\([^)]*\)/u.test(value)) score += 3;
+  score += Math.min(5, Math.floor(tokens.size / 8));
+  if (value.length >= 45 && value.length <= 700) score += 2;
+  return score;
+}
+
+export function buildConceptFirstInstructionalSelection(
+  plainText,
+  { topicHint = "" } = {},
+) {
+  const rawSentences = sentenceUnits(plainText);
+  const topicTokens = semanticTokens(topicHint);
+  const scored = rawSentences.map((text, index) => ({
+    text,
+    index,
+    excluded: sentenceExcludedFromConceptFirst(text),
+    score: conceptFirstInstructionalScore(text, topicTokens),
+  }));
+  const safe = scored.filter(
+    (entry) => !entry.excluded && entry.text.length >= 24,
+  );
+  if (!safe.length) {
+    return {
+      excerpts: [],
+      metrics: {
+        sentenceCount: Math.max(1, rawSentences.length),
+        excludedSentenceCount: scored.filter((entry) => entry.excluded).length,
+        candidateWindowCount: 0,
+        selectedWindowCount: 0,
+        focusWordCount: 0,
+      },
+    };
+  }
+
+  const safeByIndex = new Map(safe.map((entry) => [entry.index, entry]));
+  const windows = safe.map((entry) => {
+    const neighbors = [-1, 0, 1]
+      .map((offset) => safeByIndex.get(entry.index + offset))
+      .filter(Boolean);
+    const text = neighbors
+      .map((neighbor) => neighbor.text)
+      .join(" ")
+      .slice(0, 1_500);
+    const distinctTokens = semanticTokens(text).size;
+    return {
+      text,
+      index: entry.index,
+      score:
+        neighbors.reduce(
+          (total, neighbor) => total + Math.max(-4, neighbor.score),
+          0,
+        ) + Math.min(8, Math.floor(distinctTokens / 10)),
+    };
+  });
+  const selected = [];
+  for (const window of windows.sort(
+    (left, right) => right.score - left.score || left.index - right.index,
+  )) {
+    if (
+      selected.every(
+        (candidate) => conceptSimilarity(candidate.text, window.text) < 0.86,
+      )
+    ) {
+      selected.push(window);
+    }
+    if (selected.length >= 30) break;
+  }
+  const excerpts = selected.map((entry) => entry.text.trim()).filter(Boolean);
+  const focusWordCount = excerpts.reduce(
+    (maximum, excerpt) =>
+      Math.max(maximum, excerpt.match(/[\p{L}\p{N}]+/gu)?.length ?? 0),
+    0,
+  );
+  return {
+    excerpts,
+    metrics: {
+      sentenceCount: Math.max(1, rawSentences.length),
+      excludedSentenceCount: scored.filter((entry) => entry.excluded).length,
+      candidateWindowCount: windows.length,
+      selectedWindowCount: excerpts.length,
+      focusWordCount: Math.max(1, focusWordCount),
+    },
+  };
 }
 
 /**
@@ -293,8 +449,12 @@ export function questionConceptFailure(candidate) {
  */
 export function buildInstructionalExcerpts(
   plainText,
-  { strict = false, topicHint = "" } = {},
+  { strict = false, conceptFirstV58 = false, topicHint = "" } = {},
 ) {
+  if (conceptFirstV58) {
+    return buildConceptFirstInstructionalSelection(plainText, { topicHint })
+      .excerpts;
+  }
   const rawSentences = sentenceUnits(plainText);
   const topicTokens = semanticTokens(topicHint);
   const scoredSentences = rawSentences.map((text, index) => {
@@ -380,7 +540,7 @@ export function focusExcerptForOrdinal(
 ) {
   const excerpts = buildInstructionalExcerpts(plainText, options);
   if (!excerpts.length) return "";
-  if (options.strict) {
+  if (options.conceptFirstV58 || options.strict) {
     const index = (ordinal + repairCycle) % excerpts.length;
     return excerpts[index].slice(0, 2_400).trim();
   }
@@ -467,6 +627,8 @@ export function candidateDuplicatesAccepted(
   if (clusterMatches >= maximumPerCluster) return true;
   return accepted.some(
     (question) =>
+      conceptSimilarity(question.conceptCluster ?? question.concept, cluster) >=
+        0.58 &&
       conceptSimilarity(
         `${question.concept} ${question.question}`,
         `${candidate.concept} ${candidate.question}`,
@@ -510,6 +672,29 @@ export function answerSupportedByEvidence(answer, evidence) {
     if (evidenceTokens.has(token)) supportedTokens += 1;
   }
   return supportedTokens / answerTokens.size >= 0.75;
+}
+
+export function resolveUniqueEvidenceAnswerSpan(answerSpan, evidence) {
+  const candidate = String(answerSpan ?? "")
+    .normalize("NFC")
+    .trim();
+  const source = String(evidence ?? "")
+    .normalize("NFC")
+    .trim();
+  const normalizedCandidate = normalizeGroundedText(candidate);
+  const normalizedSource = normalizeGroundedText(source);
+  if (!candidate || !source || !normalizedCandidate) return null;
+  const first = normalizedSource.indexOf(normalizedCandidate);
+  if (
+    first < 0 ||
+    normalizedSource.indexOf(
+      normalizedCandidate,
+      first + normalizedCandidate.length,
+    ) >= 0
+  ) {
+    return null;
+  }
+  return candidate;
 }
 
 const CONTRADICTORY_REPLACEMENTS = new Map([
@@ -636,15 +821,88 @@ export function groundedTrueFalseQuestion(candidate, focusExcerpt) {
   };
 }
 
+function localFalseMutation(supportedStatement) {
+  for (const [source, replacement] of CONTRADICTORY_REPLACEMENTS) {
+    const pattern = new RegExp(`\\b${source}\\b`, "iu");
+    const matches = supportedStatement.match(
+      new RegExp(`\\b${source}\\b`, "giu"),
+    );
+    if (matches?.length !== 1) continue;
+    return {
+      question: supportedStatement.replace(pattern, replacement),
+      sourceValue: matches[0],
+      replacementValue: replacement,
+    };
+  }
+  const numericMatches = [...supportedStatement.matchAll(/-?\d+(?:\.\d+)?/gu)];
+  if (numericMatches.length === 1) {
+    const match = numericMatches[0];
+    const numeric = Number(match[0]);
+    if (Number.isFinite(numeric)) {
+      const replacement = Number.isInteger(numeric)
+        ? String(numeric + (numeric === 0 ? 1 : Math.sign(numeric)))
+        : String(Number((numeric + 0.1).toFixed(6)));
+      return {
+        question: `${supportedStatement.slice(0, match.index)}${replacement}${supportedStatement.slice((match.index ?? 0) + match[0].length)}`,
+        sourceValue: match[0],
+        replacementValue: replacement,
+      };
+    }
+  }
+  return null;
+}
+
+export function constructConceptFirstTrueFalseQuestion(
+  candidate,
+  focusExcerpt,
+  preferredPolarity,
+) {
+  const evidence = String(
+    candidate?.evidenceQuote ?? candidate?.sourceEvidence ?? "",
+  ).trim();
+  const supported = String(
+    candidate?.supportedFact ?? candidate?.supportedStatement ?? "",
+  ).trim();
+  if (
+    !evidenceAppearsInText(evidence, focusExcerpt) ||
+    !supported ||
+    !normalizeGroundedText(evidence).includes(normalizeGroundedText(supported))
+  ) {
+    return null;
+  }
+  const directExplanation = String(candidate?.explanation ?? "").trim();
+  if (preferredPolarity === false) {
+    const mutation = localFalseMutation(supported);
+    if (mutation) {
+      return {
+        question: mutation.question,
+        answer: false,
+        correction: supported,
+        explanation: directExplanation || supported,
+        mutationKind: "local_allowlisted",
+      };
+    }
+  }
+  return {
+    question: supported,
+    answer: true,
+    correction: supported,
+    explanation: directExplanation || supported,
+    mutationKind: "none",
+  };
+}
+
 export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
-  const evidence = String(candidate?.sourceEvidence ?? "").trim();
-  const correctAnswer = String(candidate?.correctAnswer ?? "").trim();
+  const evidence = String(
+    candidate?.evidenceQuote ?? candidate?.sourceEvidence ?? "",
+  ).trim();
+  const correctAnswer = resolveUniqueEvidenceAnswerSpan(
+    candidate?.answerSpan ?? candidate?.correctAnswer,
+    evidence,
+  );
   if (
     !evidenceAppearsInText(evidence, focusExcerpt) ||
     !correctAnswer ||
-    !normalizeGroundedText(evidence).includes(
-      normalizeGroundedText(correctAnswer),
-    ) ||
     !Array.isArray(candidate?.distractors) ||
     candidate.distractors.length !== 3
   ) {

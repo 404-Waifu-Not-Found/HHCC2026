@@ -159,6 +159,11 @@ function createDatabase(): SqliteD1Adapter {
       retry_kind TEXT,
       ordinal_attempt INTEGER,
       recovery_session_id TEXT,
+      purpose TEXT,
+      lifecycle_state TEXT NOT NULL DEFAULT 'completed',
+      dispatched_at INTEGER,
+      completed_at INTEGER,
+      last_stream_activity_at INTEGER,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (

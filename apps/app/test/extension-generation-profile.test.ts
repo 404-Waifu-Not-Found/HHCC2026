@@ -64,7 +64,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.7 and stream v5 for concept-only grounded recovery", () => {
+  it("requires v0.8.8 and stream v6 for new concept-first generation", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -88,10 +88,22 @@ describe("extension generation profile compatibility", () => {
         "0.8.7",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
-    ).toBe(true);
-    expect(supportsQuestionStream(["question-stream-v4"])).toBe(false);
+    ).toBe(false);
     expect(
-      supportsQuestionStream(["question-stream-v4", "question-stream-v5"]),
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.8",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(true);
+    expect(supportsQuestionStream(["question-stream-v5"])).toBe(false);
+    expect(
+      supportsQuestionStream(["question-stream-v5", "question-stream-v6"]),
+    ).toBe(true);
+    expect(
+      supportsQuestionStream(
+        ["question-stream-v5"],
+        "evidence_grounded_auto_v5_4",
+      ),
     ).toBe(true);
   });
 

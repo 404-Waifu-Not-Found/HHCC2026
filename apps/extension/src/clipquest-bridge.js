@@ -33,6 +33,7 @@
           "question-stream-v3",
           "question-stream-v4",
           "question-stream-v5",
+          "question-stream-v6",
           "ensure-source-ready-v1",
         ],
       });

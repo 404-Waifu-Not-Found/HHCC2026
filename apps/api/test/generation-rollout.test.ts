@@ -68,12 +68,12 @@ describe("quiz generation rollout", () => {
     );
   });
 
-  it("requires extension 0.8.7 for the concept-only grounded rollout", () => {
+  it("requires extension 0.8.8 for the concept-first rollout", () => {
     const canary = env("enabled", "", "enabled", "", "canary", "learner-1");
     expect(quizGenerationProfile(canary, "learner-1")).toEqual({
-      generationProfile: "evidence_grounded_auto_v5_4",
-      minimumExtensionVersion: "0.8.7",
-      requiredCapability: "question-stream-v5",
+      generationProfile: "concept_first_auto_v5_8",
+      minimumExtensionVersion: "0.8.8",
+      requiredCapability: "question-stream-v6",
     });
     expect(quizGenerationProfile(canary, "learner-2").generationProfile).toBe(
       "stable_auto_recovery_v5_3",
@@ -82,7 +82,7 @@ describe("quiz generation rollout", () => {
       generationProfileAllowsNewBank(
         canary,
         "learner-1",
-        "evidence_grounded_auto_v5_4",
+        "concept_first_auto_v5_8",
       ),
     ).toBe(true);
     expect(
@@ -114,7 +114,7 @@ describe("quiz generation rollout", () => {
       generationProfileAllowsNewBank(
         disabled,
         "learner-1",
-        "evidence_grounded_auto_v5_4",
+        "concept_first_auto_v5_8",
       ),
     ).toBe(false);
   });

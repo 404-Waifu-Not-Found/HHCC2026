@@ -66,12 +66,12 @@ describe("admin contracts", () => {
           promptVersion: "quiz-local-json-stream-v5.1",
           validatorVersion: "validator-local-progressive-v4.0",
           rolloutMode: "disabled",
-          supportedProfile: "evidence_grounded_auto_v5_4",
-          supportedPromptVersion: "quiz-local-json-stream-v5.7",
-          supportedValidatorVersion: "validator-local-progressive-v4.6",
+          supportedProfile: "concept_first_auto_v5_8",
+          supportedPromptVersion: "quiz-local-json-stream-v5.8",
+          supportedValidatorVersion: "validator-local-progressive-v4.7",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.7",
-          requiredCapability: "question-stream-v5",
+          requiredExtensionVersion: "0.8.8",
+          requiredCapability: "question-stream-v6",
           states: {
             generating: 1,
             retrying: 2,
@@ -767,6 +767,97 @@ describe("generated questions", () => {
     ]) {
       expect(GenerationFailureCodeSchema.safeParse(outcome).success).toBe(true);
     }
+  });
+
+  it("accepts coherent v5.8 concept-first metadata, atomic rubrics, and call lifecycles", () => {
+    const questionPlan = {
+      seed: "d".repeat(64),
+      types: Array(5).fill("short_answer"),
+    } as const;
+    const chunk = {
+      protocolVersion: 9,
+      pipelineVersion: 9,
+      model: "deepseek-v4-flash",
+      reasoningEffort: "none",
+      promptVersion: "quiz-local-json-stream-v5.8",
+      validatorVersion: "validator-local-progressive-v4.7",
+      importVersion: "extension-progressive-import-v7",
+      generationProfile: "concept_first_auto_v5_8",
+      generationId: "11111111-1111-4111-8111-111111111111",
+      generationSessionId: "22222222-2222-4222-8222-222222222222",
+      recoverySessionId: "33333333-3333-4333-8333-333333333333",
+      questionPlan,
+      promptFingerprint: "e".repeat(64),
+      title: "Atmospheric science",
+      startIndex: 0,
+      totalQuestions: 5,
+      question: {
+        ...localQuestion("short_answer", 0),
+        answer: "atmosphere",
+        rubricIdeas: ["atmosphere"],
+        acceptableAnswers: [],
+        shortAnswerMode: "atomic_term",
+        rubricV2: {
+          version: 2,
+          mode: "atomic_term",
+          canonicalAnswer: "atmosphere",
+          aliases: ["the atmosphere"],
+        },
+      },
+      metrics: {
+        aiCalls: 0,
+        retryCount: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: 0,
+        elapsedMs: 1,
+        sourceSelection: {
+          sentenceCount: 12,
+          excludedSentenceCount: 2,
+          candidateWindowCount: 10,
+          selectedWindowCount: 5,
+          focusWordCount: 80,
+        },
+      },
+    } as const;
+    expect(LocalConceptQuizQuestionChunkSchema.safeParse(chunk).success).toBe(
+      true,
+    );
+    expect(
+      LocalConceptQuizQuestionChunkSchema.safeParse({
+        ...chunk,
+        promptFingerprint: undefined,
+      }).success,
+    ).toBe(false);
+    const lifecycleBase = {
+      protocolVersion: 9,
+      purpose: "generation",
+      generationSessionId: chunk.generationSessionId,
+      recoverySessionId: chunk.recoverySessionId,
+      callIndex: 0,
+      startIndex: 0,
+      ordinalAttempt: 1,
+      requestedCount: 1,
+      classification: "primary",
+      retryDelayMs: 0,
+      usageComplete: false,
+    } as const;
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        ...lifecycleBase,
+        lifecycleState: "started",
+        acceptedCount: 0,
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        ...lifecycleBase,
+        lifecycleState: "completed",
+        acceptedCount: 1,
+        outcome: "complete",
+        elapsedMs: 900,
+      }).success,
+    ).toBe(true);
   });
 });
 

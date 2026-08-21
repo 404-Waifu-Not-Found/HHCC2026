@@ -1,6 +1,7 @@
 import {
   AutomaticRetryKindSchema,
   AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   GenerationStageSchema,
   GenerationFailureCodeSchema,
   LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -24,6 +25,7 @@ import { Platform } from "react-native";
 import {
   MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
   isCompatibleClipQuestExtensionVersion,
@@ -528,22 +530,26 @@ export async function requestExtensionLocalQuiz(
   const context = LocalQuizContextSchema.parse(rawContext);
   const minimumExtensionVersion =
     context.continuation?.resultProtocolVersion === 5
-      ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
-      : context.generationProfile === "evidence_grounded_auto_v5_4"
+      ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
+      : context.generationProfile === "concept_first_auto_v5_8"
         ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
-        : context.generationProfile === "stable_auto_recovery_v5_3"
-          ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
-          : context.generationProfile === "stable_non_thinking_v5_2"
-            ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
-            : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
+        : context.generationProfile === "evidence_grounded_auto_v5_4"
+          ? MINIMUM_GROUNDED_LOCAL_AI_EXTENSION_VERSION
+          : context.generationProfile === "stable_auto_recovery_v5_3"
+            ? MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION
+            : context.generationProfile === "stable_non_thinking_v5_2"
+              ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
+              : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
   const requiredCapability =
-    context.generationProfile === "evidence_grounded_auto_v5_4"
+    context.generationProfile === "concept_first_auto_v5_8"
       ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-      : context.generationProfile === "stable_auto_recovery_v5_3"
-        ? AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-        : context.generationProfile === "stable_non_thinking_v5_2"
-          ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-          : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
+      : context.generationProfile === "evidence_grounded_auto_v5_4"
+        ? GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+        : context.generationProfile === "stable_auto_recovery_v5_3"
+          ? AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+          : context.generationProfile === "stable_non_thinking_v5_2"
+            ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+            : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
     throw new Error("ClipQuest Local AI is not installed.");
@@ -571,10 +577,17 @@ export async function requestExtensionLocalQuiz(
   const id = requestId();
   return new Promise((resolve, reject) => {
     let settled = false;
+    let timeout: ReturnType<typeof setTimeout>;
+    let dispatchTimeout: ReturnType<typeof setTimeout> | undefined;
+    let idleTimeout: ReturnType<typeof setTimeout> | undefined;
+    const conceptFirst =
+      context.generationProfile === "concept_first_auto_v5_8";
     const finish = (callback: () => void) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
+      if (dispatchTimeout) clearTimeout(dispatchTimeout);
+      if (idleTimeout) clearTimeout(idleTimeout);
       signal.removeEventListener("abort", abort);
       window.removeEventListener("message", receive);
       callback();
@@ -587,6 +600,22 @@ export async function requestExtensionLocalQuiz(
             : new DOMException("The request was cancelled.", "AbortError"),
         ),
       );
+    const resetIdleWatchdog = () => {
+      if (!conceptFirst || settled) return;
+      if (idleTimeout) clearTimeout(idleTimeout);
+      idleTimeout = setTimeout(
+        () =>
+          finish(() =>
+            reject(
+              new LocalGenerationRequestError(
+                "The extension stopped reporting generation activity.",
+                "stream_idle_timeout",
+              ),
+            ),
+          ),
+        60_000,
+      );
+    };
     const receive = (event: MessageEvent<unknown>) => {
       if (event.source !== window || event.origin !== window.location.origin)
         return;
@@ -594,6 +623,7 @@ export async function requestExtensionLocalQuiz(
         isGenerationProgressMessage(event.data) &&
         event.data.requestId === id
       ) {
+        resetIdleWatchdog();
         onProgress(event.data.stage, event.data.progress, {
           attempt: event.data.attempt,
           maxAttempts: event.data.maxAttempts,
@@ -614,6 +644,7 @@ export async function requestExtensionLocalQuiz(
         isGenerationQuestionMessage(event.data) &&
         event.data.requestId === id
       ) {
+        resetIdleWatchdog();
         const chunk = LocalConceptQuizQuestionChunkSchema.safeParse(
           event.data.result,
         );
@@ -627,6 +658,7 @@ export async function requestExtensionLocalQuiz(
         return;
       }
       if (isGenerationCallMessage(event.data) && event.data.requestId === id) {
+        resetIdleWatchdog();
         const call = LocalGenerationCallEventSchema.safeParse(event.data.event);
         if (!call.success) {
           finish(() =>
@@ -638,6 +670,14 @@ export async function requestExtensionLocalQuiz(
           );
           return;
         }
+        if (
+          "lifecycleState" in call.data &&
+          call.data.lifecycleState === "started" &&
+          dispatchTimeout
+        ) {
+          clearTimeout(dispatchTimeout);
+          dispatchTimeout = undefined;
+        }
         onCall(call.data);
         return;
       }
@@ -648,6 +688,7 @@ export async function requestExtensionLocalQuiz(
         return;
       }
       const response = event.data.response;
+      resetIdleWatchdog();
       if (!response?.ok) {
         finish(() =>
           reject(
@@ -670,17 +711,32 @@ export async function requestExtensionLocalQuiz(
         }
       });
     };
-    const timeout = setTimeout(
+    timeout = setTimeout(
       () =>
         finish(() =>
           reject(
             new Error(
-              "Local generation exceeded 45 minutes. DeepSeek was not allowed to continue silently.",
+              "Local generation exceeded its supervised recovery limit. DeepSeek was not allowed to continue silently.",
             ),
           ),
         ),
-      45 * 60 * 1_000,
+      conceptFirst ? 15 * 60 * 1_000 : 45 * 60 * 1_000,
     );
+    if (conceptFirst) {
+      dispatchTimeout = setTimeout(
+        () =>
+          finish(() =>
+            reject(
+              new LocalGenerationRequestError(
+                "The extension did not dispatch the first generation call in time.",
+                "call_dispatch_timeout",
+              ),
+            ),
+          ),
+        10_000,
+      );
+      resetIdleWatchdog();
+    }
     window.addEventListener("message", receive);
     signal.addEventListener("abort", abort, { once: true });
     post({ type: "generate", requestId: id, context });

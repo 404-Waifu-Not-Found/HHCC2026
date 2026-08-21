@@ -1,5 +1,6 @@
 import {
   AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -43,8 +44,8 @@ export function quizGenerationProfile(
     (groundedMode === "canary" && groundedCanaryUsers.has(userId));
   if (grounded) {
     return QuizGenerationProfileResponseSchema.parse({
-      generationProfile: "evidence_grounded_auto_v5_4",
-      minimumExtensionVersion: "0.8.7",
+      generationProfile: "concept_first_auto_v5_8",
+      minimumExtensionVersion: "0.8.8",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     });
   }
@@ -94,6 +95,14 @@ export function quizGenerationProfile(
           requiredCapability: LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         },
   );
+}
+
+export function legacyGroundedQuizGenerationProfile(): QuizGenerationProfileResponse {
+  return QuizGenerationProfileResponseSchema.parse({
+    generationProfile: "evidence_grounded_auto_v5_4",
+    minimumExtensionVersion: "0.8.7",
+    requiredCapability: GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  });
 }
 
 export function generationProfileAllowsNewBank(
