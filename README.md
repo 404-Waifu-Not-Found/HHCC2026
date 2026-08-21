@@ -454,7 +454,9 @@ npm run cf:types
 npm run cf:dry-run
 ```
 
-The suite covers caption parsing and timestamp removal, one-character SSE/JSON fragmentation, early question emission, resumable suffix generation, retry budgets, the versioned extension channel, mixed question types, true/false balance, two-stage multiple-choice randomization, ordered/idempotent singleton imports, generating-attempt races, waiting and automatic-recovery states, legacy pipeline compatibility, learner feedback, and completion flows.
+The suite covers caption parsing and timestamp removal, one-character SSE/JSON fragmentation, early question emission, resumable suffix generation, retry budgets, the versioned extension channel, mixed question types, true/false balance, two-stage multiple-choice randomization, ordered/idempotent singleton imports, generating-attempt races, waiting and automatic-recovery states, legacy pipeline compatibility, learner feedback, the completion recap, and completion flows.
+
+The same format, lint, typecheck, unit, extension-packaging, and Playwright steps run on every push and pull request in [GitHub Actions](./.github/workflows/ci.yml). The repository forces LF line endings through `.gitattributes`, and the extension packager falls back to a built-in ZIP writer when the `zip` CLI is missing, so the gate behaves identically on macOS, Linux, and Windows.
 
 For a real extension smoke test with Chrome available:
 
