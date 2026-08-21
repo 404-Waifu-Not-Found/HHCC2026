@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { writeZipArchive } from "./zip-archive.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputRoot = resolve(root, "dist");
@@ -109,12 +110,20 @@ cpSync(extensionOutput, stableExtensionOutput, {
   force: true,
 });
 const archiveFiles = normalizeAndListFiles(stagingRoot, extensionOutput);
+// Prefer the system `zip` CLI (identical bytes to the tracked release asset);
+// fall back to the dependency-free writer where `zip` is not installed, such
+// as Windows developer machines, so dev:web, build, and e2e stay runnable.
 const zipped = spawnSync("zip", ["-X", "-q", archive, ...archiveFiles], {
   cwd: stagingRoot,
   stdio: "inherit",
 });
+let packager = "zip";
+if (zipped.error && zipped.error.code === "ENOENT") {
+  writeZipArchive(archive, stagingRoot, archiveFiles);
+  packager = "node";
+}
 rmSync(stagingRoot, { recursive: true, force: true });
-if (zipped.status !== 0) {
+if (packager === "zip" && zipped.status !== 0) {
   throw new Error(
     "Could not package the ClipQuest caption extension. Install the zip command and retry.",
   );
@@ -122,7 +131,9 @@ if (zipped.status !== 0) {
 const archiveSha256 = createHash("sha256")
   .update(readFileSync(archive))
   .digest("hex");
-console.log(`Built ${archive} (sha256 ${archiveSha256})`);
+console.log(
+  `Built ${archive} (sha256 ${archiveSha256}, packaged with ${packager})`,
+);
 
 function normalizeAndListFiles(stagingDirectory, directory) {
   const normalizedTime = new Date("2020-01-01T00:00:00.000Z");
