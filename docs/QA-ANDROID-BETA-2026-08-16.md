@@ -66,7 +66,7 @@ A local managed-project Gradle build completed successfully with JDK 17. It is u
 | ---------------------- | ------------------------------------------------------------------ |
 | Path                   | `apps/app/android/app/build/outputs/apk/release/app-release.apk`   |
 | Size                   | approximately 138 MB universal APK                                 |
-| SHA-256                | `847f70fa9ab3c3bfb959e340f2951ab16bc6bea603ecdf3dbbf4f43687fd7167` |
+| SHA-256                | `44eb7527a4e669c0953a3e78f2fdce14a13f0c94dd2c673155a764543906e577` |
 | ABIs                   | arm64-v8a, armeabi-v7a, x86, x86_64                                |
 | Signature verification | APK Signature Scheme v2 passed                                     |
 | Signer                 | Android Debug — **not a release identity**                         |
