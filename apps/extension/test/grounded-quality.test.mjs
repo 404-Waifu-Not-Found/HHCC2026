@@ -34,6 +34,47 @@ test("instructional excerpts exclude course administration when lesson content e
   assert.doesNotMatch(focus, /complaints|office hours|grading/iu);
 });
 
+test("multiple-choice grounding resolves an equivalent private answer span locally", () => {
+  const evidence =
+    "Rising levels of greenhouse gases in the atmosphere trap more outgoing heat.";
+  const candidate = {
+    evidenceQuote: evidence,
+    answerSpan: "higher atmospheric greenhouse-gas levels",
+    answerText: "rising levels of greenhouse gases in the atmosphere",
+    distractors: [
+      {
+        text: "lower ocean salinity",
+        whyWrong: "It does not describe the heat-trapping mechanism.",
+      },
+      {
+        text: "faster plate movement",
+        whyWrong: "It is unrelated to atmospheric heat retention.",
+      },
+      {
+        text: "weaker solar radiation",
+        whyWrong: "It reverses the direction of the supported mechanism.",
+      },
+    ],
+  };
+
+  assert.deepEqual(groundedMultipleChoiceCandidate(candidate, evidence), {
+    correctAnswer: candidate.answerText,
+    distractors: candidate.distractors.map((entry) => entry.text),
+  });
+  assert.equal(
+    groundedMultipleChoiceCandidate(
+      {
+        ...candidate,
+        answerSpan: "lower ocean salinity",
+        answerText: "lower ocean salinity",
+      },
+      evidence,
+    ),
+    null,
+    "an unrelated private span must never be repaired into acceptance",
+  );
+});
+
 test("instructional excerpts reject numeric course metadata without losing concepts", () => {
   const transcript = [
     "Unit 1 weighs 10 percent of the AP Calculus BC exam.",

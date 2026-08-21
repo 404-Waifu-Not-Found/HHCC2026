@@ -1007,17 +1007,46 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
   const evidence = String(
     candidate?.evidenceQuote ?? candidate?.sourceEvidence ?? "",
   ).trim();
-  const correctAnswer = resolveUniqueEvidenceAnswerSpan(
-    candidate?.answerSpan ?? candidate?.correctAnswer,
-    evidence,
-  );
+  const requestedAnswerSpan = String(
+    candidate?.answerSpan ?? candidate?.correctAnswer ?? "",
+  ).trim();
   const learnerAnswer = String(
     candidate?.answerText ?? candidate?.correctAnswer ?? "",
   ).trim();
+  const exactRequestedAnswerSpan = resolveUniqueEvidenceAnswerSpan(
+    requestedAnswerSpan,
+    evidence,
+  );
+  const exactLearnerAnswerSpan = resolveUniqueEvidenceAnswerSpan(
+    learnerAnswer,
+    evidence,
+  );
+  const answerRepresentationsAgree =
+    Boolean(exactRequestedAnswerSpan || exactLearnerAnswerSpan) ||
+    normalizeGroundedText(requestedAnswerSpan) ===
+      normalizeGroundedText(learnerAnswer) ||
+    choicesLikelyEquivalent(requestedAnswerSpan, learnerAnswer);
+  // DeepSeek occasionally paraphrases the private answerSpan even though the
+  // learner-facing answerText is copied exactly from the evidence. Preserve a
+  // valid exact source-language span for translated quizzes; otherwise resolve
+  // the benign mismatch locally only when both representations are equivalent
+  // and independently grounded. A wrong or unrelated answer is never repaired
+  // into acceptance.
+  const correctAnswer =
+    exactRequestedAnswerSpan ??
+    exactLearnerAnswerSpan ??
+    (answerRepresentationsAgree &&
+    answerSupportedByEvidence(requestedAnswerSpan, evidence) &&
+    answerSupportedByEvidence(learnerAnswer, evidence)
+      ? requestedAnswerSpan
+      : null);
   if (
     !evidenceAppearsInText(evidence, focusExcerpt) ||
     !correctAnswer ||
     !learnerAnswer ||
+    !answerRepresentationsAgree ||
+    (!exactRequestedAnswerSpan &&
+      !answerSupportedByEvidence(learnerAnswer, evidence)) ||
     !Array.isArray(candidate?.distractors) ||
     candidate.distractors.length !== 3
   ) {
