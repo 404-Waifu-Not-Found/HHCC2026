@@ -72,6 +72,29 @@ describe("bounded outbound responses", () => {
     vi.useRealTimers();
   });
 
+  it("preserves a caller cancellation instead of relabeling it as a timeout", async () => {
+    const caller = new AbortController();
+    const reason = new DOMException("Owner signed out", "AbortError");
+    const fetcher = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason),
+          );
+        }),
+    );
+    const request = fetchWithTimeout(
+      "https://example.com",
+      { signal: caller.signal },
+      10_000,
+      fetcher,
+    );
+
+    caller.abort(reason);
+
+    await expect(request).rejects.toBe(reason);
+  });
+
   it("aborts a stalled upstream response body after its deadline", async () => {
     vi.useFakeTimers();
     const response = new Response(

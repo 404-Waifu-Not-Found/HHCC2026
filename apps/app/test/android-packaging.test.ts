@@ -1,8 +1,14 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(import.meta.dirname, "..");
+const require = createRequire(import.meta.url);
+const { removeDebugReleaseSigning } =
+  require("../plugins/withAndroidReleaseSigningGuard.js") as {
+    removeDebugReleaseSigning(contents: string): string;
+  };
 
 describe("Android private-beta packaging", () => {
   it("pins the beta identity and supported SDK range", () => {
@@ -39,5 +45,31 @@ describe("Android private-beta packaging", () => {
     expect(easIgnore).toMatch(/^\/ios$/m);
     expect(easIgnore).toMatch(/^\.env\.\*$/m);
     expect(easIgnore).toMatch(/^\*\.keystore$/m);
+  });
+
+  it("never signs a generated release build with debug.keystore", () => {
+    const generatedGradle = `
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
+        }
+    }`;
+
+    const patched = removeDebugReleaseSigning(generatedGradle);
+    expect(patched).toContain("signingConfig signingConfigs.debug");
+    expect(patched.match(/signingConfig signingConfigs\.debug/g)).toHaveLength(
+      1,
+    );
+    expect(patched).toContain("release signing is injected by EAS Build");
+    expect(removeDebugReleaseSigning(patched)).toBe(patched);
+
+    const releaseBlock = patched.match(/release\s*\{[\s\S]*?\n\s{4}\}/)?.[0];
+    expect(releaseBlock).toBeDefined();
+    expect(releaseBlock).not.toContain("signingConfigs.debug");
   });
 });
