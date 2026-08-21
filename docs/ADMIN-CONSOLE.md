@@ -1,6 +1,6 @@
 # ClipQuest operations console
 
-Status reviewed: 2026-08-11. This document describes the current extension-local operations surface. Release implementation and live acceptance are recorded in the [README release status](../README.md#release-status) and the [current production QA report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md).
+Status reviewed: 2026-08-16. This document describes the local-client operations surface: Chrome generates through ClipQuest Local AI, while Android generates inside the native app. Release implementation and live acceptance are recorded in the [README release status](../README.md#release-status), [Android QA report](./QA-ANDROID-BETA-2026-08-16.md), and dated web-generation reports.
 
 The private operations console lives at `/admin`. It uses ClipQuest's Expo application and visual system but remains isolated from learner navigation.
 
@@ -12,7 +12,7 @@ The private operations console lives at `/admin`. It uses ClipQuest's Expo appli
 | `admin` | Read overview, people, generation streams, lessons, audit, and system health; suspend or restore learner accounts; revoke learner sessions |
 | `owner` | All administrator access plus role changes                                                                                                 |
 
-Both `admin` and `owner` receive the existing `jobs:read` permission for Generation streams. The deprecated `jobs:manage` permission is not granted. Operators cannot start, retry, repair, cancel, or continue a learner's DeepSeek stream because generation lives in that learner's Chrome extension.
+Both `admin` and `owner` receive the existing `jobs:read` permission for Generation streams. The deprecated `jobs:manage` permission is not granted. Operators cannot start, retry, repair, cancel, or continue a learner's DeepSeek stream because generation lives in that learner's Chrome extension or Android app.
 
 Roles come from the authenticated server session. The client never supplies or infers authorization, and every `/api/admin/*` endpoint checks the server-owned permission. Hiding a route or changing client state cannot grant access. Generic Better Auth admin endpoints remain blocked; privileged mutations must use ClipQuest's audited management API.
 
@@ -23,7 +23,7 @@ Roles come from the authenticated server session. The client never supplies or i
 - **Generation streams:** read-only pipeline-9 progress. It shows owner and YouTube identifiers, accepted/planned questions, requested types, state, primary calls, automatic retries/recoveries, **Legacy continuation-classified calls** when present, partial calls, bounded outcomes, token-usage completeness, first-question latency, timestamps, and stalled status.
 - **Lessons:** read-only lesson ownership, question count, attempt count, source, language, and session summaries.
 - **Audit log:** actor, action, target, reason, outcome, and timestamp for privileged mutations.
-- **System:** extension-local architecture, Worker version metadata, applied D1 migration, rollout mode, model/protocol metadata, and generation-state counts. Worker quiz generation is labelled disabled by design; local extension generation is available and required.
+- **System:** local-client architecture, Worker version metadata, applied D1 migration, rollout mode, model/protocol metadata, client requirements, and generation-state counts. Worker quiz generation is labelled disabled by design; web uses the Chrome extension and Android uses in-app generation.
 
 Generation streams never expose prompts, questions, answers, rubrics, captions, transcript fragments, raw DeepSeek bodies, raw API errors, authorization headers, credentials, or a learner's API key. The broader console also excludes auth tokens, passwords, account credentials, R2 objects, impersonation, password/email changes, and hard account deletion.
 
@@ -103,9 +103,9 @@ For production, repeat the read first with `--remote`, resolve the exact immutab
 - The last active owner cannot be suspended or demoted.
 - Suspension revokes the target's active sessions.
 - User-management requests require a reason of 3 to 500 characters and create audit records.
-- Generation streams are read-only; recovery belongs to the authenticated learner's compatible extension.
+- Generation streams are read-only; recovery belongs to the authenticated learner's compatible Chrome or Android client.
 - Lists are filtered and paginated on the server and return allowlisted fields only.
-- `configuration.generation: true` means quiz generation is available overall. The explicit architecture fields distinguish required extension-local generation from Worker generation disabled by design.
+- `configuration.generation: true` means quiz generation is available overall. The explicit architecture fields distinguish Chrome extension generation, Android in-app generation, and Worker generation disabled by design.
 
 ## API surface
 
