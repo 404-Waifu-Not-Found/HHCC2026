@@ -1,6 +1,7 @@
 import type { LibraryCard } from "@clipquest/contracts";
 import { VoxelIcon } from "./VoxelIcon";
 import {
+  Alert,
   Platform,
   Pressable,
   StyleSheet,
@@ -30,7 +31,7 @@ export function VideoCard({
   onPress(): void;
   compact?: boolean;
   fill?: boolean;
-  onExport?(): void;
+  onExport?(): void | Promise<void>;
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
@@ -135,7 +136,14 @@ export function VideoCard({
             disabled={!onExport || card.cheatSheet.status === "none"}
             onPress={(event) => {
               event.stopPropagation();
-              onExport?.();
+              void Promise.resolve(onExport?.()).catch((cause) => {
+                Alert.alert(
+                  t("exportNotes"),
+                  cause instanceof Error
+                    ? cause.message
+                    : "The cheat sheet could not be exported.",
+                );
+              });
             }}
             style={({ pressed }) => [
               styles.exportButton,
