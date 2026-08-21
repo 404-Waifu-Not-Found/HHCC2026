@@ -35,15 +35,12 @@ export async function loadImportedVideo(
         stored.transcriptionMode ??
         (hasCaptions
           ? "captions"
-          : stored.video?.source === "youtube"
-            ? "browser_tab_capture"
-            : "device_media"),
+          : "device_media"),
       capture:
         stored.capture ??
         ({
           expectedDurationSeconds: stored.video?.durationSeconds ?? 0,
-          requiresUserGesture:
-            stored.video?.source === "youtube" && !hasCaptions,
+          requiresUserGesture: false,
         } satisfies VideoImportResponse["capture"]),
     });
   } catch {

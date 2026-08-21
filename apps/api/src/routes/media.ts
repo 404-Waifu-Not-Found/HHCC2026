@@ -25,13 +25,7 @@ type MediaVideoRow = {
 export const mediaRouter = new Hono<ApiBindings>();
 
 export function assertMediaSourceAllowed(source: VideoSource): void {
-  if (source === "youtube") {
-    throw new ApiError(
-      409,
-      "browser_capture_required",
-      "YouTube audio must be captured and transcribed privately in your browser.",
-    );
-  }
+  SourceSchema.parse(source);
 }
 
 mediaRouter.post("/resolve", async (c) => {
@@ -51,17 +45,7 @@ mediaRouter.post("/resolve", async (c) => {
   if (!video || !SourceSchema.safeParse(video.source).success) {
     throw new ApiError(404, "video_not_found", "Video not found.");
   }
-  if (video.source === "youtube") {
-    console.warn(
-      JSON.stringify({
-        scope: "media_boundary",
-        event: "youtube_media_blocked",
-        requestId: crypto.randomUUID(),
-        videoId: video.id,
-      }),
-    );
-    assertMediaSourceAllowed(video.source);
-  }
+  assertMediaSourceAllowed(video.source);
   if (video.duration_seconds > MAX_CAPTIONLESS_DURATION_SECONDS) {
     throw new ApiError(
       422,

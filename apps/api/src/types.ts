@@ -3,14 +3,11 @@ export type AppSecrets = {
   RESEND_API_KEY: string;
   BETTER_AUTH_SECRET: string;
   YOUTUBE_CREDENTIALS_ENCRYPTION_KEY: string;
-  BRIGHT_DATA_API_KEY?: string;
-  SUPADATA_API_KEY?: string;
 };
 
 export type AppEnv = Omit<Env, "ENABLE_YOUTUBE_DEMO_HISTORY"> &
   AppSecrets & {
     ENABLE_YOUTUBE_DEMO_HISTORY: string;
-    YOUTUBE_BROWSER_PIPELINE_V2: string;
   };
 
 import type { AdminRole } from "@clipquest/contracts";

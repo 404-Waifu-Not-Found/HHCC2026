@@ -66,7 +66,7 @@ public YouTube / bilibili URL
         ┌─────┴───────────┐
         │ captions        │ no captions
         ▼                 ▼
- timestamped text   short-lived audio stream
+timestamped text   transient no-store audio stream
                            │
                            ▼
                  on-device decode + Whisper
@@ -97,7 +97,7 @@ The detected-video screen presents available title, creator, duration, language,
 
 ### 3. Build the transcript privately
 
-ClipQuest uses captions when possible. Captionless media is streamed through a short-lived user-bound token, decoded to 16 kHz mono PCM, and transcribed locally through WebGPU/WASM on web or `whisper.rn` in a native development build.
+ClipQuest uses open-source YouTube.js to check a fresh YouTube caption track first. If none exists, the Worker resolves and relays an audio-only format through a short-lived user-bound, `no-store` response. The browser keeps the response in memory, decodes it to 16 kHz mono PCM, and runs WebGPU/WASM Whisper locally. Audio is never written to KV, R2, D1, Cache Storage, or application logs.
 
 ### 4. Generate an evidence-backed quest
 
@@ -334,7 +334,7 @@ npm run cf:deploy
 > The app and Worker share one deployment. Build the Expo export before deploying so `apps/app/dist` contains the intended static routes and assets.
 
 > [!CAUTION]
-> YouTube can challenge shared Cloudflare egress even when metadata succeeds. Treat live caption/media retrieval as an upstream integration that must be smoke-tested with supported public videos; do not work around it by collecting browser cookies or weakening the local-transcription privacy boundary.
+> YouTube caption and audio acquisition uses open-source YouTube.js. Ordinary webpages cannot read YouTube audio cross-origin, so captionless audio is relayed transiently through the Worker with caching disabled. Smoke-test Cloudflare egress with supported public videos; never collect browser cookies or persist media.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -342,7 +342,7 @@ npm run cf:deploy
 
 ## 🛡️ Privacy and security boundary
 
-- Raw audio is streamed through a short-lived user-bound token, decoded locally, and discarded after transcription.
+- Captionless YouTube audio is relayed through a short-lived user-bound `no-store` response, decoded in browser memory, and discarded after transcription. It is never persisted by ClipQuest.
 - Only timestamped transcript segments—not raw audio—are uploaded for private storage and question generation.
 - DeepSeek and Resend credentials remain Worker-only and never enter Expo or web bundles.
 - D1 queries and R2/KV objects are scoped to authenticated ClipQuest users and server-side authorization.

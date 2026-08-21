@@ -10,7 +10,6 @@ import { cacheThumbnail } from "../lib/thumbnail";
 import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 import { getSourceAdapter, normalizeSourceUrl } from "../sources";
-import { fetchFreshYouTubeCaptions } from "../sources/youtube-captions";
 import type { SourceVideo } from "../sources/types";
 import { parseYouTubeId } from "../sources/url";
 import { ApiError } from "../lib/errors";
@@ -26,18 +25,6 @@ type VideoRow = {
   duration_seconds: number;
   source_language: string | null;
 };
-
-function youtubePipelineEnabled(value: string, userId: string): boolean {
-  const percentage = value === "true" ? 100 : Number.parseInt(value, 10);
-  if (!Number.isFinite(percentage) || percentage <= 0) return false;
-  if (percentage >= 100) return true;
-  let hash = 2166136261;
-  for (const character of userId) {
-    hash ^= character.charCodeAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0) % 100 < percentage;
-}
 
 export const videosRouter = new Hono<ApiBindings>();
 export const thumbnailRouter = new Hono<ApiBindings>();
@@ -70,57 +57,17 @@ videosRouter.post("/import", async (c) => {
 
   let inspected: SourceVideo;
   if (normalized.source === "youtube") {
-    const providerAcquisitionEnabled = youtubePipelineEnabled(
-      c.env.YOUTUBE_BROWSER_PIPELINE_V2,
-      user.id,
-    );
-    const [metadataResult, captionResult] = await Promise.allSettled([
-      getSourceAdapter("youtube").inspect(normalized.url),
-      providerAcquisitionEnabled
-        ? fetchFreshYouTubeCaptions(c.env, normalized.url.toString(), requestId)
-        : Promise.resolve(null),
-    ]);
-    const captions =
-      captionResult.status === "fulfilled" ? captionResult.value : null;
-    if (metadataResult.status === "fulfilled") {
-      inspected = metadataResult.value;
-    } else if (captions?.metadata?.title && sourceVideoId) {
-      inspected = {
-        source: "youtube",
-        sourceVideoId,
-        canonicalUrl: `https://www.youtube.com/watch?v=${sourceVideoId}`,
-        title: captions.metadata.title,
-        thumbnailUrl:
-          captions.metadata.thumbnailUrl ??
-          `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
-        durationSeconds: captions.metadata.durationSeconds ?? 0,
-        sourceLanguage: captions.language,
-        captionTracks: [],
-      };
-    } else {
-      throw metadataResult.reason;
-    }
-    if (captions) {
-      inspected = {
-        ...inspected,
-        title: captions.metadata?.title ?? inspected.title,
-        thumbnailUrl: captions.metadata?.thumbnailUrl ?? inspected.thumbnailUrl,
-        durationSeconds:
-          captions.metadata?.durationSeconds ?? inspected.durationSeconds,
-        sourceLanguage: captions.language ?? inspected.sourceLanguage,
-        captionTracks: captions.tracks,
-        preferredCaptionSegments: captions.segments,
-      };
-    }
+    inspected = await getSourceAdapter("youtube").inspect(normalized.url);
     console.info(
       JSON.stringify({
         scope: "video_import",
         event: "youtube_acquisition.completed",
         requestId,
         sourceVideoId,
-        provider: captions?.provider ?? "browser_tab_capture",
-        providerAcquisitionEnabled,
-        captionSegmentCount: captions?.segments.length ?? 0,
+        acquisition: inspected.preferredCaptionSegments?.length
+          ? "youtube_captions"
+          : "transient_audio_stream",
+        captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
         elapsedMs: Date.now() - importStartedAt,
       }),
     );
@@ -228,13 +175,10 @@ videosRouter.post("/import", async (c) => {
     },
     transcriptionMode: preferredSegments?.length
       ? "captions"
-      : inspected.source === "youtube"
-        ? "browser_tab_capture"
-        : "device_media",
+      : "device_media",
     capture: {
       expectedDurationSeconds: durationSeconds,
-      requiresUserGesture:
-        inspected.source === "youtube" && !preferredSegments?.length,
+      requiresUserGesture: false,
     },
     requiresLocalTranscription: !preferredSegments?.length,
   });

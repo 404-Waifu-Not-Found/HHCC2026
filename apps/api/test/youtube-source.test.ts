@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractYouTubePlayerResponse,
   parseYouTubePlayerResponse,
+  parseYouTubeTimedText,
   selectPreferredYouTubeCaptionTrack,
 } from "../src/sources/youtube";
 
@@ -65,5 +66,25 @@ describe("YouTube metadata", () => {
       },
     ];
     expect(selectPreferredYouTubeCaptionTrack(tracks)).toBe(tracks[3]);
+  });
+
+  it("normalizes fresh YouTube timed-text while removing empty events", () => {
+    expect(
+      parseYouTubeTimedText({
+        events: [
+          { tStartMs: 0, dDurationMs: 1500, segs: [{ utf8: "Primitive " }, { utf8: "types" }] },
+          { tStartMs: 1500, dDurationMs: 2000, segs: [{ utf8: "\nstore simple values in Java." }] },
+          { tStartMs: 3500, segs: [{ utf8: "   " }] },
+        ],
+      }),
+    ).toEqual([
+      { id: "youtube-0-0", startMs: 0, endMs: 1500, text: "Primitive types" },
+      {
+        id: "youtube-1-1500",
+        startMs: 1500,
+        endMs: 3500,
+        text: "store simple values in Java.",
+      },
+    ]);
   });
 });

@@ -114,24 +114,16 @@ app.get("/health", (c) => {
     generation: Boolean(c.env.DEEPSEEK_API_KEY),
     email: Boolean(c.env.RESEND_API_KEY),
     youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
-    brightDataCaptions: Boolean(c.env.BRIGHT_DATA_API_KEY),
-    supadataCaptions: Boolean(c.env.SUPADATA_API_KEY),
-    youtubeBrowserPipeline: c.env.YOUTUBE_BROWSER_PIPELINE_V2,
+    youtubeOpenSourceAcquisition: true,
   };
-  const youtubePipelineEnabled =
-    Number.parseInt(configuration.youtubeBrowserPipeline, 10) > 0;
-  const captionProvidersReady =
-    configuration.brightDataCaptions && configuration.supadataCaptions;
   return c.json({
     ok:
       configuration.authentication &&
       configuration.generation &&
-      configuration.email &&
-      (!youtubePipelineEnabled || captionProvidersReady),
+      configuration.email,
     service: "clipquest",
     model: c.env.DEEPSEEK_MODEL,
     configuration,
-    captionProvidersReady,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",
   });
 });

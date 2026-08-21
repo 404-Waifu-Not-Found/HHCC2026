@@ -12,15 +12,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Crypto from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Linking,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Mascot } from "../../src/components/Mascot";
-import { YouTubeCapturePlayer } from "../../src/components/YouTubeCapturePlayer";
 import {
   ProcessingSteps,
   type ProcessingStepState,
@@ -41,12 +34,6 @@ import {
   saveGenerationState,
 } from "../../src/state/creation";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
-import {
-  captureBrowserTabAudio,
-  getBrowserCaptureResumeMs,
-  preloadBrowserSpeechModel,
-  type BrowserCaptureResult,
-} from "../../src/transcription/browser-tab-capture";
 import { TranscriptionPausedError } from "../../src/transcription/types";
 import {
   breakpoints,
@@ -81,12 +68,6 @@ export default function GenerationScreen() {
   const [cancelling, setCancelling] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const [localTranscription, setLocalTranscription] = useState(false);
-  const [captureRequired, setCaptureRequired] = useState(false);
-  const [captureActive, setCaptureActive] = useState(false);
-  const [captureRequesting, setCaptureRequesting] = useState(false);
-  const captureStopRef = useRef<(() => void) | null>(null);
-  const capturedResultRef = useRef<BrowserCaptureResult | null>(null);
-  const [captureResumeMs, setCaptureResumeMs] = useState(0);
   const importedRef =
     useRef<Awaited<ReturnType<typeof loadImportedVideo>>>(null);
 
@@ -146,30 +127,11 @@ export default function GenerationScreen() {
       setProgress(1);
       let segments: TranscriptSegment[];
       let language = imported.video.sourceLanguage ?? "und";
-      let origin: "captions" | "device_whisper" | "browser_tab_capture" =
-        "captions";
+      let origin: "captions" | "device_whisper" = "captions";
       if (imported.captions.preferredSegments?.length) {
         setStage("preparing_audio");
         setProgress(1);
         segments = imported.captions.preferredSegments;
-      } else if (imported.transcriptionMode === "browser_tab_capture") {
-        const captured = capturedResultRef.current;
-        if (!captured) {
-          setCaptureRequired(true);
-          setStage("preparing_audio");
-          setProgress(0);
-          void getBrowserCaptureResumeMs(imported.video.id).then(
-            setCaptureResumeMs,
-          );
-          void preloadBrowserSpeechModel().catch(() => {
-            // Model loading is retried by the capture worker.
-          });
-          return;
-        }
-        capturedResultRef.current = null;
-        language = captured.language;
-        segments = captured.segments;
-        origin = "browser_tab_capture";
       } else {
         const media = await apiRequest(
           "/api/media/resolve",
@@ -337,51 +299,8 @@ export default function GenerationScreen() {
   });
 
   const pause = () => {
-    captureStopRef.current?.();
     controllerRef.current?.abort();
     setPaused(true);
-  };
-  const startCapture = async () => {
-    const imported = importedRef.current;
-    const signal = controllerRef.current?.signal;
-    if (!imported || !signal || captureActive || captureRequesting) return;
-    setError(undefined);
-    setCaptureRequesting(true);
-    setCaptureRequired(true);
-    setStage("preparing_audio");
-    try {
-      const result = await captureBrowserTabAudio({
-        videoId: imported.video.id,
-        durationSeconds: imported.capture.expectedDurationSeconds,
-        language: imported.video.sourceLanguage,
-        signal,
-        onPhase: (phase) => setStage(phase),
-        onProgress: (value) => setProgress(value),
-        onStarted: (stop) => {
-          captureStopRef.current = stop;
-          setCaptureRequesting(false);
-          setCaptureActive(true);
-          setStage("transcribing_device");
-        },
-      });
-      capturedResultRef.current = result;
-      setCaptureRequired(false);
-      setCaptureActive(false);
-      setCaptureRequesting(false);
-      captureStopRef.current = null;
-      setRunNumber((value) => value + 1);
-    } catch (cause) {
-      setCaptureActive(false);
-      setCaptureRequesting(false);
-      captureStopRef.current = null;
-      if (cause instanceof TranscriptionPausedError || signal.aborted) {
-        setPaused(true);
-      } else {
-        setError(
-          cause instanceof Error ? cause.message : t("trustworthyError"),
-        );
-      }
-    }
   };
   const retry = () => {
     setPaused(false);
@@ -427,24 +346,7 @@ export default function GenerationScreen() {
               {t("cancel")}
             </PrimaryButton>
           </View>
-          {captureRequired && !paused && !failed ? (
-            <View style={styles.footerAction}>
-              <PrimaryButton
-                disabled={cancelling || captureRequesting}
-                onPress={
-                  captureActive
-                    ? () => captureStopRef.current?.()
-                    : () => void startCapture()
-                }
-              >
-                {captureRequesting
-                  ? t("chooseCaptureTab")
-                  : captureActive
-                    ? t("finishCapture")
-                    : t("startTabCapture")}
-              </PrimaryButton>
-            </View>
-          ) : paused || failed ? (
+          {paused || failed ? (
             <View style={styles.footerAction}>
               <PrimaryButton disabled={cancelling} onPress={retry}>
                 {t("retry")}
@@ -515,38 +417,6 @@ export default function GenerationScreen() {
           </View>
           <ProcessingSteps steps={stepItems} />
         </Surface>
-
-        {captureRequired && importedRef.current?.video.source === "youtube" ? (
-          <Surface style={styles.captureSurface}>
-            <Text style={[styles.captureInstruction, { color: theme.text }]}>
-              {t("tabCaptureInstruction")}
-            </Text>
-            {captureResumeMs > 0 ? (
-              <Text
-                style={[styles.captureInstruction, { color: theme.textMuted }]}
-              >
-                {t("resumeCaptureAt").replace(
-                  "{time}",
-                  formatCaptureTime(captureResumeMs),
-                )}
-              </Text>
-            ) : null}
-            <YouTubeCapturePlayer
-              videoId={importedRef.current.video.sourceVideoId}
-              onEnded={() => captureStopRef.current?.()}
-            />
-            <PrimaryButton
-              variant="secondary"
-              onPress={() =>
-                void Linking.openURL(
-                  `https://www.youtube.com/watch?v=${importedRef.current?.video.sourceVideoId}`,
-                )
-              }
-            >
-              {t("openYouTubeCapture")}
-            </PrimaryButton>
-          </Surface>
-        ) : null}
 
         <Surface tone="tinted" style={styles.privacySurface}>
           <View style={styles.privacyRow}>
@@ -633,13 +503,6 @@ function formatBytes(bytes: number): string {
     : `${Math.round(bytes / 1_000)} KB`;
 }
 
-function formatCaptureTime(milliseconds: number): string {
-  const totalSeconds = Math.floor(milliseconds / 1_000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
 const styles = StyleSheet.create({
   page: { width: "100%", gap: spacing[5], paddingTop: spacing[2] },
   top: { alignItems: "center", gap: spacing[4], paddingVertical: spacing[3] },
@@ -685,12 +548,6 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.caption,
   },
   privacySurface: { padding: spacing[4] },
-  captureSurface: { gap: spacing[4], overflow: "hidden" },
-  captureInstruction: {
-    fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
-  },
   privacyRow: { flexDirection: "row", alignItems: "center", gap: spacing[4] },
   privacyIcon: {
     width: 46,

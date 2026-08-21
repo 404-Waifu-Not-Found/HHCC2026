@@ -1,5 +1,6 @@
 import { Innertube } from "youtubei.js/cf-worker";
 import { z } from "zod";
+import type { TranscriptSegment } from "@clipquest/contracts";
 import { ApiError } from "../lib/errors";
 import type { SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
@@ -7,6 +8,8 @@ import { parseYouTubeId } from "./url";
 const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
+const MAX_CAPTION_BYTES = 8 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 180 * 1024 * 1024;
 
 type YouTubeCaptionTrack = {
   base_url: string;
@@ -20,6 +23,14 @@ type YouTubeInspectionData = {
   durationSeconds: number;
   thumbnails: Array<{ url: string; width?: number }>;
   tracks: YouTubeCaptionTrack[];
+};
+
+type TimedTextPayload = {
+  events?: Array<{
+    tStartMs?: number;
+    dDurationMs?: number;
+    segs?: Array<{ utf8?: string }>;
+  }>;
 };
 
 class YouTubeMetadataLoadError extends Error {
@@ -323,6 +334,82 @@ export function selectPreferredYouTubeCaptionTrack<
   })[0];
 }
 
+export function parseYouTubeTimedText(
+  payload: TimedTextPayload,
+): TranscriptSegment[] {
+  const segments = (payload.events ?? [])
+    .slice(0, 12_000)
+    .map((event, index) => {
+      const startMs = Math.max(0, Math.floor(event.tStartMs ?? 0));
+      const text = (event.segs ?? [])
+        .map((segment) => segment.utf8 ?? "")
+        .join("")
+        .replaceAll("\n", " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return {
+        id: `youtube-${index}-${startMs}`,
+        startMs,
+        endMs:
+          startMs + Math.max(1, Math.floor(event.dDurationMs ?? 3_000)),
+        text,
+      };
+    })
+    .filter((segment) => segment.text.length > 0);
+  const characters = segments.reduce(
+    (total, segment) => total + segment.text.length,
+    0,
+  );
+  return characters >= 20 ? segments : [];
+}
+
+async function fetchCaptionSegments(
+  track: YouTubeCaptionTrack | undefined,
+): Promise<TranscriptSegment[]> {
+  if (!track) return [];
+  try {
+    const url = new URL(track.base_url);
+    url.searchParams.set("fmt", "json3");
+    const response = await fetch(url, {
+      headers: { Accept: "application/json", "Cache-Control": "no-store" },
+    });
+    if (!response.ok) return [];
+    const declaredLength = Number(response.headers.get("content-length") ?? 0);
+    if (declaredLength > MAX_CAPTION_BYTES) return [];
+    const body = await response.text();
+    if (new TextEncoder().encode(body).byteLength > MAX_CAPTION_BYTES) return [];
+    return parseYouTubeTimedText(JSON.parse(body) as TimedTextPayload);
+  } catch {
+    return [];
+  }
+}
+
+function limitAudioStream(
+  body: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  const reader = body.getReader();
+  let bytesRead = 0;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const chunk = await reader.read();
+      if (chunk.done) {
+        controller.close();
+        return;
+      }
+      bytesRead += chunk.value.byteLength;
+      if (bytesRead > MAX_AUDIO_BYTES) {
+        await reader.cancel("audio_too_large");
+        controller.error(new Error("YouTube audio exceeded the safe limit."));
+        return;
+      }
+      controller.enqueue(chunk.value);
+    },
+    async cancel(reason) {
+      await reader.cancel(reason);
+    },
+  });
+}
+
 export class YouTubeAdapter implements SourceAdapter {
   async inspect(url: URL): Promise<SourceVideo> {
     const sourceVideoId = parseYouTubeId(url);
@@ -359,6 +446,7 @@ export class YouTubeAdapter implements SourceAdapter {
       }
 
       let preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
+      const preferredCaptionSegments = await fetchCaptionSegments(preferredTrack);
       const captionTracks = inspected.tracks.map((track) => ({
         language: track.language_code,
         label: track.label || track.language_code,
@@ -378,6 +466,9 @@ export class YouTubeAdapter implements SourceAdapter {
           inspected.tracks[0]?.language_code ??
           null,
         captionTracks,
+        ...(preferredCaptionSegments.length
+          ? { preferredCaptionSegments }
+          : {}),
       };
     } catch (error) {
       console.error("YouTube inspection failed", error);
@@ -389,11 +480,88 @@ export class YouTubeAdapter implements SourceAdapter {
     }
   }
 
-  async streamAudio(): Promise<never> {
-    throw new ApiError(
-      409,
-      "browser_capture_required",
-      "YouTube audio must be captured and transcribed privately in your browser.",
-    );
+  async streamAudio(
+    sourceVideoId: string,
+    request: Request,
+  ): Promise<import("./types").AudioStream> {
+    const startedAt = Date.now();
+    try {
+      const client = await createYouTubeClient(true);
+      const info = await client.getInfo(sourceVideoId, {
+        client: YOUTUBE_INFO_CLIENT,
+      });
+      const format = info.chooseFormat({
+        type: "audio",
+        quality: "bestefficiency",
+      });
+      if (!format.url) throw new Error("audio_url_missing");
+      const declaredLength = Number(format.content_length ?? 0);
+      if (declaredLength > MAX_AUDIO_BYTES) {
+        throw new ApiError(
+          422,
+          "audio_too_large",
+          "This video's audio is too large for browser transcription.",
+        );
+      }
+      const headers = new Headers({
+        Accept: "audio/*,*/*;q=0.8",
+        "Cache-Control": "no-store",
+      });
+      const range = request.headers.get("range");
+      if (range) headers.set("Range", range);
+      const response = await fetch(format.url, { headers });
+      if (!response.ok || !response.body)
+        throw new Error(`audio_http_${response.status}`);
+      const responseLength = Number(response.headers.get("content-length") ?? 0);
+      if (responseLength > MAX_AUDIO_BYTES) {
+        await response.body.cancel("audio_too_large");
+        throw new ApiError(
+          422,
+          "audio_too_large",
+          "This video's audio is too large for browser transcription.",
+        );
+      }
+      console.info(
+        JSON.stringify({
+          scope: "youtube_audio",
+          event: "stream.opened",
+          sourceVideoId,
+          status: response.status,
+          elapsedMs: Date.now() - startedAt,
+        }),
+      );
+      return {
+        body: limitAudioStream(response.body),
+        contentType:
+          response.headers.get("content-type") ??
+          format.mime_type?.split(";")[0] ??
+          "audio/mp4",
+        ...(response.headers.get("content-length")
+          ? { contentLength: response.headers.get("content-length")! }
+          : {}),
+        ...(response.headers.get("accept-ranges")
+          ? { acceptRanges: response.headers.get("accept-ranges")! }
+          : {}),
+        ...(response.headers.get("content-range")
+          ? { contentRange: response.headers.get("content-range")! }
+          : {}),
+      };
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      console.warn(
+        JSON.stringify({
+          scope: "youtube_audio",
+          event: "stream.failed",
+          sourceVideoId,
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          elapsedMs: Date.now() - startedAt,
+        }),
+      );
+      throw new ApiError(
+        503,
+        "youtube_audio_unavailable",
+        "YouTube audio is temporarily unavailable. Try again shortly.",
+      );
+    }
   }
 }

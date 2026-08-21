@@ -81,7 +81,6 @@ export default function CreateQuestScreen() {
     video.requiresLocalTranscription && video.video.durationSeconds > 5_400;
   const tooLongForWeb =
     video.requiresLocalTranscription &&
-    video.transcriptionMode !== "browser_tab_capture" &&
     Platform.OS === "web" &&
     !canTranscribeInBrowser(video.video.durationSeconds);
   const compact = width < breakpoints.tablet;
