@@ -71,6 +71,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const compact = width < breakpoints.tablet;
   const narrow = width < breakpoints.compact;
+  const desktop = width >= breakpoints.desktop;
   const userEditedUrl = useRef(false);
   const importingRef = useRef(false);
   const [url, setUrl] = useState("");
@@ -338,7 +339,24 @@ export default function HomeScreen() {
                   </Pressable>
                 }
               />
-              {library.saved.length ? (
+              {library.saved.length && desktop ? (
+                <View style={styles.cardGrid}>
+                  {library.saved.slice(0, 3).map((card, index) => (
+                    <StaggerItem
+                      key={card.videoId}
+                      index={index}
+                      style={styles.cardGridItem}
+                    >
+                      <VideoCard
+                        compact
+                        fill
+                        card={card}
+                        onPress={() => void open(card)}
+                      />
+                    </StaggerItem>
+                  ))}
+                </View>
+              ) : library.saved.length ? (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -541,6 +559,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
     paddingRight: spacing[5],
     gap: spacing[4],
+  },
+  cardGrid: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing[4],
+    paddingVertical: spacing[2],
+  },
+  cardGridItem: {
+    width: "31.6%",
+    minWidth: 0,
   },
   opening: {
     opacity: 0.65,

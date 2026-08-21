@@ -22,10 +22,12 @@ export function VideoCard({
   card,
   onPress,
   compact = false,
+  fill = false,
 }: {
   card: LibraryCard;
   onPress(): void;
   compact?: boolean;
+  fill?: boolean;
 }) {
   const { t, theme, reduceMotion } = useSettings();
   const { width } = useWindowDimensions();
@@ -50,6 +52,7 @@ export function VideoCard({
       onPress={onPress}
       style={({ pressed, hovered }) => [
         styles.card,
+        fill && styles.fill,
         horizontal && styles.horizontal,
         {
           backgroundColor: theme.surface,
@@ -129,6 +132,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: borders.standard,
     borderRadius: radii.feature,
+  },
+  fill: {
+    width: "100%",
   },
   horizontal: {
     width: "100%",

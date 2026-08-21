@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { useEffect } from "react";
 import {
+  Platform,
   Pressable,
   StyleSheet,
   type PressableProps,
@@ -190,25 +191,54 @@ export function MotionPressable({
     ],
   }));
 
+  const handlePressIn: NonNullable<PressableProps["onPressIn"]> = (event) => {
+    pressed.value = reduceMotion
+      ? 0
+      : withTiming(1, {
+          duration: motion.quick,
+          easing: easing(motion.easing.standard),
+        });
+    onPressIn?.(event);
+  };
+
+  const handlePressOut: NonNullable<PressableProps["onPressOut"]> = (event) => {
+    pressed.value = reduceMotion ? 0 : withSpring(0, motion.spring.responsive);
+    onPressOut?.(event);
+  };
+
+  // Reanimated's web wrapper currently drops Pressable callback styles. Those
+  // callbacks carry each control's hover, focus, pressed, and theme treatment,
+  // so use the native Pressable on web and reproduce the transform feedback in
+  // its resolved style. Native platforms retain the worklet-driven animation.
+  if (Platform.OS === "web") {
+    return (
+      <Pressable
+        {...props}
+        disabled={disabled}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={(state: PressableStateCallbackType) => [
+          typeof style === "function" ? style(state) : style,
+          !disabled &&
+            !reduceMotion && {
+              transform: [
+                { translateY: state.pressed ? pressDepth : 0 },
+                { scale: state.pressed ? pressScale : 1 },
+              ],
+            },
+        ]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
+
   return (
     <AnimatedPressable
       {...props}
       disabled={disabled}
-      onPressIn={(event) => {
-        pressed.value = reduceMotion
-          ? 0
-          : withTiming(1, {
-              duration: motion.quick,
-              easing: easing(motion.easing.standard),
-            });
-        onPressIn?.(event);
-      }}
-      onPressOut={(event) => {
-        pressed.value = reduceMotion
-          ? 0
-          : withSpring(0, motion.spring.responsive);
-        onPressOut?.(event);
-      }}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       style={(state: PressableStateCallbackType) => [
         typeof style === "function" ? style(state) : style,
         !disabled && animatedStyle,

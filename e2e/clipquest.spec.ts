@@ -443,7 +443,8 @@ test("unauthenticated entry defaults to sign-in and sign-up links to welcome", a
 test("requires the local caption extension and reconnects automatically", async ({
   page,
 }) => {
-  await page.goto("/welcome");
+  await installMocks(page);
+  await page.goto("/");
   await page.evaluate(() =>
     window.sessionStorage.setItem("clipquest:e2e-extension-missing", "1"),
   );
@@ -464,10 +465,10 @@ test("requires the local caption extension and reconnects automatically", async 
   await expect(
     page.getByRole("heading", { name: "Install the Chrome extension" }),
   ).toBeHidden();
-  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByRole("heading", {
-      name: "Paste a YouTube video. Build real mastery.",
+      name: "What do you want to master?",
     }),
   ).toBeVisible();
 });
@@ -519,6 +520,42 @@ test("desktop learning journey and visual states", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "What do you want to master?" }),
   ).toBeVisible();
+  const homeVisuals = await page.evaluate(() => {
+    const byText = (selector: string, value: string) =>
+      [...document.querySelectorAll<HTMLElement>(selector)].find((element) =>
+        element.textContent?.includes(value),
+      );
+    const action = byText('[role="button"]', "Make my quest");
+    const questionType =
+      document.querySelector<HTMLElement>('[role="checkbox"]');
+    const savedCard = byText(
+      '[role="button"]',
+      "A visual guide to the Feynman technique",
+    );
+    if (!action || !questionType || !savedCard) {
+      throw new Error("Missing styled Home controls");
+    }
+    const actionStyle = getComputedStyle(action);
+    const questionStyle = getComputedStyle(questionType);
+    const cardStyle = getComputedStyle(savedCard);
+    return {
+      actionBackground: actionStyle.backgroundColor,
+      actionHeight: action.getBoundingClientRect().height,
+      questionBorder: questionStyle.borderTopWidth,
+      cardBorder: cardStyle.borderTopWidth,
+      cardWidth: savedCard.getBoundingClientRect().width,
+      hasOverflow:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth + 1,
+    };
+  });
+  expect(homeVisuals.actionBackground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(homeVisuals.actionHeight).toBeGreaterThanOrEqual(52);
+  expect(homeVisuals.questionBorder).not.toBe("0px");
+  expect(homeVisuals.cardBorder).not.toBe("0px");
+  expect(homeVisuals.cardWidth).toBeGreaterThan(260);
+  expect(homeVisuals.cardWidth).toBeLessThan(380);
+  expect(homeVisuals.hasOverflow).toBe(false);
   await capture(page, "desktop-link-import");
 
   await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
