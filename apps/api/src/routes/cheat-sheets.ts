@@ -18,7 +18,7 @@ cheatSheetContextRouter.get(
   async (c) => {
     const user = c.get("user");
     const quiz = await c.env.DB.prepare(
-      `SELECT qb.id AS quiz_id, qb.video_id, qb.language, qb.primer, qb.created_at,
+      `SELECT qb.id AS quiz_id, qb.video_id, v.source_video_id, qb.language, qb.primer, qb.created_at,
             v.title, v.source, q.prompt, q.reformulated_prompt, q.explanation
        FROM quiz_banks qb
        JOIN videos v ON v.id = qb.video_id AND v.owner_id = qb.user_id
@@ -30,6 +30,7 @@ cheatSheetContextRouter.get(
       .all<{
         quiz_id: string;
         video_id: string;
+        source_video_id: string;
         language: string;
         primer: string;
         created_at: number;
@@ -44,6 +45,7 @@ cheatSheetContextRouter.get(
     return c.json(
       CheatSheetContextSchema.parse({
         videoId: first.video_id,
+        sourceVideoId: first.source_video_id,
         quizId: first.quiz_id,
         sourceRevision: `${first.quiz_id}:${first.created_at}`,
         title: first.title,
@@ -62,26 +64,50 @@ cheatSheetContextRouter.get(
 cheatSheetsRouter.post("/", async (c) => {
   const user = c.get("user");
   const input = CheatSheetUploadRequestSchema.parse(await c.req.json());
-  const ownership = await c.env.DB.prepare(
-    `SELECT qb.id, qb.video_id, qb.created_at
-       FROM quiz_banks qb
-      WHERE qb.id = ? AND qb.video_id = ? AND qb.user_id = ?`,
-  )
-    .bind(input.quizId, input.videoId, user.id)
-    .first<{ id: string; video_id: string; created_at: number }>();
-  if (!ownership) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
-  const complete = await c.env.DB.prepare(
-    "SELECT id FROM attempts WHERE quiz_id = ? AND user_id = ? AND status = 'complete' LIMIT 1",
-  )
-    .bind(input.quizId, user.id)
-    .first();
-  if (!complete)
-    throw new ApiError(
-      409,
-      "quiz_not_complete",
-      "Complete the quiz before saving notes.",
-    );
-  const expectedRevision = `${input.quizId}:${ownership.created_at}`;
+  let expectedRevision: string;
+  let existing: {
+    id: string;
+    notes_key: string | null;
+    pdf_key: string | null;
+  } | null;
+  if (input.quizId) {
+    const ownership = await c.env.DB.prepare(
+      `SELECT qb.id, qb.video_id, qb.created_at
+         FROM quiz_banks qb
+        WHERE qb.id = ? AND qb.video_id = ? AND qb.user_id = ?`,
+    )
+      .bind(input.quizId, input.videoId, user.id)
+      .first<{ id: string; video_id: string; created_at: number }>();
+    if (!ownership)
+      throw new ApiError(404, "quiz_not_found", "Quiz not found.");
+    expectedRevision = `${input.quizId}:${ownership.created_at}`;
+    existing = await c.env.DB.prepare(
+      "SELECT id, notes_key, pdf_key FROM cheat_sheets WHERE user_id = ? AND video_id = ? AND quiz_id = ? AND source_revision = ?",
+    )
+      .bind(user.id, input.videoId, input.quizId, input.sourceRevision)
+      .first<{
+        id: string;
+        notes_key: string | null;
+        pdf_key: string | null;
+      }>();
+  } else {
+    const video = await c.env.DB.prepare(
+      "SELECT id FROM videos WHERE id = ? AND owner_id = ? AND source = 'youtube'",
+    )
+      .bind(input.videoId, user.id)
+      .first<{ id: string }>();
+    if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
+    expectedRevision = `video:${input.videoId}`;
+    existing = await c.env.DB.prepare(
+      "SELECT id, notes_key, pdf_key FROM video_cheat_sheets WHERE user_id = ? AND video_id = ? AND source_revision = ?",
+    )
+      .bind(user.id, input.videoId, input.sourceRevision)
+      .first<{
+        id: string;
+        notes_key: string | null;
+        pdf_key: string | null;
+      }>();
+  }
   if (input.sourceRevision !== expectedRevision)
     throw new ApiError(
       409,
@@ -105,14 +131,10 @@ cheatSheetsRouter.post("/", async (c) => {
       "The cheat sheet PDF is too large.",
     );
   const timestamp = now();
-  const existing = await c.env.DB.prepare(
-    "SELECT id, notes_key, pdf_key FROM cheat_sheets WHERE user_id = ? AND video_id = ? AND quiz_id = ? AND source_revision = ?",
-  )
-    .bind(user.id, input.videoId, input.quizId, input.sourceRevision)
-    .first<{ id: string; notes_key: string | null; pdf_key: string | null }>();
   const id = existing?.id ?? createId();
-  const notesKey = `cheat-sheets/${user.id}/${input.videoId}/${input.quizId}/${input.sourceRevision}.json`;
-  const pdfKey = `cheat-sheets/${user.id}/${input.videoId}/${input.quizId}/${input.sourceRevision}.pdf`;
+  const storageScope = input.quizId ?? "video";
+  const notesKey = `cheat-sheets/${user.id}/${input.videoId}/${storageScope}/${input.sourceRevision}.json`;
+  const pdfKey = `cheat-sheets/${user.id}/${input.videoId}/${storageScope}/${input.sourceRevision}.pdf`;
   await Promise.all([
     c.env.PRIVATE_BUCKET.put(notesKey, JSON.stringify(document), {
       httpMetadata: { contentType: "application/json" },
@@ -124,34 +146,62 @@ cheatSheetsRouter.post("/", async (c) => {
       },
     }),
   ]);
-  await c.env.DB.prepare(
-    `INSERT INTO cheat_sheets (id,user_id,video_id,quiz_id,source_revision,status,notes_key,pdf_key,content_hash,prompt_version,created_at,updated_at,generated_at,last_error)
-     VALUES (?,?,?,?,?,'ready',?,?,?,?,?,?,?,NULL)
-     ON CONFLICT(user_id,video_id,quiz_id,source_revision) DO UPDATE SET status='ready',notes_key=excluded.notes_key,pdf_key=excluded.pdf_key,content_hash=excluded.content_hash,prompt_version=excluded.prompt_version,updated_at=excluded.updated_at,generated_at=excluded.generated_at,last_error=NULL`,
-  )
-    .bind(
-      id,
-      user.id,
-      input.videoId,
-      input.quizId,
-      input.sourceRevision,
-      notesKey,
-      pdfKey,
-      input.contentHash,
-      input.promptVersion,
-      timestamp,
-      timestamp,
-      timestamp,
+  if (input.quizId) {
+    await c.env.DB.prepare(
+      `INSERT INTO cheat_sheets (id,user_id,video_id,quiz_id,source_revision,status,notes_key,pdf_key,content_hash,prompt_version,created_at,updated_at,generated_at,last_error)
+       VALUES (?,?,?,?,?,'ready',?,?,?,?,?,?,?,NULL)
+       ON CONFLICT(user_id,video_id,quiz_id,source_revision) DO UPDATE SET status='ready',notes_key=excluded.notes_key,pdf_key=excluded.pdf_key,content_hash=excluded.content_hash,prompt_version=excluded.prompt_version,updated_at=excluded.updated_at,generated_at=excluded.generated_at,last_error=NULL`,
     )
-    .run();
+      .bind(
+        id,
+        user.id,
+        input.videoId,
+        input.quizId,
+        input.sourceRevision,
+        notesKey,
+        pdfKey,
+        input.contentHash,
+        input.promptVersion,
+        timestamp,
+        timestamp,
+        timestamp,
+      )
+      .run();
+  } else {
+    await c.env.DB.prepare(
+      `INSERT INTO video_cheat_sheets (id,user_id,video_id,source_revision,status,notes_key,pdf_key,content_hash,prompt_version,created_at,updated_at,generated_at,last_error)
+       VALUES (?,?,?,?,'ready',?,?,?,?,?,?,?,NULL)
+       ON CONFLICT(user_id,video_id,source_revision) DO UPDATE SET status='ready',notes_key=excluded.notes_key,pdf_key=excluded.pdf_key,content_hash=excluded.content_hash,prompt_version=excluded.prompt_version,updated_at=excluded.updated_at,generated_at=excluded.generated_at,last_error=NULL`,
+    )
+      .bind(
+        id,
+        user.id,
+        input.videoId,
+        input.sourceRevision,
+        notesKey,
+        pdfKey,
+        input.contentHash,
+        input.promptVersion,
+        timestamp,
+        timestamp,
+        timestamp,
+      )
+      .run();
+  }
   // Concurrent completion effects can both upload the same deterministic
   // artifact. D1 keeps the first row id on conflict, so return the canonical
   // row rather than an id that may not have been stored.
-  const canonical = await c.env.DB.prepare(
-    "SELECT id, updated_at FROM cheat_sheets WHERE user_id = ? AND video_id = ? AND quiz_id = ? AND source_revision = ?",
-  )
-    .bind(user.id, input.videoId, input.quizId, input.sourceRevision)
-    .first<{ id: string; updated_at: number }>();
+  const canonical = input.quizId
+    ? await c.env.DB.prepare(
+        "SELECT id, updated_at FROM cheat_sheets WHERE user_id = ? AND video_id = ? AND quiz_id = ? AND source_revision = ?",
+      )
+        .bind(user.id, input.videoId, input.quizId, input.sourceRevision)
+        .first<{ id: string; updated_at: number }>()
+    : await c.env.DB.prepare(
+        "SELECT id, updated_at FROM video_cheat_sheets WHERE user_id = ? AND video_id = ? AND source_revision = ?",
+      )
+        .bind(user.id, input.videoId, input.sourceRevision)
+        .first<{ id: string; updated_at: number }>();
   return c.json(
     CheatSheetResponseSchema.parse({
       id: canonical?.id ?? id,
@@ -252,9 +302,8 @@ cheatSheetsRouter.get("/:sheetId/file", async (c) => {
 
 cheatSheetsRouter.delete("/:sheetId", async (c) => {
   const row = await getSheet(c, c.req.param("sheetId"));
-  await c.env.DB.prepare(
-    "DELETE FROM cheat_sheets WHERE id = ? AND user_id = ?",
-  )
+  const table = row.storage === "quiz" ? "cheat_sheets" : "video_cheat_sheets";
+  await c.env.DB.prepare(`DELETE FROM ${table} WHERE id = ? AND user_id = ?`)
     .bind(row.id, c.get("user").id)
     .run();
   await c.env.PRIVATE_BUCKET.delete(
@@ -270,7 +319,7 @@ async function getSheet(
   },
   id: string,
 ) {
-  const row = await c.env.DB.prepare(
+  const quizRow = await c.env.DB.prepare(
     "SELECT id, user_id, video_id, quiz_id, source_revision, status, notes_key, pdf_key, updated_at FROM cheat_sheets WHERE id = ? AND user_id = ?",
   )
     .bind(id, c.get("user").id)
@@ -278,16 +327,31 @@ async function getSheet(
       id: string;
       user_id: string;
       video_id: string;
-      quiz_id: string;
+      quiz_id: string | null;
       source_revision: string;
       status: "ready" | "failed" | "none";
       notes_key: string | null;
       pdf_key: string | null;
       updated_at: number;
     }>();
-  if (!row)
-    throw new ApiError(404, "cheat_sheet_not_found", "Cheat sheet not found.");
-  return row;
+  if (quizRow) return { ...quizRow, storage: "quiz" as const };
+  const videoRow = await c.env.DB.prepare(
+    "SELECT id, user_id, video_id, source_revision, status, notes_key, pdf_key, updated_at FROM video_cheat_sheets WHERE id = ? AND user_id = ?",
+  )
+    .bind(id, c.get("user").id)
+    .first<{
+      id: string;
+      user_id: string;
+      video_id: string;
+      source_revision: string;
+      status: "ready" | "failed" | "none";
+      notes_key: string | null;
+      pdf_key: string | null;
+      updated_at: number;
+    }>();
+  if (videoRow)
+    return { ...videoRow, quiz_id: null, storage: "video" as const };
+  throw new ApiError(404, "cheat_sheet_not_found", "Cheat sheet not found.");
 }
 
 async function readDocument(c: { env: ApiBindings["Bindings"] }, key: string) {

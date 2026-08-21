@@ -165,7 +165,7 @@ CREATE INDEX IF NOT EXISTS answers_attempt_idx ON answers(attempt_id, created_at
 CREATE TABLE IF NOT EXISTS mastery (
   user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  state TEXT NOT NULL DEFAULT 'not_started' CHECK(state IN ('not_started', 'learning', 'mastered')),
+  state TEXT NOT NULL DEFAULT 'not_started' CHECK(state IN ('not_started', 'basic', 'intermediate', 'expert', 'mastered')),
   best_score REAL,
   initial_passed_at INTEGER,
   review_passed_at INTEGER,

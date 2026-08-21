@@ -8811,6 +8811,10 @@ export async function generateLocalCheatSheet(
   adapters = {},
 ) {
   const fetchImpl = adapters.fetch ?? globalThis.fetch.bind(globalThis);
+  const transcript =
+    typeof context?.transcript === "string"
+      ? context.transcript.slice(0, 120_000)
+      : "";
   const response = await fetchImpl(
     "https://api.deepseek.com/chat/completions",
     {
@@ -8829,9 +8833,15 @@ export async function generateLocalCheatSheet(
           {
             role: "system",
             content:
-              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied quiz primer, prompts, and explanations. Use direct technical mechanism wording; do not turn mechanisms into metaphors such as a chemical/electrical barricade, wall, or shield. Do not invent facts.",
+              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied YouTube transcript when present, then use the quiz primer, prompts, and explanations as supporting context. Use direct technical mechanism wording; do not turn mechanisms into metaphors such as a chemical/electrical barricade, wall, or shield. Do not invent facts.",
           },
-          { role: "user", content: JSON.stringify(context) },
+          {
+            role: "user",
+            content: JSON.stringify({
+              ...context,
+              ...(transcript ? { transcript } : {}),
+            }),
+          },
         ],
       }),
       signal,

@@ -175,7 +175,7 @@ export async function requestLocalCheatSheet(
   const localCrypto = createLocalCrypto([
     userId,
     context.videoId,
-    context.quizId,
+    context.quizId ?? "",
     context.sourceRevision,
   ]);
   const document = await generateLocalCheatSheet(context, apiKey, signal, {

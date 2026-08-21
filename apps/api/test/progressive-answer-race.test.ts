@@ -281,7 +281,7 @@ function createDatabase(): {
     .run(ATTEMPT_ID, QUESTION_ONE_ID);
   sqlite
     .prepare(
-      "INSERT INTO mastery VALUES (?, ?, 'learning', NULL, NULL, NULL, NULL, 1)",
+      "INSERT INTO mastery VALUES (?, ?, 'basic', NULL, NULL, NULL, NULL, 1)",
     )
     .run(USER_ID, VIDEO_ID);
   return { sqlite, adapter: new SqliteD1Adapter(sqlite) };

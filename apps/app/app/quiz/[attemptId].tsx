@@ -7,6 +7,7 @@ import {
   type AttemptResumeResponse,
   type MasteryState,
   type PublicQuestion,
+  masteryStateForScore,
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Haptics from "expo-haptics";
@@ -29,6 +30,11 @@ import { IconButton } from "../../src/components/IconButton";
 import { LessonHeader } from "../../src/components/LessonHeader";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { MathText } from "../../src/components/MathText";
+import {
+  masteryColors,
+  masteryPresentation,
+  masteryTone,
+} from "../../src/components/MasteryBadge";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { QuestionStreamIndicator } from "../../src/components/QuestionStreamIndicator";
 import { Screen } from "../../src/components/Screen";
@@ -313,7 +319,7 @@ export default function QuizScreen() {
         setAnswer(undefined);
         setWaitingForQuestions(false);
         setScore(resumed.score ?? 0);
-        setMastery(resumed.mastery ?? "learning");
+        setMastery(resumed.mastery ?? "basic");
         setShowCompletion(true);
         void syncCheatSheet();
         return;
@@ -643,7 +649,7 @@ export default function QuizScreen() {
         await saveAttemptQuestion(userId, attemptId, result.nextQuestion);
       if (result.completed) {
         setScore(result.score ?? 0);
-        setMastery(result.mastery ?? "learning");
+        setMastery(result.mastery ?? "basic");
         setCompletedTotal(question.total);
       }
       if (result.correct)
@@ -730,7 +736,11 @@ export default function QuizScreen() {
   }
 
   if (showCompletion && score !== undefined) {
-    const mastered = mastery === "mastered";
+    const masteryState = mastery ?? masteryStateForScore(score);
+    const mastered = masteryState === "mastered";
+    const masteryRank = masteryPresentation(masteryState);
+    const masteryColor = masteryColors(masteryState, theme).color;
+    const masteryRankTone = masteryTone(masteryState);
     const recap = summarizeRecap(recapEntries);
     const showRecap = recapEntries.length > 0;
     // Only claim a perfect run when the recap saw every question; a session
@@ -776,13 +786,9 @@ export default function QuizScreen() {
               <StatTile
                 value={`${Math.round(score)}%`}
                 label={t("score")}
-                tone={score >= 80 ? "success" : "primary"}
+                tone={masteryRankTone}
                 icon={
-                  <VoxelIcon
-                    name="target"
-                    size={22}
-                    color={score >= 80 ? theme.success : theme.primary}
-                  />
+                  <VoxelIcon name="target" size={22} color={masteryColor} />
                 }
               />
             </StaggerItem>
@@ -794,14 +800,14 @@ export default function QuizScreen() {
               ]}
             >
               <StatTile
-                value={t(mastery === "mastered" ? "mastered" : "learning")}
+                value={t(masteryRank.labelKey)}
                 label={t("mastery")}
-                tone={mastered ? "success" : "secondary"}
+                tone={masteryRankTone}
                 icon={
                   <VoxelIcon
-                    name={mastered ? "correct" : "progress"}
+                    name={masteryRank.icon}
                     size={22}
-                    color={mastered ? theme.success : theme.secondary}
+                    color={masteryColor}
                   />
                 }
               />

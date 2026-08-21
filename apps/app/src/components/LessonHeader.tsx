@@ -10,6 +10,7 @@ import {
 } from "../theme/tokens";
 import { ProgressBar } from "./ProgressBar";
 import { MotionPressable, MotionView } from "../motion/Motion";
+import { VoxelIcon } from "./VoxelIcon";
 
 export function LessonHeader({
   progress,
@@ -48,7 +49,7 @@ export function LessonHeader({
           },
         ]}
       >
-        <Text style={[styles.closeGlyph, { color: theme.textMuted }]}>×</Text>
+        <VoxelIcon name="close" size={24} color={theme.textMuted} />
       </MotionPressable>
       <MotionView preset="from-left" style={styles.progress}>
         <ProgressBar progress={progress} accessibilityLabel={progressLabel} />
@@ -80,12 +81,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: borders.standard,
     borderRadius: radii.medium,
-  },
-  closeGlyph: {
-    fontFamily: typography.body,
-    fontSize: 30,
-    lineHeight: 32,
-    textAlign: "center",
   },
   progress: {
     flex: 1,

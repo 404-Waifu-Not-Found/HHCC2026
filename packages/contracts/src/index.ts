@@ -35,10 +35,21 @@ export const QuizQuestionTypesSchema = z
 
 export const MasteryStateSchema = z.enum([
   "not_started",
-  "learning",
+  "basic",
+  "intermediate",
+  "expert",
   "mastered",
 ]);
 export type MasteryState = z.infer<typeof MasteryStateSchema>;
+
+export function masteryStateForScore(
+  score: number,
+): Exclude<MasteryState, "not_started"> {
+  if (score >= 100) return "mastered";
+  if (score >= 90) return "expert";
+  if (score >= 80) return "intermediate";
+  return "basic";
+}
 
 export const GenerationStageSchema = z.enum([
   "getting_video",
@@ -2824,6 +2835,7 @@ export type AttemptResumeResponse = z.infer<typeof AttemptResumeResponseSchema>;
 
 export const LibraryCardSchema = z.object({
   videoId: z.string().uuid(),
+  sourceVideoId: z.string().min(1).max(128).optional(),
   quizId: z.string().uuid().nullable(),
   attemptId: z.string().uuid().nullable(),
   originalUrl: httpUrl,
@@ -2864,7 +2876,8 @@ export type CheatSheetStatus = z.infer<typeof CheatSheetStatusSchema>;
 export const CheatSheetContextSchema = z
   .object({
     videoId: z.string().uuid(),
-    quizId: z.string().uuid(),
+    sourceVideoId: z.string().min(1).max(128),
+    quizId: z.string().uuid().nullable(),
     sourceRevision: z.string().min(1).max(128),
     title: z.string().min(1).max(500),
     source: SourceSchema,
@@ -2877,7 +2890,6 @@ export const CheatSheetContextSchema = z
           explanation: z.string().min(1).max(4_000),
         }),
       )
-      .min(1)
       .max(100),
   })
   .strict();
@@ -2931,7 +2943,7 @@ export const CheatSheetResponseSchema = z
   .object({
     id: z.string().uuid(),
     videoId: z.string().uuid(),
-    quizId: z.string().uuid(),
+    quizId: z.string().uuid().nullable(),
     sourceRevision: z.string(),
     status: CheatSheetStatusSchema,
     document: CheatSheetDocumentSchema.nullable(),
@@ -2943,7 +2955,7 @@ export type CheatSheetResponse = z.infer<typeof CheatSheetResponseSchema>;
 export const CheatSheetUploadRequestSchema = z
   .object({
     videoId: z.string().uuid(),
-    quizId: z.string().uuid(),
+    quizId: z.string().uuid().nullable(),
     sourceRevision: z.string().min(1).max(128),
     document: CheatSheetDocumentSchema,
     pdfBase64: z.string().min(1).max(2_000_000),

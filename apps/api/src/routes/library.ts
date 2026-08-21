@@ -14,6 +14,7 @@ import type { ApiBindings } from "../middleware/authenticated";
 
 const LibraryRowSchema = z.object({
   video_id: z.string().uuid(),
+  source_video_id: z.string().regex(/^[\w-]{11}$/u),
   original_url: z.string().url(),
   source: SourceSchema,
   title: z.string(),
@@ -39,6 +40,7 @@ libraryRouter.get("/", async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT
       v.id AS video_id,
+      v.source_video_id,
       v.source,
       v.title,
       v.original_url,
@@ -51,9 +53,9 @@ libraryRouter.get("/", async (c) => {
       m.state AS mastery_state,
       m.next_review_at,
       (SELECT COUNT(*) FROM attempts completed WHERE completed.quiz_id = qb.id AND completed.user_id = v.owner_id AND completed.status = 'complete') AS completed_attempt,
-      cs.status AS cheat_sheet_status,
-      cs.id AS cheat_sheet_id,
-      cs.updated_at AS cheat_sheet_updated_at,
+      COALESCE(cs.status, vcs.status) AS cheat_sheet_status,
+      COALESCE(cs.id, vcs.id) AS cheat_sheet_id,
+      COALESCE(cs.updated_at, vcs.updated_at) AS cheat_sheet_updated_at,
       (SELECT a.id FROM attempts a JOIN quiz_banks aq ON aq.id = a.quiz_id AND aq.pipeline_version IN (7, ?) AND aq.quality_status = 'passed' WHERE aq.video_id = v.id AND a.user_id = v.owner_id AND a.status = 'active' ORDER BY a.updated_at DESC LIMIT 1) AS active_attempt_id
     FROM videos v
     LEFT JOIN mastery m ON m.user_id = v.owner_id AND m.video_id = v.id
@@ -70,6 +72,11 @@ libraryRouter.get("/", async (c) => {
     LEFT JOIN cheat_sheets cs ON cs.id = (
       SELECT candidate_sheet.id FROM cheat_sheets candidate_sheet
       WHERE candidate_sheet.user_id = v.owner_id AND candidate_sheet.video_id = v.id AND candidate_sheet.quiz_id = qb.id
+      ORDER BY candidate_sheet.updated_at DESC LIMIT 1
+    )
+    LEFT JOIN video_cheat_sheets vcs ON vcs.id = (
+      SELECT candidate_sheet.id FROM video_cheat_sheets candidate_sheet
+      WHERE candidate_sheet.user_id = v.owner_id AND candidate_sheet.video_id = v.id
       ORDER BY candidate_sheet.updated_at DESC LIMIT 1
     )
     WHERE v.owner_id = ? AND v.source = 'youtube'
@@ -115,6 +122,7 @@ libraryRouter.get("/", async (c) => {
     );
     return {
       videoId: row.video_id,
+      sourceVideoId: row.source_video_id,
       quizId,
       attemptId: row.active_attempt_id,
       originalUrl: row.original_url,
@@ -131,14 +139,11 @@ libraryRouter.get("/", async (c) => {
       dueForReview,
       startSettings,
       origin: row.origin,
-      cheatSheet:
-        row.completed_attempt > 0
-          ? {
-              status: row.cheat_sheet_status ?? "none",
-              sheetId: row.cheat_sheet_id,
-              updatedAt: row.cheat_sheet_updated_at,
-            }
-          : { status: "none" as const, sheetId: null, updatedAt: null },
+      cheatSheet: {
+        status: row.cheat_sheet_status ?? "none",
+        sheetId: row.cheat_sheet_id,
+        updatedAt: row.cheat_sheet_updated_at,
+      },
     };
   });
   return c.json(

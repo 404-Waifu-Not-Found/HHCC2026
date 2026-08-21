@@ -2,6 +2,15 @@ import type { MasteryState } from "@clipquest/contracts";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
 
+function masteryStateForScore(
+  score: number,
+): Exclude<MasteryState, "not_started"> {
+  if (score >= 100) return "mastered";
+  if (score >= 90) return "expert";
+  if (score >= 80) return "intermediate";
+  return "basic";
+}
+
 export type MasterySnapshot = {
   state: MasteryState;
   bestScore: number | null;
@@ -15,39 +24,44 @@ export function calculateMastery(
   input: { mode: "learn" | "review"; score: number; timestamp: number },
 ): MasterySnapshot {
   const bestScore = Math.max(current.bestScore ?? 0, input.score);
-  if (current.state === "mastered")
-    return { ...current, bestScore, nextReviewAt: null };
+  const state = masteryStateForScore(bestScore);
+  const initialPassedAt =
+    current.initialPassedAt ?? (input.score >= 80 ? input.timestamp : null);
+  const reviewPassedAt =
+    input.mode === "review" &&
+    current.initialPassedAt &&
+    input.timestamp > current.initialPassedAt
+      ? input.timestamp
+      : current.reviewPassedAt;
 
-  if (input.score >= 80 && !current.initialPassedAt) {
+  if (state === "mastered") {
     return {
-      state: "learning",
+      state,
       bestScore,
-      initialPassedAt: input.timestamp,
-      reviewPassedAt: current.reviewPassedAt,
-      nextReviewAt: input.timestamp + 3 * DAY_MS,
+      initialPassedAt,
+      reviewPassedAt,
+      nextReviewAt: null,
     };
   }
 
-  if (
-    input.score >= 80 &&
-    current.initialPassedAt &&
-    input.mode === "review" &&
-    input.timestamp > current.initialPassedAt
-  ) {
+  if (initialPassedAt && reviewPassedAt) {
     return {
-      state: "mastered",
+      state,
       bestScore,
-      initialPassedAt: current.initialPassedAt,
-      reviewPassedAt: input.timestamp,
+      initialPassedAt,
+      reviewPassedAt,
       nextReviewAt: null,
     };
   }
 
   return {
-    state: "learning",
+    state,
     bestScore,
-    initialPassedAt: current.initialPassedAt,
-    reviewPassedAt: current.reviewPassedAt,
-    nextReviewAt: current.initialPassedAt ? input.timestamp + DAY_MS : null,
+    initialPassedAt,
+    reviewPassedAt,
+    nextReviewAt:
+      initialPassedAt && !reviewPassedAt
+        ? input.timestamp + (current.initialPassedAt ? DAY_MS : 3 * DAY_MS)
+        : null,
   };
 }

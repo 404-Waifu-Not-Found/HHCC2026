@@ -1,4 +1,4 @@
-import { readdir, rename } from "node:fs/promises";
+import { rename } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -192,14 +192,7 @@ async function removeBorderBackground(path) {
   return { path, changed: true, visiblePixels };
 }
 
-const iconRoot = resolve(appRoot, "assets/icons/voxel");
-const iconFiles = (await readdir(iconRoot))
-  .filter((name) => name.endsWith(".png"))
-  .map((name) => resolve(iconRoot, name));
-const canonicalAssets = [
-  resolve(appRoot, "assets/brand/learning-prism.png"),
-  ...iconFiles,
-];
+const canonicalAssets = [resolve(appRoot, "assets/brand/learning-prism.png")];
 
 const results = [];
 for (const path of canonicalAssets) {

@@ -3,6 +3,7 @@ import {
   CheatSheetDocumentSchema,
   type CheatSheetContext,
   type CheatSheetDocument,
+  type LibraryCard,
 } from "@clipquest/contracts";
 // Use pdf-lib's prebundled ESM artifact on Expo web/native. The package module
 // entry imports tslib as a bare dependency, which Expo's web resolver exposes
@@ -13,6 +14,29 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { apiBinaryRequest, apiRequest, ClientApiError, jsonBody } from "./api";
 import { requestLocalCheatSheet } from "../generation/local-generation-client";
+
+export function createLibraryCheatSheetContext(
+  card: Pick<
+    LibraryCard,
+    "videoId" | "sourceVideoId" | "originalUrl" | "title" | "source" | "quizId"
+  >,
+): CheatSheetContext {
+  const sourceVideoId =
+    card.sourceVideoId ?? new URL(card.originalUrl).searchParams.get("v") ?? "";
+  return CheatSheetContextSchema.parse({
+    videoId: card.videoId,
+    sourceVideoId,
+    quizId: card.quizId,
+    sourceRevision: card.quizId
+      ? `${card.quizId}:library`
+      : `video:${card.videoId}`,
+    title: card.title,
+    source: card.source,
+    language: "en",
+    primer: "",
+    questions: [],
+  });
+}
 
 export async function generateCheatSheetDocumentWithLocalAi(
   context: CheatSheetContext,
@@ -46,13 +70,15 @@ export async function renderCheatSheetPdf(
     isBold = false,
     color = rgb(0.12, 0.2, 0.16),
   ) => {
-    for (const line of wrap(text, size, width, isBold ? bold : font)) {
+    const activeFont = isBold ? bold : font;
+    const safeText = toPdfSafeText(text, activeFont);
+    for (const line of wrap(safeText, size, width, activeFont)) {
       if (y < 56) nextPage();
       page.drawText(line, {
         x: margin,
         y,
         size,
-        font: isBold ? bold : font,
+        font: activeFont,
         color,
       });
       y -= size + 6;
@@ -165,7 +191,7 @@ export async function loadCheatSheetContext(
 
 export async function uploadCheatSheet(input: {
   videoId: string;
-  quizId: string;
+  quizId: string | null;
   document: CheatSheetDocument;
   pdf: Uint8Array;
 }): Promise<{ id: string }> {
@@ -196,6 +222,49 @@ export async function recordCheatSheetFailure(input: {
     method: "POST",
     body: jsonBody({ ...input, promptVersion: "cheat-sheet-v1" }),
   });
+}
+
+const pdfTextReplacements: Record<string, string> = {
+  "\u00a0": " ",
+  "\u00b7": ".",
+  "\u2022": "*",
+  "\u2013": "-",
+  "\u2014": "-",
+  "\u2018": "'",
+  "\u2019": "'",
+  "\u201c": '"',
+  "\u201d": '"',
+  "\u2026": "...",
+  "\u00d7": "x",
+  "\u00f7": "/",
+  "\u2212": "-",
+  "\u2190": "<-",
+  "\u2192": "->",
+  "\u2194": "<->",
+  "\u21d0": "<=",
+  "\u21d2": "=>",
+  "\u21d4": "<=>",
+  "\u2248": "~",
+  "\u2260": "!=",
+  "\u2264": "<=",
+  "\u2265": ">=",
+};
+
+function toPdfSafeText(
+  text: string,
+  font: { encodeText(value: string): unknown },
+): string {
+  let safeText = "";
+  for (const character of text.normalize("NFKC")) {
+    const candidate = pdfTextReplacements[character] ?? character;
+    try {
+      font.encodeText(candidate);
+      safeText += candidate;
+    } catch {
+      safeText += "?";
+    }
+  }
+  return safeText;
 }
 
 function wrap(

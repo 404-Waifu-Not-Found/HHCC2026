@@ -1,4 +1,49 @@
-import { Image, type ImageStyle } from "expo-image";
+import {
+  Activity,
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  Bell,
+  BrainCircuit,
+  CalendarDays,
+  Captions,
+  ChartColumnIncreasing,
+  ChevronsDown,
+  ChevronsUp,
+  CircleCheck,
+  CircleHelp,
+  CircleX,
+  ClipboardCheck,
+  Clock,
+  Database,
+  Download,
+  GraduationCap,
+  House,
+  KeyRound,
+  Languages,
+  Library,
+  Lightbulb,
+  Link,
+  ListChecks,
+  LoaderCircle,
+  LogIn,
+  Mail,
+  Palette,
+  RefreshCw,
+  Search,
+  ServerCog,
+  Settings,
+  ShieldCheck,
+  Square,
+  SquareCheckBig,
+  Target,
+  TriangleAlert,
+  UserPlus,
+  Users,
+  Video,
+  X,
+  type LucideIcon,
+} from "lucide-react-native";
 import type { ReactNode } from "react";
 import {
   StyleSheet,
@@ -11,59 +56,58 @@ import type { VoxelIconName } from "../theme/voxel-icons";
 
 export type { VoxelIconName } from "../theme/voxel-icons";
 
-export const voxelIconRegistry = {
-  appearance: require("../../assets/icons/voxel/appearance.png"),
-  audit: require("../../assets/icons/voxel/audit.png"),
-  back: require("../../assets/icons/voxel/back.png"),
-  calendar: require("../../assets/icons/voxel/calendar.png"),
-  captions: require("../../assets/icons/voxel/captions.png"),
-  "checkbox-checked": require("../../assets/icons/voxel/checkbox-checked.png"),
-  "checkbox-unchecked": require("../../assets/icons/voxel/checkbox-unchecked.png"),
-  checklist: require("../../assets/icons/voxel/checklist.png"),
-  close: require("../../assets/icons/voxel/close.png"),
-  collapse: require("../../assets/icons/voxel/collapse.png"),
-  correct: require("../../assets/icons/voxel/correct.png"),
-  database: require("../../assets/icons/voxel/database.png"),
-  download: require("../../assets/icons/voxel/download.png"),
-  error: require("../../assets/icons/voxel/error.png"),
-  expand: require("../../assets/icons/voxel/expand.png"),
-  help: require("../../assets/icons/voxel/help.png"),
-  home: require("../../assets/icons/voxel/home.png"),
-  idea: require("../../assets/icons/voxel/idea.png"),
-  lessons: require("../../assets/icons/voxel/lessons.png"),
-  library: require("../../assets/icons/voxel/library.png"),
-  link: require("../../assets/icons/voxel/link.png"),
-  mail: require("../../assets/icons/voxel/mail.png"),
-  model: require("../../assets/icons/voxel/model.png"),
-  next: require("../../assets/icons/voxel/next.png"),
-  notifications: require("../../assets/icons/voxel/notifications.png"),
-  operations: require("../../assets/icons/voxel/operations.png"),
-  password: require("../../assets/icons/voxel/password.png"),
-  people: require("../../assets/icons/voxel/people.png"),
-  privacy: require("../../assets/icons/voxel/privacy.png"),
-  processing: require("../../assets/icons/voxel/processing.png"),
-  progress: require("../../assets/icons/voxel/progress.png"),
-  refresh: require("../../assets/icons/voxel/refresh.png"),
-  registration: require("../../assets/icons/voxel/registration.png"),
-  search: require("../../assets/icons/voxel/search.png"),
-  selected: require("../../assets/icons/voxel/selected.png"),
-  settings: require("../../assets/icons/voxel/settings.png"),
-  "sign-in": require("../../assets/icons/voxel/sign-in.png"),
-  system: require("../../assets/icons/voxel/system.png"),
-  target: require("../../assets/icons/voxel/target.png"),
-  time: require("../../assets/icons/voxel/time.png"),
-  translation: require("../../assets/icons/voxel/translation.png"),
-  video: require("../../assets/icons/voxel/video.png"),
-  warning: require("../../assets/icons/voxel/warning.png"),
-} as const satisfies Record<VoxelIconName, number>;
+export const vectorIconRegistry = {
+  appearance: Palette,
+  audit: ClipboardCheck,
+  back: ArrowLeft,
+  calendar: CalendarDays,
+  captions: Captions,
+  "checkbox-checked": SquareCheckBig,
+  "checkbox-unchecked": Square,
+  checklist: ListChecks,
+  close: X,
+  collapse: ChevronsUp,
+  correct: CircleCheck,
+  database: Database,
+  download: Download,
+  error: CircleX,
+  expand: ChevronsDown,
+  help: CircleHelp,
+  home: House,
+  idea: Lightbulb,
+  lessons: GraduationCap,
+  library: Library,
+  link: Link,
+  mail: Mail,
+  model: BrainCircuit,
+  next: ArrowRight,
+  notifications: Bell,
+  operations: Activity,
+  password: KeyRound,
+  people: Users,
+  privacy: ShieldCheck,
+  processing: LoaderCircle,
+  progress: ChartColumnIncreasing,
+  refresh: RefreshCw,
+  registration: UserPlus,
+  search: Search,
+  selected: BadgeCheck,
+  settings: Settings,
+  "sign-in": LogIn,
+  system: ServerCog,
+  target: Target,
+  time: Clock,
+  translation: Languages,
+  video: Video,
+  warning: TriangleAlert,
+} as const satisfies Record<VoxelIconName, LucideIcon>;
 
 export type VoxelIconProps = {
   name: VoxelIconName;
   size?: number;
   accessibleLabel?: string;
   decorative?: boolean;
-  style?: StyleProp<ImageStyle>;
-  /** Raster planes are intentionally never runtime-tinted. */
+  style?: StyleProp<ViewStyle>;
   color?: ColorValue;
 };
 
@@ -73,22 +117,25 @@ export function VoxelIcon({
   accessibleLabel,
   decorative = !accessibleLabel,
   style,
+  color = "#247D49",
 }: VoxelIconProps) {
-  const renderedSize = Math.max(28, size);
+  const Icon = vectorIconRegistry[name];
   return (
-    <Image
-      source={voxelIconRegistry[name]}
-      contentFit="contain"
+    <View
+      pointerEvents="none"
       accessible={!decorative}
       accessibilityLabel={decorative ? undefined : accessibleLabel}
       accessibilityElementsHidden={decorative}
       importantForAccessibility={decorative ? "no" : "auto"}
-      style={[
-        styles.icon,
-        { width: renderedSize, height: renderedSize },
-        style,
-      ]}
-    />
+      style={[styles.icon, { width: size, height: size }, style]}
+    >
+      <Icon
+        size={size}
+        color={color as string}
+        strokeWidth={2}
+        absoluteStrokeWidth
+      />
+    </View>
   );
 }
 
@@ -107,7 +154,7 @@ export function VoxelIconTile({
     <View style={[styles.tile, { width: size, height: size }, style]}>
       {children ??
         (icon ? (
-          <VoxelIcon name={icon} size={Math.max(28, size - 10)} />
+          <VoxelIcon name={icon} size={Math.max(20, size - 16)} />
         ) : null)}
     </View>
   );
@@ -115,7 +162,8 @@ export function VoxelIconTile({
 
 const styles = StyleSheet.create({
   icon: {
-    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
   },
   tile: {
     alignItems: "center",

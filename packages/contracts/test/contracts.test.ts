@@ -23,6 +23,7 @@ import {
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
   CheatSheetDocumentSchema,
+  CheatSheetResponseSchema,
   PushRegisterResponseSchema,
   PushUnregisterRequestSchema,
   PushUnregisterResponseSchema,
@@ -33,6 +34,7 @@ import {
   type LocalConceptQuizChunk,
   type LocalConceptQuizResult,
   type QuizQuestionType,
+  masteryStateForScore,
 } from "../src/index";
 
 const validCheatSheetDocument = {
@@ -64,6 +66,31 @@ describe("cheat-sheet quality contracts", () => {
         summary: "Regional anesthetics create a chemical barricade.",
       }).success,
     ).toBe(false);
+  });
+
+  describe("mastery rank thresholds", () => {
+    it.each([
+      [100, "mastered"],
+      [90, "expert"],
+      [80, "intermediate"],
+      [79, "basic"],
+    ] as const)("maps %s%% to %s", (score, expected) => {
+      expect(masteryStateForScore(score)).toBe(expected);
+    });
+  });
+
+  it("accepts caption-only artifacts without a quiz", () => {
+    expect(
+      CheatSheetResponseSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        videoId: "22222222-2222-4222-8222-222222222222",
+        quizId: null,
+        sourceRevision: "video:22222222-2222-4222-8222-222222222222",
+        status: "ready",
+        document: validCheatSheetDocument,
+        updatedAt: 1,
+      }).success,
+    ).toBe(true);
   });
 });
 
@@ -218,6 +245,7 @@ describe("session length", () => {
   it("carries progressive replay settings on Library cards", () => {
     const card = LibraryCardSchema.parse({
       videoId: "11111111-1111-4111-8111-111111111111",
+      sourceVideoId: "dQw4w9WgXcQ",
       quizId: "22222222-2222-4222-8222-222222222222",
       attemptId: null,
       originalUrl: "https://www.youtube.com/watch?v=library-replay",
@@ -225,7 +253,7 @@ describe("session length", () => {
       title: "Library replay",
       thumbnailUrl: "https://example.com/thumbnail.jpg",
       bestScore: 67,
-      mastery: "learning",
+      mastery: "basic",
       action: "start",
       dueForReview: false,
       startSettings: {

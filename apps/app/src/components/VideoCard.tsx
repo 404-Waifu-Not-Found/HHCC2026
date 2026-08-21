@@ -2,23 +2,24 @@ import type { LibraryCard } from "@clipquest/contracts";
 import { VoxelIcon } from "./VoxelIcon";
 import {
   Alert,
+  ActivityIndicator,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
+import { useState } from "react";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, motion, radii, spacing, typography } from "../theme/tokens";
 import { MotionPressable, MotionView } from "../motion/Motion";
+import {
+  MasteryBadge,
+  masteryColors,
+  masteryPresentation,
+} from "./MasteryBadge";
+import { ProgressBar } from "./ProgressBar";
 import { ReliableThumbnail } from "./ReliableThumbnail";
-
-const masteryKeys = {
-  not_started: "notStarted",
-  learning: "learning",
-  mastered: "mastered",
-} as const;
 
 export function VideoCard({
   card,
@@ -26,15 +27,22 @@ export function VideoCard({
   compact = false,
   fill = false,
   onExport,
+  onGenerateNotes,
+  notesPending = false,
 }: {
   card: LibraryCard;
   onPress(): void;
   compact?: boolean;
   fill?: boolean;
   onExport?(): void | Promise<void>;
+  onGenerateNotes?(): void | Promise<void>;
+  notesPending?: boolean;
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
+  const [hoveredAction, setHoveredAction] = useState<
+    "notes" | "open" | undefined
+  >();
   const horizontal = !compact && width >= 720;
   // Home's compact carousel should read as a deliberate single-card surface
   // on phones, not a desktop-width card with a distracting clipped sliver.
@@ -49,12 +57,23 @@ export function VideoCard({
       : card.action === "review"
         ? t("review")
         : t("start");
-  const masteryColor =
-    card.mastery === "mastered"
-      ? theme.success
-      : card.mastery === "learning"
-        ? theme.primary
-        : theme.textMuted;
+  const masteryColor = masteryColors(card.mastery, theme).color;
+  const notesStatus = notesPending ? "generating" : card.cheatSheet.status;
+  const notesLabel =
+    notesStatus === "ready"
+      ? t("exportNotes")
+      : notesStatus === "failed"
+        ? t("retryNotes")
+        : notesStatus === "generating"
+          ? t("generatingNotes")
+          : t("generateNotes");
+  const notesIcon =
+    notesStatus === "ready"
+      ? "download"
+      : notesStatus === "failed"
+        ? "refresh"
+        : "idea";
+  const notesAction = notesStatus === "ready" ? onExport : onGenerateNotes;
 
   return (
     <View
@@ -66,12 +85,13 @@ export function VideoCard({
           backgroundColor: theme.surface,
           borderColor: theme.border,
           borderBottomColor: theme.borderStrong,
+          position: "relative",
         },
       ]}
     >
       <MotionPressable
         accessibilityRole="button"
-        accessibilityLabel={`${card.title}, ${t(masteryKeys[card.mastery])}, ${actionLabel}`}
+        accessibilityLabel={`${card.title}, ${t(masteryPresentation(card.mastery).labelKey)}, ${actionLabel}`}
         onPress={onPress}
         style={({ pressed, hovered }) => [
           styles.main,
@@ -112,74 +132,156 @@ export function VideoCard({
             {card.title}
           </Text>
           <View style={styles.meta}>
+            <MasteryBadge state={card.mastery} compact />
+          </View>
+          {card.bestScore !== null ? (
             <View
-              style={[styles.badge, { backgroundColor: theme.surfaceSunken }]}
+              style={[
+                styles.scoreBar,
+                { paddingRight: spacing[20] + spacing[5] },
+              ]}
             >
-              <View style={[styles.dot, { backgroundColor: masteryColor }]} />
-              <Text style={[styles.badgeText, { color: theme.textMuted }]}>
-                {t(masteryKeys[card.mastery])}
-              </Text>
-            </View>
-            {card.bestScore !== null ? (
-              <Text style={[styles.score, { color: masteryColor }]}>
+              <View style={styles.scoreProgress}>
+                <ProgressBar
+                  accessibilityLabel={`${t("score")}: ${Math.round(card.bestScore)}%`}
+                  compact
+                  fillColor={masteryColor}
+                  progress={card.bestScore / 100}
+                />
+              </View>
+              <Text style={[styles.scoreValue, { color: masteryColor }]}>
                 {Math.round(card.bestScore)}%
               </Text>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
         </View>
       </MotionPressable>
-      <View style={[styles.actionRow, { borderTopColor: theme.divider }]}>
-        <Text style={[styles.action, { color: theme.primary }]}>
-          {actionLabel}
-        </Text>
-        <VoxelIcon name="next" size={20} color={theme.primary} />
-        {card.cheatSheet.status === "none" ? (
-          <View
-            accessible
-            accessibilityRole="text"
-            accessibilityLabel={`${t("notesNotReady")}. Complete a quiz to enable notes export.`}
-            accessibilityHint="Complete a quiz to enable notes export."
-            style={styles.exportStatus}
-          >
-            <Text style={[styles.exportText, { color: theme.textMuted }]}>
-              {t("notesNotReady")}
-            </Text>
-          </View>
-        ) : (
-          <Pressable
+      <View style={styles.actions}>
+        <View style={styles.actionWrap}>
+          <MotionPressable
+            pressDepth={0}
+            pressScale={motion.scale.iconPress}
             accessibilityRole="button"
-            accessibilityLabel={
-              card.cheatSheet.status === "ready"
-                ? t("exportNotes")
-                : t("retryNotes")
-            }
-            accessibilityState={{ disabled: !onExport }}
+            accessibilityLabel={notesLabel}
+            accessibilityHint={notesLabel}
+            accessibilityState={{
+              busy: notesPending,
+              disabled: notesPending || !notesAction,
+            }}
+            onBlur={() => setHoveredAction(undefined)}
+            onFocus={() => setHoveredAction("notes")}
+            onHoverIn={() => setHoveredAction("notes")}
+            onHoverOut={() => setHoveredAction(undefined)}
             onPress={() => {
-              if (!onExport) return;
-              void Promise.resolve(onExport()).catch((cause) => {
+              if (!notesAction || notesPending) return;
+              void Promise.resolve(notesAction()).catch((cause) => {
                 Alert.alert(
-                  t("exportNotes"),
+                  notesLabel,
                   cause instanceof Error
                     ? cause.message
-                    : "The cheat sheet could not be exported.",
+                    : "The cheat sheet could not be prepared.",
                 );
               });
             }}
-            style={({ pressed }) => [
-              styles.exportButton,
+            style={({ pressed, hovered }) => [
+              styles.iconButton,
               {
-                borderColor: theme.borderStrong,
-                opacity: !onExport ? 0.45 : pressed ? 0.7 : 1,
+                backgroundColor:
+                  notesPending || !notesAction
+                    ? theme.surfaceSunken
+                    : hovered
+                      ? theme.surfaceTint
+                      : theme.surfaceSunken,
+                borderColor:
+                  hovered && !notesPending && notesAction
+                    ? theme.primary
+                    : theme.border,
+                opacity:
+                  notesPending || !notesAction ? 0.45 : pressed ? 0.7 : 1,
+                transform: [{ scale: hovered ? 1.06 : 1 }],
+              },
+              Platform.OS === "web" && {
+                transitionDuration: `${motion.fast}ms`,
+                transitionProperty: "transform, background-color, border-color",
+                outlineColor: theme.focus,
               },
             ]}
           >
-            <Text style={[styles.exportText, { color: theme.textMuted }]}>
-              {card.cheatSheet.status === "ready"
-                ? t("exportNotes")
-                : t("retryNotes")}
-            </Text>
-          </Pressable>
-        )}
+            {notesPending ? (
+              <ActivityIndicator color={theme.secondary} size="small" />
+            ) : (
+              <VoxelIcon name={notesIcon} size={26} />
+            )}
+          </MotionPressable>
+          {hoveredAction === "notes" ? (
+            <MotionView
+              duration={motion.fast}
+              pointerEvents="none"
+              preset="pop"
+              style={[
+                styles.tooltip,
+                {
+                  backgroundColor: theme.surfaceRaised,
+                  borderColor: theme.borderStrong,
+                },
+              ]}
+            >
+              <Text style={[styles.tooltipText, { color: theme.text }]}>
+                {notesLabel}
+              </Text>
+            </MotionView>
+          ) : null}
+        </View>
+        <View style={styles.actionWrap}>
+          <MotionPressable
+            pressDepth={0}
+            pressScale={motion.scale.iconPress}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+            accessibilityHint={actionLabel}
+            onBlur={() => setHoveredAction(undefined)}
+            onFocus={() => setHoveredAction("open")}
+            onHoverIn={() => setHoveredAction("open")}
+            onHoverOut={() => setHoveredAction(undefined)}
+            onPress={onPress}
+            style={({ pressed, hovered }) => [
+              styles.iconButton,
+              {
+                backgroundColor: hovered
+                  ? theme.surfaceTint
+                  : theme.surfaceSunken,
+                borderColor: hovered ? theme.primary : theme.border,
+                opacity: pressed ? 0.7 : 1,
+                transform: [{ scale: hovered ? 1.06 : 1 }],
+              },
+              Platform.OS === "web" && {
+                transitionDuration: `${motion.fast}ms`,
+                transitionProperty: "transform, background-color, border-color",
+                outlineColor: theme.focus,
+              },
+            ]}
+          >
+            <VoxelIcon name="next" size={26} />
+          </MotionPressable>
+          {hoveredAction === "open" ? (
+            <MotionView
+              duration={motion.fast}
+              pointerEvents="none"
+              preset="pop"
+              style={[
+                styles.tooltip,
+                {
+                  backgroundColor: theme.surfaceRaised,
+                  borderColor: theme.borderStrong,
+                },
+              ]}
+            >
+              <Text style={[styles.tooltipText, { color: theme.text }]}>
+                {actionLabel}
+              </Text>
+            </MotionView>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -242,7 +344,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flex: 1,
     padding: spacing[4],
+    paddingBottom: spacing[7],
     gap: spacing[3],
+    justifyContent: "space-between",
   },
   title: {
     minHeight: 48,
@@ -255,57 +359,57 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
+    paddingRight: spacing[20] + spacing[5],
   },
-  badge: {
+  scoreBar: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing[3],
-    paddingVertical: 6,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  badgeText: {
-    fontFamily: typography.bodyBold,
-    fontSize: 11,
-  },
-  score: {
-    marginLeft: "auto",
+  scoreValue: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.label,
   },
-  actionRow: {
-    minHeight: 36,
+  scoreProgress: {
+    flex: 1,
+    minWidth: 0,
+  },
+  actions: {
+    position: "absolute",
+    right: spacing[3],
+    bottom: spacing[3],
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: spacing[2],
-    borderTopWidth: borders.hairline,
-    paddingTop: spacing[3],
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[4],
   },
-  action: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.label,
+  actionWrap: {
+    position: "relative",
   },
-  exportButton: {
-    minHeight: 34,
+  iconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
     justifyContent: "center",
     borderWidth: borders.standard,
     borderRadius: radii.pill,
+  },
+  tooltip: {
+    position: "absolute",
+    right: 0,
+    bottom: "100%",
+    zIndex: 2,
+    minWidth: 116,
+    maxWidth: 190,
+    marginBottom: spacing[2],
+    borderWidth: borders.standard,
+    borderRadius: radii.small,
     paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
   },
-  exportText: {
+  tooltipText: {
     fontFamily: typography.bodyBold,
-    fontSize: 11,
-  },
-  exportStatus: {
-    paddingHorizontal: spacing[2],
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+    textAlign: "center",
   },
 });
