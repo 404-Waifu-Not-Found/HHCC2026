@@ -395,7 +395,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const apiKey = stored[API_KEY_STORAGE_KEY];
         if (typeof apiKey !== "string") {
           throw new Error(
-            "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+            "Open ClipQuest from the Chrome toolbar and add your DeepSeek API key.",
           );
         }
         return gradeLocalAnswerWithDeepSeek(message.request, apiKey);
@@ -524,7 +524,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!senderAllowed(sender)) {
     sendResponse({
       ok: false,
-      error: "This website is not allowed to use ClipQuest Captions.",
+      error: "This website is not allowed to use ClipQuest.",
     });
     return false;
   }
@@ -594,7 +594,7 @@ chrome.runtime.onConnect.addListener((port) => {
         const apiKey = stored[API_KEY_STORAGE_KEY];
         if (typeof apiKey !== "string") {
           const error = new Error(
-            "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+            "Open ClipQuest from the Chrome toolbar and add your DeepSeek API key.",
           );
           error.reasonCode = "credential_required";
           throw error;

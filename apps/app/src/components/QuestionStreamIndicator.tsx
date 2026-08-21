@@ -177,8 +177,8 @@ function generationReasonExplanation(
   }
   if (reasonCode === "credential_required") {
     return chinese
-      ? "请更新 ClipQuest Local AI 中的 DeepSeek 密钥；验证后会自动恢复。"
-      : "Update the DeepSeek key in ClipQuest Local AI; generation resumes automatically after validation.";
+      ? "请更新 ClipQuest 中的 DeepSeek 密钥；验证后会自动恢复。"
+      : "Update the DeepSeek key in ClipQuest; generation resumes automatically after validation.";
   }
   if (reasonCode === "billing_required") {
     return chinese

@@ -1,6 +1,6 @@
 # ClipQuest operations console
 
-Status reviewed: 2026-08-16. This document describes the local-client operations surface: Chrome generates through ClipQuest Local AI, while Android generates inside the native app. Release implementation and live acceptance are recorded in the [README release status](../README.md#release-status), [Android QA report](./QA-ANDROID-BETA-2026-08-16.md), and dated web-generation reports.
+Status reviewed: 2026-08-16. This document describes the local-client operations surface: Chrome generates through the ClipQuest extension, while Android generates inside the native app. Release implementation and live acceptance are recorded in the [README release status](../README.md#release-status), [Android QA report](./QA-ANDROID-BETA-2026-08-16.md), and dated web-generation reports.
 
 The private operations console lives at `/admin`. It uses ClipQuest's Expo application and visual system but remains isolated from learner navigation.
 

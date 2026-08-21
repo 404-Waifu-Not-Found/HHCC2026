@@ -455,7 +455,7 @@ export async function requestExtensionYouTubeTranscript(
   }
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
-    throw new Error("ClipQuest Captions is not installed.");
+    throw new Error("ClipQuest is not installed.");
   }
   const id = requestId();
   return new Promise((resolve, reject) => {
@@ -586,7 +586,7 @@ export async function requestExtensionLocalQuiz(
               : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
-    throw new Error("ClipQuest Local AI is not installed.");
+    throw new Error("ClipQuest is not installed.");
   }
   if (
     !isCompatibleClipQuestExtensionVersion(
@@ -595,17 +595,17 @@ export async function requestExtensionLocalQuiz(
     )
   ) {
     throw new Error(
-      `ClipQuest Local AI ${minimumExtensionVersion} or newer is required for streamed questions. Download and reload the current extension.`,
+      `ClipQuest ${minimumExtensionVersion} or newer is required for streamed questions. Download and reload the current extension.`,
     );
   }
   if (!extension.capabilities.includes(requiredCapability)) {
     throw new Error(
-      `Update ClipQuest Local AI. This extension does not support ${requiredCapability}.`,
+      `Update ClipQuest. This extension does not support ${requiredCapability}.`,
     );
   }
   if (!extension.configured) {
     throw new Error(
-      "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+      "Open ClipQuest from the Chrome toolbar and add your DeepSeek API key.",
     );
   }
   const id = requestId();
@@ -798,7 +798,7 @@ export async function requestExtensionLocalCheatSheet(
   const extension = await detectClipQuestExtension();
   if (!extension.available || !extension.configured)
     throw new Error(
-      "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+      "Open ClipQuest from the Chrome toolbar and add your DeepSeek API key.",
     );
   const id = requestId();
   return new Promise((resolve, reject) => {
@@ -867,12 +867,10 @@ export async function requestExtensionLocalAnswerGrade(
   const extension = await detectClipQuestExtension();
   if (!extension.available || !extension.configured)
     throw new Error(
-      "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+      "Open ClipQuest from the Chrome toolbar and add your DeepSeek API key.",
     );
   if (!extension.capabilities.includes("answer-grading-v1")) {
-    throw new Error(
-      "Update ClipQuest Local AI to enable softer answer grading.",
-    );
+    throw new Error("Update ClipQuest to enable softer answer grading.");
   }
   const id = requestId();
   return new Promise((resolve, reject) => {

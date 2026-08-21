@@ -301,7 +301,7 @@ quizImportsRouter.post("/progressive", async (c) => {
     throw new ApiError(
       403,
       "quiz_generation_profile_disabled",
-      "Install the current ClipQuest Local AI release before creating a new grounded quiz.",
+      "Install the current ClipQuest release before creating a new grounded quiz.",
     );
   }
   if (input.chunk.startIndex !== 0) {
@@ -1321,7 +1321,7 @@ async function persistProgressiveQuiz(input: {
             evidenceSegmentIds: [],
           },
         ]),
-        input.input.watched ? 1 : 0,
+        1,
         LOCAL_QUIZ_PIPELINE_VERSION,
         JSON.stringify(summary),
         input.importKey,
@@ -2202,7 +2202,7 @@ async function persistImportedQuiz(input: {
             evidenceSegmentIds: [],
           })),
         ),
-        input.input.watched ? 1 : 0,
+        1,
         LOCAL_QUIZ_PIPELINE_VERSION,
         JSON.stringify(summary),
         input.importKey,

@@ -75,7 +75,7 @@ const copy = {
     required: "Required",
     model: "Question model",
     generationArchitecture: "Generation architecture",
-    localAiGeneration: "ClipQuest Local AI generation",
+    localAiGeneration: "ClipQuest local generation",
     workerGeneration: "Worker generation",
     extensionRequirement: "Local AI extension",
     pipeline: "Quiz pipeline",
@@ -100,7 +100,7 @@ const copy = {
       "Only bounded local-stream status is shown. Captions and model responses stay private.",
     noFailures: "No recent failures",
     generationStreamsSubtitle:
-      "Read-only progress from learner-owned ClipQuest Local AI streams.",
+      "Read-only progress from learner-owned ClipQuest streams.",
     generationState: "Generation state",
     generating: "Generating",
     retrying: "Retrying",

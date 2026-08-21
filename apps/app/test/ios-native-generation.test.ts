@@ -37,6 +37,9 @@ describe("iOS native generation", () => {
     expect(generation).toContain('"Question 1 unavailable"');
     expect(creation).toContain('Platform.OS !== "web" && generationId');
     expect(creation).toContain("captionsUnavailable || captionsFailed");
+    expect(creation).not.toContain("captionStatus");
+    expect(creation).not.toContain("watchedQuestion");
+    expect(creation).toContain("watched: true");
     expect(creation).not.toContain("nativeLocalFallback");
     expect(creation).toContain("openLocalGenerationClientSettings");
     expect(settings).toContain('Platform.OS !== "web"');

@@ -731,7 +731,7 @@ test("requires the local caption extension and reconnects automatically", async 
   await page.reload();
 
   await expect(
-    page.getByRole("heading", { name: "Install the Chrome extension" }),
+    page.getByRole("heading", { name: "Install ClipQuest" }),
   ).toBeVisible();
   await expect(page.getByTestId("download-caption-extension")).toBeVisible();
   await expect(
@@ -743,7 +743,7 @@ test("requires the local caption extension and reconnects automatically", async 
   );
   await page.getByTestId("check-caption-extension").click();
   await expect(
-    page.getByRole("heading", { name: "Install the Chrome extension" }),
+    page.getByRole("heading", { name: "Install ClipQuest" }),
   ).toBeHidden();
   await expect(page).toHaveURL(/\/$/);
   await expect(
@@ -764,7 +764,7 @@ test("an older extension is gated until question streaming is available", async 
   await page.reload();
 
   await expect(
-    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+    page.getByRole("heading", { name: "Update ClipQuest" }),
   ).toBeVisible();
   await expect(
     page.getByText("0.8.17 or newer", { exact: false }),
@@ -775,7 +775,7 @@ test("an older extension is gated until question streaming is available", async 
   );
   await page.getByTestId("check-caption-extension").click();
   await expect(
-    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+    page.getByRole("heading", { name: "Update ClipQuest" }),
   ).toBeHidden();
 });
 

@@ -49,7 +49,7 @@ describe("Android UI regressions", () => {
     expect(verification).toContain('variant="ghost"');
   });
 
-  it("does not claim native captions are ready while prework is pending", () => {
+  it("keeps caption gating without showing a warning card", () => {
     const creation = source("app/create/[videoId].tsx");
     const generation = source("app/generation/[videoId].tsx");
     const localClient = source(
@@ -57,14 +57,27 @@ describe("Android UI regressions", () => {
     );
 
     expect(creation).toContain('nativeCaptionState === "running"');
-    expect(creation).toContain('t("sourceCaptionsPreparing")');
     expect(creation).toContain("loading={captionsPending}");
+    expect(creation).toContain("disabled={captionsBlocked}");
+    expect(creation).not.toContain("captionStatus");
+    expect(creation).not.toContain("sourceCaptionsUnavailable");
     expect(creation).toContain(
       "The local-client probe is diagnostic. It may wait on native",
     );
     expect(generation).toContain('"captionPrivacyNative"');
     expect(generation).toContain('label: t("checkingCaptions")');
     expect(localClient).toContain("disableStreaming: true");
+  });
+
+  it("assumes the learner watched the video on every shared client", () => {
+    const creation = source("app/create/[videoId].tsx");
+    const generation = source("app/generation/[videoId].tsx");
+
+    expect(creation).not.toContain("watchedQuestion");
+    expect(creation).not.toContain("setWatched");
+    expect(creation).toContain("watched: true");
+    expect(generation).not.toContain("params.watched");
+    expect(generation).toContain("{ watched: true }");
   });
 
   it("never calls browser focus listeners from a native quiz", () => {

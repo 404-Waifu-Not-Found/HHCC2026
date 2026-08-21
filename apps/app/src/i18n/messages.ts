@@ -68,9 +68,6 @@ export const messages = {
     continue: "Continue",
     review: "Review",
     start: "Start",
-    watchedQuestion: "Have you watched this video?",
-    watchedYes: "Yes, quiz me",
-    watchedNo: "Not yet",
     quizLanguage: "Quiz language",
     questionTypes: "Question types",
     questionTypesHelp:
@@ -132,22 +129,16 @@ export const messages = {
     videoReady: "Video ready",
     thumbnailUnavailable: "The thumbnail is taking longer than expected.",
     retryThumbnail: "Reload thumbnail",
-    sourceCaptions: "Complete source captions are ready.",
-    sourceCaptionsPreparing: "Checking this video's captions…",
-    sourceCaptionsUnavailable:
-      "Verified YouTube captions are required. ClipQuest does not download or transcribe video audio.",
-    sourceCaptionsFailed:
-      "Captions could not be verified. ClipQuest will not use video audio; paste a captioned video to continue.",
     localAiSetupTitle: "Local AI setup required",
     localAiSetupBody:
       "Add and test your DeepSeek API key on this device before creating the quiz.",
     openLocalAiSettings: "Open Local AI settings",
-    extensionRequiredTitle: "Install the Chrome extension",
+    extensionRequiredTitle: "Install ClipQuest",
     extensionRequiredBody:
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
-    extensionUpdateTitle: "Update ClipQuest Local AI",
+    extensionUpdateTitle: "Update ClipQuest",
     extensionUpdateBody:
-      "This version cannot use automatic prompt-first quiz generation yet. Install ClipQuest Local AI 0.8.26 or newer to continue.",
+      "This version cannot use automatic prompt-first quiz generation yet. Install ClipQuest 0.8.26 or newer to continue.",
     extensionStepDownload: "Download and unzip the extension package.",
     extensionStepOpen: "Open chrome://extensions and turn on Developer mode.",
     extensionStepLoad:
@@ -238,7 +229,6 @@ export const messages = {
     languageEnglish: "English",
     languageChinese: "简体中文",
     quizLanguageHelp: "Questions and explanations use this language.",
-    watchedHelp: "If not, you’ll see a short primer before the quiz.",
   },
   "zh-CN": {
     appName: "ClipQuest",
@@ -303,9 +293,6 @@ export const messages = {
     continue: "继续",
     review: "复习",
     start: "开始",
-    watchedQuestion: "你看过这个视频吗？",
-    watchedYes: "看过，考考我",
-    watchedNo: "还没有",
     quizLanguage: "测验语言",
     questionTypes: "题目类型",
     questionTypesHelp:
@@ -363,22 +350,16 @@ export const messages = {
     videoReady: "视频已准备好",
     thumbnailUnavailable: "缩略图加载时间比预期更长。",
     retryThumbnail: "重新加载缩略图",
-    sourceCaptions: "完整的来源字幕已准备好。",
-    sourceCaptionsPreparing: "正在检查此视频的字幕…",
-    sourceCaptionsUnavailable:
-      "必须提供经过验证的 YouTube 字幕。ClipQuest 不会下载或转写视频音频。",
-    sourceCaptionsFailed:
-      "无法验证字幕。ClipQuest 不会使用视频音频；请粘贴带字幕的视频后继续。",
     localAiSetupTitle: "需要设置本地 AI",
     localAiSetupBody:
       "创建测验前，请在此设备上添加并测试你的 DeepSeek API 密钥。",
     openLocalAiSettings: "打开本地 AI 设置",
-    extensionRequiredTitle: "安装 Chrome 扩展",
+    extensionRequiredTitle: "安装 ClipQuest",
     extensionRequiredBody:
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
-    extensionUpdateTitle: "更新 ClipQuest Local AI",
+    extensionUpdateTitle: "更新 ClipQuest",
     extensionUpdateBody:
-      "当前版本尚不支持自动提示词优先测验生成。请安装 ClipQuest Local AI 0.8.26 或更高版本后继续。",
+      "当前版本尚不支持自动提示词优先测验生成。请安装 ClipQuest 0.8.26 或更高版本后继续。",
     extensionStepDownload: "下载并解压扩展安装包。",
     extensionStepOpen: "打开 chrome://extensions，并启用开发者模式。",
     extensionStepLoad:
@@ -462,7 +443,6 @@ export const messages = {
     languageEnglish: "English",
     languageChinese: "简体中文",
     quizLanguageHelp: "题目与解析将使用此语言。",
-    watchedHelp: "如果没看过，答题前会显示简短导读。",
   },
 } as const;
 

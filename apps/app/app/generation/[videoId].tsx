@@ -128,7 +128,6 @@ export default function GenerationScreen() {
   const params = useLocalSearchParams<{
     videoId: string;
     generationId: string;
-    watched: string;
     quizLanguage: AppLanguage;
     sessionLength: SessionLength;
     questionTypes?: string;
@@ -267,10 +266,21 @@ export default function GenerationScreen() {
         );
       }
       let generationRecord: GenerationRecord = storedRecord;
+      if (!generationRecord.watched) {
+        const normalizedRecord = await updateGenerationRecord(
+          generationRecord.generationId,
+          { watched: true },
+        );
+        if (!normalizedRecord) {
+          throw new Error(
+            "The local generation record disappeared while the quiz was running.",
+          );
+        }
+        generationRecord = normalizedRecord;
+      }
       const routeMatchesRecord =
         generationRecord.quizLanguage === params.quizLanguage &&
         generationRecord.sessionLength === params.sessionLength &&
-        generationRecord.watched === (params.watched === "true") &&
         generationRecord.questionTypes.length === questionTypes.length &&
         generationRecord.questionTypes.every(
           (type, index) => type === questionTypes[index],
@@ -345,7 +355,7 @@ export default function GenerationScreen() {
               mode: "learn",
               sessionLength: params.sessionLength,
               questionTypes,
-              watched: params.watched === "true",
+              watched: true,
             }),
             signal,
           },
@@ -405,7 +415,7 @@ export default function GenerationScreen() {
               ? `ClipQuest Android ${requirement.minimumVersion} or newer is required.`
               : localClient.kind === "ios_app"
                 ? `ClipQuest iOS ${requirement.minimumVersion} or newer is required.`
-                : `ClipQuest Local AI ${requirement.minimumVersion} or newer is required.`,
+                : `ClipQuest ${requirement.minimumVersion} or newer is required.`,
           );
         }
         if (!localClient.configured) {
@@ -655,7 +665,7 @@ export default function GenerationScreen() {
                     quizLanguage: params.quizLanguage,
                     sessionLength: params.sessionLength,
                     questionTypes,
-                    watched: params.watched === "true",
+                    watched: true,
                     chunk,
                   }),
                   signal,
@@ -682,7 +692,7 @@ export default function GenerationScreen() {
               quizLanguage: generationRecord.quizLanguage,
               questionTypes: generationRecord.questionTypes,
               sessionLength: generationRecord.sessionLength,
-              watched: generationRecord.watched,
+              watched: true,
               questionPlan: chunk.questionPlan,
               quizId: response.quizId,
               acceptedCount: response.generation.availableQuestions,
@@ -970,7 +980,6 @@ export default function GenerationScreen() {
       params.quizLanguage,
       params.sessionLength,
       params.videoId,
-      params.watched,
       questionCount,
       questionTypes,
       session?.user.id,

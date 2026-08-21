@@ -217,7 +217,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     );
   }
   const quiz = await c.env.DB.prepare(
-    "SELECT id, video_id, primer, watched, pipeline_version, language, session_length FROM quiz_banks WHERE id = ? AND user_id = ? AND ((pipeline_version = ? AND quality_status = 'passed') OR (pipeline_version = ? AND quality_status IN ('generating', 'passed')))",
+    "SELECT id, video_id, pipeline_version, language, session_length FROM quiz_banks WHERE id = ? AND user_id = ? AND ((pipeline_version = ? AND quality_status = 'passed') OR (pipeline_version = ? AND quality_status IN ('generating', 'passed')))",
   )
     .bind(
       quizId,
@@ -228,8 +228,6 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     .first<{
       id: string;
       video_id: string;
-      primer: string;
-      watched: number;
       pipeline_version: number;
       language: string;
       session_length: "short" | "medium" | "long";
@@ -411,7 +409,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     : readyGeneration(itemCount);
   const startResponse = QuizStartResponseSchema.parse({
     attemptId,
-    primer: (input.watched ?? Boolean(quiz.watched)) ? null : quiz.primer,
+    primer: null,
     question: toPublicQuestion(firstQuestion, 0, itemCount, false),
     generation,
   });

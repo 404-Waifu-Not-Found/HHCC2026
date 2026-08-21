@@ -65,7 +65,6 @@ export default function CreateQuestScreen() {
   const { width } = useWindowDimensions();
   const [video, setVideo] = useState<VideoImportResponse>();
   const [error, setError] = useState<string>();
-  const [watched, setWatched] = useState(true);
   const [quizLanguage, setQuizLanguage] = useState<AppLanguage>(locale);
   const [sessionLength, setSessionLength] = useState<SessionLength>("medium");
   const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
@@ -184,15 +183,6 @@ export default function CreateQuestScreen() {
     (nativeCaptionState === undefined || nativeCaptionState === "running");
   const captionsUnavailable = nativeCaptionState === "unavailable";
   const captionsFailed = nativeCaptionState === "failed";
-  const transcriptStatus = (
-    captionsPending
-      ? t("sourceCaptionsPreparing")
-      : captionsUnavailable
-        ? t("sourceCaptionsUnavailable")
-        : captionsFailed
-          ? t("sourceCaptionsFailed")
-          : t("sourceCaptions")
-  ).replace(/[—–]/g, "-");
   const captionsBlocked =
     captionsUnavailable || captionsFailed || video.captions.available === false;
   const localAiMissing = Platform.OS !== "web" && localAiConfigured === false;
@@ -219,7 +209,7 @@ export default function CreateQuestScreen() {
         quizLanguage,
         questionTypes,
         sessionLength,
-        watched,
+        watched: true,
         plannedCount,
       });
     } else {
@@ -234,7 +224,7 @@ export default function CreateQuestScreen() {
         quizLanguage,
         questionTypes,
         sessionLength,
-        watched,
+        watched: true,
         acceptedCount: 0,
         plannedCount,
         state: "pending",
@@ -248,7 +238,6 @@ export default function CreateQuestScreen() {
       params: {
         videoId: video.video.id,
         generationId: nextGenerationId,
-        watched: String(watched),
         quizLanguage,
         sessionLength,
         questionTypes: questionTypes.join(","),
@@ -315,46 +304,6 @@ export default function CreateQuestScreen() {
                 >
                   {video.video.title}
                 </Text>
-                <View
-                  style={[
-                    styles.captionStatus,
-                    {
-                      backgroundColor: captionsBlocked
-                        ? theme.errorSoft
-                        : captionsPending
-                          ? theme.secondarySoft
-                          : theme.successSoft,
-                      borderColor: captionsBlocked
-                        ? theme.error
-                        : captionsPending
-                          ? theme.secondary
-                          : theme.success,
-                    },
-                  ]}
-                >
-                  <VoxelIcon
-                    name={
-                      captionsBlocked
-                        ? "error"
-                        : captionsPending
-                          ? "processing"
-                          : "captions"
-                    }
-                    size={22}
-                    color={
-                      captionsBlocked
-                        ? theme.error
-                        : captionsPending
-                          ? theme.secondaryPressed
-                          : theme.successPressed
-                    }
-                  />
-                  <Text
-                    style={[styles.captionStatusText, { color: theme.text }]}
-                  >
-                    {transcriptStatus}
-                  </Text>
-                </View>
               </View>
             </View>
           </Surface>
@@ -362,21 +311,7 @@ export default function CreateQuestScreen() {
 
         <MotionView preset="rise" delay={88}>
           <Surface style={styles.setupSurface}>
-            <SettingGroup title={t("watchedQuestion")} help={t("watchedHelp")}>
-              <SegmentedControl
-                label={t("watchedQuestion")}
-                value={watched ? "yes" : "no"}
-                onChange={(value) => setWatched(value === "yes")}
-                options={
-                  [
-                    { value: "yes", label: t("watchedYes") },
-                    { value: "no", label: t("watchedNo") },
-                  ] as const
-                }
-              />
-            </SettingGroup>
             <SettingGroup
-              divided
               title={t("quizLanguage")}
               help={t("quizLanguageHelp")}
             >
@@ -559,20 +494,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.displayMedium,
     fontSize: typography.size.title,
     lineHeight: typography.lineHeight.title,
-  },
-  captionStatus: {
-    borderWidth: borders.standard,
-    borderRadius: radii.medium,
-    padding: spacing[3],
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-  },
-  captionStatusText: {
-    flex: 1,
-    fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
   },
   setupSurface: { gap: 0 },
   settingGroup: { gap: spacing[4], paddingVertical: spacing[1] },

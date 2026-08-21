@@ -28,7 +28,7 @@ Historical 2026-08-11 baseline:
 
 - Production Worker `a8d8cda5-ea66-4e87-afae-388b2cf237dd` was tagged from Git SHA `9c1bc3b75929819cc18f1a7bb4a50b7cd954dc03`.
 - Remote D1 was migrated through `0019_grounded_generation_telemetry.sql`.
-- Chrome ran ClipQuest Local AI 0.8.5.
+- Chrome ran ClipQuest 0.8.5.
 - The deployed source advertised pipeline 9, prompt v5.5, validator v4.4, and extension-local generation, but every rollout variable was disabled. Newly tested banks therefore used the legacy v5.1 compatibility profile.
 - Ten final banks and all 100 planned questions completed, but only 9/10 first attempts completed. The excluded attempt failed schema validation at 11/15, automatic recovery also failed, and a new quiz was required.
 - The defects recorded at that baseline were recovery reliability, incorrect legacy call classification, widespread source-referential prompt wording, and a corrupting display-time prefix transformation. Later source remediations and local regressions must not be mistaken for a completed new official-site matrix.

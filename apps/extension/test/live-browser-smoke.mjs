@@ -116,7 +116,7 @@ try {
 
   await page.waitForTimeout(1_500);
   const installGateVisible = await page
-    .getByRole("heading", { name: "Install ClipQuest Captions" })
+    .getByRole("heading", { name: "Install ClipQuest" })
     .isVisible()
     .catch(() => false);
   if (installGateVisible) {

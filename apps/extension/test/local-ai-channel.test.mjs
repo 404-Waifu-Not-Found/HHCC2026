@@ -233,7 +233,10 @@ test("release ZIPs normalize metadata for reproducible matching artifacts", () =
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.28");
+  assert.equal(manifest.name, "ClipQuest");
+  assert.equal(manifest.action.default_title, "ClipQuest");
+  assert.equal(manifest.version, "0.8.29");
+  assert.match(popupHtml, /<title>ClipQuest<\/title>/);
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
