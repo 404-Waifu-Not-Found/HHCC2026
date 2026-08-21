@@ -23,6 +23,7 @@ import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
+import { estimatedGenerationDurationMs } from "../../src/generation/eta";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import {
@@ -55,7 +56,6 @@ type JourneyStep = {
   label: string;
 };
 
-const JOURNEY_DURATION_MS = 35_000;
 const JOURNEY_TICK_MS = 100;
 const LINEAR_PROGRESS_LIMIT = 0.99;
 const FINAL_SWEEP_MS = 500;
@@ -87,6 +87,7 @@ export default function GenerationScreen() {
   }, [params.questionTypes]);
   const questionCount = questionLimitForSession(params.sessionLength) as
     5 | 10 | 15;
+  const journeyDurationMs = estimatedGenerationDurationMs(questionCount);
   const journeySteps = useMemo<JourneyStep[]>(
     () => [
       { id: "video", label: t("gettingVideo") },
@@ -128,14 +129,14 @@ export default function GenerationScreen() {
       setEstimatedProgress(
         Math.min(
           LINEAR_PROGRESS_LIMIT,
-          (elapsed / JOURNEY_DURATION_MS) * LINEAR_PROGRESS_LIMIT,
+          (elapsed / journeyDurationMs) * LINEAR_PROGRESS_LIMIT,
         ),
       );
     };
     tick();
     const timer = setInterval(tick, JOURNEY_TICK_MS);
     return () => clearInterval(timer);
-  }, [error, paused, setEstimatedProgress]);
+  }, [error, journeyDurationMs, paused, setEstimatedProgress]);
 
   const finishJourneyPresentation = useCallback(
     async (signal: AbortSignal) => {
@@ -335,7 +336,7 @@ export default function GenerationScreen() {
   );
   const estimatedSecondsLeft = Math.max(
     0,
-    Math.ceil((JOURNEY_DURATION_MS / 1_000) * (1 - linearFraction)),
+    Math.ceil((journeyDurationMs / 1_000) * (1 - linearFraction)),
   );
   const compactFooter = width < breakpoints.compact;
   const stageTitle = failed
