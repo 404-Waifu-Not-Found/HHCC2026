@@ -1466,11 +1466,17 @@ async function gradeAnswer(
       RubricSchema,
       "short-answer rubric",
     );
-    const sampleAnswer = parseStoredJson(
-      question.correct_answer_json,
-      z.string().trim().min(1).max(1_000),
-      "short-answer sample answer",
-    );
+    // Older locally-generated banks may not persist a sample answer even
+    // though their rubric is valid. Keep those quizzes answerable by using a
+    // compact rubric-derived reference instead of failing the entire attempt.
+    // Newer banks still use the canonical sample answer when it is present.
+    const sampleAnswer = question.correct_answer_json
+      ? parseStoredJson(
+          question.correct_answer_json,
+          z.string().trim().min(1).max(1_000),
+          "short-answer sample answer",
+        )
+      : rubric.requiredIdeas.join("; ");
     const correct = await gradeShortAnswerWithAi(env, {
       question: question.prompt,
       sampleAnswer,
