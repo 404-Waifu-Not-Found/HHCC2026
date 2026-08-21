@@ -170,9 +170,23 @@ function conceptFirstCommonQuestionSchema(type, id) {
     type: { const: type },
     concept: { type: "string" },
     objectiveCategory: { enum: CONCEPT_FIRST_OBJECTIVE_CATEGORIES },
-    question: { type: "string" },
-    explanation: { type: "string" },
-    evidenceQuote: { type: "string" },
+    question: {
+      type: "string",
+      description:
+        type === "true_false"
+          ? "A direct standalone factual statement with no source attribution or presentation scaffolding."
+          : "A direct standalone assessment. In English, begin with What, Which, How, Why, When, Where, Who, Is, Are, Does, Do, Can, Should, Identify, Define, Explain, Describe, Calculate, or Determine; never begin with According, Based, In the, From the, As discussed, or The evidence.",
+    },
+    explanation: {
+      type: "string",
+      description:
+        "Explain the concept directly. Never refer to a lesson, source, evidence, excerpt, analogy, metaphor, example, video, transcript, or presenter.",
+    },
+    evidenceQuote: {
+      type: "string",
+      description:
+        "Private validation text copied verbatim as one contiguous span from the eligible instructional evidence.",
+    },
   };
 }
 
@@ -194,8 +208,16 @@ function conceptFirstQuestionSchemaForType(type, id) {
       required: [...commonRequired, "answerSpan", "answerText", "distractors"],
       properties: {
         ...common,
-        answerSpan: { type: "string" },
-        answerText: { type: "string" },
+        answerSpan: {
+          type: "string",
+          description:
+            "A unique contiguous substring copied character-for-character from evidenceQuote. Never paraphrase it.",
+        },
+        answerText: {
+          type: "string",
+          description:
+            "The complete supported answer. When the evidence is already in the quiz language, copy answerSpan exactly; otherwise translate it faithfully while preserving all qualifiers.",
+        },
         distractors: {
           type: "array",
           minItems: 3,
@@ -545,7 +567,9 @@ Prioritize definitions and essential conditions, then relationships and causal r
 
 Use the selected quiz language for every learner-visible field, including the question, concept, explanation, answer text, distractors, corrections, aliases, and rubric text. Private evidenceQuote and answerSpan fields must remain exact source-language evidence and are never shown to the learner. Never leak source-language wording into a learner-visible field unless it is a standard formula, symbol, proper technical acronym, or term conventionally written that way in the selected quiz language.
 
-Silently verify before output that the question remains meaningful without the source, demonstrates knowledge rather than memory of presentation wording, has one supported answer, matches the requested answer kind, and does not duplicate an accepted objective. Explanations must explain the concept directly. Return exactly the requested JSON object, without Markdown, prose outside JSON, or hidden reasoning.`;
+Treat each learner-visible field as final UI copy. The concept must be a plain concept label. The question must ask that concept directly. The explanation must begin from the concept itself. Never frame a question or explanation through an analogy, metaphor, example, weave, described mechanism, provided evidence, or other presentation device; extract and assess the underlying relationship instead. For an English multiple-choice or short-answer item, the first word of question must be one of: What, Which, How, Why, When, Where, Who, Is, Are, Does, Do, Can, Should, Identify, Define, Explain, Describe, Calculate, Determine. A true/false question must be a direct factual statement whose first noun phrase is the taught subject.
+
+Silently verify every learner-visible field before output: it contains no source attribution or presentation scaffolding; the question remains meaningful without the source; answering it demonstrates transferable knowledge; the answer is fully and uniquely supported; every causal, comparative, numeric, and directional qualifier is preserved; the answer matches the requested kind; and the objective does not duplicate an accepted item. For multiple choice, first copy one unique answerSpan character-for-character from evidenceQuote, then write a question that this exact span answers. If the evidence is already in the quiz language, answerText must equal answerSpan exactly. Explanations must explain the concept directly. Return exactly the requested JSON object, without Markdown, prose outside JSON, or hidden reasoning.`;
 
 function conceptFirstExampleQuestion(type, id) {
   const common = {
@@ -633,7 +657,7 @@ function generationMessagesV58(input, isTransientRetry) {
     );
   const typeRules =
     type === "multiple_choice"
-      ? "Return one unique private answerSpan copied as a contiguous phrase from evidenceQuote, one semantically equivalent answerText in the selected quiz language, and exactly three misconception-based distractors in the selected quiz language. answerText and every distractor must form a coherent answer to the question. Preserve every causal, comparative, quantitative, and directional qualifier: if evidence supports only lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relationship in answerText. Do not use a pronoun whose antecedent changes the scope of the evidence. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally. Each whyWrong must identify the specific misconception without source attribution."
+      ? "Choose evidenceQuote first by copying one concise contiguous span from the eligible evidence. Then copy one unique contiguous answerSpan character-for-character from evidenceQuote; do not paraphrase, summarize, change morphology, or drop punctuation inside it. If the evidence is already in the selected quiz language, answerText must be exactly identical to answerSpan. Otherwise translate answerSpan faithfully. Only after fixing that answer, write a direct question which the complete answerText answers grammatically and uniquely. In English the question must begin with an allowlisted direct interrogative or imperative from the system instruction. Return exactly three misconception-based distractors in the selected quiz language. answerText and every distractor must form a coherent answer to the question. Preserve every causal, comparative, quantitative, and directional qualifier: if evidence supports only lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relationship in answerText. Do not use a pronoun whose antecedent changes the scope of the evidence. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally. Each whyWrong must identify the specific misconception without source attribution."
       : type === "true_false"
         ? "Return one direct supportedFact contained in evidenceQuote. Do not choose truth polarity, mutate the statement, or return an answer boolean; ClipQuest constructs a safe true or false item locally."
         : "Choose exactly one shortAnswerMode. Use atomic_term for a single term or name, proposition for a concise explanatory claim with 1-3 independent requiredIdeas, enumeration for 2-8 indispensable requiredItems, and formula only with canonical formulaTokens. Do not manufacture paraphrase lists; ClipQuest derives safe variants locally.";
@@ -653,6 +677,8 @@ Eligible instructional evidence — every answer-bearing field must be supported
 Already accepted objectives — do not repeat or closely paraphrase their subject-relation-value claim:\n${accepted}
 
 Distinctness rule: shared domain vocabulary is allowed, but the new item must assess a different definition, condition, causal relationship, mechanism, method, application, or formula. Choose that distinct claim before writing the question; do not merely paraphrase an accepted prompt. A definition must define a transferable concept, not recall a number attached to it. Forbidden example: "What is the estimated annual monetary value of ecosystem services?" Prefer a mechanism question such as "Why does biodiversity matter to ecosystem services?" Do not ask for a statistic or a verbal comparison of two source statistics.
+
+Final learner-copy gate: inspect concept, question, explanation, answerText, distractor text, correction, answer, aliases, requiredIdeas, and requiredItems as applicable. None may say or imply according to, based on, in/from the lesson or source, the evidence states, as discussed, the described mechanism, the analogy/metaphor/example, or any presenter-memory framing. Do not output the item until this gate passes.
 
 Type-specific requirements:\n${typeRules}
 

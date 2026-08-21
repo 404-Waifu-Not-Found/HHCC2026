@@ -960,6 +960,14 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
       /Never ask learners to recall an estimate/u,
     );
     assert.match(
+      request.body.messages[0].content,
+      /the first word of question must be one of/u,
+    );
+    assert.match(
+      request.body.messages[0].content,
+      /copy one unique answerSpan character-for-character/u,
+    );
+    assert.match(
       request.body.messages[2].content,
       /estimated annual monetary value of ecosystem services/u,
     );
@@ -972,7 +980,18 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
       /Private reference material — never mention this source/u,
     );
     assert.match(request.task, /Exact JSON schema/u);
+    assert.match(request.task, /Final learner-copy gate/u);
     assert.doesNotMatch(request.task, /Mandatory slot plan/u);
+    if (request.type === "multiple_choice") {
+      assert.match(
+        request.task,
+        /answerText must be exactly identical to answerSpan/u,
+      );
+      assert.match(
+        request.task,
+        /do not paraphrase, summarize, change morphology/u,
+      );
+    }
   }
   const sentSystemFingerprints = new Set(
     requests.map((request) =>
