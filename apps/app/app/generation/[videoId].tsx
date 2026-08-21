@@ -2,6 +2,7 @@ import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   ExtensionQuizGenerationCallEventResponseSchema,
   ExtensionQuizProgressiveImportResponseSchema,
+  GenerationClaimResponseSchema,
   MediaResolveResponseSchema,
   QuizStartResponseSchema,
   QuizGenerationProfileResponseSchema,
@@ -12,7 +13,7 @@ import {
   type AttemptGenerationAvailability,
   type ExtensionQuizProgressiveImportResponse,
   type GenerationStage,
-  type GenerationRecordV2,
+  type GenerationRecord,
   type LocalConceptQuizQuestionChunk,
   type LocalGenerationCallEvent,
   type LocalQuizContext,
@@ -55,6 +56,7 @@ import {
   clearGenerationRecord,
   loadGenerationRecord,
   loadImportedVideo,
+  saveGenerationRecord,
   startGenerationRecordHeartbeat,
   updateGenerationRecord,
 } from "../../src/state/creation";
@@ -64,7 +66,10 @@ import { TranscriptionPausedError } from "../../src/transcription/types";
 import { acquireTextTranscript } from "../../src/transcription/acquire-text-transcript";
 import {
   LocalGenerationRequestError,
+  openClipQuestExtensionSettings,
   requestExtensionLocalQuiz,
+  subscribeToClipQuestExtension,
+  type LocalGenerationProgress,
 } from "../../src/transcription/clipquest-extension";
 import {
   breakpoints,
@@ -96,6 +101,7 @@ export default function GenerationScreen() {
   const { width } = useWindowDimensions();
   const [stage, setStage] = useState<GenerationStage>("getting_video");
   const [error, setError] = useState<string>();
+  const [configurationRequired, setConfigurationRequired] = useState(false);
   const [paused, setPaused] = useState(false);
   const [runNumber, setRunNumber] = useState(0);
   const [cancelling, setCancelling] = useState(false);
@@ -208,7 +214,7 @@ export default function GenerationScreen() {
           "This generation setup belongs to another tab or account. Return home and start again.",
         );
       }
-      let generationRecord: GenerationRecordV2 = storedRecord;
+      let generationRecord: GenerationRecord = storedRecord;
       const routeMatchesRecord =
         generationRecord.quizLanguage === params.quizLanguage &&
         generationRecord.sessionLength === params.sessionLength &&
@@ -251,13 +257,26 @@ export default function GenerationScreen() {
       let latestGeneration: AttemptGenerationAvailability | undefined;
 
       const persistState = async () => {
+        const nextState = latestGeneration?.state ?? generationRecord.state;
         await persistRecord({
           quizId: progressiveQuizId,
           attemptId,
           acceptedCount:
             latestGeneration?.availableQuestions ??
             generationRecord.acceptedCount,
-          state: latestGeneration?.state ?? generationRecord.state,
+          state: nextState,
+          ...(generationRecord.version === 3 &&
+          (nextState === "action_required" || nextState === "generation_failed")
+            ? { reasonCode: latestGeneration?.reasonCode }
+            : {}),
+          ...(generationRecord.version === 3 && nextState !== "retrying"
+            ? {
+                retryOrdinal: undefined,
+                ordinalAttempt: undefined,
+                retryKind: undefined,
+                retryDelayMs: undefined,
+              }
+            : {}),
         });
       };
 
@@ -312,6 +331,7 @@ export default function GenerationScreen() {
         state: "generating",
         generationProfile: rolloutProfile.generationProfile,
       });
+      const recoverySessionId = Crypto.randomUUID();
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
       setVideoDurationSeconds(imported.video.durationSeconds || undefined);
@@ -371,6 +391,7 @@ export default function GenerationScreen() {
       }
 
       const completeCaptionWordCount = countCaptionWords(segments);
+      beginJourney();
       setCaptionWordCount(completeCaptionWordCount);
       updateStage("creating_questions");
       const retryBaseEstimateMs = estimatedFirstQuestionDurationMs({
@@ -384,6 +405,9 @@ export default function GenerationScreen() {
         jobId: idempotencyKey,
         generationId: generationRecord.generationId,
         generationSessionId: generationRecord.generationSessionId,
+        ...(rolloutProfile.generationProfile === "stable_auto_recovery_v5_3"
+          ? { recoverySessionId }
+          : {}),
         generationProfile: rolloutProfile.generationProfile,
         videoId: imported.video.id,
         title: imported.video.title,
@@ -395,7 +419,7 @@ export default function GenerationScreen() {
         segments,
       };
       let ingestion = Promise.resolve();
-      let lastProgressState: "retrying" | undefined;
+      let lastProgressKey: string | undefined;
       const pendingCallEvents: LocalGenerationCallEvent[] = [];
 
       const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
@@ -418,6 +442,15 @@ export default function GenerationScreen() {
             generationRecord.nextCallIndex,
             event.callIndex + 1,
           ),
+          ...(generationRecord.version === 3 &&
+          event.classification === "automatic_retry"
+            ? {
+                automaticRetryCount: Math.min(
+                  12,
+                  generationRecord.automaticRetryCount + 1,
+                ),
+              }
+            : {}),
         });
       };
 
@@ -469,11 +502,50 @@ export default function GenerationScreen() {
                 },
                 ExtensionQuizProgressiveImportResponseSchema,
               );
+          if (
+            rolloutProfile.generationProfile === "stable_auto_recovery_v5_3" &&
+            generationRecord.version === 2
+          ) {
+            if (!chunk.questionPlan) {
+              throw new Error("The automatic question plan is missing.");
+            }
+            const upgraded = await saveGenerationRecord({
+              version: 3,
+              generationId: generationRecord.generationId,
+              generationSessionId: generationRecord.generationSessionId,
+              recoverySessionId,
+              idempotencyKey: generationRecord.idempotencyKey,
+              ownerUserId: generationRecord.ownerUserId,
+              videoId: generationRecord.videoId,
+              quizLanguage: generationRecord.quizLanguage,
+              questionTypes: generationRecord.questionTypes,
+              sessionLength: generationRecord.sessionLength,
+              watched: generationRecord.watched,
+              questionPlan: chunk.questionPlan,
+              generationProfile: "stable_auto_recovery_v5_3",
+              quizId: response.quizId,
+              acceptedCount: response.generation.availableQuestions,
+              plannedCount: response.generation.totalQuestions,
+              state:
+                response.generation.state === "retry_required"
+                  ? "recovering"
+                  : response.generation.state,
+              nextCallIndex: generationRecord.nextCallIndex,
+              ordinalAttempts: {},
+              automaticRetryCount: 0,
+              activeRecoveryStartedAt: Date.now(),
+              sourceReadyAt: Date.now(),
+              preworkStatus: generationRecord.preworkStatus,
+              createdAt: generationRecord.createdAt,
+              updatedAt: Date.now(),
+            });
+            generationRecord = upgraded;
+          }
           await publishStoredState(response);
           if (chunk.questionPlan && !generationRecord.questionPlan) {
             await persistRecord({ questionPlan: chunk.questionPlan });
           }
-          lastProgressState = undefined;
+          lastProgressKey = undefined;
           if (!attemptId) await startAttempt(response.quizId);
         });
         void ingestion.catch(() => undefined);
@@ -486,21 +558,52 @@ export default function GenerationScreen() {
         void ingestion.catch(() => undefined);
       };
 
-      const enqueueRetrying = () => {
-        if (lastProgressState === "retrying") return;
-        lastProgressState = "retrying";
+      const enqueueRetrying = (detail: LocalGenerationProgress) => {
+        const progressKey = `retrying:${detail.retryOrdinal ?? 0}:${detail.ordinalAttempt ?? detail.attempt ?? 0}`;
+        if (lastProgressKey === progressKey) return;
+        lastProgressKey = progressKey;
         ingestion = ingestion.then(async () => {
           if (!progressiveQuizId) return;
+          if (
+            rolloutProfile.generationProfile === "stable_auto_recovery_v5_3" &&
+            (!detail.retryOrdinal ||
+              !detail.ordinalAttempt ||
+              !detail.retryKind)
+          ) {
+            throw new Error("Automatic retry metadata is incomplete.");
+          }
           const response = await apiRequest(
             `/api/quiz-imports/${progressiveQuizId}/progress`,
             {
               method: "PATCH",
               headers: { "Idempotency-Key": idempotencyKey },
-              body: jsonBody({ state: "retrying" }),
+              body: jsonBody(
+                rolloutProfile.generationProfile === "stable_auto_recovery_v5_3"
+                  ? {
+                      state: "retrying",
+                      retryOrdinal: detail.retryOrdinal,
+                      ordinalAttempt: detail.ordinalAttempt,
+                      retryKind: detail.retryKind,
+                      retryDelayMs: detail.retryDelayMs,
+                      recoverySessionId,
+                    }
+                  : { state: "retrying" },
+              ),
               signal,
             },
             ExtensionQuizProgressiveImportResponseSchema,
           );
+          if (
+            rolloutProfile.generationProfile === "stable_auto_recovery_v5_3"
+          ) {
+            await persistRecord({
+              state: "retrying",
+              retryOrdinal: detail.retryOrdinal,
+              ordinalAttempt: detail.ordinalAttempt,
+              retryKind: detail.retryKind,
+              retryDelayMs: detail.retryDelayMs,
+            });
+          }
           await publishStoredState(response);
         });
         void ingestion.catch(() => undefined);
@@ -508,6 +611,28 @@ export default function GenerationScreen() {
       const stopHeartbeat = startGenerationRecordHeartbeat(
         generationRecord.generationId,
       );
+      const serverHeartbeat = setInterval(() => {
+        if (
+          rolloutProfile.generationProfile !== "stable_auto_recovery_v5_3" ||
+          !attemptId ||
+          !progressiveQuizId
+        ) {
+          return;
+        }
+        void apiRequest(
+          `/api/attempts/${attemptId}/generation/heartbeat`,
+          {
+            method: "PUT",
+            body: jsonBody({
+              claimKey: idempotencyKey,
+              generationSessionId: generationRecord.generationSessionId,
+              recoverySessionId,
+            }),
+            signal,
+          },
+          GenerationClaimResponseSchema,
+        ).catch(() => undefined);
+      }, 10_000);
 
       try {
         await requestExtensionLocalQuiz(
@@ -523,7 +648,7 @@ export default function GenerationScreen() {
                   retryBaseEstimateMs,
                 ),
               );
-              enqueueRetrying();
+              enqueueRetrying(detail);
             }
           },
           enqueueQuestion,
@@ -543,10 +668,20 @@ export default function GenerationScreen() {
           cause instanceof LocalGenerationRequestError
             ? cause.reasonCode
             : "local_state_conflict";
+        const automatic =
+          rolloutProfile.generationProfile === "stable_auto_recovery_v5_3";
+        const terminalState = automatic
+          ? reasonCode === "credential_required" ||
+            reasonCode === "billing_required"
+            ? "action_required"
+            : "generation_failed"
+          : "retry_required";
         if (!progressiveQuizId) {
-          await persistRecord({ state: "retry_required" }).catch(
-            () => undefined,
-          );
+          if (!automatic) {
+            await persistRecord({ state: "retry_required" }).catch(
+              () => undefined,
+            );
+          }
           throw cause;
         }
         const response = await apiRequest(
@@ -554,19 +689,25 @@ export default function GenerationScreen() {
           {
             method: "PATCH",
             headers: { "Idempotency-Key": idempotencyKey },
-            body: jsonBody({ state: "retry_required", reasonCode }),
+            body: jsonBody({
+              state: terminalState,
+              reasonCode,
+              ...(automatic ? { recoverySessionId } : {}),
+            }),
           },
           ExtensionQuizProgressiveImportResponseSchema,
         ).catch(() => undefined);
         if (response) {
           await publishStoredState(response);
         } else {
-          await persistRecord({ state: "retry_required" }).catch(
-            () => undefined,
-          );
+          await persistRecord({
+            state: terminalState,
+            ...(automatic ? { reasonCode } : {}),
+          }).catch(() => undefined);
         }
         if (!attemptId) throw cause;
       } finally {
+        clearInterval(serverHeartbeat);
         stopHeartbeat();
       }
     },
@@ -616,12 +757,44 @@ export default function GenerationScreen() {
           return;
         }
         setError(formatGenerationError(cause, t("trustworthyError")));
+        setConfigurationRequired(
+          cause instanceof LocalGenerationRequestError &&
+            (cause.reasonCode === "credential_required" ||
+              cause.reasonCode === "billing_required"),
+        );
       });
     return () => {
       active = false;
       unsubscribe();
     };
   }, [execute, params.generationId, setEstimatedProgress, t, taskKey]);
+
+  useEffect(() => {
+    if (!configurationRequired) return;
+    let restarting = false;
+    return subscribeToClipQuestExtension((extension) => {
+      if (!extension.configured || restarting) return;
+      restarting = true;
+      void (async () => {
+        const current = await loadGenerationRecord(params.generationId);
+        if (!current || current.acceptedCount > 0) return;
+        await updateGenerationRecord(params.generationId, {
+          generationSessionId: Crypto.randomUUID(),
+          idempotencyKey: Crypto.randomUUID(),
+          nextCallIndex: 0,
+          state: "generating",
+        });
+        setError(undefined);
+        setConfigurationRequired(false);
+        setRunNumber((value) => value + 1);
+      })().catch((cause) => {
+        restarting = false;
+        setError(
+          cause instanceof Error ? cause.message : t("trustworthyError"),
+        );
+      });
+    });
+  }, [configurationRequired, params.generationId, t]);
 
   const failed = Boolean(error);
   const activeIndex = journeyStepIndex(estimatedProgress, journeySteps.length);
@@ -644,7 +817,7 @@ export default function GenerationScreen() {
     if (taskKeyRef.current) cancelProgressiveGenerationTask(taskKeyRef.current);
     setPaused(true);
   };
-  const retry = () => {
+  const resumePausedGeneration = () => {
     void (async () => {
       if (!isUuid(params.generationId)) return;
       const current = await loadGenerationRecord(params.generationId);
@@ -657,6 +830,7 @@ export default function GenerationScreen() {
       });
       setPaused(false);
       setError(undefined);
+      setConfigurationRequired(false);
       setRunNumber((value) => value + 1);
     })().catch((cause) => {
       setError(cause instanceof Error ? cause.message : t("trustworthyError"));
@@ -695,10 +869,24 @@ export default function GenerationScreen() {
               {t("cancel")}
             </PrimaryButton>
           </View>
-          {paused || failed ? (
+          {paused ? (
             <View style={styles.footerAction}>
-              <PrimaryButton disabled={cancelling} onPress={retry}>
-                {t("retry")}
+              <PrimaryButton
+                disabled={cancelling}
+                onPress={resumePausedGeneration}
+              >
+                {locale === "zh-CN" ? "恢复" : "Resume"}
+              </PrimaryButton>
+            </View>
+          ) : failed && configurationRequired ? (
+            <View style={styles.footerAction}>
+              <PrimaryButton
+                disabled={cancelling}
+                onPress={openClipQuestExtensionSettings}
+              >
+                {locale === "zh-CN"
+                  ? "打开扩展设置"
+                  : "Open extension settings"}
               </PrimaryButton>
             </View>
           ) : localTranscription &&

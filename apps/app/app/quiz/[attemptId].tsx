@@ -32,16 +32,14 @@ import {
   createInitialOrdering,
   type ChoicePresentation,
 } from "../../src/lib/quiz-order";
-import {
-  continueProgressiveAttempt,
-  markProgressiveAttemptRequiresReclaim,
-} from "../../src/generation/progressive-continuation";
+import { ensureProgressiveAttemptRecovery } from "../../src/generation/progressive-continuation";
 import {
   hasActiveProgressiveGenerationForAttempt,
   publishAttemptGeneration,
   subscribeToAttemptGeneration,
 } from "../../src/generation/progressive-coordinator";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { subscribeToClipQuestExtension } from "../../src/transcription/clipquest-extension";
 import {
   FeedbackMotion,
   MotionSkeleton,
@@ -82,7 +80,6 @@ export default function QuizScreen() {
   const [generation, setGeneration] = useState<AttemptGenerationAvailability>();
   const [choicePresentation, setChoicePresentation] =
     useState<ChoicePresentation>();
-  const [continuingGeneration, setContinuingGeneration] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const recoveryAttemptedRef = useRef(false);
@@ -246,23 +243,15 @@ export default function QuizScreen() {
         publishAttemptGeneration(attemptId, status.quizId, status.generation);
         if (
           !recoveryAttemptedRef.current &&
-          (status.generation.state === "generating" ||
-            status.generation.state === "retrying") &&
+          status.generation.state !== "ready" &&
+          status.generation.state !== "action_required" &&
+          status.generation.state !== "generation_failed" &&
           !hasActiveProgressiveGenerationForAttempt(attemptId)
         ) {
           recoveryAttemptedRef.current = true;
-          void markProgressiveAttemptRequiresReclaim(attemptId)
-            .then((paused) => {
-              if (active && !paused) recoveryAttemptedRef.current = false;
-            })
-            .catch((cause) => {
-              if (!active) return;
-              setError(
-                cause instanceof Error
-                  ? cause.message
-                  : t("quizGenerationFailed"),
-              );
-            });
+          void ensureProgressiveAttemptRecovery(attemptId).finally(() => {
+            if (active) recoveryAttemptedRef.current = false;
+          });
         }
         if (status.generation.state !== "ready") {
           timeout = setTimeout(() => void poll(), 1_000);
@@ -286,20 +275,16 @@ export default function QuizScreen() {
     };
   }, [attemptId, t, updateGeneration]);
 
-  const continueGeneration = useCallback(async () => {
-    setContinuingGeneration(true);
-    setError(undefined);
-    try {
-      await continueProgressiveAttempt(attemptId);
-      await resume();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : t("quizGenerationFailed"),
-      );
-    } finally {
-      setContinuingGeneration(false);
-    }
-  }, [attemptId, resume, t]);
+  useEffect(() => {
+    if (generation?.state !== "action_required") return;
+    return subscribeToClipQuestExtension((extension) => {
+      if (!extension.configured || recoveryAttemptedRef.current) return;
+      recoveryAttemptedRef.current = true;
+      void ensureProgressiveAttemptRecovery(attemptId).finally(() => {
+        recoveryAttemptedRef.current = false;
+      });
+    });
+  }, [attemptId, generation?.state]);
 
   const canSubmit = useMemo(() => {
     if (answer === undefined) return false;
@@ -308,15 +293,7 @@ export default function QuizScreen() {
   }, [answer, orderingTouched, question?.type]);
 
   const streamIndicator = generation ? (
-    <QuestionStreamIndicator
-      generation={generation}
-      continuing={continuingGeneration}
-      onContinue={
-        generation.state === "retry_required"
-          ? () => void continueGeneration()
-          : undefined
-      }
-    />
+    <QuestionStreamIndicator generation={generation} />
   ) : undefined;
 
   const submit = async () => {

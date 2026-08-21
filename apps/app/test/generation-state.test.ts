@@ -42,6 +42,7 @@ const QUIZ_ONE = "88888888-8888-4888-8888-888888888888";
 const QUIZ_TWO = "99999999-9999-4999-8999-999999999999";
 const ATTEMPT_ONE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ATTEMPT_TWO = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const RECOVERY_ONE = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 function record(
   generationId: string,
@@ -180,5 +181,62 @@ describe("generation-scoped local state", () => {
         current.updatedAt,
       ),
     ).toBe(false);
+  });
+
+  it("persists strict automatic recovery metadata without stale retry fields", async () => {
+    await saveGenerationRecord({
+      version: 3,
+      generationId: GENERATION_ONE,
+      generationSessionId: SESSION_ONE,
+      recoverySessionId: RECOVERY_ONE,
+      idempotencyKey: KEY_ONE,
+      ownerUserId: "owner-user",
+      videoId: VIDEO_ID,
+      quizLanguage: "en",
+      questionTypes: ["multiple_choice"],
+      sessionLength: "short",
+      watched: true,
+      questionPlan: {
+        seed: "a".repeat(64),
+        types: Array.from({ length: 5 }, () => "multiple_choice" as const),
+      },
+      generationProfile: "stable_auto_recovery_v5_3",
+      quizId: QUIZ_ONE,
+      attemptId: ATTEMPT_ONE,
+      acceptedCount: 2,
+      plannedCount: 5,
+      state: "retrying",
+      nextCallIndex: 3,
+      ordinalAttempts: { "3": 2 },
+      automaticRetryCount: 1,
+      retryOrdinal: 3,
+      ordinalAttempt: 2,
+      retryKind: "content_repair",
+      retryDelayMs: 250,
+      createdAt: 1_786_300_000_000,
+      updatedAt: 1_786_300_000_100,
+    });
+    expect(await loadGenerationRecord(GENERATION_ONE)).toMatchObject({
+      version: 3,
+      state: "retrying",
+      retryOrdinal: 3,
+      retryKind: "content_repair",
+    });
+
+    const current = await loadGenerationRecord(GENERATION_ONE);
+    if (!current || current.version !== 3) {
+      throw new Error("The automatic generation record was not stored.");
+    }
+    await expect(
+      saveGenerationRecord({
+        ...current,
+        state: "generation_failed",
+        retryOrdinal: undefined,
+        ordinalAttempt: undefined,
+        retryKind: undefined,
+        retryDelayMs: undefined,
+        reasonCode: undefined,
+      }),
+    ).rejects.toThrow();
   });
 });

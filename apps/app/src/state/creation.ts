@@ -1,11 +1,13 @@
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
-  GenerationRecordV2Schema,
+  GenerationRecordSchema,
   LanguageSchema,
   QuizQuestionTypesSchema,
   VideoImportResponseSchema,
   type AppLanguage,
+  type GenerationRecord,
   type GenerationRecordV2,
+  type GenerationRecordV3,
   type LocalGenerationProfile,
   type LocalQuestionPlan,
   type QuizQuestionType,
@@ -157,9 +159,9 @@ export async function loadQuestPreferences(
 }
 
 export async function saveGenerationRecord(
-  value: GenerationRecordV2,
-): Promise<GenerationRecordV2> {
-  const parsed = GenerationRecordV2Schema.parse(value);
+  value: GenerationRecord,
+): Promise<GenerationRecord> {
+  const parsed = GenerationRecordSchema.parse(value);
   await AsyncStorage.setItem(
     generationV2KeyFor(parsed.generationId),
     JSON.stringify(parsed),
@@ -175,12 +177,12 @@ export async function saveGenerationRecord(
 
 export async function loadGenerationRecord(
   generationId: string,
-): Promise<GenerationRecordV2 | null> {
+): Promise<GenerationRecord | null> {
   if (!isUuid(generationId)) return null;
   const raw = await AsyncStorage.getItem(generationV2KeyFor(generationId));
   if (!raw) return null;
   try {
-    return GenerationRecordV2Schema.parse(JSON.parse(raw));
+    return GenerationRecordSchema.parse(JSON.parse(raw));
   } catch {
     await AsyncStorage.removeItem(generationV2KeyFor(generationId));
     return null;
@@ -189,25 +191,27 @@ export async function loadGenerationRecord(
 
 export async function updateGenerationRecord(
   generationId: string,
-  update: Partial<GenerationRecordV2>,
-): Promise<GenerationRecordV2 | null> {
+  update: Partial<GenerationRecordV2> | Partial<GenerationRecordV3>,
+): Promise<GenerationRecord | null> {
   const current = await loadGenerationRecord(generationId);
   if (!current) return null;
   return saveGenerationRecord({
     ...current,
     ...update,
     generationId: current.generationId,
-    version: 2,
+    version: current.version,
     updatedAt: Date.now(),
-  });
+  } as GenerationRecord);
 }
 
 export function generationRecordHasLiveHeartbeat(
-  record: GenerationRecordV2,
+  record: GenerationRecord,
   timestamp = Date.now(),
 ): boolean {
   return (
-    (record.state === "generating" || record.state === "retrying") &&
+    (record.state === "generating" ||
+      record.state === "retrying" ||
+      record.state === "recovering") &&
     record.updatedAt + GENERATION_RECORD_HEARTBEAT_TIMEOUT_MS > timestamp
   );
 }
@@ -230,7 +234,7 @@ export function startGenerationRecordHeartbeat(
 
 export async function loadGenerationRecordForAttempt(
   attemptId: string,
-): Promise<GenerationRecordV2 | null> {
+): Promise<GenerationRecord | null> {
   if (!isUuid(attemptId)) return null;
   const generationId = await AsyncStorage.getItem(
     attemptGenerationKeyFor(attemptId),
@@ -242,7 +246,7 @@ export async function bindAttemptToGeneration(
   generationId: string,
   attemptId: string,
   quizId: string,
-): Promise<GenerationRecordV2 | null> {
+): Promise<GenerationRecord | null> {
   if (!isUuid(attemptId) || !isUuid(quizId)) return null;
   return updateGenerationRecord(generationId, { attemptId, quizId });
 }
@@ -311,7 +315,7 @@ export async function migrateLegacyGenerationRecord(input: {
     updatedAt: timestamp,
   });
   await AsyncStorage.removeItem(generationKeyFor(input.videoId));
-  return migrated;
+  return migrated?.version === 2 ? migrated : null;
 }
 
 export async function loadGenerationState(

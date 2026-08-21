@@ -31,7 +31,7 @@ type Task = {
 };
 
 const tasks = new Map<string, Task>();
-const continuationTasks = new Map<
+const recoveryTasks = new Map<
   string,
   { completion: Promise<void>; cancel(): void }
 >();
@@ -106,23 +106,23 @@ export function cancelProgressiveGenerationTask(key: string): void {
   tasks.get(key)?.cancel();
 }
 
-export function getOrStartProgressiveContinuationTask(
+export function getOrStartProgressiveRecoveryTask(
   key: string,
   runner: (signal: AbortSignal) => Promise<void>,
 ): { completion: Promise<void>; cancel(): void } {
-  const existing = continuationTasks.get(key);
+  const existing = recoveryTasks.get(key);
   if (existing) return existing;
   const controller = new AbortController();
   const task = {
     completion: Promise.resolve(),
-    cancel: () => controller.abort(new Error("Continuation was cancelled.")),
+    cancel: () => controller.abort(new Error("Recovery was cancelled.")),
   };
   task.completion = Promise.resolve()
     .then(() => runner(controller.signal))
     .finally(() => {
-      if (continuationTasks.get(key) === task) continuationTasks.delete(key);
+      if (recoveryTasks.get(key) === task) recoveryTasks.delete(key);
     });
-  continuationTasks.set(key, task);
+  recoveryTasks.set(key, task);
   return task;
 }
 
@@ -159,7 +159,7 @@ export function subscribeToAttemptGeneration(
 export function hasActiveProgressiveGenerationForAttempt(
   attemptId: string,
 ): boolean {
-  if (continuationTasks.has(attemptId)) return true;
+  if (recoveryTasks.has(attemptId)) return true;
   return [...tasks.values()].some(
     (task) =>
       !task.controller.signal.aborted && task.snapshot.attemptId === attemptId,

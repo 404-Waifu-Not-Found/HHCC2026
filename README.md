@@ -100,14 +100,14 @@ ClipQuest page ───── ordered singleton questions ─────► st
 
 ## 🚦 Current release status
 
-As of **2026-08-10**, this source tree implements first-pass-stable progressive extension-local quiz streaming. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc); a local commit is not evidence that production has been deployed.
+As of **2026-08-10**, this source tree implements automatic-recovery progressive extension-local quiz streaming. The v5.3 profile remains disabled by default until its benchmark and canary gates pass. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc); a local commit is not evidence that production has been deployed.
 
-- New banks use extension `0.8.2`, result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, and progressive import `v4` when the rollout profile is enabled.
-- Extension `0.8.2` retains an isolated protocol-5/v5.1 continuation path; completed pipeline-7 and existing v5.0/v5.1 pipeline-9 banks remain readable.
+- When enabled, new banks use extension `0.8.3`, result protocol `7`, capability `question-stream-v3`, pipeline `9`, prompt `quiz-local-json-stream-v5.3`, validator `validator-local-progressive-v4.2`, and progressive import `v5`.
+- Extension `0.8.3` retains isolated protocol-6/v5.2 and protocol-5/v5.1 compatibility paths; completed pipeline-7 and existing pipeline-9 banks remain readable without mixing generation metadata.
 - Backend quiz generation disabled; extension generation required.
 - No Worker generation Queue binding and no generated-question fallback path.
-- Question 1 uses a singleton call. Later primary calls request at most three non-short-answer slots or two slots when short answer is present; accepted prefixes are never regenerated.
-- Empty, malformed, duplicate, truncated, answer-invalid, and schema-invalid model content pauses immediately with zero automatic retries. One automatic retry is available only for a confirmed transient HTTP, timeout, connection interruption, or premature transport close.
+- Every planned question uses one sequential singleton primary call. Accepted prefixes are never regenerated, and a recovery begins at the first authoritative missing ordinal.
+- Bounded automatic repair allows at most two content retries or four transport retries per ordinal, with a global ceiling of 12 extra model calls and 15 active minutes. Credential and billing failures require configuration instead of blind retries; there is no learner-facing continuation control.
 - Question 1 opens the planned 5-, 10-, or 15-question attempt while later questions continue uploading in order.
 - Mixed multiple-choice, true/false, and short-answer plans are seeded, balanced, and bounded to avoid runs longer than two where the selection permits it.
 - D1 stores privacy-safe call events and short recovery-claim leases; it never stores prompts, captions, raw model output, credentials, or DeepSeek errors.
@@ -170,9 +170,9 @@ For YouTube, the extension reads the current public caption or transcript data, 
 
 ### 4. Stream validated questions locally
 
-For a stable-profile bank, the site sends the verified in-memory quiz context to extension `0.8.2` through result protocol `6`. The extension sends the complete plain text directly to DeepSeek V4 Flash with thinking disabled, temperature `0.2`, `stream: true`, JSON-object response mode, and a dynamic 4,096/6,144/8,192-token limit for one-, two-, or three-question calls. Its SSE parser tolerates UTF-8 and CRLF boundaries, keep-alive comments, usage-only chunks, escaped braces and quotes, truncation, and `[DONE]`. A disabled rollout continues to select the isolated v5.1 compatibility profile.
+For an automatic-recovery bank, the site sends the verified in-memory quiz context to extension `0.8.3` through result protocol `7`. The extension sends the complete plain text directly to DeepSeek V4 Flash with thinking disabled, temperature `0.2`, `stream: true`, JSON-object response mode, and a 4,096-token singleton output limit. Its SSE parser tolerates UTF-8 and CRLF boundaries, keep-alive comments, usage-only chunks, escaped braces and quotes, truncation, and `[DONE]`. The transcript and stable instructions remain a byte-identical prefix while only the current slot and repair guidance change. A disabled v5.3 rollout continues through the isolated v5.2 or v5.1 compatibility profile selected by the Worker.
 
-Each complete object from the `questions` array must match its exact global ID and seeded type plan, contain valid type-specific grading fields, preserve its local True/False target, and remain unique against every previously accepted prompt. A bounded normalizer handles only benign representation differences before strict validation. A malformed suffix does not invalidate an already stored prefix, but content/schema failures pause immediately at the first missing ordinal. Only a confirmed transient transport or service failure may consume the single automatic retry; all other recovery requires an explicit learner continuation.
+Each complete object from the `questions` array must match the seeded type plan, contain valid type-specific grading fields, preserve its local True/False target, and remain unique against every previously accepted prompt. The extension assigns the expected global ID, constructs multiple-choice answer mappings, and serializes bounded formula tokens locally. A bounded normalizer handles only benign representation differences before strict validation. Recoverable content and transport failures retry only the missing singleton within explicit ordinal, session, time, and cost budgets.
 
 ### 5. Import, answer, and save
 
@@ -182,7 +182,7 @@ The page sends each validated question—not the transcript, raw DeepSeek respon
 
 The learner enters the quiz route as soon as question 1 is stored. A bottom-right polite-live pill reports authoritative stored counts such as `3/10 questions ready`, moves above the measured sticky footer and safe area, and disappears immediately at `10/10`. The generation port and ordered upload queue are module-owned, so route navigation does not cancel the active DeepSeek stream.
 
-If a fast learner reaches a missing ordinal, ClipQuest shows the full waiting view, continues polling approximately once per second, and opens the next question automatically when it arrives. A partial bank can never finish or score. The one permitted transient retry gets a revised first-question ETA; content failures immediately expose a reason-specific **Continue generating** action. Manual continuation obtains a 15-minute owner-only claim and resumes from the server's accepted count without replacing accepted questions.
+If a fast learner reaches a missing ordinal, ClipQuest shows the full waiting view, continues polling approximately once per second, and opens the next question automatically when it arrives. A partial bank can never finish or score. Automatic retries receive a revised first-question ETA. A 30-second owner-only recovery lease with a 10-second heartbeat lets one tab resume from the server's accepted count while other tabs remain read-only; expired leases are taken over automatically. Credential or billing failures expose extension settings and resume only after the extension reports a configuration change.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -479,7 +479,7 @@ After this source revision is deployed, expected health invariants include pipel
 
 - The learner's DeepSeek key is stored only in `chrome.storage.local` and is sent only from the extension to `https://api.deepseek.com`. ClipQuest's page and Worker never receive it.
 - Caption segments and normalized plain text remain browser-side during extension-local generation. Progressive import receives only video/session settings, bounded generation metadata, and one validated question at a time.
-- Stable generation uses result protocol `6`, request IDs, extension-owned ports, exact-origin checks, payload bounds, cancellation, and timeouts. Extension `0.8.2` must advertise `question-stream-v2`; protocol `5` and `question-stream-v1` remain only for compatible existing banks and disabled-rollout starts. The API key is never part of either protocol.
+- Automatic generation uses result protocol `7`, request IDs, extension-owned ports, exact-origin checks, payload bounds, cancellation, and timeouts. Extension `0.8.3` must advertise `question-stream-v3`; protocols `5`/`6` and capabilities `question-stream-v1`/`v2` remain compatibility paths only. The API key is never part of any protocol.
 - The Worker performs no backend quiz generation and returns no generated-looking fallback questions. Invalid, incomplete, wrong-type, or malformed extension output fails closed.
 - Multiple-choice option order is securely randomized before import, then randomized again whenever a learner view is activated. Display indexes map back to canonical indexes before submission; True/False order is unchanged.
 - D1 queries and R2/KV objects are scoped to authenticated users. Progressive imports require ownership, a UUID idempotency key, rate limits, strict pipeline metadata, and an exact next ordinal. Generating banks cannot enter Library review or complete an attempt early.

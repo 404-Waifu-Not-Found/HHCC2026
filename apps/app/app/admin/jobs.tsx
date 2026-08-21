@@ -68,7 +68,10 @@ export default function AdminJobsScreen() {
             { value: "all", label: copy.all },
             { value: "generating", label: copy.generating },
             { value: "retrying", label: copy.retrying },
+            { value: "recovering", label: copy.recovering },
             { value: "retry_required", label: copy.retryRequired },
+            { value: "action_required", label: copy.actionRequired },
+            { value: "generation_failed", label: copy.generationFailed },
             { value: "ready", label: copy.ready },
           ]}
         />
@@ -82,7 +85,15 @@ export default function AdminJobsScreen() {
         {data?.generations.map((generation) => (
           <AdminRecord
             key={generation.quizId}
-            tone={generation.state === "retry_required" ? "error" : undefined}
+            tone={
+              [
+                "retry_required",
+                "action_required",
+                "generation_failed",
+              ].includes(generation.state)
+                ? "error"
+                : undefined
+            }
           >
             <RecordHeading
               title={generation.video.title}
@@ -123,10 +134,19 @@ export default function AdminJobsScreen() {
                   icon: "time",
                 },
                 {
-                  label: copy.manualContinuations,
-                  value: String(generation.manualContinuations),
+                  label: copy.automaticRecoveries,
+                  value: String(generation.automaticRecoveries ?? 0),
                   icon: "refresh",
                 },
+                ...(generation.manualContinuations > 0
+                  ? [
+                      {
+                        label: copy.legacyManualContinuations,
+                        value: String(generation.manualContinuations),
+                        icon: "refresh" as const,
+                      },
+                    ]
+                  : []),
                 {
                   label: copy.partialCalls,
                   value: String(generation.partialCalls),
@@ -174,9 +194,16 @@ export default function AdminJobsScreen() {
                 },
               ]}
             />
-            {generation.state === "retry_required" ? (
+            {generation.state === "action_required" ? (
               <Text style={[styles.note, { color: theme.textMuted }]}>
-                {copy.learnerContinuationRequired}
+                {copy.configurationActionRequired}
+                {generation.reasonCode
+                  ? ` · ${generation.reasonCode.replaceAll("_", " ")}`
+                  : ""}
+              </Text>
+            ) : generation.state === "generation_failed" ? (
+              <Text style={[styles.note, { color: theme.textMuted }]}>
+                {copy.automaticRecoveryFailed}
                 {generation.reasonCode
                   ? ` · ${generation.reasonCode.replaceAll("_", " ")}`
                   : ""}
@@ -201,7 +228,10 @@ function generationStateLabel(
 ): string {
   if (state === "generating") return copy.generating;
   if (state === "retrying") return copy.retrying;
+  if (state === "recovering") return copy.recovering;
   if (state === "retry_required") return copy.retryRequired;
+  if (state === "action_required") return copy.actionRequired;
+  if (state === "generation_failed") return copy.generationFailed;
   return copy.ready;
 }
 
@@ -209,8 +239,11 @@ function generationTone(
   state: AdminGeneration["state"],
 ): "neutral" | "primary" | "success" | "error" {
   if (state === "ready") return "success";
-  if (state === "retry_required") return "error";
-  if (state === "retrying") return "neutral";
+  if (
+    ["retry_required", "action_required", "generation_failed"].includes(state)
+  )
+    return "error";
+  if (state === "retrying" || state === "recovering") return "neutral";
   return "primary";
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  getOrStartProgressiveContinuationTask,
   getOrStartProgressiveGenerationTask,
+  getOrStartProgressiveRecoveryTask,
   hasActiveProgressiveGenerationForAttempt,
 } from "../src/generation/progressive-coordinator";
 
@@ -53,10 +53,10 @@ describe("progressive generation coordinator", () => {
   it("deduplicates and reports an active recovery task", async () => {
     const background = deferred();
     const attemptId = "33333333-3333-4333-8333-333333333333";
-    const first = getOrStartProgressiveContinuationTask(attemptId, async () => {
+    const first = getOrStartProgressiveRecoveryTask(attemptId, async () => {
       await background.promise;
     });
-    const second = getOrStartProgressiveContinuationTask(
+    const second = getOrStartProgressiveRecoveryTask(
       attemptId,
       async () => undefined,
     );

@@ -1,10 +1,12 @@
 import {
   LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   type LocalGenerationProfile,
 } from "@clipquest/contracts";
 
-export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.2";
+export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.3";
+export const MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION = "0.8.2";
 export const MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION = "0.8.0";
 
 export function isCompatibleClipQuestExtensionVersion(
@@ -30,11 +32,13 @@ export function isCompatibleClipQuestExtensionVersion(
 
 export function supportsQuestionStream(
   capabilities: readonly string[],
-  generationProfile: LocalGenerationProfile = "stable_non_thinking_v5_2",
+  generationProfile: LocalGenerationProfile = "stable_auto_recovery_v5_3",
 ): boolean {
   return capabilities.includes(
-    generationProfile === "legacy_reasoning_v5_1"
-      ? LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
-      : LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+    generationProfile === "stable_auto_recovery_v5_3"
+      ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+      : generationProfile === "stable_non_thinking_v5_2"
+        ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+        : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   );
 }

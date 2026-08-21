@@ -5,25 +5,25 @@ import {
   GenerationClaimResponseSchema,
   MediaResolveResponseSchema,
   createTranscriptCompleteness,
-  type GenerationRecordV2,
+  type AutomaticRetryKind,
+  type GenerationFailureCode,
+  type GenerationRecord,
   type LocalGenerationCallEvent,
   type LocalQuizContext,
   type TranscriptCompleteness,
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import * as Crypto from "expo-crypto";
-import { apiRequest, jsonBody } from "../lib/api";
+import { apiRequest, ClientApiError, jsonBody } from "../lib/api";
 import {
   authClient,
   type AppSession as AuthAppSession,
 } from "../lib/auth-client";
 import {
-  clearGenerationRecord,
-  generationRecordHasLiveHeartbeat,
   loadGenerationRecord,
   loadGenerationRecordForAttempt,
   loadImportedVideo,
-  migrateLegacyGenerationRecord,
+  clearGenerationRecord,
   saveGenerationRecord,
   startGenerationRecordHeartbeat,
   updateGenerationRecord,
@@ -32,222 +32,228 @@ import { acquireTextTranscript } from "../transcription/acquire-text-transcript"
 import {
   LocalGenerationRequestError,
   requestExtensionLocalQuiz,
+  type LocalGenerationProgress,
 } from "../transcription/clipquest-extension";
 import { transcribeLocally } from "../transcription/local-transcriber";
 import {
-  getOrStartProgressiveContinuationTask,
+  getOrStartProgressiveRecoveryTask,
   publishAttemptGeneration,
 } from "./progressive-coordinator";
 
-export function continueProgressiveAttempt(attemptId: string): Promise<void> {
-  return getOrStartProgressiveContinuationTask(attemptId, (signal) =>
-    runContinuation(attemptId, signal),
+const RECOVERY_HEARTBEAT_MS = 10_000;
+
+export function ensureProgressiveAttemptRecovery(
+  attemptId: string,
+): Promise<void> {
+  return getOrStartProgressiveRecoveryTask(attemptId, (signal) =>
+    runAutomaticRecovery(attemptId, signal),
   ).completion;
 }
 
-export async function markProgressiveAttemptRequiresReclaim(
-  attemptId: string,
-): Promise<boolean> {
-  const status = await apiRequest(
-    `/api/attempts/${attemptId}/generation`,
-    {},
-    AttemptGenerationResponseSchema,
-  );
-  if (
-    status.generation.state === "ready" ||
-    status.generation.state === "retry_required"
-  ) {
-    return true;
-  }
-  let stored = await matchingGenerationRecord(attemptId, status.quizId);
-  if (!stored && status.continuation) {
-    const sessionResult = await authClient.getSession();
-    const session = sessionResult.data as AuthAppSession | null;
-    if (session?.user.id) {
-      stored = await migrateLegacyGenerationRecord({
-        videoId: status.continuation.videoId,
-        expectedQuizId: status.quizId,
-        expectedAttemptId: attemptId,
-        ownerUserId: session.user.id,
-        generationId: status.continuation.generationId ?? Crypto.randomUUID(),
-        generationSessionId: Crypto.randomUUID(),
-        plannedCount: status.generation.totalQuestions,
-        acceptedCount: status.generation.availableQuestions,
-        sessionLength: status.continuation.sessionLength,
-        quizLanguage: status.continuation.quizLanguage,
-        questionTypes: status.continuation.questionTypes,
-        watched: status.continuation.watched,
-        generationProfile: status.continuation.generationProfile,
-        questionPlan: status.continuation.questionPlan,
-      });
-    }
-  }
-  if (stored && generationRecordHasLiveHeartbeat(stored)) return false;
-  if (!stored) {
-    throw new Error(
-      "ClipQuest lost this tab's local generation state. Reopen the source video before reclaiming this attempt.",
-    );
-  }
-  const failed = await updateProgress(status.quizId, stored.idempotencyKey, {
-    state: "retry_required",
-    reasonCode: "local_state_conflict",
-  });
-  await updateGenerationRecord(stored.generationId, {
-    state: "retry_required",
-  });
-  publishAttemptGeneration(attemptId, status.quizId, failed.generation);
-  return true;
-}
-
-async function runContinuation(
+async function runAutomaticRecovery(
   attemptId: string,
   signal: AbortSignal,
 ): Promise<void> {
-  const status = await apiRequest(
-    `/api/attempts/${attemptId}/generation`,
-    { signal },
-    AttemptGenerationResponseSchema,
-  );
-  if (status.generation.state === "ready") return;
-  if (status.generation.state !== "retry_required" || !status.continuation) {
-    throw new Error(
-      "Generation is still active in another tab. Wait for it to finish or pause before reclaiming it.",
-    );
+  const status = await readStatus(attemptId, signal);
+  if (
+    status.generation.state === "ready" ||
+    status.generation.state === "generation_failed" ||
+    !status.continuation
+  ) {
+    return;
+  }
+  const continuation = status.continuation;
+  const automatic =
+    continuation.generationProfile === "stable_auto_recovery_v5_3";
+  if (status.generation.state === "action_required" && !automatic) return;
+  if (status.generation.state === "retry_required" && automatic) {
+    throw new Error("Automatic banks cannot enter manual continuation state.");
   }
 
   const sessionResult = await authClient.getSession();
   const session = sessionResult.data as AuthAppSession | null;
-  if (!session?.user.id) {
-    throw new Error("Sign in again before continuing this quiz.");
-  }
-
-  const imported = await loadImportedVideo(status.continuation.videoId);
-  if (!imported) {
-    throw new Error(
-      "The local transcript cache expired. Reopen the source video to continue generating.",
-    );
-  }
-  const transcript = await acquireContinuationTranscript(imported, signal);
-
+  if (!session?.user.id) return;
   const claimKey = Crypto.randomUUID();
-  const generationSessionId = Crypto.randomUUID();
-  const claim = await apiRequest(
-    `/api/attempts/${attemptId}/generation/claim`,
-    {
-      method: "POST",
-      body: jsonBody({ claimKey, generationSessionId }),
-      signal,
-    },
-    GenerationClaimResponseSchema,
-  );
+  const generationSessionId = automatic
+    ? continuation.generationSessionId
+    : Crypto.randomUUID();
+  if (!generationSessionId) {
+    throw new Error("The generation session metadata is missing.");
+  }
+  const recoverySessionId = automatic ? Crypto.randomUUID() : undefined;
 
-  let stored = await matchingGenerationRecord(attemptId, status.quizId);
-  if (!stored && status.continuation.generationId) {
-    const byGenerationId = await loadGenerationRecord(
-      status.continuation.generationId,
+  let claim;
+  try {
+    claim = await apiRequest(
+      `/api/attempts/${attemptId}/generation/claim`,
+      {
+        method: "POST",
+        body: jsonBody({
+          claimKey,
+          generationSessionId,
+          ...(recoverySessionId ? { recoverySessionId } : {}),
+        }),
+        signal,
+      },
+      GenerationClaimResponseSchema,
     );
+  } catch (error) {
+    if (isLeaseConflict(error)) return;
+    throw error;
+  }
+
+  const imported = await loadImportedVideo(continuation.videoId);
+  if (!imported) {
+    const failed = await stopGeneration(status.quizId, claimKey, {
+      state: "generation_failed",
+      reasonCode: "source_unavailable",
+    }).catch(() => undefined);
+    if (failed) {
+      publishAttemptGeneration(attemptId, status.quizId, failed.generation);
+    }
+    return;
+  }
+
+  const generationId = continuation.generationId ?? Crypto.randomUUID();
+  let stored = await matchingGenerationRecord(attemptId, status.quizId);
+  if (!stored && continuation.generationId) {
+    const candidate = await loadGenerationRecord(continuation.generationId);
     if (
-      byGenerationId?.ownerUserId === session.user.id &&
-      byGenerationId.quizId === status.quizId
+      candidate?.ownerUserId === session.user.id &&
+      candidate.quizId === status.quizId
     ) {
-      stored = byGenerationId;
+      stored = candidate;
     }
   }
-  if (!stored) {
-    stored = await migrateLegacyGenerationRecord({
-      videoId: status.continuation.videoId,
-      expectedQuizId: status.quizId,
-      expectedAttemptId: attemptId,
-      ownerUserId: session.user.id,
-      generationId: status.continuation.generationId ?? Crypto.randomUUID(),
-      generationSessionId,
-      plannedCount: status.generation.totalQuestions,
-      acceptedCount: status.generation.availableQuestions,
-      sessionLength: status.continuation.sessionLength,
-      quizLanguage: status.continuation.quizLanguage,
-      questionTypes: status.continuation.questionTypes,
-      watched: status.continuation.watched,
-      generationProfile: status.continuation.generationProfile,
-      questionPlan: status.continuation.questionPlan,
-    });
+  if (automatic && (!continuation.questionPlan || !recoverySessionId)) {
+    throw new Error("The automatic question plan is missing.");
   }
-  if (!stored) {
-    const timestamp = Date.now();
-    stored = await saveGenerationRecord({
-      version: 2,
-      generationId: status.continuation.generationId ?? Crypto.randomUUID(),
-      generationSessionId,
-      idempotencyKey: claimKey,
-      ownerUserId: session.user.id,
-      videoId: status.continuation.videoId,
-      quizLanguage: status.continuation.quizLanguage,
-      questionTypes: status.continuation.questionTypes,
-      sessionLength: status.continuation.sessionLength,
-      watched: status.continuation.watched,
-      generationProfile: status.continuation.generationProfile,
-      questionPlan: status.continuation.questionPlan,
-      quizId: status.quizId,
-      attemptId,
-      acceptedCount: status.generation.availableQuestions,
-      plannedCount: status.generation.totalQuestions,
-      state: "retrying",
-      nextCallIndex: 0,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    });
-  } else {
-    stored =
-      (await updateGenerationRecord(stored.generationId, {
+  const stopLeaseHeartbeat =
+    automatic && recoverySessionId
+      ? startRecoveryLeaseHeartbeat({
+          attemptId,
+          claimKey,
+          generationSessionId,
+          recoverySessionId,
+          signal,
+        })
+      : () => undefined;
+  let transcript;
+  try {
+    transcript = await acquireContinuationTranscript(imported, signal);
+  } catch (error) {
+    stopLeaseHeartbeat();
+    throw error;
+  }
+
+  const timestamp = Date.now();
+  try {
+    if (automatic) {
+      if (!continuation.questionPlan || !recoverySessionId) {
+        throw new Error("The automatic question plan is missing.");
+      }
+      stored = await saveGenerationRecord({
+        version: 3,
+        generationId,
+        generationSessionId,
+        recoverySessionId,
+        idempotencyKey: claimKey,
+        ownerUserId: session.user.id,
+        videoId: continuation.videoId,
+        quizLanguage: continuation.quizLanguage,
+        questionTypes: continuation.questionTypes,
+        sessionLength: continuation.sessionLength,
+        watched: continuation.watched,
+        questionPlan: continuation.questionPlan,
+        generationProfile: "stable_auto_recovery_v5_3",
+        quizId: status.quizId,
+        attemptId,
+        acceptedCount: status.generation.availableQuestions,
+        plannedCount: status.generation.totalQuestions,
+        state: "recovering",
+        nextCallIndex: continuation.nextCallIndex ?? 0,
+        ordinalAttempts: {
+          [String(status.generation.availableQuestions + 1)]:
+            continuation.nextOrdinalAttempt ?? 1,
+        },
+        automaticRetryCount: continuation.automaticRetryCount ?? 0,
+        activeRecoveryStartedAt: timestamp,
+        createdAt: stored?.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      });
+    } else {
+      stored = await saveGenerationRecord({
+        version: 2,
+        generationId,
         generationSessionId,
         idempotencyKey: claimKey,
+        ownerUserId: session.user.id,
+        videoId: continuation.videoId,
+        quizLanguage: continuation.quizLanguage,
+        questionTypes: continuation.questionTypes,
+        sessionLength: continuation.sessionLength,
+        watched: continuation.watched,
+        generationProfile: continuation.generationProfile,
+        questionPlan: continuation.questionPlan,
         quizId: status.quizId,
         attemptId,
         acceptedCount: status.generation.availableQuestions,
         plannedCount: status.generation.totalQuestions,
         state: "retrying",
         nextCallIndex: 0,
-        questionPlan: status.continuation.questionPlan,
-        generationProfile: status.continuation.generationProfile,
-      })) ?? stored;
+        createdAt: stored?.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      });
+    }
+  } catch (error) {
+    stopLeaseHeartbeat();
+    throw error;
   }
 
-  const retrying = await updateProgress(
-    status.quizId,
-    claimKey,
-    { state: "retrying" },
-    signal,
-  );
-  publishAttemptGeneration(attemptId, status.quizId, retrying.generation);
+  publishAttemptGeneration(attemptId, status.quizId, {
+    ...status.generation,
+    state: automatic ? "recovering" : "retrying",
+    ...(recoverySessionId ? { recoverySessionId } : {}),
+  });
 
   const context: LocalQuizContext = {
     protocolVersion: 1,
     jobId: claimKey,
-    generationId: stored.generationId,
+    generationId,
     generationSessionId,
-    generationProfile: status.continuation.generationProfile,
+    ...(recoverySessionId ? { recoverySessionId } : {}),
+    generationProfile: continuation.generationProfile,
     videoId: imported.video.id,
     title: imported.video.title,
-    quizLanguage: status.continuation.quizLanguage,
-    questionTypes: status.continuation.questionTypes,
+    quizLanguage: continuation.quizLanguage,
+    questionTypes: continuation.questionTypes,
     questionCount: status.generation.totalQuestions,
     transcriptFingerprint: transcript.completeness.textFingerprint,
     transcriptLanguage: transcript.language,
     segments: transcript.segments,
     continuation: {
-      startIndex: status.continuation.startIndex,
-      resultProtocolVersion: status.continuation.resultProtocolVersion,
-      promptVersion: status.continuation.promptVersion,
-      validatorVersion: status.continuation.validatorVersion,
-      generationProfile: status.continuation.generationProfile,
-      questionPlan: status.continuation.questionPlan,
+      startIndex: continuation.startIndex,
+      resultProtocolVersion: continuation.resultProtocolVersion,
+      promptVersion: continuation.promptVersion,
+      validatorVersion: continuation.validatorVersion,
+      generationProfile: continuation.generationProfile,
+      questionPlan: continuation.questionPlan,
       claim: claim.claim,
-      acceptedQuestions: status.continuation.acceptedQuestions,
+      nextCallIndex: automatic ? continuation.nextCallIndex : 0,
+      nextOrdinalAttempt: continuation.nextOrdinalAttempt,
+      retryKind: continuation.retryKind,
+      automaticRetryCount: continuation.automaticRetryCount,
+      acceptedQuestions: continuation.acceptedQuestions,
     },
   };
 
-  let latest = retrying;
+  let latest = status.generation;
   let ingestion = Promise.resolve();
-  const generationId = stored.generationId;
+  let lastProgressState = "recovering";
+  let automaticRetryCount =
+    stored?.version === 3 ? stored.automaticRetryCount : 0;
+  const stopLocalHeartbeat = startGenerationRecordHeartbeat(generationId);
+
   const enqueueCall = (event: LocalGenerationCallEvent) => {
     ingestion = ingestion.then(async () => {
       await apiRequest(
@@ -260,25 +266,65 @@ async function runContinuation(
         },
         ExtensionQuizGenerationCallEventResponseSchema,
       );
-      const current = await loadGenerationRecord(generationId);
-      if (current) {
-        await updateGenerationRecord(generationId, {
-          nextCallIndex: Math.max(current.nextCallIndex, event.callIndex + 1),
-        });
+      if (event.classification === "automatic_retry") {
+        automaticRetryCount = Math.min(12, automaticRetryCount + 1);
       }
+      await updateGenerationRecord(generationId, {
+        nextCallIndex: event.callIndex + 1,
+        ...(event.classification === "automatic_retry"
+          ? { automaticRetryCount }
+          : {}),
+      });
     });
     void ingestion.catch(() => undefined);
   };
-  const stopHeartbeat = startGenerationRecordHeartbeat(generationId);
 
   try {
     await requestExtensionLocalQuiz(
       context,
       signal,
-      () => undefined,
+      (_stage, _progress, detail) => {
+        if (!automatic || !recoverySessionId) return;
+        const nextState =
+          detail.status === "retrying" ? "retrying" : "generating";
+        if (
+          nextState === lastProgressState &&
+          detail.ordinalAttempt === undefined
+        ) {
+          return;
+        }
+        lastProgressState = nextState;
+        ingestion = ingestion.then(async () => {
+          const response = await updateProgress(
+            status.quizId,
+            claimKey,
+            progressPayload(nextState, detail, recoverySessionId),
+            signal,
+          );
+          latest = response.generation;
+          publishAttemptGeneration(attemptId, status.quizId, latest);
+          await updateGenerationRecord(generationId, {
+            state: nextState,
+            ...(nextState === "retrying"
+              ? {
+                  retryOrdinal: detail.retryOrdinal,
+                  ordinalAttempt: detail.ordinalAttempt,
+                  retryKind: detail.retryKind,
+                  retryDelayMs: detail.retryDelayMs,
+                }
+              : {
+                  retryOrdinal: undefined,
+                  ordinalAttempt: undefined,
+                  retryKind: undefined,
+                  retryDelayMs: undefined,
+                }),
+          });
+        });
+        void ingestion.catch(() => undefined);
+      },
       (chunk) => {
         ingestion = ingestion.then(async () => {
-          latest = await apiRequest(
+          const response = await apiRequest(
             `/api/quiz-imports/${status.quizId}/questions`,
             {
               method: "PUT",
@@ -288,50 +334,135 @@ async function runContinuation(
             },
             ExtensionQuizProgressiveImportResponseSchema,
           );
-          publishAttemptGeneration(attemptId, status.quizId, latest.generation);
-          await updateGenerationRecord(generationId, {
-            quizId: status.quizId,
-            attemptId,
-            acceptedCount: latest.generation.availableQuestions,
-            plannedCount: latest.generation.totalQuestions,
-            state: latest.generation.state,
-          });
+          latest = response.generation;
+          publishAttemptGeneration(attemptId, status.quizId, latest);
+          await updateGenerationRecord(
+            generationId,
+            automatic
+              ? {
+                  acceptedCount: latest.availableQuestions,
+                  state: latest.state,
+                  retryOrdinal: undefined,
+                  ordinalAttempt: undefined,
+                  retryKind: undefined,
+                  retryDelayMs: undefined,
+                }
+              : {
+                  acceptedCount: latest.availableQuestions,
+                  state: latest.state,
+                },
+          );
         });
         void ingestion.catch(() => undefined);
       },
       enqueueCall,
     );
     await ingestion;
-    if (latest.generation.state !== "ready") {
-      throw new Error("Continuation ended before every question was stored.");
+    if (latest.state !== "ready") {
+      throw new Error("Automatic recovery ended before the bank was complete.");
     }
     await clearGenerationRecord(generationId);
   } catch (error) {
     await ingestion.catch(() => undefined);
+    if (signal.aborted || isLeaseConflict(error)) return;
     const reasonCode =
       error instanceof LocalGenerationRequestError
         ? error.reasonCode
         : "local_state_conflict";
-    const failed = await updateProgress(status.quizId, claimKey, {
-      state: "retry_required",
+    const state =
+      reasonCode === "credential_required" || reasonCode === "billing_required"
+        ? "action_required"
+        : "generation_failed";
+    const failed = await stopGeneration(status.quizId, claimKey, {
+      state,
       reasonCode,
     }).catch(() => undefined);
-    await updateGenerationRecord(generationId, {
-      state: "retry_required",
-    }).catch(() => undefined);
+    await updateGenerationRecord(
+      generationId,
+      automatic
+        ? {
+            state,
+            reasonCode,
+            retryOrdinal: undefined,
+            ordinalAttempt: undefined,
+            retryKind: undefined,
+            retryDelayMs: undefined,
+          }
+        : { state: "retry_required" },
+    ).catch(() => undefined);
     if (failed) {
-      publishAttemptGeneration(attemptId, status.quizId, failed.generation);
+      latest = failed.generation;
+      publishAttemptGeneration(attemptId, status.quizId, latest);
     }
-    throw error;
   } finally {
-    stopHeartbeat();
+    stopLeaseHeartbeat();
+    stopLocalHeartbeat();
   }
+}
+
+function progressPayload(
+  state: "generating" | "retrying",
+  detail: LocalGenerationProgress,
+  recoverySessionId: string,
+) {
+  return {
+    state,
+    recoverySessionId,
+    ...(state === "retrying"
+      ? {
+          retryOrdinal: detail.retryOrdinal,
+          ordinalAttempt: detail.ordinalAttempt,
+          retryKind: detail.retryKind,
+          retryDelayMs: detail.retryDelayMs,
+        }
+      : {}),
+  };
+}
+
+function startRecoveryLeaseHeartbeat(input: {
+  attemptId: string;
+  claimKey: string;
+  generationSessionId: string;
+  recoverySessionId: string;
+  signal: AbortSignal;
+}): () => void {
+  let active = true;
+  const renew = () => {
+    if (!active || input.signal.aborted) return;
+    void apiRequest(
+      `/api/attempts/${input.attemptId}/generation/heartbeat`,
+      {
+        method: "PUT",
+        body: jsonBody({
+          claimKey: input.claimKey,
+          generationSessionId: input.generationSessionId,
+          recoverySessionId: input.recoverySessionId,
+        }),
+        signal: input.signal,
+      },
+      GenerationClaimResponseSchema,
+    ).catch(() => undefined);
+  };
+  const timer = setInterval(renew, RECOVERY_HEARTBEAT_MS);
+  renew();
+  return () => {
+    active = false;
+    clearInterval(timer);
+  };
+}
+
+async function readStatus(attemptId: string, signal: AbortSignal) {
+  return apiRequest(
+    `/api/attempts/${attemptId}/generation`,
+    { signal },
+    AttemptGenerationResponseSchema,
+  );
 }
 
 async function matchingGenerationRecord(
   attemptId: string,
   quizId: string,
-): Promise<GenerationRecordV2 | null> {
+): Promise<GenerationRecord | null> {
   const stored = await loadGenerationRecordForAttempt(attemptId);
   return stored?.quizId === quizId && stored.attemptId === attemptId
     ? stored
@@ -352,7 +483,6 @@ async function acquireContinuationTranscript(
     () => undefined,
   );
   if (textTranscript) return textTranscript;
-
   const media = await apiRequest(
     "/api/media/resolve",
     {
@@ -385,8 +515,18 @@ function updateProgress(
   quizId: string,
   idempotencyKey: string,
   progress: {
-    state: "retrying" | "retry_required";
-    reasonCode?: string;
+    state:
+      | "generating"
+      | "retrying"
+      | "recovering"
+      | "action_required"
+      | "generation_failed";
+    reasonCode?: GenerationFailureCode;
+    retryOrdinal?: number;
+    ordinalAttempt?: number;
+    retryKind?: AutomaticRetryKind;
+    retryDelayMs?: number;
+    recoverySessionId?: string;
   },
   signal?: AbortSignal,
 ) {
@@ -399,5 +539,29 @@ function updateProgress(
       signal,
     },
     ExtensionQuizProgressiveImportResponseSchema,
+  );
+}
+
+function stopGeneration(
+  quizId: string,
+  idempotencyKey: string | undefined,
+  progress: {
+    state: "action_required" | "generation_failed";
+    reasonCode: GenerationFailureCode;
+  },
+) {
+  if (!idempotencyKey) throw new Error("The generation key is unavailable.");
+  return updateProgress(quizId, idempotencyKey, progress);
+}
+
+function isLeaseConflict(error: unknown): boolean {
+  return (
+    error instanceof ClientApiError &&
+    [
+      "generation_claim_leased",
+      "generation_claim_conflict",
+      "generation_recovery_lease_conflict",
+      "generation_recovery_lease_lost",
+    ].includes(error.code)
   );
 }

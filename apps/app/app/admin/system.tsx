@@ -135,6 +135,11 @@ export default function AdminSystemScreen() {
                     tone="secondary"
                   />
                   <StatTile
+                    value={String(data.generation.states.recovering)}
+                    label={copy.recovering}
+                    tone="secondary"
+                  />
+                  <StatTile
                     value={String(data.generation.states.ready)}
                     label={copy.ready}
                     tone="success"
@@ -142,6 +147,16 @@ export default function AdminSystemScreen() {
                   <StatTile
                     value={String(data.generation.states.retryRequired)}
                     label={copy.retryRequired}
+                    tone="warning"
+                  />
+                  <StatTile
+                    value={String(data.generation.states.actionRequired)}
+                    label={copy.actionRequired}
+                    tone="warning"
+                  />
+                  <StatTile
+                    value={String(data.generation.states.generationFailed)}
+                    label={copy.generationFailed}
                     tone="warning"
                   />
                 </View>
