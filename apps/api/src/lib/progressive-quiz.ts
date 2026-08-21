@@ -577,11 +577,13 @@ export function sharedEngineClientTransitionAllowed(
 ): boolean {
   const originalKind = summary.client?.kind ?? "chrome_extension";
   const minimumVersion =
-    nextClient?.kind === "android_app" ? "0.2.0" : "0.8.18";
+    nextClient?.kind !== undefined && nextClient.kind !== "chrome_extension"
+      ? "0.2.0"
+      : "0.8.18";
   return (
     nextClient !== undefined &&
     originalKind === "chrome_extension" &&
-    nextClient.kind === "android_app" &&
+    (nextClient.kind === "android_app" || nextClient.kind === "ios_app") &&
     nextClient.capability === "question-stream-v7" &&
     semanticVersionAtLeast(nextClient.version, minimumVersion) &&
     summary.resultProtocolVersion === 10 &&

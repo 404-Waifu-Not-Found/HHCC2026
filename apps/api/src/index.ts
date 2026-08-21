@@ -130,6 +130,7 @@ app.get("/health", (c) => {
     extensionQuizGeneration: true,
     extensionRequired: true,
     androidQuizGeneration: true,
+    iosQuizGeneration: true,
     email: Boolean(c.env.RESEND_API_KEY),
     youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
     youtubeOpenSourceAcquisition: true,
@@ -163,6 +164,11 @@ app.get("/health", (c) => {
           requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         },
         androidApp: {
+          minimumVersion: "0.2.0",
+          requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+          foregroundOnly: true,
+        },
+        iosApp: {
           minimumVersion: "0.2.0",
           requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
           foregroundOnly: true,

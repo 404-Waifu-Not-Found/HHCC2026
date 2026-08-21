@@ -72,12 +72,19 @@ function versionAtLeast(actual: string, minimum: string): boolean {
 
 function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
   if (!chunk.client) return;
-  const minimum = chunk.client.kind === "android_app" ? "0.2.0" : "0.8.17";
+  const native = chunk.client.kind !== "chrome_extension";
+  const minimum = native ? "0.2.0" : "0.8.17";
+  const clientName =
+    chunk.client.kind === "android_app"
+      ? "Android"
+      : chunk.client.kind === "ios_app"
+        ? "iOS"
+        : "Local AI";
   if (!versionAtLeast(chunk.client.version, minimum)) {
     throw new ApiError(
       403,
       "local_generation_client_outdated",
-      `ClipQuest ${chunk.client.kind === "android_app" ? "Android" : "Local AI"} ${minimum} or newer is required.`,
+      `ClipQuest ${clientName} ${minimum} or newer is required.`,
     );
   }
 }
@@ -422,7 +429,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
   const nextSummary = ProgressiveQuizSummarySchema.parse({
     ...summary,
     source: clientTransitionAllowed
-      ? input.chunk.client?.kind === "android_app"
+      ? input.chunk.client?.kind !== "chrome_extension"
         ? "client-local-json-stream"
         : "extension-local-json-stream"
       : summary.source,
@@ -1138,7 +1145,8 @@ async function persistProgressiveQuiz(input: {
     : questionQualityFlags(question, []);
   const summary = ProgressiveQuizSummarySchema.parse({
     source:
-      chunk.client?.kind === "android_app"
+      chunk.client?.kind !== undefined &&
+      chunk.client.kind !== "chrome_extension"
         ? "client-local-json-stream"
         : "extension-local-json-stream",
     client: chunk.client,

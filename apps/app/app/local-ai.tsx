@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../src/components/AppTextInput";
 import { PrimaryButton } from "../src/components/PrimaryButton";
 import { Screen } from "../src/components/Screen";
@@ -17,12 +17,13 @@ import { spacing, typography } from "../src/theme/tokens";
 export default function LocalAiSettingsScreen() {
   const { data: session } = useAppSession();
   const { locale, theme } = useSettings();
+  const isIos = Platform.OS === "ios";
   const copy =
     locale === "zh-CN"
       ? {
           back: "返回",
           title: "本地 AI",
-          subtitle: "测验生成由此 Android 应用直接连接 DeepSeek 完成。",
+          subtitle: `测验生成由此 ${isIos ? "iPhone" : "Android"} 应用直接连接 DeepSeek 完成。`,
           configured: "已在此设备配置",
           missing: "尚未配置",
           key: "DeepSeek API 密钥",
@@ -31,14 +32,12 @@ export default function LocalAiSettingsScreen() {
           saved: "DeepSeek 已为此 ClipQuest 帐户配置。",
           removed: "DeepSeek 密钥已从此设备移除。",
           saveFailed: "无法保存此密钥。",
-          privacy:
-            "密钥由 Android Keystore 加密，并仅供当前登录的 ClipQuest 帐户使用。密钥和字幕会由此设备直接发送到 DeepSeek，ClipQuest 服务器不会收到它们。",
+          privacy: `密钥由 ${isIos ? "iOS 钥匙串" : "Android Keystore"} 加密，并仅供当前登录的 ClipQuest 帐户使用。密钥和字幕会由此设备直接发送到 DeepSeek，ClipQuest 服务器不会收到它们。`,
         }
       : {
           back: "Back",
           title: "Local AI",
-          subtitle:
-            "Quiz generation runs directly between this Android app and DeepSeek.",
+          subtitle: `Quiz generation runs directly between this ${isIos ? "iPhone app" : "Android app"} and DeepSeek.`,
           configured: "Configured on this device",
           missing: "Not configured",
           key: "DeepSeek API key",
@@ -47,8 +46,7 @@ export default function LocalAiSettingsScreen() {
           saved: "DeepSeek is configured for this ClipQuest account.",
           removed: "The DeepSeek key was removed from this device.",
           saveFailed: "The key could not be saved.",
-          privacy:
-            "The key is encrypted with Android Keystore and scoped to your signed-in ClipQuest account. Your key and captions are sent directly to DeepSeek; ClipQuest servers receive neither.",
+          privacy: `The key is encrypted with ${isIos ? "iOS Keychain" : "Android Keystore"} and scoped to your signed-in ClipQuest account. Your key and captions are sent directly to DeepSeek; ClipQuest servers receive neither.`,
         };
   const [apiKey, setApiKey] = useState("");
   const [configured, setConfigured] = useState(false);

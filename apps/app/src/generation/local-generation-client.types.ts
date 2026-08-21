@@ -27,7 +27,7 @@ export type LocalGenerationClientStatus =
       configured: boolean;
       version?: string;
       capabilities: string[];
-      kind: "chrome_extension" | "android_app";
+      kind: "chrome_extension" | "android_app" | "ios_app";
     };
 
 export type LocalGenerationRequest = (

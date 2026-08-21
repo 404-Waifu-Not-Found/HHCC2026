@@ -22,7 +22,7 @@ export async function enableReviewReminders(
   locale: AppLanguage,
 ): Promise<void> {
   if (!Device.isDevice) {
-    throw new Error("Review reminders require a physical Android device.");
+    throw new Error("Review reminders require a physical device.");
   }
   const permission = await Notifications.requestPermissionsAsync();
   if (permission.status !== "granted") {
@@ -43,7 +43,11 @@ export async function enableReviewReminders(
     "/api/push/register",
     {
       method: "POST",
-      body: jsonBody({ token, platform: "android", locale }),
+      body: jsonBody({
+        token,
+        platform: Platform.OS === "ios" ? "ios" : "android",
+        locale,
+      }),
     },
     PushRegisterResponseSchema,
   );

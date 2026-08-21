@@ -135,7 +135,7 @@ export const AdminGenerationSchema = z
     quizId: z.string().uuid(),
     client: z
       .object({
-        kind: z.enum(["chrome_extension", "android_app"]),
+        kind: z.enum(["chrome_extension", "android_app", "ios_app"]),
         version: z.string().min(1).max(32),
         capability: z.string().min(1).max(64),
       })
@@ -282,6 +282,15 @@ export const AdminSystemResponseSchema = z.object({
       extensionRequired: z.literal(true),
       androidEnabled: z.literal(true).optional(),
       androidApp: z
+        .object({
+          minimumVersion: z.literal("0.2.0"),
+          requiredCapability: z.literal("question-stream-v7"),
+          foregroundOnly: z.literal(true),
+        })
+        .strict()
+        .optional(),
+      iosEnabled: z.literal(true).optional(),
+      iosApp: z
         .object({
           minimumVersion: z.literal("0.2.0"),
           requiredCapability: z.literal("question-stream-v7"),

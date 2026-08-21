@@ -112,22 +112,22 @@ async function runAutomaticRecovery(
   const sessionResult = await authClient.getSession();
   const session = sessionResult.data as AuthAppSession | null;
   if (!session?.user.id) return;
-  // Android uses one single-task activity. Preserve its local lease identity
+  // Native apps use one active scene. Preserve the local lease identity
   // across a foreground interruption so that the same app can renew the lease
   // immediately. Web tabs still receive independent claim identities.
   let stored =
-    Platform.OS === "android"
+    Platform.OS !== "web"
       ? await matchingGenerationRecord(attemptId, status.quizId)
       : null;
-  const resumableAndroidLease =
-    Platform.OS === "android" &&
+  const resumableNativeLease =
+    Platform.OS !== "web" &&
     stored &&
     (stored.version === 3 || stored.version === 4) &&
     stored.generationSessionId === continuation.generationSessionId
       ? stored
       : undefined;
-  const claimKey = resumableAndroidLease
-    ? resumableAndroidLease.idempotencyKey
+  const claimKey = resumableNativeLease
+    ? resumableNativeLease.idempotencyKey
     : Crypto.randomUUID();
   const generationSessionId =
     continuation.generationSessionId ??
@@ -136,8 +136,8 @@ async function runAutomaticRecovery(
     throw new Error("The generation session metadata is missing.");
   }
   const recoverySessionId = automatic
-    ? resumableAndroidLease
-      ? resumableAndroidLease.recoverySessionId
+    ? resumableNativeLease
+      ? resumableNativeLease.recoverySessionId
       : Crypto.randomUUID()
     : undefined;
 
@@ -778,9 +778,9 @@ async function acquireContinuationTranscript(
     preferredLanguage,
   );
   if (textTranscript) return textTranscript;
-  if (Platform.OS === "android") {
+  if (Platform.OS !== "web") {
     throw new Error(
-      "This Android beta requires a public YouTube video with usable captions.",
+      "This native beta requires a public YouTube video with usable captions.",
     );
   }
   const media = await apiRequest(

@@ -10,6 +10,7 @@ import {
 import { useFonts } from "expo-font";
 import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Linking from "expo-linking";
 import { useEffect } from "react";
 import { AppState, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -25,6 +26,7 @@ import { removeLocalGenerationCredential } from "../src/generation/local-generat
 import { pauseAllProgressiveGenerationTasks } from "../src/generation/progressive-coordinator";
 import { useAppSession } from "../src/lib/auth-client";
 import { clearReviewReminderDeviceState } from "../src/notifications/review-reminders";
+import { nativeRouteForUrl } from "../src/navigation/native-deep-links";
 
 const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
 
@@ -40,7 +42,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (Platform.OS !== "android") return;
+    if (Platform.OS === "web") return;
     const subscription = AppState.addEventListener("change", (state) => {
       if (state !== "active") pauseAllProgressiveGenerationTasks();
     });
@@ -88,11 +90,38 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <SettingsProvider>
           <NativeAccountBoundary />
+          <NativeDeepLinkBoundary />
           <RootNavigator />
         </SettingsProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+function NativeDeepLinkBoundary() {
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    let active = true;
+    let lastUrl: string | undefined;
+    const open = (url: string) => {
+      if (!active || url === lastUrl) return;
+      const route = nativeRouteForUrl(url);
+      if (!route) return;
+      lastUrl = url;
+      router.replace(route as never);
+    };
+    const subscription = Linking.addEventListener("url", ({ url }) =>
+      open(url),
+    );
+    void Linking.getInitialURL().then((url) => {
+      if (url) open(url);
+    });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+  return null;
 }
 
 const OBSERVED_NATIVE_USER_KEY = "clipquest:native-local-ai-user:v1";

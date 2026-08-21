@@ -1,5 +1,6 @@
+import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { Platform, StyleSheet, Text } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
@@ -23,7 +24,10 @@ export default function ForgotPasswordScreen() {
     try {
       const result = await authClient.requestPasswordReset({
         email: email.trim().toLowerCase(),
-        redirectTo: "/reset-password",
+        redirectTo:
+          Platform.OS === "web"
+            ? "/reset-password"
+            : "clipquest://reset-password",
       });
       if (result.error) {
         setError(result.error.message ?? t("emailSendFailed"));
@@ -87,6 +91,13 @@ export default function ForgotPasswordScreen() {
         onPress={() => void submit()}
       >
         {t("sendResetLink")}
+      </PrimaryButton>
+      <PrimaryButton
+        variant="ghost"
+        disabled={loading}
+        onPress={() => router.replace("/(auth)/sign-in")}
+      >
+        {t("back")} · {t("signIn")}
       </PrimaryButton>
     </AuthShell>
   );

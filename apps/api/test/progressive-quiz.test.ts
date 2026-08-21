@@ -232,7 +232,9 @@ describe("progressive quiz storage state", () => {
       version: "0.2.0",
       capability: "question-stream-v7" as const,
     };
+    const ios = { ...android, kind: "ios_app" as const };
     expect(sharedEngineClientTransitionAllowed(current, android)).toBe(true);
+    expect(sharedEngineClientTransitionAllowed(current, ios)).toBe(true);
     expect(
       sharedEngineClientTransitionAllowed(
         { ...current, client: android },

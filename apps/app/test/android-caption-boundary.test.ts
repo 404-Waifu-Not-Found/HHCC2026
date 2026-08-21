@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(import.meta.dirname, "..");
 
-describe("Android caption-only generation boundary", () => {
+describe("native caption-only generation boundary", () => {
   it("fails before media resolution when captions are unavailable", () => {
     const creation = readFileSync(
       resolve(appRoot, "app/generation/[videoId].tsx"),
@@ -15,16 +15,16 @@ describe("Android caption-only generation boundary", () => {
       "utf8",
     );
     const message =
-      "This Android beta requires a public YouTube video with usable captions.";
+      "This native beta requires a public YouTube video with usable captions.";
     for (const source of [creation, recovery]) {
-      const androidGuard = source.indexOf('Platform.OS === "android"');
-      const captionFailure = source.indexOf(message, androidGuard);
+      const nativeGuard = source.indexOf('Platform.OS !== "web"');
+      const captionFailure = source.indexOf(message, nativeGuard);
       const mediaResolve = source.indexOf(
         '"/api/media/resolve"',
         captionFailure,
       );
-      expect(androidGuard).toBeGreaterThanOrEqual(0);
-      expect(captionFailure).toBeGreaterThan(androidGuard);
+      expect(nativeGuard).toBeGreaterThanOrEqual(0);
+      expect(captionFailure).toBeGreaterThan(nativeGuard);
       expect(mediaResolve).toBeGreaterThan(captionFailure);
     }
   });

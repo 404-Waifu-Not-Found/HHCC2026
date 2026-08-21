@@ -49,11 +49,11 @@ describe("Android UI regressions", () => {
     expect(verification).toContain('variant="ghost"');
   });
 
-  it("does not claim Android captions are ready while prework is pending", () => {
+  it("does not claim native captions are ready while prework is pending", () => {
     const creation = source("app/create/[videoId].tsx");
     const generation = source("app/generation/[videoId].tsx");
 
-    expect(creation).toContain('androidCaptionState === "running"');
+    expect(creation).toContain('nativeCaptionState === "running"');
     expect(creation).toContain('t("sourceCaptionsPreparing")');
     expect(creation).toContain("loading={captionsPending}");
     expect(generation).toContain('"privateTranscriptionAndroid"');

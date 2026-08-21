@@ -181,7 +181,7 @@ export default function GenerationScreen() {
   );
   const journeySteps = useMemo<JourneyStep[]>(
     () =>
-      Platform.OS === "android"
+      Platform.OS !== "web"
         ? [
             { id: "video", label: t("gettingVideo") },
             { id: "captions", label: t("checkingCaptions") },
@@ -202,6 +202,7 @@ export default function GenerationScreen() {
   );
   const [estimatedProgress, setEstimatedProgressState] = useState(0);
   const [journeyElapsedMs, setJourneyElapsedMs] = useState(0);
+  const [journeyActive, setJourneyActive] = useState(false);
   const estimatedProgressRef = useRef(0);
   const journeyStartedAtRef = useRef(0);
   const finishingPresentationRef = useRef(false);
@@ -222,6 +223,17 @@ export default function GenerationScreen() {
     setEstimatedProgressState(0);
     setJourneyElapsedMs(0);
     setRetryEtaPhase(undefined);
+    setJourneyActive(true);
+  }, []);
+
+  const stopJourney = useCallback(() => {
+    journeyStartedAtRef.current = 0;
+    finishingPresentationRef.current = false;
+    estimatedProgressRef.current = 0;
+    setEstimatedProgressState(0);
+    setJourneyElapsedMs(0);
+    setRetryEtaPhase(undefined);
+    setJourneyActive(false);
   }, []);
 
   useEffect(() => {
@@ -248,7 +260,6 @@ export default function GenerationScreen() {
       publish,
       resolveFirst,
     }: ProgressiveGenerationTaskContext) => {
-      beginJourney();
       if (!session?.user.id) {
         throw new Error("Sign in again before creating a quiz.");
       }
@@ -391,7 +402,9 @@ export default function GenerationScreen() {
         const requirement =
           localClient.kind === "android_app"
             ? rolloutProfile.clientRequirements.androidApp
-            : rolloutProfile.clientRequirements.chromeExtension;
+            : localClient.kind === "ios_app"
+              ? rolloutProfile.clientRequirements.androidApp
+              : rolloutProfile.clientRequirements.chromeExtension;
         if (
           !localClient.version ||
           !semanticVersionAtLeast(
@@ -403,10 +416,19 @@ export default function GenerationScreen() {
           throw new Error(
             localClient.kind === "android_app"
               ? `ClipQuest Android ${requirement.minimumVersion} or newer is required.`
-              : `ClipQuest Local AI ${requirement.minimumVersion} or newer is required.`,
+              : localClient.kind === "ios_app"
+                ? `ClipQuest iOS ${requirement.minimumVersion} or newer is required.`
+                : `ClipQuest Local AI ${requirement.minimumVersion} or newer is required.`,
+          );
+        }
+        if (!localClient.configured) {
+          throw new LocalGenerationRequestError(
+            "Add your DeepSeek API key in Local AI settings.",
+            "credential_required",
           );
         }
       }
+      beginJourney();
       await persistRecord({
         state: "generating",
         generationProfile: rolloutProfile.generationProfile,
@@ -442,9 +464,9 @@ export default function GenerationScreen() {
         captionSourceCategory = textTranscript.captionSourceCategory;
       }
       if (!segments.length) {
-        if (Platform.OS === "android") {
+        if (Platform.OS !== "web") {
           throw new Error(
-            "This Android beta requires a public YouTube video with usable captions.",
+            "This native beta requires a public YouTube video with usable captions.",
           );
         }
         setLocalTranscription(true);
@@ -856,7 +878,7 @@ export default function GenerationScreen() {
         await clearGenerationRecord(generationRecord.generationId);
       } catch (cause) {
         await Promise.allSettled([questionIngestion, callIngestion]);
-        if (Platform.OS === "android" && signal.aborted) {
+        if (Platform.OS !== "web" && signal.aborted) {
           await persistRecord({ state: "generating" }).catch(() => undefined);
           throw new TranscriptionPausedError();
         }
@@ -978,6 +1000,7 @@ export default function GenerationScreen() {
           setPaused(true);
           return;
         }
+        stopJourney();
         setError(formatGenerationError(cause, t("trustworthyError")));
         setConfigurationRequired(
           cause instanceof LocalGenerationRequestError &&
@@ -994,6 +1017,7 @@ export default function GenerationScreen() {
     params.generationId,
     sessionPending,
     setEstimatedProgress,
+    stopJourney,
     t,
     taskKey,
   ]);
@@ -1080,7 +1104,7 @@ export default function GenerationScreen() {
   }, [params.generationId, t]);
 
   useEffect(() => {
-    if (Platform.OS !== "android") return;
+    if (Platform.OS === "web") return;
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active") {
         if (taskKeyRef.current) {
@@ -1094,7 +1118,7 @@ export default function GenerationScreen() {
 
   useEffect(() => {
     if (
-      Platform.OS === "android" &&
+      Platform.OS !== "web" &&
       paused &&
       !error &&
       !configurationRequired &&
@@ -1136,7 +1160,7 @@ export default function GenerationScreen() {
               {t("cancel")}
             </PrimaryButton>
           </View>
-          {paused && Platform.OS !== "android" ? (
+          {paused && Platform.OS === "web" ? (
             <View style={styles.footerAction}>
               <PrimaryButton
                 disabled={cancelling}
@@ -1152,10 +1176,10 @@ export default function GenerationScreen() {
                 onPress={openLocalGenerationClientSettings}
               >
                 {locale === "zh-CN"
-                  ? Platform.OS === "android"
+                  ? Platform.OS !== "web"
                     ? "打开本地 AI 设置"
                     : "打开扩展设置"
-                  : Platform.OS === "android"
+                  : Platform.OS !== "web"
                     ? "Open Local AI settings"
                     : "Open extension settings"}
               </PrimaryButton>
@@ -1198,13 +1222,17 @@ export default function GenerationScreen() {
             <View style={styles.progressSummary}>
               <View style={styles.progressCopy}>
                 <Text style={[styles.progressLabel, { color: theme.text }]}>
-                  {activeStep.label} · {activeIndex + 1}/{journeySteps.length}
+                  {failed
+                    ? locale === "zh-CN"
+                      ? "本地生成不可用"
+                      : "Local generation unavailable"
+                    : `${activeStep.label} · ${activeIndex + 1}/${journeySteps.length}`}
                 </Text>
                 <FeedbackMotion signal={activeIndex} kind="progress">
                   <Text
                     style={[styles.progressPercent, { color: theme.primary }]}
                   >
-                    {Math.round(estimatedProgress * 100)}%
+                    {failed ? "—" : `${Math.round(estimatedProgress * 100)}%`}
                   </Text>
                 </FeedbackMotion>
               </View>
@@ -1216,21 +1244,33 @@ export default function GenerationScreen() {
               />
               <View style={styles.detailRow}>
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
-                  {t("firstQuestionEta")}
+                  {failed
+                    ? locale === "zh-CN"
+                      ? "状态"
+                      : "Status"
+                    : t("firstQuestionEta")}
                 </Text>
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
-                  {retryEtaPhase && retrySecondsLeft !== undefined
-                    ? formatRetryFirstQuestionRemaining(
-                        retryEtaPhase,
-                        retrySecondsLeft,
-                        locale,
-                      )
-                    : estimatedSecondsLeft > 0
-                      ? formatFirstQuestionRemaining(
-                          estimatedSecondsLeft,
-                          locale,
-                        )
-                      : t("firstQuestionTakingLonger")}
+                  {failed
+                    ? locale === "zh-CN"
+                      ? "第一题不可用"
+                      : "Question 1 unavailable"
+                    : !journeyActive
+                      ? locale === "zh-CN"
+                        ? "正在检查本地生成环境"
+                        : "Checking local generation"
+                      : retryEtaPhase && retrySecondsLeft !== undefined
+                        ? formatRetryFirstQuestionRemaining(
+                            retryEtaPhase,
+                            retrySecondsLeft,
+                            locale,
+                          )
+                        : estimatedSecondsLeft > 0
+                          ? formatFirstQuestionRemaining(
+                              estimatedSecondsLeft,
+                              locale,
+                            )
+                          : t("firstQuestionTakingLonger")}
                 </Text>
               </View>
               {retryEtaPhase ? (
@@ -1255,7 +1295,7 @@ export default function GenerationScreen() {
               </View>
               <Text style={[styles.privacyText, { color: theme.textMuted }]}>
                 {t(
-                  Platform.OS === "android"
+                  Platform.OS !== "web"
                     ? "privateTranscriptionAndroid"
                     : "privateTranscription",
                 )}

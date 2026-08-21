@@ -572,7 +572,7 @@ export type LocalGenerationProfile = z.infer<
 
 export const LocalGenerationClientSchema = z
   .object({
-    kind: z.enum(["chrome_extension", "android_app"]),
+    kind: z.enum(["chrome_extension", "android_app", "ios_app"]),
     version: z
       .string()
       .trim()

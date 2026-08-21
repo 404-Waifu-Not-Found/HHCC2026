@@ -55,7 +55,7 @@ export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
-    if (Platform.OS !== "android" || !session?.user.id) return;
+    if (Platform.OS === "web" || !session?.user.id) return;
     let active = true;
     void reviewRemindersEnabled(session.user.id).then((enabled) => {
       if (active) setNotificationsEnabled(enabled);
@@ -173,7 +173,7 @@ export default function SettingsScreen() {
                 {adminCopy.openOperations}
               </PrimaryButton>
             ) : null}
-            {Platform.OS === "android" ? (
+            {Platform.OS !== "web" ? (
               <PrimaryButton
                 variant="secondary"
                 onPress={() => router.push("/local-ai" as never)}
@@ -274,7 +274,7 @@ export default function SettingsScreen() {
               value={reduceMotion}
               onChange={setReduceMotion}
             />
-            {Platform.OS === "android" && session?.user.id ? (
+            {Platform.OS !== "web" && session?.user.id ? (
               <SettingSwitch
                 label={t("notifications")}
                 help={t("remindersHelp")}

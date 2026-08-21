@@ -208,13 +208,15 @@ describe("session length", () => {
 });
 
 describe("generated questions", () => {
-  it("models Android local generation without weakening Chrome compatibility", () => {
+  it("models native local generation without weakening Chrome compatibility", () => {
     const android = {
       kind: "android_app",
       version: "0.2.0",
       capability: "question-stream-v7",
     } as const;
     expect(LocalGenerationClientSchema.parse(android)).toEqual(android);
+    const ios = { ...android, kind: "ios_app" as const };
+    expect(LocalGenerationClientSchema.parse(ios)).toEqual(ios);
     expect(
       LocalGenerationClientSchema.safeParse({
         ...android,

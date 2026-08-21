@@ -150,14 +150,14 @@ export default function CreateQuestScreen() {
     Platform.OS === "web" &&
     !canTranscribeInBrowser(video.video.durationSeconds);
   const compact = width < breakpoints.tablet;
-  const androidCaptionState =
-    Platform.OS === "android" && generationId ? preworkStatus : undefined;
+  const nativeCaptionState =
+    Platform.OS !== "web" && generationId ? preworkStatus : undefined;
   const captionsPending =
-    Platform.OS === "android" &&
+    Platform.OS !== "web" &&
     Boolean(generationId) &&
-    (androidCaptionState === undefined || androidCaptionState === "running");
-  const captionsUnavailable = androidCaptionState === "unavailable";
-  const captionsFailed = androidCaptionState === "failed";
+    (nativeCaptionState === undefined || nativeCaptionState === "running");
+  const captionsUnavailable = nativeCaptionState === "unavailable";
+  const captionsFailed = nativeCaptionState === "failed";
   const transcriptStatus = (
     captionsPending
       ? t("sourceCaptionsPreparing")
