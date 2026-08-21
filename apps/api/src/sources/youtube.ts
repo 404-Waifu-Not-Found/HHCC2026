@@ -1,5 +1,6 @@
 import {
   CaptionTrackSchema,
+  TranscriptSegmentSchema,
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import { Innertube } from "youtubei.js/cf-worker";
@@ -204,7 +205,7 @@ async function fetchYouTubeWatchPage(
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
       },
-      redirect: "error",
+      redirect: "manual",
     });
   } catch {
     throw new YouTubeMetadataLoadError("watch_fetch_failed");
@@ -241,7 +242,7 @@ async function fetchYouTubeOEmbed(
   try {
     response = await fetch(oembedUrl, {
       headers: { Accept: "application/json" },
-      redirect: "error",
+      redirect: "manual",
     });
   } catch {
     throw new YouTubeMetadataLoadError("oembed_fetch_failed");
@@ -397,13 +398,45 @@ export function parseYouTubeTimedText(value: unknown): TranscriptSegment[] {
   });
 }
 
-const CachedYouTubeSourceSchema = z.object({
+const CachedYouTubeSourceV1Schema = z.object({
   sourceVideoId: z.string().regex(/^[a-zA-Z0-9_-]{6,20}$/),
   title: z.string().trim().min(1).max(500),
   durationSeconds: z.number().int().nonnegative(),
   captionTrack: CaptionTrackSchema,
   timedText: z.unknown(),
 });
+
+const CachedYouTubeSourceV2Schema = z.object({
+  version: z.literal(2),
+  sourceVideoId: z.string().regex(/^[a-zA-Z0-9_-]{6,20}$/),
+  title: z.string().trim().min(1).max(500),
+  durationSeconds: z.number().int().nonnegative(),
+  captionTracks: z.array(CaptionTrackSchema).min(1).max(100),
+  preferredCaptionSegments: z.array(TranscriptSegmentSchema).min(1).max(12_000),
+});
+
+const CachedYouTubeSourceSchema = z.union([
+  CachedYouTubeSourceV2Schema,
+  CachedYouTubeSourceV1Schema,
+]);
+
+export function createCachedYouTubeSourcePayload(source: SourceVideo): unknown {
+  if (
+    source.source !== "youtube" ||
+    !source.preferredCaptionSegments?.length ||
+    !source.captionTracks.length
+  ) {
+    throw new Error("A YouTube source with captions is required for caching.");
+  }
+  return CachedYouTubeSourceV2Schema.parse({
+    version: 2,
+    sourceVideoId: source.sourceVideoId,
+    title: source.title,
+    durationSeconds: source.durationSeconds,
+    captionTracks: source.captionTracks,
+    preferredCaptionSegments: source.preferredCaptionSegments,
+  });
+}
 
 export async function loadCachedYouTubeSource(
   bucket: R2Bucket,
@@ -421,8 +454,15 @@ export async function loadCachedYouTubeSource(
     );
     if (!cached.success || cached.data.sourceVideoId !== sourceVideoId)
       return null;
-    const segments = parseYouTubeTimedText(cached.data.timedText);
+    const segments =
+      "version" in cached.data
+        ? cached.data.preferredCaptionSegments
+        : parseYouTubeTimedText(cached.data.timedText);
     if (!segments.length) return null;
+    const captionTracks =
+      "version" in cached.data
+        ? cached.data.captionTracks
+        : [cached.data.captionTrack];
 
     return {
       source: "youtube",
@@ -431,8 +471,8 @@ export async function loadCachedYouTubeSource(
       title: cached.data.title,
       thumbnailUrl: `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
       durationSeconds: cached.data.durationSeconds,
-      sourceLanguage: cached.data.captionTrack.language,
-      captionTracks: [cached.data.captionTrack],
+      sourceLanguage: captionTracks[0]?.language ?? null,
+      captionTracks,
       preferredCaptionSegments: segments,
     };
   } catch {
@@ -480,7 +520,7 @@ export async function loadYouTubeCaptionSegments(
   try {
     response = await fetch(url, {
       headers: { Accept: "application/json" },
-      redirect: "error",
+      redirect: "manual",
     });
   } catch {
     throw new YouTubeCaptionLoadError("fetch_failed");

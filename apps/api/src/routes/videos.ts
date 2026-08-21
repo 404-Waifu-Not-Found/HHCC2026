@@ -11,6 +11,8 @@ import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 import { getSourceAdapter, normalizeSourceUrl } from "../sources";
 import { loadCachedYouTubeSource } from "../sources/youtube";
+import type { SourceVideo } from "../sources/types";
+import { parseYouTubeId } from "../sources/url";
 import { ApiError } from "../lib/errors";
 
 type VideoRow = {
@@ -29,6 +31,7 @@ export const videosRouter = new Hono<ApiBindings>();
 export const thumbnailRouter = new Hono<ApiBindings>();
 
 videosRouter.post("/import", async (c) => {
+  const importStartedAt = Date.now();
   const user = c.get("user");
   await enforceRateLimit(c.env.DB, {
     namespace: "video-import",
@@ -38,11 +41,86 @@ videosRouter.post("/import", async (c) => {
   });
   const input = await parseJson(c, VideoImportRequestSchema);
   const normalized = await normalizeSourceUrl(input.url);
-  const inspected =
-    (normalized.source === "youtube"
-      ? await loadCachedYouTubeSource(c.env.PRIVATE_BUCKET, normalized.url)
-      : null) ??
-    (await getSourceAdapter(normalized.source).inspect(normalized.url));
+  const sourceVideoId =
+    normalized.source === "youtube"
+      ? parseYouTubeId(normalized.url)
+      : undefined;
+  console.info(
+    JSON.stringify({
+      scope: "video_import",
+      event: "request.accepted",
+      source: normalized.source,
+      sourceVideoId,
+    }),
+  );
+
+  let inspected: SourceVideo | null = null;
+  let sourceCacheStatus: "hit" | "miss" | "error" | "not_applicable" =
+    normalized.source === "youtube" ? "miss" : "not_applicable";
+  if (normalized.source === "youtube") {
+    const cacheStartedAt = Date.now();
+    try {
+      inspected = await loadCachedYouTubeSource(
+        c.env.PRIVATE_BUCKET,
+        normalized.url,
+      );
+      sourceCacheStatus = inspected ? "hit" : "miss";
+      console.info(
+        JSON.stringify({
+          scope: "video_import",
+          event: inspected ? "source_cache.hit" : "source_cache.miss",
+          source: normalized.source,
+          sourceVideoId,
+          elapsedMs: Date.now() - cacheStartedAt,
+        }),
+      );
+    } catch (error) {
+      sourceCacheStatus = "error";
+      console.error(
+        JSON.stringify({
+          scope: "video_import",
+          event: "source_cache.failed",
+          source: normalized.source,
+          sourceVideoId,
+          elapsedMs: Date.now() - cacheStartedAt,
+          errorName: error instanceof Error ? error.name : "UnknownError",
+        }),
+      );
+    }
+  }
+
+  if (!inspected) {
+    const adapterStartedAt = Date.now();
+    try {
+      inspected = await getSourceAdapter(normalized.source).inspect(
+        normalized.url,
+      );
+      console.info(
+        JSON.stringify({
+          scope: "video_import",
+          event: "source_adapter.completed",
+          source: normalized.source,
+          sourceVideoId: inspected.sourceVideoId,
+          elapsedMs: Date.now() - adapterStartedAt,
+          captionTrackCount: inspected.captionTracks.length,
+          captionSegmentCount: inspected.preferredCaptionSegments?.length ?? 0,
+        }),
+      );
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          scope: "video_import",
+          event: "source_adapter.failed",
+          source: normalized.source,
+          sourceVideoId,
+          elapsedMs: Date.now() - adapterStartedAt,
+          errorCode: error instanceof ApiError ? error.code : "source_failed",
+          errorName: error instanceof Error ? error.name : "UnknownError",
+        }),
+      );
+      throw error;
+    }
+  }
   const existing = await c.env.DB.prepare(
     "SELECT id, source, source_video_id, original_url, title, thumbnail_key, thumbnail_remote_url, duration_seconds, source_language FROM videos WHERE owner_id = ? AND source = ? AND source_video_id = ?",
   )
@@ -113,6 +191,20 @@ videosRouter.post("/import", async (c) => {
     },
     requiresLocalTranscription: !preferredSegments?.length,
   });
+  console.info(
+    JSON.stringify({
+      scope: "video_import",
+      event: "request.completed",
+      source: inspected.source,
+      sourceVideoId: inspected.sourceVideoId,
+      cacheStatus: sourceCacheStatus,
+      existingVideo: Boolean(existing),
+      captionTrackCount: inspected.captionTracks.length,
+      captionSegmentCount: preferredSegments?.length ?? 0,
+      requiresLocalTranscription: !preferredSegments?.length,
+      elapsedMs: Date.now() - importStartedAt,
+    }),
+  );
   return c.json(response, 201);
 });
 

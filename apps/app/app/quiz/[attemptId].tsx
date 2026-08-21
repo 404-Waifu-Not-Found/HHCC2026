@@ -110,6 +110,10 @@ export default function QuizScreen() {
         if (stored.question) activateQuestion(stored.question);
         setPrimer(stored.primer);
         setShowPrimer(Boolean(stored.primer && !stored.primerSeen));
+        if (stored.question) {
+          setLoading(false);
+          return;
+        }
       }
       try {
         await resume();
