@@ -148,7 +148,7 @@ test("release builds preserve the loaded unpacked extension directory", () => {
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.4.4");
+  assert.equal(manifest.version, "0.4.5");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -161,6 +161,19 @@ test("the popup exposes only DeepSeek configuration", () => {
   assert.doesNotMatch(popupHtml, /Download \.txt/);
   assert.doesNotMatch(popup, /youtubeVideoId|quiz-output|download-text/);
   assert.match(background, /captionsToPlainText/);
+});
+
+test("caption acquisition never creates a visible fetch tab", () => {
+  assert.ok(!manifest.permissions.includes("offscreen"));
+  assert.doesNotMatch(background, /chrome\.tabs\.create/);
+  assert.doesNotMatch(background, /chrome\.tabs\.remove/);
+  assert.match(background, /matchingYouTubeTab/);
+  assert.match(background, /chrome\.tabs\.query/);
+  assert.match(
+    background,
+    /Keep this YouTube video open in a tab while ClipQuest prepares the quiz/,
+  );
+  assert.doesNotMatch(buildScript, /youtube-background-captions\.js/);
 });
 
 test("YouTube watch pages embed a quick ClipQuest handoff", () => {

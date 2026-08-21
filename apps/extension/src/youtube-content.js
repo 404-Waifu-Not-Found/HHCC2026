@@ -1,6 +1,9 @@
 (function installYouTubeExtractor() {
   "use strict";
 
+  if (globalThis.__clipQuestYouTubeExtractorInstalled) return;
+  globalThis.__clipQuestYouTubeExtractorInstalled = true;
+
   const core = globalThis.ClipQuestCaptionCore;
   const REQUEST_EVENT = "clipquest:youtube:tracks-request:v1";
   const RESPONSE_EVENT = "clipquest:youtube:tracks-response:v1";

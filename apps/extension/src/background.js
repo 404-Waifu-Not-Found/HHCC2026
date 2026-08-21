@@ -49,13 +49,20 @@ function waitForTab(tabId) {
       resolve();
     }
     chrome.tabs.onUpdated.addListener(updated);
-    void chrome.tabs.get(tabId).then((tab) => {
-      if (tab.status === "complete") {
+    void chrome.tabs
+      .get(tabId)
+      .then((tab) => {
+        if (tab.status === "complete") {
+          clearTimeout(timeout);
+          chrome.tabs.onUpdated.removeListener(updated);
+          resolve();
+        }
+      })
+      .catch((error) => {
         clearTimeout(timeout);
         chrome.tabs.onUpdated.removeListener(updated);
-        resolve();
-      }
-    });
+        reject(error);
+      });
   });
 }
 
@@ -75,41 +82,86 @@ async function sendWithRetry(tabId, message) {
     : new Error("The YouTube caption reader did not start.");
 }
 
-async function extractCaptions(request) {
-  const url = `https://www.youtube.com/watch?v=${encodeURIComponent(request.videoId)}`;
-  const tab = await chrome.tabs.create({ url, active: false });
-  if (typeof tab.id !== "number") {
-    throw new Error("The YouTube caption tab could not be opened.");
-  }
+function tabVideoId(tab) {
   try {
-    await waitForTab(tab.id);
-    const response = await Promise.race([
-      sendWithRetry(tab.id, {
-        type: "clipquest.youtube.extract.v1",
-        videoId: request.videoId,
-        preferredLanguage: request.preferredLanguage,
-      }),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("YouTube caption extraction timed out.")),
-          EXTRACTION_TIMEOUT_MS,
-        ),
+    const url = new URL(tab?.url ?? "");
+    return url.pathname === "/watch" ? url.searchParams.get("v") : null;
+  } catch {
+    return null;
+  }
+}
+
+async function matchingYouTubeTab(videoId) {
+  const tabs = await chrome.tabs.query({
+    url: ["https://www.youtube.com/watch*", "https://youtube.com/watch*"],
+  });
+  return tabs.find((tab) => tabVideoId(tab) === videoId) ?? null;
+}
+
+async function injectYouTubeExtractor(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    files: ["youtube-page.js"],
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["caption-core.js", "youtube-content.js"],
+  });
+}
+
+async function extractCaptionsFromTab(request, tab) {
+  if (typeof tab.id !== "number") {
+    throw new Error("The existing YouTube tab is unavailable.");
+  }
+  if (tab.status !== "complete") await waitForTab(tab.id);
+  const message = {
+    type: "clipquest.youtube.extract.v1",
+    videoId: request.videoId,
+    preferredLanguage: request.preferredLanguage,
+  };
+  let response;
+  try {
+    response = await chrome.tabs.sendMessage(tab.id, message);
+  } catch {
+    await injectYouTubeExtractor(tab.id);
+    response = await sendWithRetry(tab.id, message);
+  }
+  if (!response?.ok || !response.result) return response;
+  return {
+    ...response,
+    result: {
+      ...response.result,
+      title:
+        typeof tab.title === "string"
+          ? tab.title.replace(/\s*-\s*YouTube\s*$/i, "").trim()
+          : response.result.title,
+    },
+  };
+}
+
+async function extractCaptions(request) {
+  const tab = await matchingYouTubeTab(request.videoId);
+  if (!tab) {
+    throw new Error(
+      "Keep this YouTube video open in a tab while ClipQuest prepares the quiz.",
+    );
+  }
+
+  let timeout;
+  try {
+    return await Promise.race([
+      extractCaptionsFromTab(request, tab),
+      new Promise(
+        (_, reject) =>
+          (timeout = setTimeout(
+            () => reject(new Error("YouTube caption extraction timed out.")),
+            EXTRACTION_TIMEOUT_MS,
+          )),
       ),
     ]);
-    const loadedTab = await chrome.tabs.get(tab.id).catch(() => null);
-    if (!response?.ok || !response.result) return response;
-    return {
-      ...response,
-      result: {
-        ...response.result,
-        title:
-          typeof loadedTab?.title === "string"
-            ? loadedTab.title.replace(/\s*-\s*YouTube\s*$/i, "").trim()
-            : `YouTube ${request.videoId}`,
-      },
-    };
   } finally {
-    await chrome.tabs.remove(tab.id).catch(() => undefined);
+    clearTimeout(timeout);
   }
 }
 
