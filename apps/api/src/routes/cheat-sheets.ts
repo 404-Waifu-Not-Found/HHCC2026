@@ -176,7 +176,7 @@ cheatSheetsRouter.post("/failure", async (c) => {
   const id = createId();
   await c.env.DB.prepare(
     `INSERT INTO cheat_sheets (id,user_id,video_id,quiz_id,source_revision,status,prompt_version,created_at,updated_at,last_error)
-     VALUES (?,?,?,?,?,'failed',?,?,?,?,?)
+     VALUES (?,?,?,?,?,'failed',?,?,?,?)
      ON CONFLICT(user_id,video_id,quiz_id,source_revision) DO UPDATE SET status='failed',prompt_version=excluded.prompt_version,updated_at=excluded.updated_at,last_error=excluded.last_error`,
   )
     .bind(
