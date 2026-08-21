@@ -247,6 +247,26 @@ describe("extension generation profile compatibility", () => {
     expect(
       admissionBlock.indexOf("startAttempt(response.quizId)"),
     ).toBeLessThan(admissionBlock.indexOf("schedulePendingCallFlush()"));
+    expect(source).toContain("The local engine must not wait for diagnostics");
+    expect(source).toContain("await questionIngestion;");
+    expect(source).toContain('scope: "generation_call_telemetry"');
+  });
+
+  it("keeps recovery question ingestion independent from call telemetry", () => {
+    const recovery = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/generation/progressive-continuation.ts",
+      ),
+      "utf8",
+    );
+    expect(recovery).toContain("let callIngestion = Promise.resolve()");
+    expect(recovery).toContain("return Promise.resolve();");
+    expect(recovery).toContain('scope: "generation_call_telemetry"');
+    expect(recovery).toContain("await ingestion;");
+    expect(recovery).toContain(
+      "await Promise.allSettled([ingestion, callIngestion])",
+    );
   });
 
   it("treats an accepted extension progress heartbeat as dispatch proof", () => {

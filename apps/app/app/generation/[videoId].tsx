@@ -584,7 +584,7 @@ export default function GenerationScreen() {
       const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
         if (!progressiveQuizId || !callEventsReady) {
           pendingCallEvents.push(event);
-          return;
+          return true;
         }
         await retryAuthoritativeTelemetryWrite(
           () =>
@@ -620,16 +620,53 @@ export default function GenerationScreen() {
               }
             : {}),
         }).catch(() => undefined);
+        return true;
+      };
+
+      const reportCallTelemetryFailure = (
+        event: LocalGenerationCallEvent,
+        error: unknown,
+      ) => {
+        // Call telemetry is privacy-safe diagnostics, not learner-visible
+        // question data. A transient Worker/API failure must not abort a valid
+        // local DeepSeek stream after a question has already been accepted.
+        console.warn(
+          JSON.stringify({
+            scope: "generation_call_telemetry",
+            event: "deferred",
+            callIndex: event.callIndex,
+            startIndex: event.startIndex,
+            reason:
+              error instanceof Error ? error.message : "telemetry_write_failed",
+          }),
+        );
       };
 
       const schedulePendingCallFlush = () => {
         callIngestion = callIngestion.then(async () => {
           callEventsReady = true;
           while (pendingCallEvents.length) {
-            await uploadCallEvent(pendingCallEvents.shift()!);
+            const event = pendingCallEvents.shift()!;
+            try {
+              await uploadCallEvent(event);
+            } catch (error) {
+              reportCallTelemetryFailure(event, error);
+              // Preserve ordering for a later recovery attempt without
+              // blocking the next learner-visible model call.
+              pendingCallEvents.unshift(event);
+              break;
+            }
           }
         });
-        void callIngestion.catch(() => undefined);
+        void callIngestion.catch((error) => {
+          console.warn(
+            JSON.stringify({
+              scope: "generation_call_telemetry",
+              event: "queue_failed",
+              reason: error instanceof Error ? error.message : "queue_failed",
+            }),
+          );
+        });
       };
 
       const publishStoredState = async (
@@ -746,10 +783,24 @@ export default function GenerationScreen() {
 
       const enqueueCall = (event: LocalGenerationCallEvent) => {
         callIngestion = callIngestion.then(async () => {
-          await uploadCallEvent(event);
+          try {
+            await uploadCallEvent(event);
+          } catch (error) {
+            reportCallTelemetryFailure(event, error);
+          }
         });
-        void callIngestion.catch(() => undefined);
-        return callIngestion;
+        void callIngestion.catch((error) => {
+          console.warn(
+            JSON.stringify({
+              scope: "generation_call_telemetry",
+              event: "queue_failed",
+              reason: error instanceof Error ? error.message : "queue_failed",
+            }),
+          );
+        });
+        // The local engine must not wait for diagnostics. Question ingestion
+        // remains the authoritative learner-visible queue below.
+        return Promise.resolve();
       };
 
       const enqueueRetrying = (detail: LocalGenerationProgress) => {
@@ -826,7 +877,7 @@ export default function GenerationScreen() {
         enqueueQuestion,
         enqueueCall,
       );
-      await Promise.all([questionIngestion, callIngestion]);
+      await questionIngestion;
       if (replayed.questions > 0 && progressiveQuizId && attemptId) {
         return;
       }
@@ -878,7 +929,7 @@ export default function GenerationScreen() {
           enqueueQuestion,
           enqueueCall,
         );
-        await Promise.all([questionIngestion, callIngestion]);
+        await questionIngestion;
         if (!latestGeneration || latestGeneration.state !== "ready") {
           throw new Error(
             "DeepSeek finished before every planned question was stored.",

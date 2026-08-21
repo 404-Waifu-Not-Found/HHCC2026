@@ -440,6 +440,7 @@ async function runAutomaticRecovery(
 
   let latest = status.generation;
   let ingestion = Promise.resolve();
+  let callIngestion = Promise.resolve();
   let lastProgressState = "recovering";
   let automaticRetryCount =
     stored?.version === 3 || stored?.version === 4
@@ -451,74 +452,101 @@ async function runAutomaticRecovery(
   let latestModelFailureReason: GenerationFailureCode | undefined;
   const stopLocalHeartbeat = startGenerationRecordHeartbeat(generationId);
 
-  const enqueueCall = (event: LocalGenerationCallEvent) => {
-    ingestion = ingestion.then(async () => {
-      await retryAuthoritativeTelemetryWrite(
-        () =>
-          apiRequest(
-            `/api/quiz-imports/${status.quizId}/calls/${event.generationSessionId}/${event.callIndex}`,
-            {
-              method: "PUT",
-              headers: { "Idempotency-Key": claimKey },
-              body: jsonBody(event),
-              signal,
-            },
-            ExtensionQuizGenerationCallEventResponseSchema,
-          ),
-        signal,
-      );
-      if ("lifecycleState" in event) {
-        if (
-          event.lifecycleState === "completed" &&
-          event.outcome !== "complete"
-        ) {
-          latestModelFailureReason = GenerationFailureCodeSchema.safeParse(
-            event.outcome,
-          ).data;
-        }
-        latest = {
-          ...latest,
-          recoveryPhase:
-            event.lifecycleState === "started" ? "dispatched" : undefined,
-          activeCallIndex:
-            event.lifecycleState === "started" ? event.callIndex : undefined,
-        };
-        publishAttemptGeneration(attemptId, status.quizId, latest);
-      }
+  const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
+    await retryAuthoritativeTelemetryWrite(
+      () =>
+        apiRequest(
+          `/api/quiz-imports/${status.quizId}/calls/${event.generationSessionId}/${event.callIndex}`,
+          {
+            method: "PUT",
+            headers: { "Idempotency-Key": claimKey },
+            body: jsonBody(event),
+            signal,
+          },
+          ExtensionQuizGenerationCallEventResponseSchema,
+        ),
+      signal,
+    );
+    if ("lifecycleState" in event) {
       if (
-        event.classification === "automatic_retry" &&
-        (!("lifecycleState" in event) || event.lifecycleState === "started")
+        event.lifecycleState === "completed" &&
+        event.outcome !== "complete"
       ) {
-        automaticRetryCount = Math.min(
-          grounded
-            ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
-            : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
-          automaticRetryCount + 1,
-        );
-        retryBudgetUsedCount = Math.min(
-          grounded
-            ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
-            : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
-          retryBudgetUsedCount + 1,
+        latestModelFailureReason = GenerationFailureCodeSchema.safeParse(
+          event.outcome,
+        ).data;
+      }
+      latest = {
+        ...latest,
+        recoveryPhase:
+          event.lifecycleState === "started" ? "dispatched" : undefined,
+        activeCallIndex:
+          event.lifecycleState === "started" ? event.callIndex : undefined,
+      };
+      publishAttemptGeneration(attemptId, status.quizId, latest);
+    }
+    if (
+      event.classification === "automatic_retry" &&
+      (!("lifecycleState" in event) || event.lifecycleState === "started")
+    ) {
+      automaticRetryCount = Math.min(
+        grounded
+          ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
+          : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
+        automaticRetryCount + 1,
+      );
+      retryBudgetUsedCount = Math.min(
+        grounded
+          ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
+          : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
+        retryBudgetUsedCount + 1,
+      );
+    }
+    // The Worker event is authoritative. A stale or missing browser cache
+    // record cannot be allowed to poison the model-call queue.
+    await updateGenerationRecord(
+      generationId,
+      stored?.version === 3 || stored?.version === 4
+        ? {
+            nextCallIndex: event.callIndex + 1,
+            ...(event.classification === "automatic_retry"
+              ? { automaticRetryCount }
+              : {}),
+          }
+        : { nextCallIndex: event.callIndex + 1 },
+    ).catch(() => undefined);
+  };
+
+  const enqueueCall = (event: LocalGenerationCallEvent) => {
+    callIngestion = callIngestion.then(async () => {
+      try {
+        await uploadCallEvent(event);
+      } catch (error) {
+        // Call telemetry is diagnostic only. Let the accepted-question prefix
+        // continue; a later recovery can establish a fresh authoritative call
+        // cursor from the persisted generation state.
+        console.warn(
+          JSON.stringify({
+            scope: "generation_call_telemetry",
+            event: "deferred",
+            callIndex: event.callIndex,
+            startIndex: event.startIndex,
+            reason:
+              error instanceof Error ? error.message : "telemetry_write_failed",
+          }),
         );
       }
-      // The Worker event is authoritative. A stale or missing browser cache
-      // record cannot be allowed to poison the ingestion chain and suppress
-      // the remaining model-call events.
-      await updateGenerationRecord(
-        generationId,
-        stored?.version === 3 || stored?.version === 4
-          ? {
-              nextCallIndex: event.callIndex + 1,
-              ...(event.classification === "automatic_retry"
-                ? { automaticRetryCount }
-                : {}),
-            }
-          : { nextCallIndex: event.callIndex + 1 },
-      ).catch(() => undefined);
     });
-    void ingestion.catch(() => undefined);
-    return ingestion;
+    void callIngestion.catch((error) => {
+      console.warn(
+        JSON.stringify({
+          scope: "generation_call_telemetry",
+          event: "queue_failed",
+          reason: error instanceof Error ? error.message : "queue_failed",
+        }),
+      );
+    });
+    return Promise.resolve();
   };
 
   const enqueueQuestion = (chunk: LocalConceptQuizQuestionChunk) => {
@@ -604,7 +632,7 @@ async function runAutomaticRecovery(
         if (detail.ordinalAttempt) {
           latestOrdinalAttempt = detail.ordinalAttempt;
         }
-        ingestion = ingestion.then(async () => {
+        callIngestion = callIngestion.then(async () => {
           // A progress snapshot may race an append. It is safe to drop after
           // bounded retries; model-call and question writes remain fail-closed.
           const response = await retryAuthoritativeTelemetryWrite(
@@ -642,7 +670,7 @@ async function runAutomaticRecovery(
               : { state: nextState },
           ).catch(() => undefined);
         });
-        void ingestion.catch(() => undefined);
+        void callIngestion.catch(() => undefined);
       },
       enqueueQuestion,
       enqueueCall,
@@ -653,7 +681,7 @@ async function runAutomaticRecovery(
     }
     await clearGenerationRecord(generationId);
   } catch (error) {
-    await ingestion.catch(() => undefined);
+    await Promise.allSettled([ingestion, callIngestion]);
     if (signal.aborted || isLeaseConflict(error)) return;
     const reasonCode = authoritativeRecoveryFailureCode({
       requestReasonCode:
