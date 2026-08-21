@@ -50,6 +50,11 @@ import {
   presentQuizText,
 } from "../../src/lib/question-presentation";
 import {
+  recordRecapEntry,
+  summarizeRecap,
+  type RecapEntry,
+} from "../../src/lib/session-recap";
+import {
   createChoicePresentation,
   createInitialOrdering,
   type ChoicePresentation,
@@ -156,6 +161,7 @@ export default function QuizScreen() {
   const [mastery, setMastery] = useState<MasteryState>();
   const [showCompletion, setShowCompletion] = useState(false);
   const [completedTotal, setCompletedTotal] = useState<number>();
+  const [recapEntries, setRecapEntries] = useState<RecapEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [waitingForQuestions, setWaitingForQuestions] = useState(false);
   const [generation, setGeneration] = useState<AttemptGenerationAvailability>();
@@ -592,6 +598,25 @@ export default function QuizScreen() {
         AttemptAnswerResponseSchema,
       );
       setFeedback(result);
+      setRecapEntries((entries) =>
+        recordRecapEntry(entries, {
+          questionId: question.id,
+          prompt: presentQuizPrompt(question.prompt),
+          correct: result.correct,
+          isRetry: question.isRetry,
+          learnerAnswer: presentCorrectAnswer(
+            question,
+            submittedAnswer,
+            (key) => t(key),
+          ),
+          correctAnswer: result.correct
+            ? undefined
+            : presentCorrectAnswer(question, result.correctAnswer, (key) =>
+                t(key),
+              ),
+          explanation: presentQuizText(result.explanation),
+        }),
+      );
       updateGeneration(result.generation);
       if (userId)
         await saveAttemptQuestion(userId, attemptId, result.nextQuestion);
@@ -685,6 +710,8 @@ export default function QuizScreen() {
 
   if (showCompletion && score !== undefined) {
     const mastered = mastery === "mastered";
+    const recap = summarizeRecap(recapEntries);
+    const showRecap = recapEntries.length > 0;
     const showCompactCompletionStats =
       compactCompletion && completedTotal !== undefined;
     const localCheatSheetReady = Boolean(pendingCheatSheetRef.current);
@@ -772,7 +799,119 @@ export default function QuizScreen() {
                 />
               </StaggerItem>
             ) : null}
+            {showRecap ? (
+              <StaggerItem
+                index={3}
+                style={[
+                  styles.statItem,
+                  compactCompletion && styles.statItemCompact,
+                ]}
+              >
+                <StatTile
+                  value={`${recap.firstTryCorrect}/${recap.answered}`}
+                  label={t("firstTry")}
+                  tone={recap.missed.length ? "secondary" : "success"}
+                  icon={
+                    <VoxelIcon
+                      name={recap.missed.length ? "progress" : "correct"}
+                      size={22}
+                      color={
+                        recap.missed.length ? theme.secondary : theme.success
+                      }
+                    />
+                  }
+                />
+              </StaggerItem>
+            ) : null}
           </View>
+          {showRecap ? (
+            <MotionView preset="rise" delay={132} style={styles.recap}>
+              <Surface tone="tinted" style={styles.recapCard}>
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.recapTitle, { color: theme.text }]}
+                >
+                  {t("recapTitle")}
+                </Text>
+                <Text style={[styles.recapBody, { color: theme.textMuted }]}>
+                  {recap.missed.length ? t("recapSubtitle") : t("recapPerfect")}
+                </Text>
+                {recap.missed.map((item, index) => (
+                  <View
+                    key={`${item.questionId}-${index}`}
+                    testID="recap-missed-item"
+                    style={[
+                      styles.recapItem,
+                      {
+                        backgroundColor: theme.surfaceRaised,
+                        borderColor: theme.divider,
+                      },
+                    ]}
+                  >
+                    <MathText
+                      selectable
+                      style={[styles.recapPrompt, { color: theme.text }]}
+                    >
+                      {item.prompt}
+                    </MathText>
+                    {item.learnerAnswer ? (
+                      <Text style={[styles.recapLine, { color: theme.error }]}>
+                        <Text style={styles.recapLabel}>
+                          {t("recapYourAnswer")}:{" "}
+                        </Text>
+                        {item.learnerAnswer}
+                      </Text>
+                    ) : null}
+                    {item.correctAnswer ? (
+                      <Text
+                        style={[styles.recapLine, { color: theme.success }]}
+                      >
+                        <Text style={styles.recapLabel}>
+                          {t("correctAnswer")}:{" "}
+                        </Text>
+                        {item.correctAnswer}
+                      </Text>
+                    ) : null}
+                    <Text
+                      selectable
+                      style={[styles.recapLine, { color: theme.textMuted }]}
+                    >
+                      <Text style={styles.recapLabel}>
+                        {t("explanation")}:{" "}
+                      </Text>
+                      <MathText
+                        style={[styles.recapLine, { color: theme.textMuted }]}
+                      >
+                        {item.explanation}
+                      </MathText>
+                    </Text>
+                    {item.recoveredOnRetry ? (
+                      <View
+                        style={[
+                          styles.recapBadge,
+                          { backgroundColor: theme.successSoft },
+                        ]}
+                      >
+                        <VoxelIcon
+                          name="correct"
+                          size={16}
+                          color={theme.success}
+                        />
+                        <Text
+                          style={[
+                            styles.recapBadgeText,
+                            { color: theme.success },
+                          ]}
+                        >
+                          {t("recapRecovered")}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+              </Surface>
+            </MotionView>
+          ) : null}
           <MotionView preset="rise" delay={176} style={styles.completeActions}>
             <PrimaryButton
               testID="download-cheat-sheet-pdf"
@@ -1489,5 +1628,54 @@ const styles = StyleSheet.create({
   completeActions: {
     width: "100%",
     gap: spacing[3],
+  },
+  recap: {
+    width: "100%",
+  },
+  recapCard: {
+    gap: spacing[3],
+  },
+  recapTitle: {
+    fontFamily: typography.display,
+    fontSize: typography.size.titleSmall,
+    lineHeight: typography.lineHeight.titleSmall,
+  },
+  recapBody: {
+    fontFamily: typography.body,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  recapItem: {
+    gap: spacing[2],
+    padding: spacing[4],
+    borderRadius: radii.medium,
+    borderWidth: borders.hairline,
+  },
+  recapPrompt: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  recapLine: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  recapLabel: {
+    fontFamily: typography.bodyBold,
+  },
+  recapBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
+    borderRadius: radii.pill,
+  },
+  recapBadgeText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
   },
 });

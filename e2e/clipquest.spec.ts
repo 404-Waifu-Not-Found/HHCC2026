@@ -29,6 +29,7 @@ type Scenario = {
   adminMode: "allowed" | "denied";
   answerCorrect: boolean;
   completedAttempt: boolean;
+  completeOnAnswer: boolean;
   generationMode: "stable" | "failed";
   importMode: "success" | "unavailable";
   thumbnailMode: "stable" | "fail-once" | "failed";
@@ -1341,6 +1342,60 @@ test("desktop learning journey and visual states", async ({ page }) => {
   ).toEqual([]);
 });
 
+test("completion recap lists missed questions with the correct answer and retry recovery", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  const scenario = await installMocks(page);
+  await page.goto("/welcome");
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  scenario.completedAttempt = false;
+  scenario.answerCorrect = false;
+
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: baseQuestion.prompt }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: baseQuestion.options[1] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(
+    page.getByText("Almost—try this concept another way."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(
+    page.getByRole("heading", { name: `Try again: ${baseQuestion.prompt}` }),
+  ).toBeVisible();
+
+  scenario.answerCorrect = true;
+  scenario.completeOnAnswer = true;
+  await page.getByRole("button", { name: baseQuestion.options[0] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(page.getByText("Nice! That’s right.")).toBeVisible();
+  await page.getByRole("button", { name: "Finish" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Quest complete!" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "What to review" }),
+  ).toBeVisible();
+  await expect(page.getByText("Right first try")).toBeVisible();
+  await expect(page.getByText("0/1", { exact: true })).toBeVisible();
+  const missed = page.getByTestId("recap-missed-item");
+  await expect(missed).toHaveCount(1);
+  await expect(missed).toContainText(baseQuestion.prompt);
+  await expect(missed).toContainText(`Your answer: ${baseQuestion.options[1]}`);
+  await expect(missed).toContainText(
+    `Correct answer: ${baseQuestion.options[0]}`,
+  );
+  await expect(missed).toContainText(
+    "Why: The key is effortful reconstruction: recalling the idea strengthens access to it later.",
+  );
+  await expect(missed).toContainText("Recovered on retry");
+  await capture(page, "desktop-completion-recap");
+  expect(scenario.answerBodies).toHaveLength(2);
+});
+
 test("mobile link, processing, lesson feedback, and completion", async ({
   page,
 }) => {
@@ -1765,6 +1820,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     adminMode: "allowed",
     answerCorrect: true,
     completedAttempt: false,
+    completeOnAnswer: false,
     generationMode: "stable",
     importMode: "success",
     thumbnailMode: "stable",
@@ -2372,25 +2428,29 @@ async function installMocks(page: Page): Promise<Scenario> {
     }
     if (path.endsWith("/answer") && path.includes("/api/attempts/")) {
       scenario.answerBodies.push(request.postDataJSON());
+      const completed = scenario.completeOnAnswer;
       await json(route, {
         correct: scenario.answerCorrect,
+        correctAnswer: scenario.question.type === "true_false" ? true : 0,
         explanation: scenario.answerCorrect
           ? "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice."
           : "The key is effortful reconstruction: recalling the idea strengthens access to it later.",
         evidenceSegmentIds: ["segment-1"],
-        nextQuestion: !scenario.answerCorrect
-          ? {
-              ...scenario.question,
-              prompt: `Try again: ${scenario.question.prompt}`,
-              isRetry: true,
-            }
-          : scenario.progressiveState !== "ready" &&
-              scenario.question.position >= scenario.progressiveAvailable
-            ? null
-            : nextQuestion,
-        completed: false,
-        score: null,
-        mastery: null,
+        nextQuestion: completed
+          ? null
+          : !scenario.answerCorrect
+            ? {
+                ...scenario.question,
+                prompt: `Try again: ${scenario.question.prompt}`,
+                isRetry: true,
+              }
+            : scenario.progressiveState !== "ready" &&
+                scenario.question.position >= scenario.progressiveAvailable
+              ? null
+              : nextQuestion,
+        completed,
+        score: completed ? 80 : null,
+        mastery: completed ? "learning" : null,
         generation: generation(),
       });
       return;

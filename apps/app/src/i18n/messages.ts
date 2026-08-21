@@ -171,6 +171,14 @@ export const messages = {
     masteryBuilt: "You’ve built mastery for this video.",
     laterReview:
       "Score at least 80% in this session and again on a later review to master it.",
+    firstTry: "Right first try",
+    recapTitle: "What to review",
+    recapSubtitle:
+      "The questions you missed this session, with the correct answer and the reasoning. Revisit these ideas before your next review.",
+    recapPerfect:
+      "Every question was right on the first try. Come back for the scheduled review to lock it in.",
+    recapYourAnswer: "Your answer",
+    recapRecovered: "Recovered on retry",
     answerRequired: "Choose or write an answer first.",
     moveUp: "Move up",
     moveDown: "Move down",
@@ -395,6 +403,12 @@ export const messages = {
     quizComplete: "学习任务完成！",
     masteryBuilt: "你已经掌握了这个视频。",
     laterReview: "本次和之后复习都达到 80%，即可标记为已掌握。",
+    firstTry: "一次答对",
+    recapTitle: "需要复习的内容",
+    recapSubtitle: "本次答错的题目、正确答案和解析。下次复习前先回顾这些要点。",
+    recapPerfect: "所有题目都一次答对。按计划回来复习，巩固记忆。",
+    recapYourAnswer: "你的答案",
+    recapRecovered: "重试时已答对",
     answerRequired: "请先选择或填写答案。",
     moveUp: "上移",
     moveDown: "下移",
