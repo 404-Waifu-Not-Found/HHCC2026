@@ -7,11 +7,14 @@ import {
   LOCAL_QUIZ_VALIDATOR_VERSION,
 } from "@clipquest/contracts";
 import { createAuth } from "./auth";
-import { publicAssetShell } from "./lib/asset-shell";
+import { preventStaleAppShell, publicAssetShell } from "./lib/asset-shell";
+import { quizGenerationRolloutMode } from "./lib/generation-rollout";
 import { ApiError, errorResponse } from "./lib/errors";
 import { clearExpiredRateLimits } from "./lib/rate-limit";
+import { publicWorkerVersion } from "./lib/worker-version";
 import { authenticated, type ApiBindings } from "./middleware/authenticated";
 import { adminRouter } from "./routes/admin";
+import { generationRouter } from "./routes/generation";
 import { libraryRouter } from "./routes/library";
 import { mediaRouter } from "./routes/media";
 import { modelsRouter } from "./routes/models";
@@ -90,11 +93,14 @@ app.use("*", async (c, next) => {
     if (shellPath) {
       const assetUrl = new URL(c.req.url);
       assetUrl.pathname = shellPath;
-      c.res = await c.env.ASSETS.fetch(
-        new Request(assetUrl.toString(), {
-          method: c.req.method,
-          headers: c.req.raw.headers,
-        }),
+      c.res = preventStaleAppShell(
+        await c.env.ASSETS.fetch(
+          new Request(assetUrl.toString(), {
+            method: c.req.method,
+            headers: c.req.raw.headers,
+          }),
+        ),
+        publicWorkerVersion(c.env),
       );
       return;
     }
@@ -116,10 +122,18 @@ app.get("/health", (c) => {
     ok: configuration.authentication && configuration.email,
     service: "clipquest",
     model: LOCAL_QUIZ_MODEL,
-    reasoningEffort: "high",
+    reasoningEffort: "none",
     pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+    generationProfile: "stable_auto_recovery_v5_3",
+    rolloutMode: quizGenerationRolloutMode(c.env),
+    worker: publicWorkerVersion(c.env),
+    versionAffinity: {
+      requestKeyPresent: Boolean(
+        c.req.header("Cloudflare-Workers-Version-Key"),
+      ),
+    },
     maintenance: false,
     configuration,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",
@@ -141,6 +155,7 @@ app.use("/api/*", authenticated);
 app.route("/api/admin", adminRouter);
 app.route("/api/videos", videosRouter);
 app.route("/api/media", mediaRouter);
+app.route("/api/local-ai", generationRouter);
 app.route("/api/quiz-imports", quizImportsRouter);
 app.route("/api", quizzesRouter);
 app.route("/api/library", libraryRouter);
@@ -164,7 +179,7 @@ function corsHeaders(origin: string | undefined): Headers {
   const headers = new Headers({
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Headers": "Content-Type, Cookie, Idempotency-Key",
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     Vary: "Origin",
   });
   if (origin) headers.set("Access-Control-Allow-Origin", origin);

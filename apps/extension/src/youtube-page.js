@@ -1,6 +1,9 @@
 (function installYouTubePageBridge() {
   "use strict";
 
+  if (globalThis.__clipQuestYouTubePageBridgeInstalled) return;
+  globalThis.__clipQuestYouTubePageBridgeInstalled = true;
+
   const REQUEST_EVENT = "clipquest:youtube:tracks-request:v1";
   const RESPONSE_EVENT = "clipquest:youtube:tracks-response:v1";
   let capturedCaption = null;

@@ -4,6 +4,8 @@ import {
   generateQuizFromPlainText,
   testDeepSeekKey,
 } from "./local-generator.js";
+import { replayGenerationOutboxEntries } from "./generation-outbox.js";
+import { isClipQuestPageOrigin } from "./origin-policy.js";
 
 const CLIPQUEST_MATCHES = [
   "https://clipquest.ccwu.cc/*",
@@ -14,6 +16,87 @@ const TAB_READY_TIMEOUT_MS = 20_000;
 const EXTRACTION_TIMEOUT_MS = 45_000;
 const API_KEY_STORAGE_KEY = "deepseekApiKey";
 const LOCAL_AI_PORT = "clipquest-local-ai-v1";
+const TRANSCRIPT_CACHE_PREFIX = "clipquestTranscriptCacheV1:";
+const TRANSCRIPT_CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
+const GENERATION_OUTBOX_PREFIX = "clipquestGenerationOutboxV1:";
+const GENERATION_OUTBOX_TTL_MS = 24 * 60 * 60 * 1_000;
+const MAX_GENERATION_OUTBOX_ENTRIES = 64;
+
+function generationOutboxKey(generationId) {
+  return `${GENERATION_OUTBOX_PREFIX}${generationId}`;
+}
+
+function automaticGenerationContext(context) {
+  return (
+    context?.generationProfile === "stable_auto_recovery_v5_3" &&
+    typeof context.generationId === "string" &&
+    typeof context.generationSessionId === "string" &&
+    typeof context.recoverySessionId === "string"
+  );
+}
+
+async function appendGenerationOutbox(context, message) {
+  if (!automaticGenerationContext(context)) return;
+  const key = generationOutboxKey(context.generationId);
+  const stored = await chrome.storage.local.get(key).catch(() => ({}));
+  const previous = stored[key];
+  const sameSession =
+    previous?.generationSessionId === context.generationSessionId &&
+    Array.isArray(previous?.entries);
+  const entries = sameSession ? previous.entries : [];
+  entries.push({ sequence: Number(previous?.nextSequence ?? 0), message });
+  const nextSequence = Number(previous?.nextSequence ?? 0) + 1;
+  await chrome.storage.local
+    .set({
+      [key]: {
+        generationSessionId: context.generationSessionId,
+        createdAt: sameSession ? previous.createdAt : Date.now(),
+        updatedAt: Date.now(),
+        expiresAt: Date.now() + GENERATION_OUTBOX_TTL_MS,
+        nextSequence,
+        entries: entries.slice(-MAX_GENERATION_OUTBOX_ENTRIES),
+      },
+    })
+    .catch(() => undefined);
+}
+
+async function replayGenerationOutbox(context, requestId, post) {
+  if (!automaticGenerationContext(context)) {
+    return { context, completed: false };
+  }
+  const key = generationOutboxKey(context.generationId);
+  const stored = await chrome.storage.local.get(key).catch(() => ({}));
+  const outbox = stored[key];
+  if (
+    !outbox ||
+    outbox.generationSessionId !== context.generationSessionId ||
+    !Array.isArray(outbox.entries) ||
+    Number(outbox.expiresAt) <= Date.now()
+  ) {
+    if (outbox) await chrome.storage.local.remove(key).catch(() => undefined);
+    return { context, completed: false };
+  }
+
+  return replayGenerationOutboxEntries(
+    context,
+    outbox.entries,
+    requestId,
+    post,
+  );
+}
+
+async function notifyClipQuestConfigurationChanged() {
+  const tabs = await chrome.tabs.query({ url: CLIPQUEST_MATCHES });
+  await Promise.allSettled(
+    tabs
+      .filter((tab) => Number.isInteger(tab.id))
+      .map((tab) =>
+        chrome.tabs.sendMessage(tab.id, {
+          type: "clipquest.configuration.changed.v1",
+        }),
+      ),
+  );
+}
 
 function extensionPageSender(sender) {
   return (
@@ -24,16 +107,7 @@ function extensionPageSender(sender) {
 }
 
 function senderAllowed(sender) {
-  try {
-    const url = new URL(sender?.url ?? sender?.tab?.url ?? "");
-    return (
-      url.origin === "https://clipquest.ccwu.cc" ||
-      (url.protocol === "http:" &&
-        (url.hostname === "localhost" || url.hostname === "127.0.0.1"))
-    );
-  } catch {
-    return false;
-  }
+  return isClipQuestPageOrigin(sender?.url ?? sender?.tab?.url ?? "");
 }
 
 function waitForTab(tabId) {
@@ -49,13 +123,20 @@ function waitForTab(tabId) {
       resolve();
     }
     chrome.tabs.onUpdated.addListener(updated);
-    void chrome.tabs.get(tabId).then((tab) => {
-      if (tab.status === "complete") {
+    void chrome.tabs
+      .get(tabId)
+      .then((tab) => {
+        if (tab.status === "complete") {
+          clearTimeout(timeout);
+          chrome.tabs.onUpdated.removeListener(updated);
+          resolve();
+        }
+      })
+      .catch((error) => {
         clearTimeout(timeout);
         chrome.tabs.onUpdated.removeListener(updated);
-        resolve();
-      }
-    });
+        reject(error);
+      });
   });
 }
 
@@ -75,41 +156,146 @@ async function sendWithRetry(tabId, message) {
     : new Error("The YouTube caption reader did not start.");
 }
 
-async function extractCaptions(request) {
-  const url = `https://www.youtube.com/watch?v=${encodeURIComponent(request.videoId)}`;
-  const tab = await chrome.tabs.create({ url, active: false });
-  if (typeof tab.id !== "number") {
-    throw new Error("The YouTube caption tab could not be opened.");
-  }
+function tabVideoId(tab) {
   try {
-    await waitForTab(tab.id);
+    const url = new URL(tab?.url ?? "");
+    return url.pathname === "/watch" ? url.searchParams.get("v") : null;
+  } catch {
+    return null;
+  }
+}
+
+async function matchingYouTubeTab(videoId) {
+  const tabs = await chrome.tabs.query({
+    url: ["https://www.youtube.com/watch*", "https://youtube.com/watch*"],
+  });
+  return tabs.find((tab) => tabVideoId(tab) === videoId) ?? null;
+}
+
+function transcriptCacheKey(videoId, preferredLanguage) {
+  const language = String(preferredLanguage ?? "auto")
+    .toLocaleLowerCase("en-US")
+    .replace(/[^a-z0-9_-]/g, "-")
+    .slice(0, 35);
+  return `${TRANSCRIPT_CACHE_PREFIX}${videoId}:${language}`;
+}
+
+async function cachedCaptions(request) {
+  const key = transcriptCacheKey(request.videoId, request.preferredLanguage);
+  const stored = await chrome.storage.local.get(key);
+  const entry = stored[key];
+  if (
+    !entry ||
+    typeof entry !== "object" ||
+    !Number.isFinite(entry.expiresAt) ||
+    entry.expiresAt <= Date.now() ||
+    !entry.result ||
+    !Array.isArray(entry.result.segments)
+  ) {
+    if (entry) await chrome.storage.local.remove(key).catch(() => undefined);
+    return null;
+  }
+  return { ok: true, result: entry.result, cached: true };
+}
+
+async function storeCachedCaptions(request, response) {
+  if (!response?.ok || !Array.isArray(response.result?.segments)) return;
+  const key = transcriptCacheKey(request.videoId, request.preferredLanguage);
+  await chrome.storage.local
+    .set({
+      [key]: {
+        expiresAt: Date.now() + TRANSCRIPT_CACHE_TTL_MS,
+        result: response.result,
+      },
+    })
+    .catch(() => undefined);
+}
+
+async function ensureYouTubeTab(videoId) {
+  const existing = await matchingYouTubeTab(videoId);
+  if (existing) return { tab: existing, created: false };
+  const tab = await chrome.tabs.create({
+    url: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+    active: false,
+  });
+  if (typeof tab.id !== "number") {
+    throw new Error("ClipQuest could not open the YouTube source tab.");
+  }
+  await waitForTab(tab.id);
+  return { tab: await chrome.tabs.get(tab.id), created: true };
+}
+
+async function injectYouTubeExtractor(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    files: ["youtube-page.js"],
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["caption-core.js", "youtube-content.js"],
+  });
+}
+
+async function extractCaptionsFromTab(request, tab) {
+  if (typeof tab.id !== "number") {
+    throw new Error("The existing YouTube tab is unavailable.");
+  }
+  if (tab.status !== "complete") await waitForTab(tab.id);
+  const message = {
+    type: "clipquest.youtube.extract.v1",
+    videoId: request.videoId,
+    preferredLanguage: request.preferredLanguage,
+  };
+  let response;
+  try {
+    response = await chrome.tabs.sendMessage(tab.id, message);
+  } catch {
+    await injectYouTubeExtractor(tab.id);
+    response = await sendWithRetry(tab.id, message);
+  }
+  if (!response?.ok || !response.result) return response;
+  return {
+    ...response,
+    result: {
+      ...response.result,
+      title:
+        typeof tab.title === "string"
+          ? tab.title.replace(/\s*-\s*YouTube\s*$/i, "").trim()
+          : response.result.title,
+    },
+  };
+}
+
+async function extractCaptions(request, { ensureSource = false } = {}) {
+  const cached = await cachedCaptions(request);
+  if (cached) return cached;
+  const source = ensureSource
+    ? await ensureYouTubeTab(request.videoId)
+    : { tab: await matchingYouTubeTab(request.videoId), created: false };
+  if (!source.tab) {
+    throw new Error("ClipQuest could not find the requested YouTube source.");
+  }
+
+  let timeout;
+  try {
     const response = await Promise.race([
-      sendWithRetry(tab.id, {
-        type: "clipquest.youtube.extract.v1",
-        videoId: request.videoId,
-        preferredLanguage: request.preferredLanguage,
-      }),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("YouTube caption extraction timed out.")),
-          EXTRACTION_TIMEOUT_MS,
-        ),
+      extractCaptionsFromTab(request, source.tab),
+      new Promise(
+        (_, reject) =>
+          (timeout = setTimeout(
+            () => reject(new Error("YouTube caption extraction timed out.")),
+            EXTRACTION_TIMEOUT_MS,
+          )),
       ),
     ]);
-    const loadedTab = await chrome.tabs.get(tab.id).catch(() => null);
-    if (!response?.ok || !response.result) return response;
-    return {
-      ...response,
-      result: {
-        ...response.result,
-        title:
-          typeof loadedTab?.title === "string"
-            ? loadedTab.title.replace(/\s*-\s*YouTube\s*$/i, "").trim()
-            : `YouTube ${request.videoId}`,
-      },
-    };
+    await storeCachedCaptions(request, response);
+    return response;
   } finally {
-    await chrome.tabs.remove(tab.id).catch(() => undefined);
+    clearTimeout(timeout);
+    if (source.created && typeof source.tab.id === "number") {
+      await chrome.tabs.remove(source.tab.id).catch(() => undefined);
+    }
   }
 }
 
@@ -226,6 +412,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "clipquest.key.get.v1") {
+    if (!extensionPageSender(sender)) return false;
     void chrome.storage.local.get(API_KEY_STORAGE_KEY).then((stored) =>
       sendResponse({
         configured: typeof stored[API_KEY_STORAGE_KEY] === "string",
@@ -234,6 +421,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === "clipquest.key.save.v1") {
+    if (!extensionPageSender(sender)) return false;
     const key = typeof message.apiKey === "string" ? message.apiKey.trim() : "";
     if (!/^sk-[A-Za-z0-9_-]{12,}$/.test(key)) {
       sendResponse({ ok: false, error: "Enter a valid DeepSeek API key." });
@@ -241,16 +429,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     void chrome.storage.local
       .set({ [API_KEY_STORAGE_KEY]: key })
+      .then(notifyClipQuestConfigurationChanged)
       .then(() => sendResponse({ ok: true }));
     return true;
   }
   if (message?.type === "clipquest.key.delete.v1") {
+    if (!extensionPageSender(sender)) return false;
     void chrome.storage.local
       .remove(API_KEY_STORAGE_KEY)
+      .then(notifyClipQuestConfigurationChanged)
       .then(() => sendResponse({ ok: true }));
     return true;
   }
   if (message?.type === "clipquest.key.test.v1") {
+    if (!extensionPageSender(sender)) return false;
     const supplied =
       typeof message.apiKey === "string" ? message.apiKey.trim() : "";
     void chrome.storage.local
@@ -271,6 +463,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
     return true;
   }
+  if (message?.type === "clipquest.settings.open.v1") {
+    if (!senderAllowed(sender)) return false;
+    void chrome.runtime.openOptionsPage().catch(() =>
+      chrome.tabs.create({
+        url: chrome.runtime.getURL("popup.html"),
+        active: true,
+      }),
+    );
+    sendResponse({ ok: true });
+    return false;
+  }
+  if (message?.type === "clipquest.source.ensure.v1") {
+    if (!senderAllowed(sender)) return false;
+    if (!/^[\w-]{11}$/.test(message.videoId)) {
+      sendResponse({ ok: false, error: "The YouTube video id is invalid." });
+      return false;
+    }
+    void extractCaptions(message, { ensureSource: true })
+      .then((response) => sendResponse(response))
+      .catch((error) =>
+        sendResponse({
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "The YouTube source could not be prepared.",
+        }),
+      );
+    return true;
+  }
   if (message?.type !== "clipquest.extract.v1") return false;
   if (!senderAllowed(sender)) {
     sendResponse({
@@ -283,7 +505,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ ok: false, error: "The YouTube video id is invalid." });
     return false;
   }
-  void extractCaptions(message)
+  void extractCaptions(message, { ensureSource: true })
     .then((response) => sendResponse(response))
     .catch((error) =>
       sendResponse({
@@ -344,9 +566,11 @@ chrome.runtime.onConnect.addListener((port) => {
       .then(async (stored) => {
         const apiKey = stored[API_KEY_STORAGE_KEY];
         if (typeof apiKey !== "string") {
-          throw new Error(
+          const error = new Error(
             "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
           );
+          error.reasonCode = "credential_required";
+          throw error;
         }
         const progress = (stage, value, detail = {}) => {
           post({
@@ -357,24 +581,68 @@ chrome.runtime.onConnect.addListener((port) => {
             ...detail,
           });
         };
-        return message.context
-          ? generateLocalQuiz(
-              message.context,
-              apiKey,
-              progress,
-              controller.signal,
-            )
-          : generateQuizForVideo(message, apiKey, progress, controller.signal);
+        const generationContext = message.context;
+        const question = async (result) => {
+          const outgoing = {
+            type: "question",
+            requestId,
+            result,
+          };
+          await appendGenerationOutbox(generationContext, outgoing);
+          post(outgoing);
+        };
+        const call = async (event) => {
+          const outgoing = {
+            type: "call",
+            requestId,
+            event,
+          };
+          await appendGenerationOutbox(generationContext, outgoing);
+          post(outgoing);
+        };
+        if (message.context) {
+          const replay = await replayGenerationOutbox(
+            message.context,
+            requestId,
+            post,
+          );
+          if (replay.completed) return undefined;
+          return generateLocalQuiz(
+            replay.context,
+            apiKey,
+            progress,
+            controller.signal,
+            question,
+            call,
+          );
+        }
+        return generateQuizForVideo(
+          message,
+          apiKey,
+          progress,
+          controller.signal,
+        );
       })
-      .then((result) =>
-        post({ type: "result", requestId, response: { ok: true, result } }),
-      )
+      .then(async (result) => {
+        if (result === undefined) return;
+        const outgoing = {
+          type: "result",
+          requestId,
+          response: { ok: true, result },
+        };
+        await appendGenerationOutbox(message.context, outgoing);
+        post(outgoing);
+      })
       .catch((error) =>
         post({
           type: "result",
           requestId,
           response: {
             ok: false,
+            reasonCode:
+              typeof error?.reasonCode === "string"
+                ? error.reasonCode
+                : "local_state_conflict",
             error:
               error instanceof Error
                 ? error.message

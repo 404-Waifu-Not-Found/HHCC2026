@@ -1,5 +1,8 @@
 import {
   AdminAuditResponseSchema,
+  AdminGenerationStateSchema,
+  AdminGenerationsResponseSchema,
+  AdminJobsResponseSchema,
   AdminLessonsResponseSchema,
   AdminMeResponseSchema,
   AdminMutationResponseSchema,
@@ -9,15 +12,27 @@ import {
   AdminSetRoleRequestSchema,
   AdminSystemResponseSchema,
   AdminUsersResponseSchema,
+  LOCAL_QUIZ_MODEL,
+  LOCAL_QUIZ_PIPELINE_VERSION,
+  LOCAL_QUIZ_PROMPT_VERSION,
+  LOCAL_QUIZ_VALIDATOR_VERSION,
   type AdminRole,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { permissionsForRole } from "../admin/access";
 import { adminAuditStatement } from "../admin/audit";
+import {
+  readAdminGenerationCounts,
+  readAdminGenerationPage,
+  readLatestAppliedMigration,
+  readRecentGenerationFailures,
+} from "../admin/generations";
 import { ApiError } from "../lib/errors";
+import { quizGenerationRolloutMode } from "../lib/generation-rollout";
 import { now } from "../lib/ids";
 import { parseJson } from "../lib/validation";
+import { publicWorkerVersion } from "../lib/worker-version";
 import { requireAdminPermission } from "../middleware/admin";
 import type { ApiBindings } from "../middleware/authenticated";
 
@@ -34,6 +49,14 @@ const UserListQuerySchema = ListQuerySchema.extend({
 
 const AuditListQuerySchema = ListQuerySchema.extend({
   outcome: z.enum(["success", "failed"]).optional(),
+});
+
+const GenerationListQuerySchema = ListQuerySchema.extend({
+  state: AdminGenerationStateSchema.optional(),
+  stalled: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
 });
 
 type CountRow = { count: number };
@@ -75,40 +98,59 @@ adminRouter.get(
   requireAdminPermission("overview:read"),
   async (c) => {
     const weekAgo = now() - 7 * 24 * 60 * 60 * 1_000;
-    const [users, lessons, newUsers, lessons7d, attempts7d] = await Promise.all(
-      [
-        count(c.env.DB, "SELECT COUNT(*) AS count FROM user"),
-        count(
-          c.env.DB,
-          "SELECT COUNT(*) AS count FROM quiz_banks q JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube'",
-        ),
-        count(
-          c.env.DB,
-          "SELECT COUNT(*) AS count FROM user WHERE created_at >= ?",
-          [weekAgo],
-        ),
-        count(
-          c.env.DB,
-          "SELECT COUNT(*) AS count FROM quiz_banks q JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube' AND q.created_at >= ?",
-          [weekAgo],
-        ),
-        count(
-          c.env.DB,
-          "SELECT COUNT(*) AS count FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube' AND a.status = 'complete' AND a.completed_at >= ?",
-          [weekAgo],
-        ),
-      ],
-    );
+    const [
+      users,
+      lessons,
+      newUsers,
+      lessons7d,
+      attempts7d,
+      generationCounts,
+      recentFailures,
+    ] = await Promise.all([
+      count(c.env.DB, "SELECT COUNT(*) AS count FROM user"),
+      count(
+        c.env.DB,
+        "SELECT COUNT(*) AS count FROM quiz_banks q JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube'",
+      ),
+      count(
+        c.env.DB,
+        "SELECT COUNT(*) AS count FROM user WHERE created_at >= ?",
+        [weekAgo],
+      ),
+      count(
+        c.env.DB,
+        "SELECT COUNT(*) AS count FROM quiz_banks q JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube' AND q.created_at >= ?",
+        [weekAgo],
+      ),
+      count(
+        c.env.DB,
+        "SELECT COUNT(*) AS count FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id JOIN videos v ON v.id = q.video_id WHERE v.source = 'youtube' AND a.status = 'complete' AND a.completed_at >= ?",
+        [weekAgo],
+      ),
+      readAdminGenerationCounts(c.env.DB),
+      readRecentGenerationFailures(c.env.DB),
+    ]);
 
     return c.json(
       AdminOverviewResponseSchema.parse({
-        totals: { users, lessons, activeJobs: 0, failedJobs: 0 },
+        totals: {
+          users,
+          lessons,
+          activeJobs:
+            generationCounts.generating +
+            generationCounts.retrying +
+            generationCounts.recovering,
+          failedJobs:
+            generationCounts.retryRequired +
+            generationCounts.actionRequired +
+            generationCounts.generationFailed,
+        },
         activity: {
           newUsers7d: newUsers,
           lessons7d,
           completedAttempts7d: attempts7d,
         },
-        recentFailures: [],
+        recentFailures,
       }),
     );
   },
@@ -286,6 +328,37 @@ adminRouter.post(
 );
 
 adminRouter.get(
+  "/generations",
+  requireAdminPermission("jobs:read"),
+  async (c) => {
+    const query = parseListQuery(c.req.query(), GenerationListQuerySchema);
+    const result = await readAdminGenerationPage(c.env.DB, query);
+    return c.json(
+      AdminGenerationsResponseSchema.parse({
+        generations: result.generations,
+        pagination: {
+          page: query.page,
+          pageSize: query.pageSize,
+          total: result.total,
+        },
+      }),
+    );
+  },
+);
+
+// One-release compatibility endpoint for stale shells and bookmarks. Backend
+// generation jobs no longer exist; local extension streams are exposed above.
+adminRouter.get("/jobs", requireAdminPermission("jobs:read"), (c) => {
+  const query = parseListQuery(c.req.query(), ListQuerySchema);
+  return c.json(
+    AdminJobsResponseSchema.parse({
+      jobs: [],
+      pagination: { page: query.page, pageSize: query.pageSize, total: 0 },
+    }),
+  );
+});
+
+adminRouter.get(
   "/lessons",
   requireAdminPermission("lessons:read"),
   async (c) => {
@@ -393,12 +466,27 @@ adminRouter.get("/audit", requireAdminPermission("audit:read"), async (c) => {
 });
 
 adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
-  const jobs = { queued: 0, running: 0, complete: 0, failed: 0 };
+  const [generationCounts, migration] = await Promise.all([
+    readAdminGenerationCounts(c.env.DB),
+    readLatestAppliedMigration(c.env.DB),
+  ]);
+  const jobs = {
+    queued: 0,
+    running:
+      generationCounts.generating +
+      generationCounts.retrying +
+      generationCounts.recovering,
+    complete: generationCounts.ready,
+    failed:
+      generationCounts.retryRequired +
+      generationCounts.actionRequired +
+      generationCounts.generationFailed,
+  };
   return c.json(
     AdminSystemResponseSchema.parse({
       configuration: {
         authentication: Boolean(c.env.BETTER_AUTH_SECRET),
-        generation: false,
+        generation: true,
         email: Boolean(c.env.RESEND_API_KEY),
         youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
         youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",
@@ -406,9 +494,22 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
       model: "extension-local",
       jobs,
       database: {
-        migration: "0007_admin_audit_retention",
+        migration,
         auditEnabled: true,
       },
+      generation: {
+        mode: "extension_local",
+        backendEnabled: false,
+        extensionEnabled: true,
+        extensionRequired: true,
+        model: LOCAL_QUIZ_MODEL,
+        pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
+        promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
+        validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+        rolloutMode: quizGenerationRolloutMode(c.env),
+        states: generationCounts,
+      },
+      worker: publicWorkerVersion(c.env),
     }),
   );
 });

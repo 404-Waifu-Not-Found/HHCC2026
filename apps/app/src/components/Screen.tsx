@@ -1,5 +1,6 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import { useState, type PropsWithChildren, type ReactNode } from "react";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -16,6 +17,7 @@ export function Screen({
   children,
   scroll = true,
   footer,
+  floating,
   contentWidth = "wide",
   centered = false,
   padded = true,
@@ -23,12 +25,14 @@ export function Screen({
 }: PropsWithChildren<{
   scroll?: boolean;
   footer?: ReactNode;
+  floating?: ReactNode;
   contentWidth?: ContentWidth;
   centered?: boolean;
   padded?: boolean;
   footerFlush?: boolean;
 }>) {
   const { theme } = useSettings();
+  const [footerHeight, setFooterHeight] = useState(0);
   const { width } = useWindowDimensions();
   const horizontal =
     width >= breakpoints.desktop
@@ -88,6 +92,7 @@ export function Screen({
         <MotionView
           preset="rise"
           delay={80}
+          onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
           style={[
             styles.footer,
             footerFlush && styles.footerFlush,
@@ -101,6 +106,22 @@ export function Screen({
           {footer}
         </MotionView>
       ) : null}
+      {floating ? (
+        <View
+          nativeID="clipquest-screen-floating"
+          pointerEvents="box-none"
+          style={[
+            styles.floating,
+            {
+              right: Platform.OS === "web" ? undefined : horizontal,
+              bottom:
+                (footer ? footerHeight : safeArea.minimumBottom) + spacing[3],
+            },
+          ]}
+        >
+          {floating}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -108,6 +129,7 @@ export function Screen({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
+    position: "relative",
   },
   flex: {
     flex: 1,
@@ -132,5 +154,10 @@ const styles = StyleSheet.create({
   footerFlush: {
     paddingTop: 0,
     paddingBottom: 0,
+  },
+  floating: {
+    position: "absolute",
+    zIndex: 20,
+    alignItems: "flex-end",
   },
 });

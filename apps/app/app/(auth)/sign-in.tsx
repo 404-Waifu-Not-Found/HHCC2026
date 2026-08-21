@@ -1,5 +1,5 @@
 import { VoxelIcon } from "../../src/components/VoxelIcon";
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
@@ -7,7 +7,12 @@ import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
+import {
+  parseQuickOpenRequest,
+  type QuickOpenSearchParams,
+} from "../../src/lib/quick-open";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { persistAuthJourneyQuickOpenHandoff } from "../../src/state/pending-video-handoff";
 import { radii, spacing, typography } from "../../src/theme/tokens";
 import {
   FeedbackMotion,
@@ -17,6 +22,8 @@ import {
 
 export default function SignInScreen() {
   const { t, theme } = useSettings();
+  const params = useLocalSearchParams<QuickOpenSearchParams>();
+  const quickOpen = parseQuickOpenRequest(params);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
@@ -28,6 +35,9 @@ export default function SignInScreen() {
     setLoading(true);
     setError(undefined);
     try {
+      if (quickOpen) {
+        await persistAuthJourneyQuickOpenHandoff(quickOpen.url);
+      }
       const result = identifier.includes("@")
         ? await authClient.signIn.email({
             email: identifier.trim().toLowerCase(),
@@ -60,7 +70,11 @@ export default function SignInScreen() {
             {t("newToClipQuest")}
           </Text>
           <Link
-            href="/(auth)/sign-up"
+            href={
+              quickOpen
+                ? { pathname: "/(auth)/sign-up", params: quickOpen }
+                : "/(auth)/sign-up"
+            }
             style={[styles.link, styles.footerLink, { color: theme.text }]}
           >
             {t("signUp")}

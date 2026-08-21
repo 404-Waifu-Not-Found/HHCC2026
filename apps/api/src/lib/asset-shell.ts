@@ -17,7 +17,7 @@ const staticShells = new Map<string, string>([
   ["/welcome", "/welcome.html"],
 ]);
 
-const dynamicShells: ReadonlyArray<readonly [RegExp, string]> = [
+const dynamicShells: readonly (readonly [RegExp, string])[] = [
   [/^\/create\/[^/]+$/, "/create/[videoId].html"],
   [/^\/generation\/[^/]+$/, "/generation/[videoId].html"],
   [/^\/quiz\/[^/]+$/, "/quiz/[attemptId].html"],
@@ -34,3 +34,28 @@ export function publicAssetShell(pathname: string): string | null {
     null
   );
 }
+
+export function preventStaleAppShell(
+  response: Response,
+  workerVersion?: PublicWorkerVersion,
+): Response {
+  const headers = new Headers(response.headers);
+  // The HTML shell points at a content-hashed JavaScript bundle. Never keep an
+  // old shell in the browser after a deploy, or it can continue loading an old
+  // bundle even though the new assets are already live.
+  headers.set("Cache-Control", "no-store");
+  if (workerVersion) {
+    headers.set("X-ClipQuest-Worker-Version", workerVersion.versionId);
+    if (workerVersion.versionTag) {
+      headers.set("X-ClipQuest-Worker-Tag", workerVersion.versionTag);
+    } else {
+      headers.delete("X-ClipQuest-Worker-Tag");
+    }
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+import type { PublicWorkerVersion } from "./worker-version";

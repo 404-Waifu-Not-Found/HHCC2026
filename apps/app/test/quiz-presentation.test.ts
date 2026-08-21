@@ -32,4 +32,20 @@ describe("quiz answer presentation", () => {
     expect(completionBranch).toContain('router.replace("/(tabs)/library")');
     expect(completionBranch).not.toContain('router.replace("/(tabs)")');
   });
+
+  it("pins floating quiz status to synchronous web breakpoint gutters", async () => {
+    const [screenSource, htmlSource] = await Promise.all([
+      readFile(resolve(appRoot, "src/components/Screen.tsx"), "utf8"),
+      readFile(resolve(appRoot, "app/+html.tsx"), "utf8"),
+    ]);
+    expect(screenSource).toContain('nativeID="clipquest-screen-floating"');
+    expect(screenSource).toContain(
+      'right: Platform.OS === "web" ? undefined : horizontal',
+    );
+    expect(htmlSource).toContain("#clipquest-screen-floating { right: 20px; }");
+    expect(htmlSource).toContain("@media (min-width: 768px)");
+    expect(htmlSource).toContain("right: 24px");
+    expect(htmlSource).toContain("@media (min-width: 1024px)");
+    expect(htmlSource).toContain("right: 32px");
+  });
 });

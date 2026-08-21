@@ -91,7 +91,10 @@ export default function AdminOverviewScreen() {
                             title={failure.videoTitle}
                             subtitle={failure.ownerEmail}
                             badge={
-                              <StatusBadge label={copy.failed} tone="error" />
+                              <StatusBadge
+                                label={copy.retryRequired}
+                                tone="error"
+                              />
                             }
                           />
                           <RecordMeta

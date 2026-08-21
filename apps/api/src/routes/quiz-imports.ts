@@ -1,44 +1,637 @@
 import {
+  ExtensionQuizChunkAppendRequestSchema,
+  ExtensionQuizGenerationCallEventRequestSchema,
+  ExtensionQuizGenerationCallEventResponseSchema,
+  ExtensionQuizGenerationProgressRequestSchema,
   ExtensionQuizImportRequestSchema,
   ExtensionQuizImportResponseSchema,
-  LOCAL_QUIZ_MODEL,
+  ExtensionQuizProgressiveImportRequestSchema,
+  ExtensionQuizProgressiveImportResponseSchema,
   LOCAL_QUIZ_PIPELINE_VERSION,
-  LOCAL_QUIZ_PROMPT_VERSION,
-  LOCAL_QUIZ_VALIDATOR_VERSION,
+  LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION,
+  LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   type ExtensionQuizImportRequest,
+  type ExtensionQuizProgressiveImportRequest,
+  type LocalGenerationCallEvent,
+  type LocalGenerationCallEventV3,
   type LocalConceptQuizQuestion,
+  type LocalConceptQuizQuestionChunk,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { ApiError } from "../lib/errors";
+import { quizGenerationProfile } from "../lib/generation-rollout";
 import { createId, now } from "../lib/ids";
+import { requireIdempotencyKey } from "../lib/idempotency";
 import { enforceRateLimit } from "../lib/rate-limit";
+import {
+  ProgressiveQuizSummarySchema,
+  acceptedQuestionSummary,
+  assertProgressiveChunkMetadata,
+  readProgressiveGenerationSnapshot,
+  tryProgressiveQuizSummary,
+  type ProgressiveQuizSummary,
+} from "../lib/progressive-quiz";
 import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 
-const IdempotencyKeySchema = z.string().uuid();
 const QUIZ_IMPORT_VERSION = "extension-quiz-import-v3" as const;
+const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
+const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
+const MAX_AUTOMATIC_RETRIES = 12;
 
 export const quizImportsRouter = new Hono<ApiBindings>();
 
-quizImportsRouter.post("/", async (c) => {
+quizImportsRouter.post("/progressive", async (c) => {
   const user = c.get("user");
-  const idempotencyKey = IdempotencyKeySchema.safeParse(
-    c.req.header("idempotency-key"),
+  const importKey = requireIdempotencyKey(c);
+  const existing = await findProgressiveImportedQuiz(
+    c.env.DB,
+    user.id,
+    importKey,
   );
-  if (!idempotencyKey.success) {
-    throw new ApiError(
-      400,
-      "idempotency_key_required",
-      "A valid idempotency key is required.",
+  if (existing) {
+    return c.json(
+      ExtensionQuizProgressiveImportResponseSchema.parse(
+        await progressiveImportState(c.env.DB, existing.id),
+      ),
     );
   }
 
-  const existing = await findImportedQuiz(
-    c.env.DB,
-    user.id,
-    idempotencyKey.data,
+  await enforceRateLimit(c.env.DB, {
+    namespace: "extension-progressive-import",
+    identifier: user.id,
+    maximum: 8,
+    windowSeconds: 60,
+  });
+  const input = await parseJson(c, ExtensionQuizProgressiveImportRequestSchema);
+  const enabledProfile = quizGenerationProfile(c.env, user.id);
+  if (
+    input.chunk.generationProfile &&
+    input.chunk.generationProfile !== "legacy_reasoning_v5_1" &&
+    input.chunk.generationProfile !== enabledProfile.generationProfile
+  ) {
+    throw new ApiError(
+      403,
+      "quiz_generation_profile_disabled",
+      "The stable generation profile is not enabled for this account yet.",
+    );
+  }
+  if (input.chunk.startIndex !== 0) {
+    throw new ApiError(
+      409,
+      "quiz_question_out_of_sequence",
+      "Progressive import must begin with question one.",
+    );
+  }
+  await requireOwnedVideo(c.env.DB, input.videoId, user.id);
+
+  const quizId = createId();
+  try {
+    await persistProgressiveQuiz({
+      db: c.env.DB,
+      quizId,
+      userId: user.id,
+      importKey,
+      input,
+    });
+  } catch (error) {
+    const raced = await findProgressiveImportedQuiz(
+      c.env.DB,
+      user.id,
+      importKey,
+    );
+    if (!raced) throw error;
+    return c.json(
+      ExtensionQuizProgressiveImportResponseSchema.parse(
+        await progressiveImportState(c.env.DB, raced.id),
+      ),
+    );
+  }
+
+  return c.json(
+    ExtensionQuizProgressiveImportResponseSchema.parse(
+      await progressiveImportState(c.env.DB, quizId),
+    ),
+    201,
   );
+});
+
+quizImportsRouter.put("/:quizId/questions", async (c) => {
+  const user = c.get("user");
+  const importKey = requireIdempotencyKey(c);
+  await enforceRateLimit(c.env.DB, {
+    namespace: "extension-progressive-question",
+    identifier: user.id,
+    maximum: 45,
+    windowSeconds: 60,
+  });
+  const input = await parseJson(c, ExtensionQuizChunkAppendRequestSchema);
+  const bank = await progressiveBank(
+    c.env.DB,
+    c.req.param("quizId"),
+    user.id,
+    importKey,
+  );
+  const snapshot = await readProgressiveGenerationSnapshot(c.env.DB, bank.id);
+  const summary = snapshot.summary;
+  if (!summary || !snapshot.availability) {
+    throw new ApiError(
+      409,
+      "quiz_not_progressive",
+      "This quiz does not support current progressive question delivery.",
+    );
+  }
+  assertProgressiveChunkMetadata(summary, input.chunk);
+  if (input.chunk.totalQuestions !== summary.plannedCount) {
+    throw new ApiError(
+      409,
+      "quiz_question_mismatch",
+      "The question does not match this quiz's planned total.",
+    );
+  }
+  if (
+    input.chunk.question.type !==
+    summary.plannedQuestionTypes[input.chunk.startIndex]
+  ) {
+    throw new ApiError(
+      422,
+      "quiz_question_type_mismatch",
+      "The streamed question did not match the requested type plan.",
+    );
+  }
+  const state = progressiveImportStateFromSnapshot(snapshot);
+  if (input.chunk.startIndex < snapshot.authoritativeCount) {
+    if (
+      await storedQuestionMatches(
+        c.env.DB,
+        bank.id,
+        input.chunk.startIndex,
+        input.chunk.question,
+      )
+    ) {
+      await reconcileAttemptItems(c.env.DB, bank.id);
+      return c.json(ExtensionQuizProgressiveImportResponseSchema.parse(state));
+    }
+    throw new ApiError(
+      409,
+      "quiz_question_conflict",
+      "That question position was already stored with different content.",
+    );
+  }
+  if (input.chunk.startIndex !== snapshot.authoritativeCount) {
+    throw new ApiError(
+      409,
+      "quiz_question_out_of_sequence",
+      "Questions must be uploaded in global order.",
+    );
+  }
+  const normalizedPrompt = input.chunk.question.question
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .trim();
+  if (
+    summary.acceptedQuestionSummaries.some(
+      (question) =>
+        promptSimilarity(question.question, normalizedPrompt) >= 0.9,
+    )
+  ) {
+    throw new ApiError(
+      422,
+      "quiz_question_duplicate",
+      "The streamed question duplicates an accepted prompt.",
+    );
+  }
+
+  const nextCount = input.chunk.startIndex + 1;
+  const qualityFlags = questionQualityFlags(
+    input.chunk.question,
+    summary.acceptedQuestionSummaries,
+  );
+  const complete = nextCount === summary.plannedCount;
+  const questionId = createId();
+  const timestamp = now();
+  const nextSummary = ProgressiveQuizSummarySchema.parse({
+    ...summary,
+    generationState: complete ? "ready" : "generating",
+    reasonCode: undefined,
+    retryOrdinal: undefined,
+    ordinalAttempt: undefined,
+    retryKind: undefined,
+    retryDelayMs: undefined,
+    generatedQuestionTypes: [
+      ...summary.generatedQuestionTypes,
+      input.chunk.question.type,
+    ],
+    acceptedCount: nextCount,
+    lastProgressAt: timestamp,
+    lastQuestionAt: timestamp,
+    stateChangedAt:
+      summary.generationState === (complete ? "ready" : "generating")
+        ? summary.stateChangedAt
+        : timestamp,
+    acceptedQuestionSummaries: [
+      ...summary.acceptedQuestionSummaries,
+      acceptedQuestionSummary(input.chunk.question),
+    ],
+    qualityFlags: qualityFlags.length
+      ? [
+          ...summary.qualityFlags,
+          { ordinal: input.chunk.startIndex, codes: qualityFlags },
+        ]
+      : summary.qualityFlags,
+    aiCalls:
+      summary.aiCalls +
+      (summary.telemetryAvailable ? 0 : input.chunk.metrics.aiCalls),
+    retryCount:
+      summary.retryCount +
+      (summary.telemetryAvailable ? 0 : input.chunk.metrics.retryCount),
+    inputTokens:
+      summary.inputTokens +
+      (summary.telemetryAvailable ? 0 : input.chunk.metrics.inputTokens),
+    outputTokens:
+      summary.outputTokens +
+      (summary.telemetryAvailable ? 0 : input.chunk.metrics.outputTokens),
+    reasoningTokens:
+      summary.reasoningTokens +
+      (summary.telemetryAvailable ? 0 : input.chunk.metrics.reasoningTokens),
+    elapsedMs:
+      summary.elapsedMs +
+      (summary.telemetryAvailable ? 0 : input.chunk.metrics.elapsedMs),
+  });
+  const conceptsJson = JSON.stringify(
+    nextSummary.acceptedQuestionSummaries.map((question) => ({
+      id: question.id,
+      title: question.concept,
+      summary: question.concept,
+      evidenceSegmentIds: [],
+    })),
+  );
+
+  try {
+    const results = await c.env.DB.batch([
+      questionInsert(
+        c.env.DB,
+        bank.id,
+        input.chunk.question,
+        input.chunk.startIndex,
+        summary.plannedCount,
+        input.chunk,
+        questionId,
+        qualityFlags,
+      ),
+      c.env.DB.prepare(
+        "INSERT OR IGNORE INTO attempt_items (attempt_id, ordinal, question_id) SELECT id, ?, ? FROM attempts WHERE quiz_id = ?",
+      ).bind(input.chunk.startIndex, questionId, bank.id),
+      c.env.DB.prepare(
+        "UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ?, concepts_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating'",
+      ).bind(
+        complete ? "passed" : "generating",
+        JSON.stringify(nextSummary),
+        conceptsJson,
+        bank.id,
+        user.id,
+        importKey,
+        LOCAL_QUIZ_PIPELINE_VERSION,
+      ),
+    ]);
+    if (results[0]?.meta.changes !== 1 || results[2]?.meta.changes !== 1) {
+      throw new Error("Progressive question write lost its reservation.");
+    }
+  } catch (error) {
+    if (
+      await storedQuestionMatches(
+        c.env.DB,
+        bank.id,
+        input.chunk.startIndex,
+        input.chunk.question,
+      )
+    ) {
+      await reconcileAttemptItems(c.env.DB, bank.id);
+      return c.json(
+        ExtensionQuizProgressiveImportResponseSchema.parse(
+          await progressiveImportState(c.env.DB, bank.id),
+        ),
+      );
+    }
+    throw error;
+  }
+
+  await reconcileAttemptItems(c.env.DB, bank.id);
+  await renewGenerationClaim(
+    c.env.DB,
+    bank.id,
+    importKey,
+    timestamp,
+    summary.generationProfile,
+  );
+  return c.json(
+    ExtensionQuizProgressiveImportResponseSchema.parse(
+      await progressiveImportState(c.env.DB, bank.id),
+    ),
+  );
+});
+
+quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
+  const user = c.get("user");
+  const importKey = requireIdempotencyKey(c);
+  await enforceRateLimit(c.env.DB, {
+    namespace: "extension-progressive-call-event",
+    identifier: user.id,
+    maximum: 90,
+    windowSeconds: 60,
+  });
+  const input = await parseJson(
+    c,
+    ExtensionQuizGenerationCallEventRequestSchema,
+  );
+  if (
+    c.req.param("sessionId") !== input.generationSessionId ||
+    c.req.param("callIndex") !== String(input.callIndex)
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_identity_mismatch",
+      "The call event identity does not match its request path.",
+    );
+  }
+  const bank = await progressiveBank(
+    c.env.DB,
+    c.req.param("quizId"),
+    user.id,
+    importKey,
+  );
+  const snapshot = await readProgressiveGenerationSnapshot(c.env.DB, bank.id);
+  if (!snapshot.summary || !snapshot.availability) {
+    throw new ApiError(
+      409,
+      "quiz_not_progressive",
+      "This quiz does not support current progressive question delivery.",
+    );
+  }
+  if (
+    input.startIndex >= snapshot.summary.plannedCount ||
+    input.startIndex + input.requestedCount > snapshot.summary.plannedCount
+  ) {
+    throw new ApiError(
+      422,
+      "generation_call_range_invalid",
+      "The call event is outside this quiz's planned question range.",
+    );
+  }
+  const automaticEvent = isAutomaticCallEvent(input);
+  if (
+    automaticEvent !==
+    (snapshot.summary.generationProfile === "stable_auto_recovery_v5_3")
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_protocol_mismatch",
+      "The call event protocol must match the quiz generation profile.",
+    );
+  }
+
+  const replay = await storedCallEvent(
+    c.env.DB,
+    bank.id,
+    input.generationSessionId,
+    input.callIndex,
+  );
+  if (replay) {
+    if (!callEventsMatch(replay, input)) {
+      throw new ApiError(
+        409,
+        "generation_call_conflict",
+        "That generation call was already recorded with different data.",
+      );
+    }
+    return c.json(
+      ExtensionQuizGenerationCallEventResponseSchema.parse({
+        quizId: bank.id,
+        recorded: true,
+      }),
+    );
+  }
+
+  if (input.classification === "automatic_retry") {
+    const existingRetry = await c.env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND classification = 'automatic_retry'",
+    )
+      .bind(bank.id, input.generationSessionId)
+      .first<{ count: number }>();
+    const retryLimit = automaticEvent ? MAX_AUTOMATIC_RETRIES : 1;
+    if (Number(existingRetry?.count ?? 0) >= retryLimit) {
+      throw new ApiError(
+        409,
+        "automatic_retry_budget_exceeded",
+        automaticEvent
+          ? "The automatic recovery call budget has been exhausted."
+          : "Only one transient automatic retry is permitted per generation session.",
+      );
+    }
+    if (automaticEvent) {
+      const ordinalRetries = await c.env.DB.prepare(
+        "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND start_ordinal = ? AND classification = 'automatic_retry' AND retry_kind = ?",
+      )
+        .bind(
+          bank.id,
+          input.generationSessionId,
+          input.startIndex,
+          input.retryKind,
+        )
+        .first<{ count: number }>();
+      const contentRetry = new Set([
+        "empty_content",
+        "truncated_output",
+        "content_repair",
+        "duplicate_repair",
+        "answer_repair",
+      ]).has(input.retryKind!);
+      const perOrdinalLimit = contentRetry ? 2 : 4;
+      if (Number(ordinalRetries?.count ?? 0) >= perOrdinalLimit) {
+        throw new ApiError(
+          409,
+          "automatic_retry_ordinal_budget_exceeded",
+          "The automatic retry budget for this question has been exhausted.",
+        );
+      }
+    }
+  }
+
+  await assertGenerationCallSequence(
+    c.env.DB,
+    bank.id,
+    importKey,
+    snapshot.summary.acceptedCount,
+    input,
+  );
+
+  const timestamp = now();
+  const result = await c.env.DB.prepare(
+    `INSERT INTO quiz_generation_call_events
+     (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at, protocol_version, retry_kind, ordinal_attempt, recovery_session_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      bank.id,
+      input.generationSessionId,
+      input.callIndex,
+      input.startIndex,
+      input.requestedCount,
+      input.acceptedCount,
+      input.classification,
+      input.outcome,
+      input.retryDelayMs,
+      input.elapsedMs,
+      input.inputTokens ?? null,
+      input.outputTokens ?? null,
+      input.reasoningTokens ?? null,
+      input.usageComplete ? 1 : 0,
+      timestamp,
+      automaticEvent ? input.protocolVersion : null,
+      automaticEvent ? (input.retryKind ?? null) : null,
+      automaticEvent ? input.ordinalAttempt : null,
+      automaticEvent ? input.recoverySessionId : null,
+    )
+    .run();
+  if (result.meta.changes !== 1) {
+    throw new ApiError(
+      409,
+      "generation_call_conflict",
+      "The generation call event could not be recorded.",
+    );
+  }
+  await renewGenerationClaim(
+    c.env.DB,
+    bank.id,
+    importKey,
+    timestamp,
+    snapshot.summary.generationProfile,
+    isAutomaticCallEvent(input) ? input.recoverySessionId : undefined,
+  );
+  return c.json(
+    ExtensionQuizGenerationCallEventResponseSchema.parse({
+      quizId: bank.id,
+      recorded: true,
+    }),
+    201,
+  );
+});
+
+quizImportsRouter.patch("/:quizId/progress", async (c) => {
+  const user = c.get("user");
+  const importKey = requireIdempotencyKey(c);
+  const input = await parseJson(
+    c,
+    ExtensionQuizGenerationProgressRequestSchema,
+  );
+  const bank = await progressiveBank(
+    c.env.DB,
+    c.req.param("quizId"),
+    user.id,
+    importKey,
+  );
+  const snapshot = await readProgressiveGenerationSnapshot(c.env.DB, bank.id);
+  if (snapshot.qualityStatus !== "passed") {
+    const summary = snapshot.summary;
+    if (!summary) {
+      throw new ApiError(
+        409,
+        "quiz_not_progressive",
+        "This quiz does not support current progressive question delivery.",
+      );
+    }
+    if (
+      summary.generationProfile === "stable_auto_recovery_v5_3" &&
+      input.state === "retry_required"
+    ) {
+      throw new ApiError(
+        422,
+        "manual_generation_continuation_removed",
+        "Automatic-generation banks cannot enter a manual continuation state.",
+      );
+    }
+    if (
+      summary.generationProfile === "stable_auto_recovery_v5_3" &&
+      input.state === "retrying" &&
+      (!input.retryOrdinal ||
+        !input.ordinalAttempt ||
+        !input.retryKind ||
+        !input.recoverySessionId)
+    ) {
+      throw new ApiError(
+        422,
+        "automatic_retry_metadata_required",
+        "Automatic retries require bounded ordinal recovery metadata.",
+      );
+    }
+    const timestamp = now();
+    const nextSummary = ProgressiveQuizSummarySchema.parse({
+      ...summary,
+      generationState: input.state,
+      reasonCode: input.reasonCode,
+      retryOrdinal: input.state === "retrying" ? input.retryOrdinal : undefined,
+      ordinalAttempt:
+        input.state === "retrying" ? input.ordinalAttempt : undefined,
+      retryKind: input.state === "retrying" ? input.retryKind : undefined,
+      retryDelayMs: input.state === "retrying" ? input.retryDelayMs : undefined,
+      recoverySessionId: input.recoverySessionId ?? summary.recoverySessionId,
+      stateChangedAt:
+        summary.generationState === input.state
+          ? summary.stateChangedAt
+          : timestamp,
+    });
+    const updateSummary = c.env.DB.prepare(
+      "UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating' AND quality_summary_json = ?",
+    ).bind(
+      JSON.stringify(nextSummary),
+      bank.id,
+      user.id,
+      importKey,
+      LOCAL_QUIZ_PIPELINE_VERSION,
+      snapshot.qualitySummaryJson,
+    );
+    if (
+      input.state === "retry_required" ||
+      input.state === "action_required" ||
+      input.state === "generation_failed"
+    ) {
+      const results = await c.env.DB.batch([
+        updateSummary,
+        c.env.DB.prepare(
+          "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ? WHERE quiz_id = ? AND claim_key = ?",
+        ).bind(timestamp, timestamp, bank.id, importKey),
+      ]);
+      if (results[0]?.meta.changes !== 1) {
+        throw new ApiError(
+          409,
+          "quiz_generation_state_conflict",
+          "Generation state changed before this update could be stored.",
+        );
+      }
+    } else {
+      const result = await updateSummary.run();
+      if (result.meta.changes !== 1) {
+        throw new ApiError(
+          409,
+          "quiz_generation_state_conflict",
+          "Generation state changed before this update could be stored.",
+        );
+      }
+    }
+  }
+  return c.json(
+    ExtensionQuizProgressiveImportResponseSchema.parse(
+      await progressiveImportState(c.env.DB, bank.id),
+    ),
+  );
+});
+
+quizImportsRouter.post("/", async (c) => {
+  const user = c.get("user");
+  const idempotencyKey = requireIdempotencyKey(c);
+
+  const existing = await findImportedQuiz(c.env.DB, user.id, idempotencyKey);
   if (existing) {
     return c.json(
       ExtensionQuizImportResponseSchema.parse({ quizId: existing.id }),
@@ -65,15 +658,11 @@ quizImportsRouter.post("/", async (c) => {
       db: c.env.DB,
       quizId,
       userId: user.id,
-      importKey: idempotencyKey.data,
+      importKey: idempotencyKey,
       input,
     });
   } catch (error) {
-    const raced = await findImportedQuiz(
-      c.env.DB,
-      user.id,
-      idempotencyKey.data,
-    );
+    const raced = await findImportedQuiz(c.env.DB, user.id, idempotencyKey);
     if (raced) {
       return c.json(
         ExtensionQuizImportResponseSchema.parse({ quizId: raced.id }),
@@ -84,6 +673,635 @@ quizImportsRouter.post("/", async (c) => {
 
   return c.json(ExtensionQuizImportResponseSchema.parse({ quizId }), 201);
 });
+
+async function requireOwnedVideo(
+  db: D1Database,
+  videoId: string,
+  userId: string,
+): Promise<void> {
+  const video = await db
+    .prepare("SELECT id FROM videos WHERE id = ? AND owner_id = ?")
+    .bind(videoId, userId)
+    .first<{ id: string }>();
+  if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
+}
+
+async function persistProgressiveQuiz(input: {
+  db: D1Database;
+  quizId: string;
+  userId: string;
+  importKey: string;
+  input: ExtensionQuizProgressiveImportRequest;
+}): Promise<void> {
+  const timestamp = now();
+  const chunk = input.input.chunk;
+  const question = chunk.question;
+  const qualityFlags = questionQualityFlags(question, []);
+  const summary = ProgressiveQuizSummarySchema.parse({
+    source: "extension-local-json-stream",
+    importVersion:
+      chunk.importVersion ??
+      (chunk.promptVersion === "quiz-local-json-stream-v5.3"
+        ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+        : chunk.promptVersion === "quiz-local-json-stream-v5.2"
+          ? "extension-progressive-import-v4"
+          : "extension-progressive-import-v3"),
+    resultProtocolVersion: chunk.protocolVersion,
+    pipelineVersion: chunk.pipelineVersion,
+    model: chunk.model,
+    reasoningEffort: chunk.reasoningEffort,
+    promptVersion: chunk.promptVersion,
+    validatorVersion: chunk.validatorVersion,
+    generationProfile: chunk.generationProfile ?? "legacy_reasoning_v5_1",
+    generationId: chunk.generationId,
+    generationSessionId: chunk.generationSessionId,
+    recoverySessionId: chunk.recoverySessionId,
+    questionPlanSeed: chunk.questionPlan?.seed,
+    generationState: "generating",
+    requestedQuestionTypes: input.input.questionTypes,
+    plannedQuestionTypes: chunk.questionPlan?.types,
+    generatedQuestionTypes: [question.type],
+    plannedCount: chunk.totalQuestions,
+    acceptedCount: 1,
+    lastProgressAt: timestamp,
+    lastQuestionAt: timestamp,
+    stateChangedAt: timestamp,
+    telemetryAvailable:
+      chunk.promptVersion === "quiz-local-json-stream-v5.2" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.3",
+    qualityFlags: qualityFlags.length
+      ? [{ ordinal: 0, codes: qualityFlags }]
+      : [],
+    acceptedQuestionSummaries: [acceptedQuestionSummary(question)],
+    transcriptStored: false,
+    ...chunk.metrics,
+  });
+  const statements = [
+    input.db
+      .prepare(
+        `INSERT INTO quiz_banks
+         (id, user_id, video_id, language, session_length, primer, concepts_json, watched, pipeline_version, quality_status, quality_summary_json, import_key, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'generating', ?, ?, ?)`,
+      )
+      .bind(
+        input.quizId,
+        input.userId,
+        input.input.videoId,
+        input.input.quizLanguage,
+        input.input.sessionLength,
+        chunk.title,
+        JSON.stringify([
+          {
+            id: question.id,
+            title: question.concept,
+            summary: question.concept,
+            evidenceSegmentIds: [],
+          },
+        ]),
+        input.input.watched ? 1 : 0,
+        LOCAL_QUIZ_PIPELINE_VERSION,
+        JSON.stringify(summary),
+        input.importKey,
+        timestamp,
+      ),
+    questionInsert(
+      input.db,
+      input.quizId,
+      question,
+      0,
+      chunk.totalQuestions,
+      chunk,
+      undefined,
+      qualityFlags,
+    ),
+    input.db
+      .prepare(
+        "INSERT INTO mastery (user_id, video_id, state, updated_at) VALUES (?, ?, 'not_started', ?) ON CONFLICT(user_id, video_id) DO NOTHING",
+      )
+      .bind(input.userId, input.input.videoId, timestamp),
+  ];
+  if (
+    chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    chunk.generationSessionId &&
+    chunk.recoverySessionId
+  ) {
+    statements.push(
+      input.db
+        .prepare(
+          `INSERT INTO quiz_generation_claims
+             (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at, recovery_session_id, heartbeat_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          input.quizId,
+          chunk.generationSessionId,
+          input.importKey,
+          timestamp + AUTOMATIC_GENERATION_CLAIM_LEASE_MS,
+          timestamp,
+          chunk.recoverySessionId,
+          timestamp,
+        ),
+    );
+  }
+  const results = await input.db.batch(statements);
+  if (
+    results.length !== statements.length ||
+    results[0]?.meta.changes !== 1 ||
+    results[1]?.meta.changes !== 1
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_import_rejected",
+      "The first streamed question could not be stored atomically.",
+    );
+  }
+}
+
+async function findProgressiveImportedQuiz(
+  db: D1Database,
+  userId: string,
+  importKey: string,
+): Promise<{ id: string } | null> {
+  const result = await db
+    .prepare(
+      "SELECT id, quality_summary_json FROM quiz_banks WHERE user_id = ? AND import_key = ? AND pipeline_version = ? LIMIT 1",
+    )
+    .bind(userId, importKey, LOCAL_QUIZ_PIPELINE_VERSION)
+    .first<{ id: string; quality_summary_json: string }>();
+  return result && tryProgressiveQuizSummary(result.quality_summary_json)
+    ? { id: result.id }
+    : null;
+}
+
+type ProgressiveBank = {
+  id: string;
+};
+
+async function progressiveBank(
+  db: D1Database,
+  quizId: string,
+  userId: string,
+  importKey: string,
+): Promise<ProgressiveBank> {
+  const bank = await db
+    .prepare(
+      "SELECT id FROM quiz_banks WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ?",
+    )
+    .bind(quizId, userId, importKey, LOCAL_QUIZ_PIPELINE_VERSION)
+    .first<ProgressiveBank>();
+  if (!bank) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
+  return bank;
+}
+
+async function progressiveImportState(db: D1Database, quizId: string) {
+  return progressiveImportStateFromSnapshot(
+    await readProgressiveGenerationSnapshot(db, quizId),
+  );
+}
+
+function progressiveImportStateFromSnapshot(
+  snapshot: Awaited<ReturnType<typeof readProgressiveGenerationSnapshot>>,
+) {
+  if (
+    snapshot.pipelineVersion !== LOCAL_QUIZ_PIPELINE_VERSION ||
+    !snapshot.summary ||
+    !snapshot.availability
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_not_progressive",
+      "This quiz does not support current progressive question delivery.",
+    );
+  }
+  return {
+    quizId: snapshot.quizId,
+    generation: snapshot.availability,
+  };
+}
+
+async function storedQuestionMatches(
+  db: D1Database,
+  quizId: string,
+  ordinal: number,
+  question: LocalConceptQuizQuestion,
+): Promise<boolean> {
+  const stored = await db
+    .prepare(
+      "SELECT source_question_id, type, prompt, options_json, correct_answer_json, rubric_json, explanation, generation_metadata_json FROM questions WHERE quiz_id = ? AND ordinal = ?",
+    )
+    .bind(quizId, ordinal)
+    .first<{
+      source_question_id: string;
+      type: string;
+      prompt: string;
+      options_json: string | null;
+      correct_answer_json: string | null;
+      rubric_json: string | null;
+      explanation: string;
+      generation_metadata_json: string;
+    }>();
+  if (!stored) return false;
+  const expected = storedQuestionFields(question);
+  let concept: unknown;
+  try {
+    concept = z
+      .object({ concept: z.string() })
+      .passthrough()
+      .parse(JSON.parse(stored.generation_metadata_json)).concept;
+  } catch {
+    return false;
+  }
+  return (
+    stored.source_question_id === question.id &&
+    stored.type === question.type &&
+    stored.prompt === question.question &&
+    stored.options_json === expected.optionsJson &&
+    stored.correct_answer_json === expected.correctAnswerJson &&
+    stored.rubric_json === expected.rubricJson &&
+    stored.explanation === expected.explanation &&
+    concept === question.concept
+  );
+}
+
+export async function reconcileAttemptItems(
+  db: D1Database,
+  quizId: string,
+): Promise<void> {
+  await db
+    .prepare(
+      "INSERT OR IGNORE INTO attempt_items (attempt_id, ordinal, question_id) SELECT a.id, q.ordinal, q.id FROM attempts a JOIN questions q ON q.quiz_id = a.quiz_id WHERE a.quiz_id = ?",
+    )
+    .bind(quizId)
+    .run();
+}
+
+type StoredCallEvent = {
+  generation_session_id: string;
+  call_index: number;
+  start_ordinal: number;
+  requested_count: number;
+  accepted_count: number;
+  classification: LocalGenerationCallEvent["classification"];
+  outcome_code: LocalGenerationCallEvent["outcome"];
+  retry_delay_ms: number;
+  elapsed_ms: number;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  reasoning_tokens: number | null;
+  usage_complete: number;
+  protocol_version: number | null;
+  retry_kind: string | null;
+  ordinal_attempt: number | null;
+  recovery_session_id: string | null;
+};
+
+function isAutomaticCallEvent(
+  event: LocalGenerationCallEvent,
+): event is LocalGenerationCallEventV3 {
+  return (
+    "protocolVersion" in event &&
+    event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION
+  );
+}
+
+async function storedCallEvent(
+  db: D1Database,
+  quizId: string,
+  generationSessionId: string,
+  callIndex: number,
+): Promise<StoredCallEvent | null> {
+  return db
+    .prepare(
+      `SELECT generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, protocol_version, retry_kind, ordinal_attempt, recovery_session_id
+       FROM quiz_generation_call_events
+       WHERE quiz_id = ? AND generation_session_id = ? AND call_index = ?`,
+    )
+    .bind(quizId, generationSessionId, callIndex)
+    .first<StoredCallEvent>();
+}
+
+function callEventsMatch(
+  stored: StoredCallEvent,
+  event: LocalGenerationCallEvent,
+): boolean {
+  return (
+    stored.generation_session_id === event.generationSessionId &&
+    Number(stored.call_index) === event.callIndex &&
+    Number(stored.start_ordinal) === event.startIndex &&
+    Number(stored.requested_count) === event.requestedCount &&
+    Number(stored.accepted_count) === event.acceptedCount &&
+    stored.classification === event.classification &&
+    stored.outcome_code === event.outcome &&
+    Number(stored.retry_delay_ms) === event.retryDelayMs &&
+    Number(stored.elapsed_ms) === event.elapsedMs &&
+    nullableNumber(stored.input_tokens) === (event.inputTokens ?? null) &&
+    nullableNumber(stored.output_tokens) === (event.outputTokens ?? null) &&
+    nullableNumber(stored.reasoning_tokens) ===
+      (event.reasoningTokens ?? null) &&
+    Boolean(stored.usage_complete) === event.usageComplete &&
+    Number(stored.protocol_version ?? 0) ===
+      (isAutomaticCallEvent(event) ? event.protocolVersion : 0) &&
+    stored.retry_kind ===
+      (isAutomaticCallEvent(event) ? (event.retryKind ?? null) : null) &&
+    nullableNumber(stored.ordinal_attempt) ===
+      (isAutomaticCallEvent(event) ? event.ordinalAttempt : null) &&
+    stored.recovery_session_id ===
+      (isAutomaticCallEvent(event) ? event.recoverySessionId : null)
+  );
+}
+
+function nullableNumber(value: number | null): number | null {
+  return value === null ? null : Number(value);
+}
+
+async function assertGenerationCallSequence(
+  db: D1Database,
+  quizId: string,
+  importKey: string,
+  acceptedQuestionCount: number,
+  event: LocalGenerationCallEvent,
+): Promise<void> {
+  if (isAutomaticCallEvent(event)) {
+    await assertAutomaticGenerationCallSequence(
+      db,
+      quizId,
+      importKey,
+      acceptedQuestionCount,
+      event,
+    );
+    return;
+  }
+  const eventFrontier = event.startIndex + event.acceptedCount;
+  const bufferedFailedFirstCall =
+    event.callIndex === 0 &&
+    event.startIndex === 0 &&
+    event.acceptedCount === 0 &&
+    acceptedQuestionCount === 1 &&
+    ["transient_http", "network_interrupted", "timeout"].includes(
+      event.outcome,
+    ) &&
+    event.retryDelayMs > 0;
+  if (acceptedQuestionCount !== eventFrontier && !bufferedFailedFirstCall) {
+    throw new ApiError(
+      409,
+      "generation_call_progress_conflict",
+      "The call event does not match the stored question frontier.",
+    );
+  }
+
+  const claim = await db
+    .prepare(
+      "SELECT generation_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+    )
+    .bind(quizId)
+    .first<{
+      generation_session_id: string;
+      claim_key: string;
+      lease_expires_at: number;
+    }>();
+  const claimedSession =
+    claim?.generation_session_id === event.generationSessionId &&
+    claim.claim_key === importKey;
+  if (
+    (event.classification === "manual_continuation" && !claimedSession) ||
+    (claimedSession && event.classification === "primary")
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_classification_conflict",
+      "The call classification does not match its continuation claim.",
+    );
+  }
+
+  if (event.callIndex === 0) {
+    if (
+      event.classification === "automatic_retry" ||
+      (event.classification === "primary" && event.startIndex !== 0)
+    ) {
+      throw new ApiError(
+        409,
+        "generation_call_sequence_conflict",
+        "The generation session did not begin with a valid primary call.",
+      );
+    }
+    return;
+  }
+
+  const previous = await storedCallEvent(
+    db,
+    quizId,
+    event.generationSessionId,
+    event.callIndex - 1,
+  );
+  if (!previous) {
+    throw new ApiError(
+      409,
+      "generation_call_sequence_conflict",
+      "Generation call events must be recorded consecutively.",
+    );
+  }
+  const expectedStart =
+    Number(previous.start_ordinal) + Number(previous.accepted_count);
+  if (event.startIndex !== expectedStart) {
+    throw new ApiError(
+      409,
+      "generation_call_sequence_conflict",
+      "The next call must begin at the first missing question.",
+    );
+  }
+
+  if (event.classification === "automatic_retry") {
+    const retryableOutcomes = new Set([
+      "transient_http",
+      "network_interrupted",
+      "timeout",
+    ]);
+    if (
+      !retryableOutcomes.has(previous.outcome_code) ||
+      Number(previous.retry_delay_ms) <= 0 ||
+      event.requestedCount !== 1
+    ) {
+      throw new ApiError(
+        409,
+        "generation_call_retry_conflict",
+        "An automatic retry requires one confirmed transient predecessor.",
+      );
+    }
+    return;
+  }
+
+  if (previous.outcome_code !== "complete") {
+    throw new ApiError(
+      409,
+      "generation_call_sequence_conflict",
+      "A non-retry call cannot follow a failed generation call.",
+    );
+  }
+  const expectedClassification = claimedSession
+    ? "manual_continuation"
+    : "primary";
+  if (event.classification !== expectedClassification) {
+    throw new ApiError(
+      409,
+      "generation_call_classification_conflict",
+      "The call classification changed within one generation session.",
+    );
+  }
+}
+
+async function assertAutomaticGenerationCallSequence(
+  db: D1Database,
+  quizId: string,
+  importKey: string,
+  acceptedQuestionCount: number,
+  event: LocalGenerationCallEventV3,
+): Promise<void> {
+  const eventFrontier = event.startIndex + event.acceptedCount;
+  const bufferedFailedFirstCall =
+    event.startIndex === 0 &&
+    event.acceptedCount === 0 &&
+    acceptedQuestionCount === 1;
+  if (acceptedQuestionCount !== eventFrontier && !bufferedFailedFirstCall) {
+    throw new ApiError(
+      409,
+      "generation_call_progress_conflict",
+      "The call event does not match the stored question frontier.",
+    );
+  }
+
+  const claim = await db
+    .prepare(
+      "SELECT generation_session_id, recovery_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+    )
+    .bind(quizId)
+    .first<{
+      generation_session_id: string;
+      recovery_session_id: string | null;
+      claim_key: string;
+      lease_expires_at: number;
+    }>();
+  if (
+    claim?.generation_session_id !== event.generationSessionId ||
+    claim.recovery_session_id !== event.recoverySessionId ||
+    claim.claim_key !== importKey ||
+    Number(claim.lease_expires_at) <= now()
+  ) {
+    throw new ApiError(
+      409,
+      "generation_recovery_lease_conflict",
+      "This tab no longer owns the automatic recovery lease.",
+    );
+  }
+
+  if (event.callIndex === 0) {
+    if (
+      event.classification !== "primary" ||
+      event.startIndex !== 0 ||
+      event.ordinalAttempt !== 1 ||
+      event.retryKind !== undefined
+    ) {
+      throw new ApiError(
+        409,
+        "generation_call_sequence_conflict",
+        "Automatic generation must begin with the primary q1 call.",
+      );
+    }
+    return;
+  }
+
+  const previous = await storedCallEvent(
+    db,
+    quizId,
+    event.generationSessionId,
+    event.callIndex - 1,
+  );
+  if (!previous || Number(previous.protocol_version) !== 7) {
+    throw new ApiError(
+      409,
+      "generation_call_sequence_conflict",
+      "Automatic call events must be recorded consecutively.",
+    );
+  }
+
+  if (event.classification === "primary") {
+    if (
+      previous.outcome_code !== "complete" ||
+      event.startIndex !==
+        Number(previous.start_ordinal) + Number(previous.accepted_count) ||
+      event.ordinalAttempt !== 1 ||
+      event.retryKind !== undefined
+    ) {
+      throw new ApiError(
+        409,
+        "generation_call_sequence_conflict",
+        "A primary call must begin the next never-attempted question.",
+      );
+    }
+    return;
+  }
+
+  const expectedAttempt = Number(previous.ordinal_attempt ?? 1) + 1;
+  if (
+    previous.outcome_code === "complete" ||
+    event.startIndex !== Number(previous.start_ordinal) ||
+    event.ordinalAttempt !== expectedAttempt ||
+    !retryKindMatchesOutcome(event.retryKind, previous.outcome_code)
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_retry_conflict",
+      "An automatic retry must repair the immediately preceding failed singleton call.",
+    );
+  }
+}
+
+function retryKindMatchesOutcome(
+  retryKind: LocalGenerationCallEventV3["retryKind"],
+  outcome: string,
+): boolean {
+  const outcomesByKind: Record<string, Set<string>> = {
+    transport: new Set(["transient_http", "network_interrupted", "timeout"]),
+    empty_content: new Set(["empty_content"]),
+    truncated_output: new Set(["truncated_json", "finish_length"]),
+    duplicate_repair: new Set(["duplicate_question"]),
+    answer_repair: new Set(["answer_mapping_invalid"]),
+    content_repair: new Set(["schema_invalid", "type_or_order_mismatch"]),
+    automatic_resume: new Set([
+      "local_state_conflict",
+      "append_conflict",
+      "network_interrupted",
+    ]),
+  };
+  return retryKind ? (outcomesByKind[retryKind]?.has(outcome) ?? false) : false;
+}
+
+async function renewGenerationClaim(
+  db: D1Database,
+  quizId: string,
+  importKey: string,
+  timestamp: number,
+  profile: ProgressiveQuizSummary["generationProfile"],
+  recoverySessionId?: string,
+): Promise<void> {
+  const leaseMs =
+    profile === "stable_auto_recovery_v5_3"
+      ? AUTOMATIC_GENERATION_CLAIM_LEASE_MS
+      : LEGACY_GENERATION_CLAIM_LEASE_MS;
+  await db
+    .prepare(
+      "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ?, heartbeat_at = COALESCE(?, heartbeat_at) WHERE quiz_id = ? AND claim_key = ? AND (? IS NULL OR recovery_session_id = ?)",
+    )
+    .bind(
+      timestamp + leaseMs,
+      timestamp,
+      recoverySessionId ? timestamp : null,
+      quizId,
+      importKey,
+      recoverySessionId ?? null,
+      recoverySessionId ?? null,
+    )
+    .run();
+}
 
 async function persistImportedQuiz(input: {
   db: D1Database;
@@ -98,11 +1316,11 @@ async function persistImportedQuiz(input: {
   const summary = {
     source: "extension-local-tool",
     importVersion: QUIZ_IMPORT_VERSION,
-    pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
-    model: LOCAL_QUIZ_MODEL,
+    pipelineVersion: generatedQuiz.pipelineVersion,
+    model: generatedQuiz.model,
     reasoningEffort: "high",
-    promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
-    validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+    promptVersion: generatedQuiz.promptVersion,
+    validatorVersion: generatedQuiz.validatorVersion,
     qualityStatus: "passed",
     requestedQuestionTypes: input.input.questionTypes,
     generatedQuestionTypes: questions.map((question) => question.type),
@@ -146,6 +1364,14 @@ async function persistImportedQuiz(input: {
         question,
         ordinal,
         questions.length,
+        generatedQuiz,
+        undefined,
+        questionQualityFlags(
+          question,
+          questions
+            .slice(0, ordinal)
+            .map((accepted) => acceptedQuestionSummary(accepted)),
+        ),
       ),
     ),
     input.db
@@ -175,9 +1401,16 @@ function questionInsert(
   quizId: string,
   question: LocalConceptQuizQuestion,
   ordinal: number,
-  questionCount: number,
+  _questionCount: number,
+  metadata: Pick<
+    LocalConceptQuizQuestionChunk,
+    "pipelineVersion" | "model" | "promptVersion" | "validatorVersion"
+  >,
+  questionId = createId(),
+  qualityFlags: QuestionQualityFlag[] = [],
 ): D1PreparedStatement {
   const stored = storedQuestionFields(question);
+  const difficulty = structuralDifficulty(question);
   return db
     .prepare(
       `INSERT INTO questions
@@ -185,7 +1418,7 @@ function questionInsert(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?)`,
     )
     .bind(
-      createId(),
+      questionId,
       quizId,
       ordinal,
       question.id,
@@ -197,15 +1430,18 @@ function questionInsert(
       stored.correctAnswerJson,
       stored.rubricJson,
       stored.explanation,
-      assignedDifficulty(ordinal, questionCount),
+      difficulty,
       JSON.stringify({
         source: "extension-local-tool",
         blueprintSlot: question.id,
         concept: question.concept,
         questionType: question.type,
-        model: LOCAL_QUIZ_MODEL,
-        promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
-        validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+        pipelineVersion: metadata.pipelineVersion,
+        model: metadata.model,
+        promptVersion: metadata.promptVersion,
+        validatorVersion: metadata.validatorVersion,
+        structuralDifficulty: difficulty,
+        qualityFlags,
         schemaValidated: true,
         transcriptStored: false,
       }),
@@ -247,12 +1483,130 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
   };
 }
 
-function assignedDifficulty(ordinal: number, questionCount: number): number {
-  const position = (ordinal + 0.5) / questionCount;
-  if (position < 0.2) return 1;
-  if (position < 0.55) return 2;
-  if (position < 0.85) return 3;
-  return 4;
+export function structuralDifficulty(
+  question: LocalConceptQuizQuestion,
+): number {
+  const prompt = question.question.normalize("NFKC").toLocaleLowerCase();
+  let score = 1;
+  if (/\b(how|why|explain|compare|contrast|derive|apply)\b/.test(prompt)) {
+    score += 1;
+  }
+  if (/\b(analy[sz]e|evaluate|justify|prove|predict|what if)\b/.test(prompt)) {
+    score += 1;
+  }
+  const expression = `${question.question} ${
+    typeof question.answer === "string" ? question.answer : ""
+  }`;
+  const operations = expression.match(
+    /[+\-*/^=]|[×÷]|\b(?:sin|cos|tan|log|lim)\b/gi,
+  )?.length;
+  if ((operations ?? 0) >= 2) score += 1;
+  if ((operations ?? 0) >= 5 || /[()[\]{}].*[()[\]{}]/.test(expression)) {
+    score += 1;
+  }
+  if (question.type === "short_answer" && question.rubricIdeas.length >= 3) {
+    score += 1;
+  }
+  if (question.type === "multiple_choice") {
+    const similarities: number[] = [];
+    for (let left = 0; left < question.choices.length; left += 1) {
+      for (let right = left + 1; right < question.choices.length; right += 1) {
+        similarities.push(
+          tokenSimilarity(question.choices[left]!, question.choices[right]!),
+        );
+      }
+    }
+    if (Math.max(...similarities, 0) >= 0.65) score += 1;
+  }
+  return Math.max(1, Math.min(5, score));
+}
+
+type QuestionQualityFlag =
+  | "concept_overlap"
+  | "low_structural_difficulty"
+  | "high_structural_difficulty"
+  | "similar_distractors";
+
+export function questionQualityFlags(
+  question: LocalConceptQuizQuestion,
+  accepted: Array<{ concept: string }>,
+): QuestionQualityFlag[] {
+  const flags: QuestionQualityFlag[] = [];
+  const difficulty = structuralDifficulty(question);
+  if (difficulty <= 1) flags.push("low_structural_difficulty");
+  if (difficulty >= 5) flags.push("high_structural_difficulty");
+  if (
+    accepted.some(
+      (candidate) =>
+        tokenSimilarity(candidate.concept, question.concept) >= 0.65,
+    )
+  ) {
+    flags.push("concept_overlap");
+  }
+  if (question.type === "multiple_choice") {
+    let maximumSimilarity = 0;
+    for (let left = 0; left < question.choices.length; left += 1) {
+      for (let right = left + 1; right < question.choices.length; right += 1) {
+        maximumSimilarity = Math.max(
+          maximumSimilarity,
+          tokenSimilarity(question.choices[left]!, question.choices[right]!),
+        );
+      }
+    }
+    if (maximumSimilarity >= 0.65) flags.push("similar_distractors");
+  }
+  return flags;
+}
+
+function tokenSimilarity(left: string, right: string): number {
+  const tokenize = (value: string) =>
+    new Set(
+      value
+        .normalize("NFKC")
+        .toLocaleLowerCase()
+        .split(/[^\p{L}\p{N}]+/u)
+        .filter(Boolean),
+    );
+  const leftTokens = tokenize(left);
+  const rightTokens = tokenize(right);
+  const union = new Set([...leftTokens, ...rightTokens]);
+  if (union.size === 0) return 0;
+  let intersection = 0;
+  for (const token of leftTokens) {
+    if (rightTokens.has(token)) intersection += 1;
+  }
+  return intersection / union.size;
+}
+
+export function promptSimilarity(left: string, right: string): number {
+  const canonical = (value: string) =>
+    value
+      .normalize("NFKC")
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const leftValue = canonical(left);
+  const rightValue = canonical(right);
+  if (!leftValue || !rightValue) return 0;
+  if (leftValue === rightValue) return 1;
+  const shingles = (value: string) => {
+    const compact = value.replace(/\s+/g, " ");
+    if (compact.length <= 3) return new Set([compact]);
+    return new Set(
+      Array.from({ length: compact.length - 2 }, (_, index) =>
+        compact.slice(index, index + 3),
+      ),
+    );
+  };
+  const leftShingles = shingles(leftValue);
+  const rightShingles = shingles(rightValue);
+  const union = new Set([...leftShingles, ...rightShingles]);
+  let intersection = 0;
+  for (const shingle of leftShingles) {
+    if (rightShingles.has(shingle)) intersection += 1;
+  }
+  return union.size === 0 ? 0 : intersection / union.size;
 }
 
 async function findImportedQuiz(

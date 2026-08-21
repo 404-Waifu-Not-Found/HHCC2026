@@ -4,6 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-05",
   "compatibility_flags": ["nodejs_compat"],
+  "preview_urls": true,
   "routes": [
     {
       "pattern": "clipquest.ccwu.cc",
@@ -35,6 +36,9 @@
     "html_handling": "none",
     "not_found_handling": "404-page",
   },
+  "version_metadata": {
+    "binding": "WORKER_VERSION",
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -63,6 +67,10 @@
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
     "ENABLE_YOUTUBE_DEMO_HISTORY": "false",
     "MODEL_MANIFEST_KEY": "models/whisper-tiny/manifest.json",
+    "QUIZ_V5_2_CANARY_USER_IDS": "",
+    "QUIZ_V5_2_ROLLOUT": "disabled",
+    "QUIZ_V5_3_CANARY_USER_IDS": "",
+    "QUIZ_V5_3_ROLLOUT": "disabled",
     "RESEND_FROM": "ClipQuest <hello@clipquest.ccwu.cc>",
   },
   "observability": {

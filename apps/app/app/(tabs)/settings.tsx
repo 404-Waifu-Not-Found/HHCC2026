@@ -17,6 +17,7 @@ import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { Surface } from "../../src/components/Surface";
 import { authClient, useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { clearPendingVideoHandoffs } from "../../src/state/pending-video-handoff";
 import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
 import {
   breakpoints,
@@ -53,6 +54,7 @@ export default function SettingsScreen() {
       const result = await authClient.signOut();
       if (result.error)
         throw new Error(result.error.message ?? t("signOutFailed"));
+      await clearPendingVideoHandoffs();
       router.replace("/(auth)/sign-in");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signOutFailed"));
@@ -69,6 +71,7 @@ export default function SettingsScreen() {
       const result = await authClient.deleteUser({ password: deletePassword });
       if (result.error)
         throw new Error(result.error.message ?? t("deleteAccountFailed"));
+      await clearPendingVideoHandoffs();
       router.replace("/(auth)/sign-in");
     } catch (cause) {
       setError(

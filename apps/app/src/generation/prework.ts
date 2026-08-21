@@ -4,16 +4,16 @@ import {
   type VideoImportResponse,
 } from "@clipquest/contracts";
 import {
-  loadGenerationState,
-  saveGenerationState,
+  loadGenerationRecord,
   saveImportedVideo,
+  updateGenerationRecord,
 } from "../state/creation";
 import { acquireTextTranscript } from "../transcription/acquire-text-transcript";
 
 export async function preGenerateImportedQuiz(
   imported: VideoImportResponse,
   input: {
-    idempotencyKey: string;
+    generationId: string;
     quizLanguage: AppLanguage;
     questionTypes: QuizQuestionType[];
   },
@@ -23,7 +23,7 @@ export async function preGenerateImportedQuiz(
   try {
     const transcript = await acquireTextTranscript(imported, controller.signal);
     if (!transcript) {
-      await updateMatchingState(imported.video.id, input.idempotencyKey, {
+      await updateMatchingState(input.generationId, {
         preworkStatus: "unavailable",
       });
       return;
@@ -48,7 +48,7 @@ export async function preGenerateImportedQuiz(
       },
       requiresLocalTranscription: false,
     });
-    await updateMatchingState(imported.video.id, input.idempotencyKey, {
+    await updateMatchingState(input.generationId, {
       preworkStatus: "ready",
     });
     console.info(
@@ -65,7 +65,7 @@ export async function preGenerateImportedQuiz(
       }),
     );
   } catch (error) {
-    await updateMatchingState(imported.video.id, input.idempotencyKey, {
+    await updateMatchingState(input.generationId, {
       preworkStatus: "failed",
     });
     console.warn(
@@ -81,11 +81,10 @@ export async function preGenerateImportedQuiz(
 }
 
 async function updateMatchingState(
-  videoId: string,
-  idempotencyKey: string,
+  generationId: string,
   update: { preworkStatus: "ready" | "unavailable" | "failed" },
 ) {
-  const current = await loadGenerationState(videoId);
-  if (!current || current.idempotencyKey !== idempotencyKey) return;
-  await saveGenerationState(videoId, { ...current, ...update });
+  const current = await loadGenerationRecord(generationId);
+  if (!current) return;
+  await updateGenerationRecord(generationId, update);
 }

@@ -7,7 +7,11 @@ import {
 import { Hono } from "hono";
 import { createId, now } from "../lib/ids";
 import { enforceRateLimit } from "../lib/rate-limit";
-import { cacheThumbnail } from "../lib/thumbnail";
+import {
+  cacheThumbnail,
+  thumbnailCacheKey,
+  THUMBNAIL_RETRY_AFTER_SECONDS,
+} from "../lib/thumbnail";
 import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 import { getSourceAdapter, normalizeSourceUrl } from "../sources";
@@ -119,7 +123,11 @@ videosRouter.post("/import", async (c) => {
   }
 
   c.executionCtx.waitUntil(
-    cacheThumbnail(c.env, videoId, inspected.thumbnailUrl),
+    cacheThumbnail(c.env, {
+      videoId,
+      sourceVideoId: inspected.sourceVideoId,
+      remoteUrl: inspected.thumbnailUrl,
+    }).then(() => undefined),
   );
   const preferredSegments = inspected.preferredCaptionSegments?.filter(
     (segment) => segment.text.trim().length > 0,
@@ -261,24 +269,73 @@ videosRouter.post("/:videoId/captions/resolve", async (c) => {
 thumbnailRouter.get("/:videoId/thumbnail", async (c) => {
   const videoId = c.req.param("videoId");
   const video = await c.env.DB.prepare(
-    "SELECT thumbnail_key, thumbnail_remote_url FROM videos WHERE id = ?",
+    "SELECT source_video_id, thumbnail_key, thumbnail_remote_url FROM videos WHERE id = ?",
   )
     .bind(videoId)
-    .first<{ thumbnail_key: string | null; thumbnail_remote_url: string }>();
+    .first<{
+      source_video_id: string;
+      thumbnail_key: string | null;
+      thumbnail_remote_url: string;
+    }>();
   if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
 
-  if (video.thumbnail_key) {
-    const object = await c.env.PRIVATE_BUCKET.get(video.thumbnail_key);
-    if (object) {
-      const headers = new Headers();
-      object.writeHttpMetadata(headers);
-      headers.set("ETag", object.httpEtag);
-      headers.set(
-        "Cache-Control",
-        "public, max-age=86400, stale-while-revalidate=604800",
-      );
-      return new Response(object.body, { headers });
-    }
+  const deterministicKey = thumbnailCacheKey(videoId);
+  const storedKey = video.thumbnail_key ?? deterministicKey;
+  let object = await c.env.PRIVATE_BUCKET.get(storedKey);
+  if (!object && storedKey !== deterministicKey) {
+    object = await c.env.PRIVATE_BUCKET.get(deterministicKey);
   }
-  return Response.redirect(video.thumbnail_remote_url, 302);
+  if (object) {
+    if (video.thumbnail_key !== object.key) {
+      c.executionCtx.waitUntil(
+        c.env.DB.prepare(
+          "UPDATE videos SET thumbnail_key = ?, updated_at = ? WHERE id = ?",
+        )
+          .bind(object.key, Date.now(), videoId)
+          .run()
+          .then(() => undefined),
+      );
+    }
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("Content-Length", String(object.size));
+    headers.set("ETag", object.httpEtag);
+    headers.set(
+      "Cache-Control",
+      "public, max-age=86400, stale-while-revalidate=604800",
+    );
+    console.info(
+      JSON.stringify({
+        scope: "thumbnail",
+        event: "cache_hit",
+        videoId,
+        sourceVideoId: video.source_video_id,
+        bytes: object.size,
+      }),
+    );
+    return new Response(object.body, { headers });
+  }
+
+  const acquired = await cacheThumbnail(c.env, {
+    videoId,
+    sourceVideoId: video.source_video_id,
+    remoteUrl: video.thumbnail_remote_url,
+  });
+  if (acquired.ok) {
+    const headers = new Headers({
+      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      "Content-Length": String(acquired.bytes.byteLength),
+      "Content-Type": acquired.contentType,
+    });
+    if (acquired.etag) headers.set("ETag", acquired.etag);
+    return new Response(acquired.bytes, { headers });
+  }
+
+  return new Response(null, {
+    status: 503,
+    headers: {
+      "Cache-Control": "no-store",
+      "Retry-After": String(THUMBNAIL_RETRY_AFTER_SECONDS),
+    },
+  });
 });

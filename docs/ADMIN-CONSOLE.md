@@ -71,7 +71,8 @@ The safe order is:
 2. Apply `npm run db:migrate:remote` while the previous Worker is still serving. Added columns are backward-compatible.
 3. Promote exactly one trusted verified account to `owner` and verify the row.
 4. Run `npm run build` and `npm run test:e2e`.
-5. Deploy with `npm run cf:deploy`.
+5. Deploy with the guarded `npm run cf:deploy` workflow documented in
+   `docs/PRODUCTION-RELEASE.md`; never use a direct one-step production deploy.
 6. Sign in as the owner, open `/admin`, verify read-only views, then perform one reversible test action and confirm its audit entry.
 7. Promote additional operators from the console only when needed.
 

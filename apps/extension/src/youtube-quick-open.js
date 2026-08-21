@@ -24,20 +24,42 @@
   }
 
   function clipQuestUrl(videoId) {
-    const destination = new URL("/welcome", CLIPQUEST_ORIGIN);
+    const destination = new URL("/", CLIPQUEST_ORIGIN);
     destination.searchParams.set(
       "url",
       `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
     );
+    destination.searchParams.set("autostart", "1");
     return destination.href;
   }
 
-  function actionMount() {
-    return (
-      document.querySelector("#top-level-buttons-computed") ??
-      document.querySelector("#actions-inner") ??
-      document.querySelector("#actions")
+  function actionPlacement() {
+    const actions =
+      document.querySelector("ytd-watch-metadata #actions-inner") ??
+      document.querySelector("#actions-inner");
+    const menu = actions?.querySelector("#menu ytd-menu-renderer");
+    if (menu) {
+      return {
+        mount: menu,
+        before:
+          menu.querySelector(":scope > #flexible-item-buttons") ??
+          menu.querySelector(":scope > #button-shape"),
+      };
+    }
+
+    const topLevelButtons = actions?.querySelector(
+      "#menu #top-level-buttons-computed",
     );
+    if (topLevelButtons) {
+      return { mount: topLevelButtons, before: null };
+    }
+
+    return actions ? { mount: actions, before: null } : null;
+  }
+
+  function isCorrectlyPlaced(link, placement) {
+    if (link.parentElement !== placement.mount) return false;
+    return !placement.before || link.nextElementSibling === placement.before;
   }
 
   function createButton() {
@@ -46,6 +68,7 @@
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.setAttribute("aria-label", "Open this video in ClipQuest");
+    link.title = "Open this video in ClipQuest";
 
     const mark = document.createElement("img");
     mark.className = "clipquest-quick-open__mark";
@@ -69,11 +92,13 @@
       return;
     }
 
-    const mount = actionMount();
-    if (!mount) return;
+    const placement = actionPlacement();
+    if (!placement) return;
     const link = existing ?? createButton();
     link.href = clipQuestUrl(videoId);
-    if (link.parentElement !== mount) mount.prepend(link);
+    if (!isCorrectlyPlaced(link, placement)) {
+      placement.mount.insertBefore(link, placement.before);
+    }
   }
 
   function scheduleSync() {
@@ -91,9 +116,14 @@
   }
 
   document.addEventListener("yt-navigate-finish", scheduleSync);
+  document.addEventListener("yt-page-data-updated", scheduleSync);
   window.addEventListener("popstate", scheduleSync);
   new MutationObserver(() => {
-    if (!document.getElementById(BUTTON_ID)) scheduleSync();
+    const link = document.getElementById(BUTTON_ID);
+    const placement = actionPlacement();
+    if (!link || (placement && !isCorrectlyPlaced(link, placement))) {
+      scheduleSync();
+    }
   }).observe(document.documentElement, { childList: true, subtree: true });
   scheduleSync();
 })();

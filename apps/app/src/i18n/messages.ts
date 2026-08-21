@@ -83,6 +83,9 @@ export const messages = {
     creatingQuestions: "Creating questions",
     finalizingQuestions: "Opening your quiz",
     estimatedProgress: "Estimated progress",
+    firstQuestionEta: "Ready-to-start ETA",
+    firstQuestionTakingLonger:
+      "Question 1 is taking longer than usual — still streaming",
     takingLonger: "Still working carefully — almost there",
     cached: "Already downloaded",
     removeModel: "Remove downloaded model",
@@ -125,12 +128,17 @@ export const messages = {
     notFoundBody:
       "That page does not exist. Head home to start or continue a video quest.",
     videoReady: "Video ready",
+    thumbnailUnavailable: "The thumbnail is taking longer than expected.",
+    retryThumbnail: "Reload thumbnail",
     sourceCaptions: "Complete source captions are ready.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
     extensionRequiredTitle: "Install the Chrome extension",
     extensionRequiredBody:
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
+    extensionUpdateTitle: "Update ClipQuest Local AI",
+    extensionUpdateBody:
+      "This version cannot use automatic quiz recovery yet. Install ClipQuest Local AI 0.8.3 or newer to continue.",
     extensionStepDownload: "Download and unzip the extension package.",
     extensionStepOpen: "Open chrome://extensions and turn on Developer mode.",
     extensionStepLoad:
@@ -169,6 +177,11 @@ export const messages = {
       "This quiz changed on another screen. The current question has been restored.",
     quizResumeMissing: "The current quiz question is missing.",
     quizResumeFailed: "Could not resume this quiz.",
+    preparingNextQuestion: "Preparing your next question",
+    quizStillGenerating:
+      "You reached the questions that are ready. The rest of your quiz is still generating.",
+    quizGenerationFailed:
+      "The rest of this quiz could not be generated. Start again from the video.",
     answerCheckFailed: "Could not check that answer.",
     retryingConcept: "Retrying this concept",
     generationFailed: "Quiz creation stopped",
@@ -177,7 +190,7 @@ export const messages = {
     cancelGenerationFailed: "Could not cancel quiz creation. Please try again.",
     tryAgain: "Try again",
     privateTranscription:
-      "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only the completed quiz so you can answer it and save progress.",
+      "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only validated quiz questions so you can answer them and save progress.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -301,6 +314,8 @@ export const messages = {
     creatingQuestions: "正在生成题目",
     finalizingQuestions: "正在打开测验",
     estimatedProgress: "预计进度",
+    firstQuestionEta: "开始答题倒计时",
+    firstQuestionTakingLonger: "第一题比平时稍慢，仍在生成中",
     takingLonger: "正在认真处理，很快就好",
     cached: "已下载",
     removeModel: "删除已下载模型",
@@ -340,11 +355,16 @@ export const messages = {
     notFoundTitle: "这个学习任务走丢了",
     notFoundBody: "该页面不存在。返回首页开始或继续视频学习任务。",
     videoReady: "视频已准备好",
+    thumbnailUnavailable: "缩略图加载时间比预期更长。",
+    retryThumbnail: "重新加载缩略图",
     sourceCaptions: "完整的来源字幕已准备好。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
     extensionRequiredTitle: "安装 Chrome 扩展",
     extensionRequiredBody:
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
+    extensionUpdateTitle: "更新 ClipQuest Local AI",
+    extensionUpdateBody:
+      "当前版本尚不支持自动恢复测验生成。请安装 ClipQuest Local AI 0.8.3 或更高版本后继续。",
     extensionStepDownload: "下载并解压扩展安装包。",
     extensionStepOpen: "打开 chrome://extensions，并启用开发者模式。",
     extensionStepLoad:
@@ -381,6 +401,9 @@ export const messages = {
     quizResynced: "此测验已在其他页面更新，现已恢复到当前题目。",
     quizResumeMissing: "当前测验题目缺失。",
     quizResumeFailed: "无法继续此测验。",
+    preparingNextQuestion: "正在准备下一题",
+    quizStillGenerating: "你已完成当前准备好的题目，其余题目仍在生成中。",
+    quizGenerationFailed: "其余题目未能生成，请从该视频重新开始。",
     answerCheckFailed: "无法检查此答案。",
     retryingConcept: "换一种方式再练一次",
     generationFailed: "测验生成已停止",
@@ -388,7 +411,7 @@ export const messages = {
     cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
     privateTranscription:
-      "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存完成的测验，供你作答并保存学习进度。",
+      "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目，供你作答并保存学习进度。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",

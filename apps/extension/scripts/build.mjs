@@ -1,4 +1,13 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+} from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -28,7 +37,9 @@ for (const file of [
   "caption-core.js",
   "caption-text.js",
   "clipquest-bridge.js",
+  "generation-outbox.js",
   "local-generator.js",
+  "origin-policy.js",
   "popup.css",
   "popup.html",
   "popup.js",
@@ -81,15 +92,39 @@ cpSync(extensionOutput, stableExtensionOutput, {
   recursive: true,
   force: true,
 });
-const zipped = spawnSync(
-  "zip",
-  ["-q", "-r", archive, "clipquest-captions-extension"],
-  { cwd: stagingRoot, stdio: "inherit" },
-);
+const archiveFiles = normalizeAndListFiles(stagingRoot, extensionOutput);
+const zipped = spawnSync("zip", ["-X", "-q", archive, ...archiveFiles], {
+  cwd: stagingRoot,
+  stdio: "inherit",
+});
 rmSync(stagingRoot, { recursive: true, force: true });
 if (zipped.status !== 0) {
   throw new Error(
     "Could not package the ClipQuest caption extension. Install the zip command and retry.",
   );
 }
-console.log(`Built ${archive}`);
+const archiveSha256 = createHash("sha256")
+  .update(readFileSync(archive))
+  .digest("hex");
+console.log(`Built ${archive} (sha256 ${archiveSha256})`);
+
+function normalizeAndListFiles(stagingDirectory, directory) {
+  const normalizedTime = new Date("2020-01-01T00:00:00.000Z");
+  const files = [];
+  const visit = (current) => {
+    const entries = readdirSync(current, { withFileTypes: true }).sort(
+      (left, right) => left.name.localeCompare(right.name),
+    );
+    for (const entry of entries) {
+      const target = resolve(current, entry.name);
+      if (entry.isDirectory()) visit(target);
+      else if (entry.isFile()) {
+        utimesSync(target, normalizedTime, normalizedTime);
+        files.push(target.slice(stagingDirectory.length + 1));
+      }
+    }
+    utimesSync(current, normalizedTime, normalizedTime);
+  };
+  visit(directory);
+  return files.sort();
+}

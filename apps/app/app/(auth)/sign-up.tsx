@@ -1,5 +1,5 @@
 import { VoxelIcon } from "../../src/components/VoxelIcon";
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
@@ -7,7 +7,12 @@ import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
+import {
+  parseQuickOpenRequest,
+  type QuickOpenSearchParams,
+} from "../../src/lib/quick-open";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { persistAuthJourneyQuickOpenHandoff } from "../../src/state/pending-video-handoff";
 import {
   borders,
   controls,
@@ -23,6 +28,8 @@ import {
 
 export default function SignUpScreen() {
   const { t, theme } = useSettings();
+  const params = useLocalSearchParams<QuickOpenSearchParams>();
+  const quickOpen = parseQuickOpenRequest(params);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,6 +52,9 @@ export default function SignUpScreen() {
     setLoading(true);
     setError(undefined);
     try {
+      if (quickOpen) {
+        await persistAuthJourneyQuickOpenHandoff(quickOpen.url);
+      }
       const normalizedUsername = username.trim().toLowerCase();
       const normalizedEmail = email.trim().toLowerCase();
       const result = await authClient.signUp.email({
@@ -81,7 +91,11 @@ export default function SignUpScreen() {
             {t("alreadyHaveAccount")}
           </Text>
           <Link
-            href="/(auth)/sign-in"
+            href={
+              quickOpen
+                ? { pathname: "/(auth)/sign-in", params: quickOpen }
+                : "/(auth)/sign-in"
+            }
             style={[styles.link, styles.footerLink, { color: theme.text }]}
           >
             {t("signIn")}

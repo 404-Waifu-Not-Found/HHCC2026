@@ -1,6 +1,5 @@
 import type { LibraryCard } from "@clipquest/contracts";
 import { VoxelIcon } from "./VoxelIcon";
-import { Image } from "expo-image";
 import {
   Platform,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, motion, radii, spacing, typography } from "../theme/tokens";
 import { MotionPressable, MotionView } from "../motion/Motion";
+import { ReliableThumbnail } from "./ReliableThumbnail";
 
 const masteryKeys = {
   not_started: "notStarted",
@@ -29,7 +29,7 @@ export function VideoCard({
   compact?: boolean;
   fill?: boolean;
 }) {
-  const { t, theme, reduceMotion } = useSettings();
+  const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const horizontal = !compact && width >= 720;
   const actionLabel =
@@ -73,10 +73,11 @@ export function VideoCard({
       ]}
     >
       <View style={[styles.media, horizontal && styles.mediaHorizontal]}>
-        <Image
-          source={{ uri: card.thumbnailUrl }}
-          contentFit="cover"
-          transition={reduceMotion ? 0 : 180}
+        <ReliableThumbnail
+          uri={card.thumbnailUrl}
+          accessibilityLabel={card.title}
+          recyclingKey={card.videoId}
+          testID={`video-card-thumbnail-${card.videoId}`}
           style={styles.image}
         />
         <MotionView
@@ -152,7 +153,6 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#DCE1ED",
   },
   sourceBadge: {
     position: "absolute",

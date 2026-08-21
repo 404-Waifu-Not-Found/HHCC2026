@@ -27,6 +27,12 @@
         type: "ready",
         version,
         configured: configuration?.configured === true,
+        capabilities: [
+          "question-stream-v1",
+          "question-stream-v2",
+          "question-stream-v3",
+          "ensure-source-ready-v1",
+        ],
       });
     } catch {
       // An unpacked extension can be reloaded while a page is open. The page
@@ -46,6 +52,47 @@
     }
     if (message.type === "ping") {
       void announce();
+      return;
+    }
+    if (
+      message.type === "ensure-source-ready" &&
+      typeof message.requestId === "string" &&
+      /^[\w-]{11}$/.test(message.videoId)
+    ) {
+      void chrome.runtime
+        .sendMessage({
+          type: "clipquest.source.ensure.v1",
+          requestId: message.requestId,
+          videoId: message.videoId,
+          preferredLanguage:
+            typeof message.preferredLanguage === "string"
+              ? message.preferredLanguage
+              : undefined,
+        })
+        .then((response) =>
+          post({
+            type: "source-ready-result",
+            requestId: message.requestId,
+            response,
+          }),
+        )
+        .catch((error) =>
+          post({
+            type: "source-ready-result",
+            requestId: message.requestId,
+            response: {
+              ok: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "The source could not be prepared.",
+            },
+          }),
+        );
+      return;
+    }
+    if (message.type === "open-settings") {
+      void chrome.runtime.sendMessage({ type: "clipquest.settings.open.v1" });
       return;
     }
     if (
@@ -85,6 +132,28 @@
             attempt: response.attempt,
             maxAttempts: response.maxAttempts,
             status: response.status,
+            retryDelayMs: response.retryDelayMs,
+            retryOrdinal: response.retryOrdinal,
+            ordinalAttempt: response.ordinalAttempt,
+            retryKind: response.retryKind,
+            reasonCode: response.reasonCode,
+            recoverySessionId: response.recoverySessionId,
+          });
+          return;
+        }
+        if (response.type === "question") {
+          post({
+            type: "generation-question",
+            requestId,
+            result: response.result,
+          });
+          return;
+        }
+        if (response.type === "call") {
+          post({
+            type: "generation-call",
+            requestId,
+            event: response.event,
           });
           return;
         }
@@ -138,6 +207,15 @@
           },
         }),
       );
+  });
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.deepseekApiKey) void announce();
+  });
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === "clipquest.configuration.changed.v1") {
+      void announce();
+    }
   });
 
   void announce();

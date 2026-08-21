@@ -11,9 +11,10 @@
     "prepare:web": "node scripts/prepare-web-runtime.mjs",
     "web": "npm run prepare:web && expo start --web",
     "web:e2e": "npm run prepare:web && expo start --web --localhost --port 8081",
-    "build": "npm run prepare:web && expo export --platform web --clear && node scripts/finalize-web-output.mjs",
+    "build": "npm run prepare:web && expo export --platform web --clear && node scripts/finalize-web-output.mjs && npm run verify:web-assets",
+    "verify:web-assets": "node scripts/verify-web-assets.mjs dist",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude 'scripts/**/*.test.mjs' && node --test scripts/verify-web-assets.test.mjs",
     "native:prebuild": "expo prebuild",
     "android:internal": "eas build --platform android --profile internal",
     "ios:development": "eas build --platform ios --profile development"

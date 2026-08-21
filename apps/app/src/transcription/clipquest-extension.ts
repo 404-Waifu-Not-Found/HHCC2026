@@ -1,15 +1,38 @@
 import {
+  AutomaticRetryKindSchema,
   GenerationStageSchema,
-  LocalConceptQuizResultSchema,
+  GenerationFailureCodeSchema,
+  LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+  LocalGenerationCallEventSchema,
+  LocalConceptQuizGenerationResultSchema,
+  LocalConceptQuizQuestionChunkSchema,
   LocalQuizContextSchema,
   MAX_COMPLETE_TRANSCRIPT_SEGMENTS,
   TranscriptSegmentSchema,
   type GenerationStage,
-  type LocalConceptQuizResult,
+  type GenerationFailureCode,
+  type LocalConceptQuizQuestionChunk,
+  type LocalConceptQuizGenerationResult,
+  type LocalGenerationCallEvent,
   type LocalQuizContext,
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import { Platform } from "react-native";
+import {
+  MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
+  isCompatibleClipQuestExtensionVersion,
+} from "./extension-compat";
+
+export {
+  MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+  isCompatibleClipQuestExtensionVersion,
+  supportsQuestionStream,
+} from "./extension-compat";
 
 const CHANNEL = "clipquest:captions:v1";
 const WEBSITE_SOURCE = "clipquest-website";
@@ -23,6 +46,7 @@ type ExtensionReadyMessage = {
   type: "ready";
   version?: string;
   configured?: boolean;
+  capabilities?: unknown;
 };
 
 type ExtensionExtractionResult = {
@@ -51,6 +75,11 @@ type ExtensionResultMessage = {
   };
 };
 
+type ExtensionSourceReadyResultMessage = Omit<
+  ExtensionResultMessage,
+  "type"
+> & { type: "source-ready-result" };
+
 type ExtensionGenerationProgressMessage = {
   channel: typeof CHANNEL;
   source: typeof EXTENSION_SOURCE;
@@ -61,12 +90,24 @@ type ExtensionGenerationProgressMessage = {
   attempt?: number;
   maxAttempts?: number;
   status?: "generating" | "retrying" | "complete";
+  retryDelayMs?: number;
+  retryOrdinal?: number;
+  ordinalAttempt?: number;
+  retryKind?: unknown;
+  reasonCode?: unknown;
+  recoverySessionId?: string;
 };
 
 export type LocalGenerationProgress = {
   attempt?: number;
   maxAttempts?: number;
   status?: "generating" | "retrying" | "complete";
+  retryDelayMs?: number;
+  retryOrdinal?: number;
+  ordinalAttempt?: number;
+  retryKind?: import("@clipquest/contracts").AutomaticRetryKind;
+  reasonCode?: GenerationFailureCode;
+  recoverySessionId?: string;
 };
 
 type ExtensionGenerationResultMessage = {
@@ -74,12 +115,47 @@ type ExtensionGenerationResultMessage = {
   source: typeof EXTENSION_SOURCE;
   type: "generation-result";
   requestId: string;
-  response?: { ok?: boolean; result?: unknown; error?: string };
+  response?: {
+    ok?: boolean;
+    result?: unknown;
+    error?: string;
+    reasonCode?: string;
+  };
+};
+
+type ExtensionGenerationQuestionMessage = {
+  channel: typeof CHANNEL;
+  source: typeof EXTENSION_SOURCE;
+  type: "generation-question";
+  requestId: string;
+  result?: unknown;
+};
+
+type ExtensionGenerationCallMessage = {
+  channel: typeof CHANNEL;
+  source: typeof EXTENSION_SOURCE;
+  type: "generation-call";
+  requestId: string;
+  event?: unknown;
 };
 
 export type ClipQuestExtensionStatus =
   | { available: false }
-  | { available: true; configured: boolean; version?: string };
+  | {
+      available: true;
+      configured: boolean;
+      version?: string;
+      capabilities: string[];
+    };
+
+export class LocalGenerationRequestError extends Error {
+  constructor(
+    message: string,
+    readonly reasonCode: GenerationFailureCode,
+  ) {
+    super(message);
+  }
+}
 
 function canUseExtensionBridge(): boolean {
   return (
@@ -110,6 +186,19 @@ function isResultMessage(value: unknown): value is ExtensionResultMessage {
   );
 }
 
+function isSourceReadyResultMessage(
+  value: unknown,
+): value is ExtensionSourceReadyResultMessage {
+  if (!value || typeof value !== "object") return false;
+  const message = value as Partial<ExtensionSourceReadyResultMessage>;
+  return (
+    message.channel === CHANNEL &&
+    message.source === EXTENSION_SOURCE &&
+    message.type === "source-ready-result" &&
+    typeof message.requestId === "string"
+  );
+}
+
 function isGenerationProgressMessage(
   value: unknown,
 ): value is ExtensionGenerationProgressMessage {
@@ -125,11 +214,33 @@ function isGenerationProgressMessage(
     message.progress >= 0 &&
     message.progress <= 1 &&
     (message.attempt === undefined ||
-      (Number.isInteger(message.attempt) && message.attempt >= 1)) &&
+      (Number.isInteger(message.attempt) &&
+        message.attempt >= 1 &&
+        message.attempt <= 12)) &&
     (message.maxAttempts === undefined ||
-      (Number.isInteger(message.maxAttempts) && message.maxAttempts >= 1)) &&
+      (Number.isInteger(message.maxAttempts) &&
+        message.maxAttempts >= 1 &&
+        message.maxAttempts <= 12)) &&
     (message.status === undefined ||
-      ["generating", "retrying", "complete"].includes(message.status))
+      ["generating", "retrying", "complete"].includes(message.status)) &&
+    (message.retryDelayMs === undefined ||
+      (Number.isInteger(message.retryDelayMs) &&
+        message.retryDelayMs >= 0 &&
+        message.retryDelayMs <= 300_000)) &&
+    (message.retryOrdinal === undefined ||
+      (Number.isInteger(message.retryOrdinal) &&
+        message.retryOrdinal >= 1 &&
+        message.retryOrdinal <= 15)) &&
+    (message.ordinalAttempt === undefined ||
+      (Number.isInteger(message.ordinalAttempt) &&
+        message.ordinalAttempt >= 1 &&
+        message.ordinalAttempt <= 12)) &&
+    (message.retryKind === undefined ||
+      AutomaticRetryKindSchema.safeParse(message.retryKind).success) &&
+    (message.reasonCode === undefined ||
+      GenerationFailureCodeSchema.safeParse(message.reasonCode).success) &&
+    (message.recoverySessionId === undefined ||
+      /^[0-9a-f-]{36}$/i.test(message.recoverySessionId))
   );
 }
 
@@ -146,6 +257,32 @@ function isGenerationResultMessage(
   );
 }
 
+function isGenerationQuestionMessage(
+  value: unknown,
+): value is ExtensionGenerationQuestionMessage {
+  if (!value || typeof value !== "object") return false;
+  const message = value as Partial<ExtensionGenerationQuestionMessage>;
+  return (
+    message.channel === CHANNEL &&
+    message.source === EXTENSION_SOURCE &&
+    message.type === "generation-question" &&
+    typeof message.requestId === "string"
+  );
+}
+
+function isGenerationCallMessage(
+  value: unknown,
+): value is ExtensionGenerationCallMessage {
+  if (!value || typeof value !== "object") return false;
+  const message = value as Partial<ExtensionGenerationCallMessage>;
+  return (
+    message.channel === CHANNEL &&
+    message.source === EXTENSION_SOURCE &&
+    message.type === "generation-call" &&
+    typeof message.requestId === "string"
+  );
+}
+
 function post(message: Record<string, unknown>): void {
   window.postMessage(
     { channel: CHANNEL, source: WEBSITE_SOURCE, ...message },
@@ -154,7 +291,11 @@ function post(message: Record<string, unknown>): void {
 }
 
 export function subscribeToClipQuestExtension(
-  listener: (status: { version?: string; configured: boolean }) => void,
+  listener: (status: {
+    version?: string;
+    configured: boolean;
+    capabilities: string[];
+  }) => void,
 ): () => void {
   if (!canUseExtensionBridge()) return () => undefined;
   const receive = (event: MessageEvent<unknown>) => {
@@ -163,6 +304,7 @@ export function subscribeToClipQuestExtension(
     if (!isReadyMessage(event.data)) return;
     listener({
       configured: event.data.configured === true,
+      capabilities: extensionCapabilities(event.data.capabilities),
       ...(typeof event.data.version === "string"
         ? { version: event.data.version }
         : {}),
@@ -192,6 +334,7 @@ export async function detectClipQuestExtension(
       finish({
         available: true,
         configured: event.data.configured === true,
+        capabilities: extensionCapabilities(event.data.capabilities),
         ...(typeof event.data.version === "string"
           ? { version: event.data.version }
           : {}),
@@ -201,6 +344,14 @@ export async function detectClipQuestExtension(
     window.addEventListener("message", receive);
     post({ type: "ping" });
   });
+}
+
+function extensionCapabilities(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter(
+        (capability): capability is string => typeof capability === "string",
+      )
+    : [];
 }
 
 function parseExtractionResult(value: unknown): ExtensionExtractionResult {
@@ -303,7 +454,12 @@ export async function requestExtensionYouTubeTranscript(
     const receive = (event: MessageEvent<unknown>) => {
       if (event.source !== window || event.origin !== window.location.origin)
         return;
-      if (!isResultMessage(event.data) || event.data.requestId !== id) return;
+      if (
+        (!isResultMessage(event.data) &&
+          !isSourceReadyResultMessage(event.data)) ||
+        event.data.requestId !== id
+      )
+        return;
       const response = event.data.response;
       if (!response?.ok) {
         finish(() =>
@@ -341,12 +497,19 @@ export async function requestExtensionYouTubeTranscript(
     window.addEventListener("message", receive);
     signal.addEventListener("abort", abort, { once: true });
     post({
-      type: "extract",
+      type: "ensure-source-ready",
       requestId: id,
       videoId,
       ...(preferredLanguage ? { preferredLanguage } : {}),
     });
   });
+}
+
+export const ensureExtensionSourceReady = requestExtensionYouTubeTranscript;
+
+export function openClipQuestExtensionSettings(): void {
+  if (!canUseExtensionBridge()) return;
+  post({ type: "open-settings" });
 }
 
 export async function requestExtensionLocalQuiz(
@@ -357,11 +520,40 @@ export async function requestExtensionLocalQuiz(
     progress: number,
     detail: LocalGenerationProgress,
   ) => void,
-): Promise<LocalConceptQuizResult> {
+  onQuestion: (chunk: LocalConceptQuizQuestionChunk) => void = () => undefined,
+  onCall: (event: LocalGenerationCallEvent) => void = () => undefined,
+): Promise<LocalConceptQuizGenerationResult> {
   const context = LocalQuizContextSchema.parse(rawContext);
+  const minimumExtensionVersion =
+    context.generationProfile === "stable_auto_recovery_v5_3"
+      ? MINIMUM_LOCAL_AI_EXTENSION_VERSION
+      : context.generationProfile === "stable_non_thinking_v5_2"
+        ? MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION
+        : MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION;
+  const requiredCapability =
+    context.generationProfile === "stable_auto_recovery_v5_3"
+      ? LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+      : context.generationProfile === "stable_non_thinking_v5_2"
+        ? STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY
+        : LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY;
   const extension = await detectClipQuestExtension();
   if (!extension.available) {
     throw new Error("ClipQuest Local AI is not installed.");
+  }
+  if (
+    !isCompatibleClipQuestExtensionVersion(
+      extension.version,
+      minimumExtensionVersion,
+    )
+  ) {
+    throw new Error(
+      `ClipQuest Local AI ${minimumExtensionVersion} or newer is required for streamed questions. Download and reload the current extension.`,
+    );
+  }
+  if (!extension.capabilities.includes(requiredCapability)) {
+    throw new Error(
+      `Update ClipQuest Local AI. This extension does not support ${requiredCapability}.`,
+    );
   }
   if (!extension.configured) {
     throw new Error(
@@ -398,7 +590,47 @@ export async function requestExtensionLocalQuiz(
           attempt: event.data.attempt,
           maxAttempts: event.data.maxAttempts,
           status: event.data.status,
+          retryDelayMs: event.data.retryDelayMs,
+          retryOrdinal: event.data.retryOrdinal,
+          ordinalAttempt: event.data.ordinalAttempt,
+          retryKind: AutomaticRetryKindSchema.safeParse(event.data.retryKind)
+            .data,
+          reasonCode: GenerationFailureCodeSchema.safeParse(
+            event.data.reasonCode,
+          ).data,
+          recoverySessionId: event.data.recoverySessionId,
         });
+        return;
+      }
+      if (
+        isGenerationQuestionMessage(event.data) &&
+        event.data.requestId === id
+      ) {
+        const chunk = LocalConceptQuizQuestionChunkSchema.safeParse(
+          event.data.result,
+        );
+        if (!chunk.success) {
+          finish(() =>
+            reject(new Error("The extension returned an invalid quiz chunk.")),
+          );
+          return;
+        }
+        onQuestion(chunk.data);
+        return;
+      }
+      if (isGenerationCallMessage(event.data) && event.data.requestId === id) {
+        const call = LocalGenerationCallEventSchema.safeParse(event.data.event);
+        if (!call.success) {
+          finish(() =>
+            reject(
+              new Error(
+                "The extension returned an invalid generation call event.",
+              ),
+            ),
+          );
+          return;
+        }
+        onCall(call.data);
         return;
       }
       if (
@@ -411,10 +643,12 @@ export async function requestExtensionLocalQuiz(
       if (!response?.ok) {
         finish(() =>
           reject(
-            new Error(
+            new LocalGenerationRequestError(
               typeof response?.error === "string"
                 ? response.error
                 : "Local quiz generation failed.",
+              GenerationFailureCodeSchema.safeParse(response?.reasonCode)
+                .data ?? "local_state_conflict",
             ),
           ),
         );
@@ -445,8 +679,10 @@ export async function requestExtensionLocalQuiz(
   });
 }
 
-function parseLocalConceptQuizResult(value: unknown): LocalConceptQuizResult {
-  const parsed = LocalConceptQuizResultSchema.safeParse(value);
+function parseLocalConceptQuizResult(
+  value: unknown,
+): LocalConceptQuizGenerationResult {
+  const parsed = LocalConceptQuizGenerationResultSchema.safeParse(value);
   if (!parsed.success) {
     throw new Error("The extension returned an invalid local quiz.");
   }

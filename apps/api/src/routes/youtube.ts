@@ -6,7 +6,6 @@ import { Hono } from "hono";
 import { z } from "zod";
 import {
   Innertube,
-  type OAuth2ClientID,
   type OAuth2Tokens,
 } from "youtubei.js/cf-worker";
 import { classifyHistoryTitles } from "../lib/ai-services";
@@ -411,6 +410,12 @@ async function cacheHistoryThumbnails(
     )
       .bind(userId, candidate.id)
       .first<{ id: string }>();
-    if (row) await cacheThumbnail(env, row.id, candidate.thumbnailUrl);
+    if (row) {
+      await cacheThumbnail(env, {
+        videoId: row.id,
+        sourceVideoId: candidate.id,
+        remoteUrl: candidate.thumbnailUrl,
+      });
+    }
   }
 }

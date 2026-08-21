@@ -1,13 +1,19 @@
-import { Redirect } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { BrandLockup } from "../src/components/BrandLockup";
 import { authClient } from "../src/lib/auth-client";
+import {
+  parseQuickOpenRequest,
+  type QuickOpenSearchParams,
+} from "../src/lib/quick-open";
 import { useSettings } from "../src/providers/SettingsProvider";
 import { spacing } from "../src/theme/tokens";
 
 export default function Index() {
   const { data, isPending } = authClient.useSession();
   const { t, theme } = useSettings();
+  const params = useLocalSearchParams<QuickOpenSearchParams>();
+  const quickOpen = parseQuickOpenRequest(params);
   if (isPending) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
@@ -20,7 +26,24 @@ export default function Index() {
       </View>
     );
   }
-  return <Redirect href={data ? "/(tabs)" : "/(auth)/sign-in"} />;
+  if (data) {
+    return (
+      <Redirect
+        href={
+          quickOpen ? { pathname: "/(tabs)", params: quickOpen } : "/(tabs)"
+        }
+      />
+    );
+  }
+  return (
+    <Redirect
+      href={
+        quickOpen
+          ? { pathname: "/(auth)/sign-in", params: quickOpen }
+          : "/(auth)/sign-in"
+      }
+    />
+  );
 }
 
 const styles = StyleSheet.create({

@@ -1,4 +1,5 @@
 import { VoxelIcon } from "./VoxelIcon";
+import { MathText } from "./MathText";
 import type { ReactNode } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
@@ -114,14 +115,14 @@ export function AnswerCard({
           <View style={styles.leading}>{leading}</View>
         ) : null}
         <View style={styles.copy}>
-          <Text
+          <MathText
             style={[
               styles.label,
               { color: disabled ? theme.textMuted : theme.text },
             ]}
           >
             {label}
-          </Text>
+          </MathText>
           {supporting ? (
             <Text style={[styles.supporting, { color: theme.textMuted }]}>
               {supporting}

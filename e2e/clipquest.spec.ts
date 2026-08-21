@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   createTranscriptCompleteness,
+  type GenerationRecordV2,
   type PublicQuestion,
 } from "@clipquest/contracts";
 
@@ -18,6 +19,9 @@ const THUMBNAIL_URL = `${BASE_URL}/test-thumbnail.svg`;
 const SCREENSHOT_DIR =
   process.env.CLIPQUEST_SCREENSHOT_DIR ?? "docs/screenshots/final";
 const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
+const GENERATION_ID = "abababab-abab-4bab-8bab-abababababab";
+const GENERATION_SESSION_ID = "bcbcbcbc-bcbc-4bcb-8bcb-bcbcbcbcbcbc";
+const GENERATION_IMPORT_KEY = "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd";
 
 type Scenario = {
   adminMode: "allowed" | "denied";
@@ -25,10 +29,26 @@ type Scenario = {
   completedAttempt: boolean;
   generationMode: "stable" | "failed";
   importMode: "success" | "unavailable";
+  thumbnailMode: "stable" | "fail-once" | "failed";
+  thumbnailFailureTag?: string;
+  thumbnailRequestCount: number;
   extensionCaptionImport: boolean;
   requestedPaths: string[];
   quizImportBodies: unknown[];
   quizImportKeys: (string | null)[];
+  quizStartBodies: unknown[];
+  answerBodies: unknown[];
+  progressiveAvailable: number;
+  progressiveTotal: 5 | 10 | 15;
+  progressiveState:
+    | "generating"
+    | "retrying"
+    | "recovering"
+    | "retry_required"
+    | "action_required"
+    | "generation_failed"
+    | "ready";
+  claimLeased: boolean;
   question: PublicQuestion;
 };
 
@@ -71,6 +91,15 @@ const shortAnswerQuestion: PublicQuestion = {
   id: "68686868-6868-4868-8868-686868686868",
   type: "short_answer",
   prompt: "Name one reason spaced retrieval improves long-term memory.",
+  options: undefined,
+};
+
+const formulaProseQuestion: PublicQuestion = {
+  ...baseQuestion,
+  id: "69696969-6969-4969-8969-696969696969",
+  type: "true_false",
+  prompt:
+    "For a function f defined on an interval from x = a to x = b, the average rate of change is (f(b)-f(a))/(b-a), and this value is the slope of the secant line through the points (a, f(a)) and (b, f(b)).",
   options: undefined,
 };
 
@@ -121,7 +150,7 @@ const dueCard = {
 const savedCard = {
   ...dueCard,
   videoId: VIDEO_ID_TWO,
-  quizId: null,
+  quizId: QUIZ_ID,
   attemptId: null,
   originalUrl: "https://www.youtube.com/watch?v=feynman-learning",
   source: "youtube" as const,
@@ -130,6 +159,10 @@ const savedCard = {
   mastery: "not_started" as const,
   action: "start" as const,
   dueForReview: false,
+  startSettings: {
+    sessionLength: "long" as const,
+    questionTypes: ["short_answer"] as const,
+  },
 };
 
 test.beforeEach(async ({ page }) => {
@@ -154,97 +187,242 @@ test.beforeEach(async ({ page }) => {
         return;
       }
       if (event.data.type === "ping") {
+        const outdated =
+          window.sessionStorage.getItem("clipquest:e2e-extension-outdated") ===
+          "1";
         window.postMessage(
           {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: "e2e",
+            version: outdated ? "0.7.9" : "0.8.3",
             configured: true,
+            capabilities: outdated
+              ? []
+              : [
+                  "question-stream-v1",
+                  "question-stream-v2",
+                  "question-stream-v3",
+                  "ensure-source-ready-v1",
+                ],
           },
           window.location.origin,
         );
       }
       if (event.data.type === "generate") {
+        const automatic =
+          event.data.context?.generationProfile === "stable_auto_recovery_v5_3";
         const questionCount = event.data.context?.questionCount ?? 10;
-        window.postMessage(
-          {
-            channel: "clipquest:captions:v1",
-            source: "clipquest-extension",
-            type: "generation-result",
-            requestId: event.data.requestId,
-            response: {
-              ok: true,
+        const generatedStartIndex =
+          event.data.context?.continuation?.startIndex ?? 0;
+        const selectedTypes = event.data.context?.questionTypes ?? [
+          "multiple_choice",
+          "true_false",
+          "short_answer",
+        ];
+        const questionPlan = event.data.context?.continuation?.questionPlan ?? {
+          seed: "a".repeat(64),
+          types: Array.from(
+            { length: questionCount },
+            (_, index) => selectedTypes[index % selectedTypes.length],
+          ),
+        };
+        let trueFalseIndex = 0;
+        const questions = Array.from({ length: questionCount }, (_, index) => {
+          const type = questionPlan.types[index];
+          const common = {
+            id: `q${index + 1}`,
+            concept: `Concept ${index + 1}`,
+            question: `How does concept ${index + 1} apply?`,
+            explanation: `Concept ${index + 1} supports this answer.`,
+          };
+          if (type === "true_false") {
+            const answer = trueFalseIndex % 2 === 0;
+            trueFalseIndex += 1;
+            return {
+              ...common,
+              type: "true_false",
+              answer,
+              correction: `Concept ${index + 1} is corrected here.`,
+            };
+          }
+          if (type === "short_answer") {
+            return {
+              ...common,
+              type: "short_answer",
+              answer: `Reference answer ${index + 1}`,
+              rubricIdeas: [`Concept ${index + 1}`],
+              acceptableAnswers: [`Equivalent answer ${index + 1}`],
+            };
+          }
+          return {
+            ...common,
+            type: "multiple_choice",
+            choices: [
+              `Correct ${index + 1}`,
+              `Distractor A ${index + 1}`,
+              `Distractor B ${index + 1}`,
+              `Distractor C ${index + 1}`,
+            ],
+            answerIndex: 0,
+            answer: `Correct ${index + 1}`,
+          };
+        });
+        const metadata = automatic
+          ? {
+              protocolVersion: 7,
+              pipelineVersion: 9,
+              model: "deepseek-v4-flash",
+              reasoningEffort: "none",
+              promptVersion: "quiz-local-json-stream-v5.3",
+              validatorVersion: "validator-local-progressive-v4.2",
+              importVersion: "extension-progressive-import-v5",
+              generationProfile: "stable_auto_recovery_v5_3",
+              generationId: event.data.context.generationId,
+              generationSessionId: event.data.context.generationSessionId,
+              recoverySessionId: event.data.context.recoverySessionId,
+              questionPlan,
+            }
+          : {
+              protocolVersion: 5,
+              pipelineVersion: 9,
+              model: "deepseek-v4-flash",
+              reasoningEffort: "high",
+              promptVersion: "quiz-local-json-stream-v5.0",
+              validatorVersion: "validator-local-progressive-v4.0",
+            };
+        const initialCallIndex =
+          event.data.context?.continuation?.nextCallIndex ?? 0;
+        const postQuestion = (
+          question: (typeof questions)[number],
+          index: number,
+        ) => {
+          window.postMessage(
+            {
+              channel: "clipquest:captions:v1",
+              source: "clipquest-extension",
+              type: "generation-question",
+              requestId: event.data.requestId,
               result: {
-                protocolVersion: 3,
-                pipelineVersion: 7,
-                model: "deepseek-v4-flash",
-                reasoningEffort: "high",
-                promptVersion: "quiz-local-tool-v2.0",
-                validatorVersion: "validator-local-tool-v2.0",
-                quiz: {
-                  title: "Local concept quiz",
-                  questions: Array.from(
-                    { length: questionCount },
-                    (_, index) => {
-                      const common = {
-                        id: `q${index + 1}`,
-                        concept: `Concept ${index + 1}`,
-                        question: `How does concept ${index + 1} apply?`,
-                        explanation: `Concept ${index + 1} supports this answer.`,
-                      };
-                      if (index % 3 === 1) {
-                        return {
-                          ...common,
-                          type: "true_false",
-                          answer: index % 2 === 0,
-                          correction: `Concept ${index + 1} is corrected here.`,
-                        };
-                      }
-                      if (index % 3 === 2) {
-                        return {
-                          ...common,
-                          type: "short_answer",
-                          answer: `Reference answer ${index + 1}`,
-                          rubricIdeas: [`Concept ${index + 1}`],
-                          acceptableAnswers: [`Equivalent answer ${index + 1}`],
-                        };
-                      }
-                      return {
-                        ...common,
-                        type: "multiple_choice",
-                        choices: [
-                          `Correct ${index + 1}`,
-                          `Distractor A ${index + 1}`,
-                          `Distractor B ${index + 1}`,
-                          `Distractor C ${index + 1}`,
-                        ],
-                        answerIndex: 0,
-                        answer: `Correct ${index + 1}`,
-                      };
-                    },
-                  ),
-                },
+                ...metadata,
+                title: "Local concept quiz",
+                startIndex: index,
+                totalQuestions: questionCount,
+                question,
                 metrics: {
-                  aiCalls: 1,
+                  aiCalls: index === 0 ? 1 : 0,
                   retryCount: 0,
-                  inputTokens: 100,
-                  outputTokens: 200,
-                  reasoningTokens: 50,
-                  elapsedMs: 1000,
+                  inputTokens: 0,
+                  outputTokens: 0,
+                  reasoningTokens: 0,
+                  elapsedMs: 10,
                 },
               },
             },
-          },
-          window.location.origin,
+            window.location.origin,
+          );
+          const relativeCallIndex = index - generatedStartIndex;
+          const firstRecoveryAttempt =
+            relativeCallIndex === 0
+              ? (event.data.context?.continuation?.nextOrdinalAttempt ?? 1)
+              : 1;
+          if (automatic) {
+            window.postMessage(
+              {
+                channel: "clipquest:captions:v1",
+                source: "clipquest-extension",
+                type: "generation-call",
+                requestId: event.data.requestId,
+                event: {
+                  protocolVersion: 7,
+                  generationSessionId: event.data.context.generationSessionId,
+                  recoverySessionId: event.data.context.recoverySessionId,
+                  callIndex: initialCallIndex + relativeCallIndex,
+                  startIndex: index,
+                  ordinalAttempt: firstRecoveryAttempt,
+                  requestedCount: 1,
+                  acceptedCount: 1,
+                  classification:
+                    firstRecoveryAttempt > 1 ? "automatic_retry" : "primary",
+                  ...(firstRecoveryAttempt > 1
+                    ? {
+                        retryKind:
+                          event.data.context?.continuation?.retryKind ??
+                          "automatic_resume",
+                      }
+                    : {}),
+                  outcome: "complete",
+                  retryDelayMs: 0,
+                  elapsedMs: 10,
+                  usageComplete: false,
+                },
+              },
+              window.location.origin,
+            );
+          }
+        };
+        postQuestion(questions[generatedStartIndex], generatedStartIndex);
+        const completionDelay = Number(
+          window.sessionStorage.getItem(
+            "clipquest:e2e-generation-completion-delay-ms",
+          ) ?? "1200",
         );
+        window.setTimeout(() => {
+          window.sessionStorage.setItem(
+            "clipquest:e2e-second-question-sent",
+            "1",
+          );
+          questions
+            .slice(generatedStartIndex + 1)
+            .forEach((question, index) =>
+              postQuestion(question, generatedStartIndex + index + 1),
+            );
+          window.postMessage(
+            {
+              channel: "clipquest:captions:v1",
+              source: "clipquest-extension",
+              type: "generation-result",
+              requestId: event.data.requestId,
+              response: {
+                ok: true,
+                result: {
+                  ...metadata,
+                  ...(generatedStartIndex > 0
+                    ? {
+                        title: "Local concept quiz",
+                        generatedStartIndex,
+                        totalQuestions: questionCount,
+                      }
+                    : {
+                        quiz: { title: "Local concept quiz", questions },
+                      }),
+                  metrics: {
+                    aiCalls: 1,
+                    retryCount: 0,
+                    inputTokens: 100,
+                    outputTokens: 200,
+                    reasoningTokens: 50,
+                    elapsedMs: 1000,
+                  },
+                },
+              },
+            },
+            window.location.origin,
+          );
+        }, completionDelay);
       }
-      if (event.data.type === "extract") {
+      if (
+        event.data.type === "extract" ||
+        event.data.type === "ensure-source-ready"
+      ) {
         window.postMessage(
           {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
-            type: "result",
+            type:
+              event.data.type === "ensure-source-ready"
+                ? "source-ready-result"
+                : "result",
             requestId: event.data.requestId,
             response: {
               ok: true,
@@ -473,6 +651,32 @@ test("requires the local caption extension and reconnects automatically", async 
   ).toBeVisible();
 });
 
+test("an older extension is gated until question streaming is available", async ({
+  page,
+}) => {
+  await installMocks(page);
+  await page.goto("/");
+  await page.evaluate(() =>
+    window.sessionStorage.setItem("clipquest:e2e-extension-outdated", "1"),
+  );
+  await page.reload();
+
+  await expect(
+    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("0.8.3 or newer", { exact: false }),
+  ).toBeVisible();
+
+  await page.evaluate(() =>
+    window.sessionStorage.removeItem("clipquest:e2e-extension-outdated"),
+  );
+  await page.getByTestId("check-caption-extension").click();
+  await expect(
+    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+  ).toBeHidden();
+});
+
 test("imports the extension quiz, opens the learner flow, and accepts an answer", async ({
   page,
 }) => {
@@ -482,16 +686,24 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
   await page
     .getByLabel("Paste a YouTube link")
     .fill("https://www.youtube.com/watch?v=SVb9OV0bLzI&t=44s");
-  await expect(page).toHaveURL(`/create/${VIDEO_ID}`);
+  await expectCreateRouteWithGeneration(page);
   await page.getByRole("radio", { name: "Short · 5" }).click();
   await page.getByRole("button", { name: "Create my quiz" }).click();
 
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      window.sessionStorage.getItem("clipquest:e2e-second-question-sent"),
+    ),
+  ).toBeNull();
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "1/5 questions ready",
+  );
   expect(scenario.requestedPaths).toContain("/api/videos/import");
-  expect(scenario.requestedPaths).toContain("/api/quiz-imports");
+  expect(scenario.requestedPaths).toContain("/api/quiz-imports/progressive");
   expect(scenario.requestedPaths).toContain(`/api/quizzes/${QUIZ_ID}/start`);
   expect(scenario.quizImportKeys).toHaveLength(1);
   expect(scenario.quizImportKeys[0]).toMatch(
@@ -500,6 +712,10 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
   expect(JSON.stringify(scenario.quizImportBodies)).not.toContain("segments");
   expect(JSON.stringify(scenario.quizImportBodies)).not.toContain("transcript");
 
+  await expect(page.getByTestId("question-stream-indicator")).toBeHidden({
+    timeout: 5_000,
+  });
+
   await page.getByRole("button", { name: baseQuestion.options[0] }).click();
   await page.getByRole("button", { name: "Check answer" }).click();
   await expect(
@@ -507,6 +723,372 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
       "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice.",
     ),
   ).toBeVisible();
+  expect(scenario.answerBodies).toHaveLength(1);
+  expect(scenario.answerBodies[0]).toMatchObject({
+    questionId: QUESTION_ID,
+    answer: 0,
+  });
+});
+
+test("reopens a completed progressive quiz with its stored Library settings", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 15;
+  scenario.progressiveTotal = 15;
+  await page.goto("/library");
+  await page
+    .getByRole("button", { name: /A visual guide to the Feynman technique/u })
+    .click();
+  await expectQuizRoute(page);
+  expect(scenario.quizStartBodies).toEqual([
+    {
+      mode: "learn",
+      sessionLength: "long",
+      questionTypes: ["short_answer"],
+    },
+  ]);
+});
+
+test("multiple-choice views reshuffle only on activation and submit canonical indexes", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const cryptoObject = window.crypto;
+    const original = cryptoObject.getRandomValues.bind(cryptoObject);
+    Object.defineProperty(cryptoObject, "getRandomValues", {
+      configurable: true,
+      value: <T extends ArrayBufferView | null>(array: T): T => {
+        const current = Number(
+          window.sessionStorage.getItem("clipquest:e2e-random-draws") ?? "0",
+        );
+        window.sessionStorage.setItem(
+          "clipquest:e2e-random-draws",
+          String(current + 1),
+        );
+        return original(array);
+      },
+    });
+  });
+  const scenario = await installMocks(page);
+  scenario.answerCorrect = false;
+  await page.goto("/");
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await seedGenerationRecord(page, {
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 1,
+    state: "generating",
+  });
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: baseQuestion.prompt }),
+  ).toBeVisible();
+
+  const initialOrder = await displayedChoiceOrder(page, baseQuestion.options);
+  const initialDraws = await randomDrawCount(page);
+  await page.getByRole("button", { name: baseQuestion.options[1] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(
+    page.getByText("Almost—try this concept another way."),
+  ).toBeVisible();
+  expect(await displayedChoiceOrder(page, baseQuestion.options)).toEqual(
+    initialOrder,
+  );
+  expect(await randomDrawCount(page)).toBe(initialDraws);
+  expect(scenario.answerBodies[0]).toMatchObject({ answer: 1 });
+
+  scenario.answerCorrect = true;
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: `Try again: ${baseQuestion.prompt}`,
+    }),
+  ).toBeVisible();
+  expect(await randomDrawCount(page)).toBeGreaterThan(initialDraws);
+  expect(await displayedChoiceOrder(page, baseQuestion.options)).toHaveLength(
+    4,
+  );
+
+  await page.getByRole("button", { name: baseQuestion.options[0] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(page.getByText("Nice! That’s right.")).toBeVisible();
+  expect(scenario.answerBodies[1]).toMatchObject({ answer: 0 });
+});
+
+test("a fast learner waits without partial completion and resumes when question two arrives", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 1;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "generating";
+  scenario.claimLeased = true;
+  await page.goto("/");
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: baseQuestion.prompt }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: baseQuestion.options[0] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(page.getByText("Nice! That’s right.")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Preparing your next question" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Quest complete!" }),
+  ).toHaveCount(0);
+
+  scenario.progressiveAvailable = 2;
+  scenario.question = nextQuestion;
+  await expect(
+    page.getByRole("heading", { name: nextQuestion.prompt }),
+  ).toBeVisible({ timeout: 4_000 });
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "2/5 questions ready",
+  );
+});
+
+test("legacy retry-required quizzes recover automatically from the authoritative missing suffix", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 3;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "retry_required";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
+    idempotencyKey: "99999999-9999-4999-8999-999999999999",
+    quizLanguage: "en",
+    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+    sessionLength: "short",
+    watched: true,
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 3,
+    plannedCount: 5,
+  });
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "Recovering legacy generation automatically · 3/5 ready",
+  );
+  await expect(
+    page.getByRole("button", { name: "Continue generating" }),
+  ).toHaveCount(0);
+  await expect
+    .poll(
+      () =>
+        scenario.requestedPaths.filter(
+          (path) => path === `/api/attempts/${ATTEMPT_ID}/generation/claim`,
+        ).length,
+    )
+    .toBeGreaterThan(0);
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "/5",
+  );
+  await expect(page.getByTestId("question-stream-indicator")).toBeHidden({
+    timeout: 5_000,
+  });
+  expect(scenario.progressiveAvailable).toBe(5);
+  const appendedIndexes = scenario.quizImportBodies
+    .map((body) =>
+      typeof body === "object" && body
+        ? (body as { chunk?: { startIndex?: number } }).chunk?.startIndex
+        : undefined,
+    )
+    .filter((index): index is number => typeof index === "number");
+  expect(appendedIndexes).toEqual([3, 4]);
+});
+
+test("a reloaded legacy quiz reclaims and recovers without learner action", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 1;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "retry_required";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
+    idempotencyKey: "91919191-9191-4191-8191-919191919191",
+    quizLanguage: "en",
+    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+    sessionLength: "short",
+    watched: true,
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 1,
+    plannedCount: 5,
+  });
+  await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+
+  await expect(
+    page.getByRole("button", { name: "Continue generating" }),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("question-stream-indicator")).toBeHidden({
+    timeout: 5_000,
+  });
+  const appendedIndexes = scenario.quizImportBodies
+    .map((body) =>
+      typeof body === "object" && body
+        ? (body as { chunk?: { startIndex?: number } }).chunk?.startIndex
+        : undefined,
+    )
+    .filter((index): index is number => typeof index === "number");
+  expect(appendedIndexes).toEqual([1, 2, 3, 4]);
+});
+
+test("the streaming indicator stays inside each gutter and above the quiz footer", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  const generationId = await seedGenerationRecord(page, {
+    sessionLength: "short",
+    plannedCount: 5,
+  });
+  await page.evaluate(() =>
+    window.sessionStorage.setItem(
+      "clipquest:e2e-generation-completion-delay-ms",
+      "30000",
+    ),
+  );
+  await page.goto(
+    `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=short`,
+  );
+  await expectQuizRoute(page, true);
+  await expect(page.getByTestId("question-stream-indicator")).toBeVisible();
+
+  for (const viewport of [
+    { width: 1440, height: 1024, gutter: 32 },
+    { width: 768, height: 1024, gutter: 24 },
+    { width: 390, height: 844, gutter: 20 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const indicator = await page
+      .getByTestId("question-stream-indicator")
+      .boundingBox();
+    const check = await page
+      .getByRole("button", { name: "Check answer" })
+      .boundingBox();
+    expect(indicator).not.toBeNull();
+    expect(check).not.toBeNull();
+    expect(
+      viewport.width - (indicator?.x ?? 0) - (indicator?.width ?? 0),
+    ).toBeCloseTo(viewport.gutter, 0);
+    expect((indicator?.y ?? 0) + (indicator?.height ?? 0)).toBeLessThan(
+      check?.y ?? 0,
+    );
+    for (const option of baseQuestion.options) {
+      const answer = await page
+        .getByRole("button", { name: option })
+        .boundingBox();
+      expect(boxesOverlap(indicator, answer)).toBe(false);
+    }
+  }
+
+  scenario.question = shortAnswerQuestion;
+  await seedAttempt(page, ATTEMPT_ID, shortAnswerQuestion);
+  await page.reload();
+  const shortAnswer = page.getByLabel("Short answer");
+  await expect(shortAnswer).toBeVisible();
+  await shortAnswer.focus();
+  const focusedIndicator = await page
+    .getByTestId("question-stream-indicator")
+    .boundingBox();
+  const focusedFooter = await page
+    .getByRole("button", { name: "Check answer" })
+    .boundingBox();
+  expect(boxesOverlap(focusedIndicator, focusedFooter)).toBe(false);
+
+  expect(scenario.progressiveState).toBe("generating");
+});
+
+test("YouTube quick open lands on Home and starts one import automatically", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  const quickOpenVideo = "https://www.youtube.com/watch?v=SVb9OV0bLzI&t=44s";
+
+  await page.goto(`/?url=${encodeURIComponent(quickOpenVideo)}&autostart=1`);
+
+  await expectCreateRouteWithGeneration(page);
+  expect(
+    scenario.requestedPaths.filter((path) => path === "/api/videos/import"),
+  ).toHaveLength(1);
+});
+
+test("a cold thumbnail retries without shifting the create page", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.thumbnailMode = "fail-once";
+  scenario.thumbnailFailureTag = "cold";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+    ...importedVideo,
+    video: {
+      ...importedVideo.video,
+      thumbnailUrl: `${THUMBNAIL_URL}?thumbnail_case=cold`,
+    },
+  });
+
+  await page.goto(`/create/${VIDEO_ID}`);
+  const thumbnail = page.getByTestId("create-video-thumbnail");
+  await expect(thumbnail).toBeVisible();
+  const loadingBounds = await thumbnail.boundingBox();
+
+  await expect
+    .poll(() => scenario.thumbnailRequestCount, { timeout: 5_000 })
+    .toBe(2);
+  await expect(
+    page.getByTestId("create-video-thumbnail-placeholder"),
+  ).toBeHidden();
+
+  const loadedBounds = await thumbnail.boundingBox();
+  expect(loadingBounds).not.toBeNull();
+  expect(loadedBounds).not.toBeNull();
+  expect(loadedBounds?.width).toBeCloseTo(loadingBounds?.width ?? 0, 0);
+  expect(loadedBounds?.height).toBeCloseTo(loadingBounds?.height ?? 0, 0);
+  await expect(
+    page.getByRole("button", { name: "Create my quiz" }),
+  ).toBeEnabled();
+});
+
+test("a permanent thumbnail failure keeps quiz setup usable", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.thumbnailMode = "failed";
+  scenario.thumbnailFailureTag = "permanent";
+  await page.goto("/");
+  await seed(page, `clipquest:creation:${VIDEO_ID}`, {
+    ...importedVideo,
+    video: {
+      ...importedVideo.video,
+      thumbnailUrl: `${THUMBNAIL_URL}?thumbnail_case=permanent`,
+    },
+  });
+
+  await page.goto(`/create/${VIDEO_ID}`);
+  await expect(page.getByTestId("create-video-thumbnail-retry")).toBeVisible({
+    timeout: 7_000,
+  });
+  expect(scenario.thumbnailRequestCount).toBe(4);
+  await expect(
+    page.getByText("The thumbnail is taking longer than expected."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create my quiz" }),
+  ).toBeEnabled();
 });
 
 test("desktop learning journey and visual states", async ({ page }) => {
@@ -565,16 +1147,14 @@ test("desktop learning journey and visual states", async ({ page }) => {
   ).toBeVisible();
   await capture(page, "desktop-video-preview");
 
-  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
-    idempotencyKey: "visual-idempotency",
-    jobId: JOB_ID,
-    quizLanguage: "en",
-    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+  const generationId = await seedGenerationRecord(page, {
+    sessionLength: "medium",
+    plannedCount: 10,
   });
   await page.goto(
-    `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=medium`,
+    `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=medium`,
   );
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
@@ -654,16 +1234,14 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   await capture(page, "mobile-link-import");
 
   await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
-  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
-    idempotencyKey: "mobile-idempotency",
-    jobId: JOB_ID,
-    quizLanguage: "en",
-    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+  const generationId = await seedGenerationRecord(page, {
+    sessionLength: "medium",
+    plannedCount: 10,
   });
   await page.goto(
-    `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=medium`,
+    `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=medium`,
   );
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
@@ -721,13 +1299,56 @@ test("all generated question types keep the tactile learning layout", async ({
   await capture(page, "tablet-quiz-true-false");
 
   scenario.question = shortAnswerQuestion;
+  scenario.progressiveAvailable = 2;
+  scenario.progressiveTotal = 5;
+  scenario.progressiveState = "generating";
   await seedAttempt(page, ATTEMPT_ID, shortAnswerQuestion);
+  await seedGenerationRecord(page, {
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 2,
+    state: "generating",
+  });
   await page.goto(`/quiz/${ATTEMPT_ID}`);
   await expect(
     page.getByRole("heading", { name: shortAnswerQuestion.prompt }),
   ).toBeVisible();
-  await expect(page.getByLabel("Short answer")).toBeVisible();
+  const shortAnswer = page.getByLabel("Short answer");
+  await expect(shortAnswer).toBeVisible();
+  await shortAnswer.focus();
+  await expect(page.getByTestId("question-stream-indicator")).toBeVisible();
+  expect(
+    boxesOverlap(
+      await page.getByTestId("question-stream-indicator").boundingBox(),
+      await page.getByRole("button", { name: "Check answer" }).boundingBox(),
+    ),
+  ).toBe(false);
   await capture(page, "tablet-quiz-short-answer");
+});
+
+test("formula-containing question prose keeps the display typeface", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.question = formulaProseQuestion;
+  await page.goto("/");
+  await seedAttempt(page, ATTEMPT_ID, formulaProseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+
+  const heading = page.getByRole("heading", {
+    name: formulaProseQuestion.prompt,
+  });
+  await expect(heading).toBeVisible();
+  await expect
+    .poll(() =>
+      heading.evaluate((element) => getComputedStyle(element).fontFamily),
+    )
+    .toContain("Fredoka_600SemiBold");
+  await expect
+    .poll(() =>
+      heading.evaluate((element) => getComputedStyle(element).letterSpacing),
+    )
+    .toBe("-0.3px");
 });
 
 test("dark theme stays polished across learner, auth, settings, and admin shells", async ({
@@ -847,7 +1468,7 @@ test("YouTube-only imports validate and recover from unavailable video", async (
   await input.fill(
     "https://www.youtube.com/watch?v=clipquest-learning-science",
   );
-  await expect(page).toHaveURL(new RegExp(`/create/${VIDEO_ID}$`));
+  await expectCreateRouteWithGeneration(page);
   await expect(page.getByText("YouTube", { exact: true }).last()).toBeVisible();
 
   expect(
@@ -879,11 +1500,28 @@ test("admin operations console is responsive and uses real management contracts"
     page.getByText("Action completed and added to the audit log."),
   ).toBeVisible();
 
-  await page.getByRole("tab", { name: "Processing" }).click();
+  await page.getByRole("tab", { name: "Generation streams" }).click();
   await expect(
     page.getByText("How memory really works: retrieval, spacing, and sleep"),
   ).toBeVisible();
   await capture(page, "admin-processing-desktop-1440");
+
+  await page.getByRole("tab", { name: "Lessons" }).click();
+  await expect(page.getByRole("heading", { name: "Lessons" })).toBeVisible();
+  await expect(
+    page.getByText("How memory really works: retrieval, spacing, and sleep"),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Audit log" }).click();
+  await expect(page.getByRole("heading", { name: "Audit log" })).toBeVisible();
+  await expect(page.getByText("Generation retry")).toBeVisible();
+
+  await page.getByRole("tab", { name: "System" }).click();
+  await expect(page.getByRole("heading", { name: "System" })).toBeVisible();
+  await expect(page.getByText("Disabled by design")).toBeVisible();
+  await expect(
+    page.getByText("0018_automatic_generation_recovery.sql"),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/users");
@@ -918,19 +1556,54 @@ async function installMocks(page: Page): Promise<Scenario> {
     completedAttempt: false,
     generationMode: "stable",
     importMode: "success",
+    thumbnailMode: "stable",
+    thumbnailRequestCount: 0,
     extensionCaptionImport: false,
     requestedPaths: [],
     quizImportBodies: [],
     quizImportKeys: [],
+    quizStartBodies: [],
+    answerBodies: [],
+    progressiveAvailable: 5,
+    progressiveTotal: 5,
+    progressiveState: "ready",
+    claimLeased: false,
     question: baseQuestion,
   };
 
-  await page.route("**/test-thumbnail.svg", async (route) => {
+  await page.route("**/test-thumbnail.svg*", async (route) => {
+    const thumbnailUrl = new URL(route.request().url());
+    const targeted = scenario.thumbnailFailureTag
+      ? thumbnailUrl.searchParams.get("thumbnail_case") ===
+        scenario.thumbnailFailureTag
+      : true;
+    if (targeted) scenario.thumbnailRequestCount += 1;
+    if (
+      targeted &&
+      (scenario.thumbnailMode === "failed" ||
+        (scenario.thumbnailMode === "fail-once" &&
+          scenario.thumbnailRequestCount === 1))
+    ) {
+      await route.fulfill({
+        status: 503,
+        headers: { "Cache-Control": "no-store", "Retry-After": "1" },
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "image/svg+xml",
       body: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#4856D8"/><stop offset="1" stop-color="#43BCEB"/></linearGradient></defs><rect width="800" height="450" rx="28" fill="url(#g)"/><circle cx="630" cy="100" r="82" fill="#B8F244" opacity=".9"/><path d="M322 118v214l184-107z" fill="#fff" opacity=".94"/><text x="54" y="390" fill="#fff" font-size="36" font-family="Arial" font-weight="700">LEARNING SCIENCE</text></svg>`,
     });
+  });
+
+  const generation = () => ({
+    state: scenario.progressiveState,
+    availableQuestions: scenario.progressiveAvailable,
+    totalQuestions: scenario.progressiveTotal,
+    ...(scenario.progressiveState === "retry_required"
+      ? { reasonCode: "automatic_retries_exhausted" }
+      : {}),
   });
 
   await page.route("**/api/**", async (route) => {
@@ -970,7 +1643,6 @@ async function installMocks(page: Page): Promise<Scenario> {
           "users:moderate",
           "users:set-role",
           "jobs:read",
-          "jobs:manage",
           "lessons:read",
           "audit:read",
           "system:read",
@@ -987,9 +1659,8 @@ async function installMocks(page: Page): Promise<Scenario> {
             id: JOB_ID,
             videoTitle: "Neural networks explained visually",
             ownerEmail: "learner@example.com",
-            errorCode: "generation_failed",
-            errorMessage:
-              "The question provider returned an incomplete response.",
+            errorCode: "automatic_retries_exhausted",
+            errorMessage: null,
             updatedAt: "2026-07-31T09:40:00.000Z",
           },
         ],
@@ -1036,18 +1707,54 @@ async function installMocks(page: Page): Promise<Scenario> {
     }
     if (path === "/api/admin/jobs" && request.method() === "GET") {
       await json(route, {
-        jobs: [
+        jobs: [],
+        pagination: { page: 1, pageSize: 20, total: 0 },
+      });
+      return;
+    }
+    if (path === "/api/admin/generations" && request.method() === "GET") {
+      await json(route, {
+        generations: [
           {
-            id: JOB_ID,
-            state: "failed",
-            stage: "creating_questions",
-            progress: 0.58,
-            errorCode: "generation_failed",
-            errorMessage:
-              "The transcript could not create trustworthy questions.",
-            cancelRequested: false,
+            quizId: QUIZ_ID,
+            state: "retry_required",
+            acceptedQuestions: 6,
+            plannedQuestions: 10,
+            progress: 0.6,
+            requestedQuestionTypes: [
+              "multiple_choice",
+              "true_false",
+              "short_answer",
+            ],
+            aiCalls: 6,
+            retryCount: 1,
+            elapsedMs: 36_000,
+            telemetrySource: "authoritative_calls",
+            primaryCalls: 4,
+            automaticRetries: 1,
+            manualContinuations: 1,
+            partialCalls: 1,
+            outcomeCounts: {
+              complete: 4,
+              transient_http: 1,
+              partial_accepted: 1,
+            },
+            tokenUsage: {
+              inputTokens: 12_400,
+              outputTokens: 2_160,
+              reasoningTokens: 0,
+              completeCalls: 5,
+              unknownCalls: 1,
+              complete: false,
+            },
+            firstQuestionLatencyMs: 7_200,
+            reasonCode: "automatic_retries_exhausted",
+            stalled: false,
+            lastProgressAt: "2026-07-31T09:40:00.000Z",
+            lastQuestionAt: "2026-07-31T09:40:00.000Z",
+            lastAttemptAt: "2026-07-31T09:41:00.000Z",
+            stateChangedAt: "2026-07-31T09:41:00.000Z",
             createdAt: "2026-07-31T09:30:00.000Z",
-            updatedAt: "2026-07-31T09:40:00.000Z",
             owner: {
               id: ADMIN_USER_ID,
               name: "Morgan Operator",
@@ -1126,8 +1833,32 @@ async function installMocks(page: Page): Promise<Scenario> {
         model: "deepseek-v4-flash",
         jobs: { queued: 4, running: 3, complete: 3755, failed: 3 },
         database: {
-          migration: "0007_admin_audit_retention",
+          migration: "0018_automatic_generation_recovery.sql",
           auditEnabled: true,
+        },
+        generation: {
+          mode: "extension_local",
+          backendEnabled: false,
+          extensionEnabled: true,
+          extensionRequired: true,
+          model: "deepseek-v4-flash",
+          pipelineVersion: 9,
+          promptVersion: "quiz-local-json-stream-v5.3",
+          validatorVersion: "validator-local-progressive-v4.2",
+          rolloutMode: "disabled",
+          states: {
+            generating: 2,
+            retrying: 1,
+            recovering: 0,
+            retryRequired: 3,
+            actionRequired: 0,
+            generationFailed: 0,
+            ready: 3755,
+          },
+        },
+        worker: {
+          versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",
+          versionTag: "e2e",
         },
       });
       return;
@@ -1188,23 +1919,206 @@ async function installMocks(page: Page): Promise<Scenario> {
       });
       return;
     }
-    if (path === "/api/quiz-imports" && request.method() === "POST") {
+    if (
+      path === "/api/quiz-imports/progressive" &&
+      request.method() === "POST"
+    ) {
       scenario.quizImportBodies.push(request.postDataJSON());
       scenario.quizImportKeys.push(
         request.headers()["idempotency-key"] ?? null,
       );
-      await json(route, { quizId: QUIZ_ID }, 201);
+      const body = request.postDataJSON() as {
+        chunk?: { totalQuestions?: 5 | 10 | 15 };
+      };
+      scenario.progressiveAvailable = 1;
+      scenario.progressiveTotal = body.chunk?.totalQuestions ?? 5;
+      scenario.progressiveState = "generating";
+      await json(route, { quizId: QUIZ_ID, generation: generation() }, 201);
+      return;
+    }
+    if (path === "/api/local-ai/profile" && request.method() === "GET") {
+      await json(route, {
+        generationProfile: "stable_auto_recovery_v5_3",
+        minimumExtensionVersion: "0.8.3",
+        requiredCapability: "question-stream-v3",
+      });
+      return;
+    }
+    if (
+      path === `/api/quiz-imports/${QUIZ_ID}/questions` &&
+      request.method() === "PUT"
+    ) {
+      scenario.quizImportBodies.push(request.postDataJSON());
+      scenario.quizImportKeys.push(
+        request.headers()["idempotency-key"] ?? null,
+      );
+      const body = request.postDataJSON() as {
+        chunk?: { startIndex?: number };
+      };
+      scenario.progressiveAvailable = Math.max(
+        scenario.progressiveAvailable,
+        (body.chunk?.startIndex ?? 0) + 1,
+      );
+      scenario.progressiveState =
+        scenario.progressiveAvailable === scenario.progressiveTotal
+          ? "ready"
+          : "generating";
+      await json(route, { quizId: QUIZ_ID, generation: generation() });
+      return;
+    }
+    if (
+      path === `/api/quiz-imports/${QUIZ_ID}/progress` &&
+      request.method() === "PATCH"
+    ) {
+      const body = request.postDataJSON() as {
+        state?: "retrying" | "retry_required";
+      };
+      scenario.progressiveState = body.state ?? "retry_required";
+      await json(route, { quizId: QUIZ_ID, generation: generation() });
+      return;
+    }
+    if (
+      path.startsWith(`/api/quiz-imports/${QUIZ_ID}/calls/`) &&
+      request.method() === "PUT"
+    ) {
+      await json(route, { quizId: QUIZ_ID, recorded: true }, 201);
       return;
     }
     if (
       path === `/api/quizzes/${QUIZ_ID}/start` &&
       request.method() === "POST"
     ) {
+      scenario.quizStartBodies.push(request.postDataJSON());
       await json(
         route,
-        { attemptId: ATTEMPT_ID, primer: null, question: scenario.question },
+        {
+          attemptId: ATTEMPT_ID,
+          primer: null,
+          question: {
+            ...scenario.question,
+            total: scenario.progressiveTotal,
+          },
+          generation: generation(),
+        },
         201,
       );
+      return;
+    }
+    if (
+      path.endsWith("/generation/claim") &&
+      path.includes("/api/attempts/") &&
+      request.method() === "POST"
+    ) {
+      if (scenario.claimLeased) {
+        await json(
+          route,
+          {
+            error: {
+              code: "generation_claim_leased",
+              message: "Another tab owns the active recovery lease.",
+            },
+          },
+          409,
+        );
+        return;
+      }
+      await json(route, {
+        attemptId: path.includes(COMPLETE_ATTEMPT_ID)
+          ? COMPLETE_ATTEMPT_ID
+          : ATTEMPT_ID,
+        quizId: QUIZ_ID,
+        generation: generation(),
+        claim: {
+          state: "leased",
+          leaseExpiresAt: "2026-08-10T08:15:00.000Z",
+        },
+      });
+      return;
+    }
+    if (
+      path.endsWith("/generation/heartbeat") &&
+      path.includes("/api/attempts/") &&
+      request.method() === "PUT"
+    ) {
+      await json(route, {
+        attemptId: path.includes(COMPLETE_ATTEMPT_ID)
+          ? COMPLETE_ATTEMPT_ID
+          : ATTEMPT_ID,
+        quizId: QUIZ_ID,
+        generation: generation(),
+        claim: {
+          state: "leased",
+          leaseExpiresAt: "2026-08-10T08:15:00.000Z",
+        },
+      });
+      return;
+    }
+    if (
+      path.endsWith("/generation") &&
+      path.includes("/api/attempts/") &&
+      request.method() === "GET"
+    ) {
+      if (path.includes(COMPLETE_ATTEMPT_ID)) {
+        await json(route, {
+          attemptId: COMPLETE_ATTEMPT_ID,
+          quizId: QUIZ_ID,
+          generation: {
+            state: "ready",
+            availableQuestions: scenario.progressiveTotal,
+            totalQuestions: scenario.progressiveTotal,
+          },
+        });
+        return;
+      }
+      await json(route, {
+        attemptId: ATTEMPT_ID,
+        quizId: QUIZ_ID,
+        generation: generation(),
+        ...(scenario.progressiveState !== "ready"
+          ? {
+              continuation: {
+                videoId: VIDEO_ID,
+                quizLanguage: "en",
+                sessionLength:
+                  scenario.progressiveTotal === 5
+                    ? "short"
+                    : scenario.progressiveTotal === 10
+                      ? "medium"
+                      : "long",
+                questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+                watched: true,
+                startIndex: scenario.progressiveAvailable,
+                resultProtocolVersion: 5,
+                pipelineVersion: 9,
+                model: "deepseek-v4-flash",
+                reasoningEffort: "high",
+                promptVersion: "quiz-local-json-stream-v5.0",
+                validatorVersion: "validator-local-progressive-v4.0",
+                importVersion: "extension-progressive-import-v3",
+                generationProfile: "legacy_reasoning_v5_1",
+                generationId: GENERATION_ID,
+                claim: {
+                  state:
+                    scenario.progressiveState === "retry_required"
+                      ? "available"
+                      : "not_required",
+                  leaseExpiresAt: null,
+                },
+                acceptedQuestions: Array.from(
+                  { length: scenario.progressiveAvailable },
+                  (_, index) => ({
+                    id: `q${index + 1}`,
+                    type: DEFAULT_QUIZ_QUESTION_TYPES[
+                      index % DEFAULT_QUIZ_QUESTION_TYPES.length
+                    ],
+                    concept: `Concept ${index + 1}`,
+                    question: `How does concept ${index + 1} apply?`,
+                  }),
+                ),
+              },
+            }
+          : {}),
+      });
       return;
     }
     if (path.endsWith("/resume") && path.includes("/api/attempts/")) {
@@ -1216,20 +2130,38 @@ async function installMocks(page: Page): Promise<Scenario> {
         completed,
         score: completed ? 88 : null,
         mastery: completed ? "mastered" : null,
+        generation: completed
+          ? {
+              state: "ready",
+              availableQuestions: scenario.progressiveTotal,
+              totalQuestions: scenario.progressiveTotal,
+            }
+          : generation(),
       });
       return;
     }
     if (path.endsWith("/answer") && path.includes("/api/attempts/")) {
+      scenario.answerBodies.push(request.postDataJSON());
       await json(route, {
         correct: scenario.answerCorrect,
         explanation: scenario.answerCorrect
           ? "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice."
           : "The key is effortful reconstruction: recalling the idea strengthens access to it later.",
         evidenceSegmentIds: ["segment-1"],
-        nextQuestion,
+        nextQuestion: !scenario.answerCorrect
+          ? {
+              ...scenario.question,
+              prompt: `Try again: ${scenario.question.prompt}`,
+              isRetry: true,
+            }
+          : scenario.progressiveState !== "ready" &&
+              scenario.question.position >= scenario.progressiveAvailable
+            ? null
+            : nextQuestion,
         completed: false,
         score: null,
         mastery: null,
+        generation: generation(),
       });
       return;
     }
@@ -1254,6 +2186,69 @@ async function seed(page: Page, key: string, value: unknown): Promise<void> {
   );
 }
 
+async function seedGenerationRecord(
+  page: Page,
+  overrides: Partial<GenerationRecordV2> = {},
+): Promise<string> {
+  const timestamp = Date.now();
+  const record: GenerationRecordV2 = {
+    version: 2,
+    generationId: GENERATION_ID,
+    generationSessionId: GENERATION_SESSION_ID,
+    idempotencyKey: GENERATION_IMPORT_KEY,
+    ownerUserId: sessionFixture().user.id,
+    videoId: VIDEO_ID,
+    quizLanguage: "en",
+    questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
+    sessionLength: "short",
+    watched: true,
+    acceptedCount: 0,
+    plannedCount: 5,
+    state: "pending",
+    nextCallIndex: 0,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...overrides,
+  };
+  await seed(page, `clipquest:generation:v2:${record.generationId}`, record);
+  if (record.attemptId) {
+    await page.evaluate(
+      ({ attemptId, generationId }) =>
+        window.localStorage.setItem(
+          `clipquest:generation-attempt:v2:${attemptId}`,
+          generationId,
+        ),
+      { attemptId: record.attemptId, generationId: record.generationId },
+    );
+  }
+  return record.generationId;
+}
+
+async function expectCreateRouteWithGeneration(page: Page): Promise<void> {
+  await expect(page).toHaveURL((url) => {
+    const generationId = url.searchParams.get("generationId") ?? "";
+    return (
+      url.pathname === `/create/${VIDEO_ID}` &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        generationId,
+      )
+    );
+  });
+}
+
+async function expectQuizRoute(
+  page: Page,
+  requiresGenerationId = false,
+): Promise<void> {
+  await expect(page).toHaveURL((url) => {
+    if (url.pathname !== `/quiz/${ATTEMPT_ID}`) return false;
+    if (!requiresGenerationId) return true;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      url.searchParams.get("generationId") ?? "",
+    );
+  });
+}
+
 async function seedAttempt(
   page: Page,
   attemptId: string,
@@ -1265,6 +2260,44 @@ async function seedAttempt(
     question,
     primerSeen: true,
   });
+}
+
+async function displayedChoiceOrder(
+  page: Page,
+  options: readonly string[],
+): Promise<string[]> {
+  const choices = await Promise.all(
+    options.map(async (option) => ({
+      option,
+      box: await page.getByRole("button", { name: option }).boundingBox(),
+    })),
+  );
+  return choices
+    .sort(
+      (left, right) =>
+        (left.box?.y ?? 0) - (right.box?.y ?? 0) ||
+        (left.box?.x ?? 0) - (right.box?.x ?? 0),
+    )
+    .map(({ option }) => option);
+}
+
+async function randomDrawCount(page: Page): Promise<number> {
+  return page.evaluate(() =>
+    Number(window.sessionStorage.getItem("clipquest:e2e-random-draws") ?? "0"),
+  );
+}
+
+function boxesOverlap(
+  left: { x: number; y: number; width: number; height: number } | null,
+  right: { x: number; y: number; width: number; height: number } | null,
+): boolean {
+  if (!left || !right) return false;
+  return !(
+    left.x + left.width <= right.x ||
+    right.x + right.width <= left.x ||
+    left.y + left.height <= right.y ||
+    right.y + right.height <= left.y
+  );
 }
 
 async function capture(page: Page, name: string): Promise<void> {

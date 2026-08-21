@@ -53,20 +53,20 @@ form.addEventListener("submit", async (event) => {
   syncActions();
   setStatus("Saving and testing the key…");
   try {
+    const tested = await chrome.runtime.sendMessage({
+      type: "clipquest.key.test.v1",
+      apiKey,
+    });
+    if (!tested?.ok) {
+      configured = false;
+      throw new Error(tested?.error ?? "DeepSeek rejected the key.");
+    }
     const saved = await chrome.runtime.sendMessage({
       type: "clipquest.key.save.v1",
       apiKey,
     });
     if (!saved?.ok)
       throw new Error(saved?.error ?? "The key could not be saved.");
-    const tested = await chrome.runtime.sendMessage({
-      type: "clipquest.key.test.v1",
-    });
-    if (!tested?.ok) {
-      await chrome.runtime.sendMessage({ type: "clipquest.key.delete.v1" });
-      configured = false;
-      throw new Error(tested?.error ?? "DeepSeek rejected the key.");
-    }
     configured = true;
     input.value = "";
     input.placeholder = "Key saved locally";
