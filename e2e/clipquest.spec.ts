@@ -348,6 +348,56 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
   expect(mobileOverflow).toBe(false);
 });
 
+test("unauthenticated entry defaults to sign-in and sign-up links to welcome", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+
+  await page.goto("/sign-up");
+  const trialLink = page.getByTestId("try-without-account-link");
+  await expect(trialLink).toHaveText(
+    "Don’t want to create an account but want to try?",
+  );
+  await expect(trialLink).toBeVisible();
+
+  const rightAlignment = await page.evaluate(() => {
+    const trial = document.querySelector<HTMLElement>(
+      '[data-testid="try-without-account-link"]',
+    );
+    const input = document.querySelector<HTMLInputElement>(
+      'input[aria-label="Username"]',
+    );
+    if (!trial || !input?.parentElement)
+      throw new Error("Missing sign-up trial link");
+    return {
+      trialRight: trial.getBoundingClientRect().right,
+      fieldRight: input.parentElement.getBoundingClientRect().right,
+    };
+  });
+  expect(rightAlignment.trialRight).toBeCloseTo(rightAlignment.fieldRight, 0);
+
+  await trialLink.click();
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(
+    page.getByRole("heading", { name: "Paste a video. Build real mastery." }),
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/sign-up");
+  await expect(page.getByTestId("try-without-account-link")).toBeVisible();
+  const mobileOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1,
+  );
+  expect(mobileOverflow).toBe(false);
+});
+
 test("requires the local caption extension and reconnects automatically", async ({
   page,
 }) => {

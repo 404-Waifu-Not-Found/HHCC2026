@@ -131,7 +131,7 @@ export default function SettingsScreen() {
       const result = await authClient.signOut();
       if (result.error)
         throw new Error(result.error.message ?? t("signOutFailed"));
-      router.replace("/(auth)/welcome");
+      router.replace("/(auth)/sign-in");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signOutFailed"));
     } finally {
@@ -147,7 +147,7 @@ export default function SettingsScreen() {
       const result = await authClient.deleteUser({ password: deletePassword });
       if (result.error)
         throw new Error(result.error.message ?? t("deleteAccountFailed"));
-      router.replace("/(auth)/welcome");
+      router.replace("/(auth)/sign-in");
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : t("deleteAccountFailed"),

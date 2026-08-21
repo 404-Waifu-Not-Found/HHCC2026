@@ -43,7 +43,7 @@ export default function TabLayout() {
     );
   }
 
-  if (!data) return <Redirect href="/(auth)/welcome" />;
+  if (!data) return <Redirect href="/(auth)/sign-in" />;
 
   return (
     <Tabs

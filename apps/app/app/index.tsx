@@ -23,7 +23,7 @@ export default function Index() {
       </View>
     );
   }
-  return <Redirect href={data ? "/(tabs)" : "/(auth)/welcome"} />;
+  return <Redirect href={data ? "/(tabs)" : "/(auth)/sign-in"} />;
 }
 
 const styles = StyleSheet.create({

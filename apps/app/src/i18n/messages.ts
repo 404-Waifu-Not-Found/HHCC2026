@@ -29,6 +29,7 @@ export const messages = {
     ageRequired: "Confirm that you are at least 13 before creating an account.",
     newToClipQuest: "New to ClipQuest?",
     alreadyHaveAccount: "Already have an account?",
+    tryWithoutAccount: "Don’t want to create an account but want to try?",
     authCrossDevice:
       "Your progress stays synced across web, iPhone, and Android.",
     welcomeSubtitle:
@@ -249,6 +250,7 @@ export const messages = {
     ageRequired: "创建账户前，请确认你已满 13 岁。",
     newToClipQuest: "第一次使用 ClipQuest？",
     alreadyHaveAccount: "已有账户？",
+    tryWithoutAccount: "不想创建账户，只想先试用？",
     authCrossDevice: "学习进度会在网页、iPhone 和 Android 设备间同步。",
     welcomeSubtitle: "把你正在观看的视频变成专注、基于证据的学习任务。",
     welcomePrivacy: "无需登录 YouTube，我们只使用公开视频字幕。",

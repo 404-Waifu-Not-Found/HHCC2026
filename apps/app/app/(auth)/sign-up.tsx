@@ -72,14 +72,23 @@ export default function SignUpScreen() {
       subtitle={t("authCrossDevice")}
       footer={
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.textMuted }]}>
-            {t("alreadyHaveAccount")}
-          </Text>
+          <View style={styles.accountFooter}>
+            <Text style={[styles.footerText, { color: theme.textMuted }]}>
+              {t("alreadyHaveAccount")}
+            </Text>
+            <Link
+              href="/(auth)/sign-in"
+              style={[styles.link, styles.footerLink, { color: theme.text }]}
+            >
+              {t("signIn")}
+            </Link>
+          </View>
           <Link
-            href="/(auth)/sign-in"
-            style={[styles.link, styles.footerLink, { color: theme.text }]}
+            testID="try-without-account-link"
+            href="/(auth)/welcome"
+            style={[styles.tryLink, { color: theme.primary }]}
           >
-            {t("signIn")}
+            {t("tryWithoutAccount")}
           </Link>
         </View>
       }
@@ -235,6 +244,10 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.label,
   },
   footer: {
+    alignItems: "stretch",
+    gap: spacing[1],
+  },
+  accountFooter: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
@@ -244,4 +257,13 @@ const styles = StyleSheet.create({
   footerText: { fontFamily: typography.body, fontSize: typography.size.label },
   link: { fontFamily: typography.bodyBold, fontSize: typography.size.label },
   footerLink: { minHeight: 44, paddingVertical: spacing[3] },
+  tryLink: {
+    minHeight: 44,
+    alignSelf: "flex-end",
+    paddingVertical: spacing[3],
+    textAlign: "right",
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
 });
