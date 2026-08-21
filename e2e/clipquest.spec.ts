@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   createTranscriptCompleteness,
+  type GenerationRecordV2,
   type PublicQuestion,
 } from "@clipquest/contracts";
 
@@ -18,6 +19,9 @@ const THUMBNAIL_URL = `${BASE_URL}/test-thumbnail.svg`;
 const SCREENSHOT_DIR =
   process.env.CLIPQUEST_SCREENSHOT_DIR ?? "docs/screenshots/final";
 const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
+const GENERATION_ID = "abababab-abab-4bab-8bab-abababababab";
+const GENERATION_SESSION_ID = "bcbcbcbc-bcbc-4bcb-8bcb-bcbcbcbcbcbc";
+const GENERATION_IMPORT_KEY = "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd";
 
 type Scenario = {
   adminMode: "allowed" | "denied";
@@ -582,11 +586,11 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
   await page
     .getByLabel("Paste a YouTube link")
     .fill("https://www.youtube.com/watch?v=SVb9OV0bLzI&t=44s");
-  await expect(page).toHaveURL(`/create/${VIDEO_ID}`);
+  await expectCreateRouteWithGeneration(page);
   await page.getByRole("radio", { name: "Short · 5" }).click();
   await page.getByRole("button", { name: "Create my quiz" }).click();
 
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
@@ -636,7 +640,7 @@ test("reopens a completed progressive quiz with its stored Library settings", as
   await page
     .getByRole("button", { name: /A visual guide to the Feynman technique/u })
     .click();
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page);
   expect(scenario.quizStartBodies).toEqual([
     {
       mode: "learn",
@@ -670,6 +674,12 @@ test("multiple-choice views reshuffle only on activation and submit canonical in
   scenario.answerCorrect = false;
   await page.goto("/");
   await seedAttempt(page, ATTEMPT_ID, baseQuestion);
+  await seedGenerationRecord(page, {
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 1,
+    state: "generating",
+  });
   await page.goto(`/quiz/${ATTEMPT_ID}`);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
@@ -793,7 +803,7 @@ test("retry-required quizzes continue locally from the authoritative missing suf
   expect(appendedIndexes).toEqual([3, 4]);
 });
 
-test("a reloaded quiz automatically recovers from the first server-missing question", async ({
+test("a reloaded legacy quiz pauses and recovers only after explicit reclaim", async ({
   page,
 }) => {
   const scenario = await installMocks(page);
@@ -816,7 +826,11 @@ test("a reloaded quiz automatically recovers from the first server-missing quest
   await seedAttempt(page, ATTEMPT_ID, baseQuestion);
   await page.goto(`/quiz/${ATTEMPT_ID}`);
 
-  await expect(page.getByTestId("question-stream-indicator")).toBeVisible();
+  await expect(page.getByTestId("question-stream-indicator")).toContainText(
+    "Generation paused · 1/5 ready",
+  );
+  expect(scenario.quizImportBodies).toHaveLength(0);
+  await page.getByRole("button", { name: "Continue generating" }).click();
   await expect(page.getByTestId("question-stream-indicator")).toBeHidden({
     timeout: 5_000,
   });
@@ -836,6 +850,10 @@ test("the streaming indicator stays inside each gutter and above the quiz footer
   const scenario = await installMocks(page);
   await page.goto("/");
   await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
+  const generationId = await seedGenerationRecord(page, {
+    sessionLength: "short",
+    plannedCount: 5,
+  });
   await page.evaluate(() =>
     window.sessionStorage.setItem(
       "clipquest:e2e-generation-completion-delay-ms",
@@ -843,9 +861,9 @@ test("the streaming indicator stays inside each gutter and above the quiz footer
     ),
   );
   await page.goto(
-    `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=short`,
+    `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=short`,
   );
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page, true);
   await expect(page.getByTestId("question-stream-indicator")).toBeVisible();
 
   for (const viewport of [
@@ -901,7 +919,7 @@ test("YouTube quick open lands on Home and starts one import automatically", asy
 
   await page.goto(`/?url=${encodeURIComponent(quickOpenVideo)}&autostart=1`);
 
-  await expect(page).toHaveURL(`/create/${VIDEO_ID}`);
+  await expectCreateRouteWithGeneration(page);
   expect(
     scenario.requestedPaths.filter((path) => path === "/api/videos/import"),
   ).toHaveLength(1);
@@ -1028,16 +1046,14 @@ test("desktop learning journey and visual states", async ({ page }) => {
   ).toBeVisible();
   await capture(page, "desktop-video-preview");
 
-  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
-    idempotencyKey: "visual-idempotency",
-    jobId: JOB_ID,
-    quizLanguage: "en",
-    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+  const generationId = await seedGenerationRecord(page, {
+    sessionLength: "medium",
+    plannedCount: 10,
   });
   await page.goto(
-    `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=medium`,
+    `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=medium`,
   );
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
@@ -1117,16 +1133,14 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   await capture(page, "mobile-link-import");
 
   await seed(page, `clipquest:creation:${VIDEO_ID}`, importedVideo);
-  await seed(page, `clipquest:generation:${VIDEO_ID}`, {
-    idempotencyKey: "mobile-idempotency",
-    jobId: JOB_ID,
-    quizLanguage: "en",
-    questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
+  const generationId = await seedGenerationRecord(page, {
+    sessionLength: "medium",
+    plannedCount: 10,
   });
   await page.goto(
-    `/generation/${VIDEO_ID}?watched=true&quizLanguage=en&sessionLength=medium`,
+    `/generation/${VIDEO_ID}?generationId=${generationId}&watched=true&quizLanguage=en&sessionLength=medium`,
   );
-  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  await expectQuizRoute(page, true);
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
@@ -1188,6 +1202,12 @@ test("all generated question types keep the tactile learning layout", async ({
   scenario.progressiveTotal = 5;
   scenario.progressiveState = "generating";
   await seedAttempt(page, ATTEMPT_ID, shortAnswerQuestion);
+  await seedGenerationRecord(page, {
+    quizId: QUIZ_ID,
+    attemptId: ATTEMPT_ID,
+    acceptedCount: 2,
+    state: "generating",
+  });
   await page.goto(`/quiz/${ATTEMPT_ID}`);
   await expect(
     page.getByRole("heading", { name: shortAnswerQuestion.prompt }),
@@ -1322,7 +1342,7 @@ test("YouTube-only imports validate and recover from unavailable video", async (
   await input.fill(
     "https://www.youtube.com/watch?v=clipquest-learning-science",
   );
-  await expect(page).toHaveURL(new RegExp(`/create/${VIDEO_ID}$`));
+  await expectCreateRouteWithGeneration(page);
   await expect(page.getByText("YouTube", { exact: true }).last()).toBeVisible();
 
   expect(
@@ -1374,7 +1394,7 @@ test("admin operations console is responsive and uses real management contracts"
   await expect(page.getByRole("heading", { name: "System" })).toBeVisible();
   await expect(page.getByText("Disabled by design")).toBeVisible();
   await expect(
-    page.getByText("0016_progressive_quiz_streaming.sql"),
+    page.getByText("0017_quiz_generation_call_events.sql"),
   ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1579,12 +1599,34 @@ async function installMocks(page: Page): Promise<Scenario> {
               "true_false",
               "short_answer",
             ],
-            aiCalls: 3,
-            retryCount: 2,
+            aiCalls: 6,
+            retryCount: 1,
             elapsedMs: 36_000,
+            telemetrySource: "authoritative_calls",
+            primaryCalls: 4,
+            automaticRetries: 1,
+            manualContinuations: 1,
+            partialCalls: 1,
+            outcomeCounts: {
+              complete: 4,
+              transient_http: 1,
+              partial_accepted: 1,
+            },
+            tokenUsage: {
+              inputTokens: 12_400,
+              outputTokens: 2_160,
+              reasoningTokens: 0,
+              completeCalls: 5,
+              unknownCalls: 1,
+              complete: false,
+            },
+            firstQuestionLatencyMs: 7_200,
             reasonCode: "automatic_retries_exhausted",
             stalled: false,
             lastProgressAt: "2026-07-31T09:40:00.000Z",
+            lastQuestionAt: "2026-07-31T09:40:00.000Z",
+            lastAttemptAt: "2026-07-31T09:41:00.000Z",
+            stateChangedAt: "2026-07-31T09:41:00.000Z",
             createdAt: "2026-07-31T09:30:00.000Z",
             owner: {
               id: ADMIN_USER_ID,
@@ -1664,7 +1706,7 @@ async function installMocks(page: Page): Promise<Scenario> {
         model: "deepseek-v4-flash",
         jobs: { queued: 4, running: 3, complete: 3755, failed: 3 },
         database: {
-          migration: "0016_progressive_quiz_streaming.sql",
+          migration: "0017_quiz_generation_call_events.sql",
           auditEnabled: true,
         },
         generation: {
@@ -1676,6 +1718,7 @@ async function installMocks(page: Page): Promise<Scenario> {
           pipelineVersion: 9,
           promptVersion: "quiz-local-json-stream-v5.1",
           validatorVersion: "validator-local-progressive-v4.0",
+          rolloutMode: "disabled",
           states: {
             generating: 2,
             retrying: 1,
@@ -1763,6 +1806,14 @@ async function installMocks(page: Page): Promise<Scenario> {
       await json(route, { quizId: QUIZ_ID, generation: generation() }, 201);
       return;
     }
+    if (path === "/api/local-ai/profile" && request.method() === "GET") {
+      await json(route, {
+        generationProfile: "legacy_reasoning_v5_1",
+        minimumExtensionVersion: "0.8.0",
+        requiredCapability: "question-stream-v1",
+      });
+      return;
+    }
     if (
       path === `/api/quiz-imports/${QUIZ_ID}/questions` &&
       request.method() === "PUT"
@@ -1817,6 +1868,21 @@ async function installMocks(page: Page): Promise<Scenario> {
       return;
     }
     if (
+      path === `/api/attempts/${ATTEMPT_ID}/generation/claim` &&
+      request.method() === "POST"
+    ) {
+      await json(route, {
+        attemptId: ATTEMPT_ID,
+        quizId: QUIZ_ID,
+        generation: generation(),
+        claim: {
+          state: "leased",
+          leaseExpiresAt: "2026-08-10T08:15:00.000Z",
+        },
+      });
+      return;
+    }
+    if (
       path.endsWith("/generation") &&
       path.includes("/api/attempts/") &&
       request.method() === "GET"
@@ -1839,6 +1905,22 @@ async function installMocks(page: Page): Promise<Scenario> {
                 questionTypes: DEFAULT_QUIZ_QUESTION_TYPES,
                 watched: true,
                 startIndex: scenario.progressiveAvailable,
+                resultProtocolVersion: 5,
+                pipelineVersion: 9,
+                model: "deepseek-v4-flash",
+                reasoningEffort: "high",
+                promptVersion: "quiz-local-json-stream-v5.0",
+                validatorVersion: "validator-local-progressive-v4.0",
+                importVersion: "extension-progressive-import-v3",
+                generationProfile: "legacy_reasoning_v5_1",
+                generationId: GENERATION_ID,
+                claim: {
+                  state:
+                    scenario.progressiveState === "retry_required"
+                      ? "available"
+                      : "not_required",
+                  leaseExpiresAt: null,
+                },
                 acceptedQuestions: Array.from(
                   { length: scenario.progressiveAvailable },
                   (_, index) => ({
@@ -1919,6 +2001,69 @@ async function seed(page: Page, key: string, value: unknown): Promise<void> {
       window.localStorage.setItem(storageKey, JSON.stringify(storedValue)),
     { storageKey: key, storedValue: value },
   );
+}
+
+async function seedGenerationRecord(
+  page: Page,
+  overrides: Partial<GenerationRecordV2> = {},
+): Promise<string> {
+  const timestamp = Date.now();
+  const record: GenerationRecordV2 = {
+    version: 2,
+    generationId: GENERATION_ID,
+    generationSessionId: GENERATION_SESSION_ID,
+    idempotencyKey: GENERATION_IMPORT_KEY,
+    ownerUserId: sessionFixture().user.id,
+    videoId: VIDEO_ID,
+    quizLanguage: "en",
+    questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
+    sessionLength: "short",
+    watched: true,
+    acceptedCount: 0,
+    plannedCount: 5,
+    state: "pending",
+    nextCallIndex: 0,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...overrides,
+  };
+  await seed(page, `clipquest:generation:v2:${record.generationId}`, record);
+  if (record.attemptId) {
+    await page.evaluate(
+      ({ attemptId, generationId }) =>
+        window.localStorage.setItem(
+          `clipquest:generation-attempt:v2:${attemptId}`,
+          generationId,
+        ),
+      { attemptId: record.attemptId, generationId: record.generationId },
+    );
+  }
+  return record.generationId;
+}
+
+async function expectCreateRouteWithGeneration(page: Page): Promise<void> {
+  await expect(page).toHaveURL((url) => {
+    const generationId = url.searchParams.get("generationId") ?? "";
+    return (
+      url.pathname === `/create/${VIDEO_ID}` &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        generationId,
+      )
+    );
+  });
+}
+
+async function expectQuizRoute(
+  page: Page,
+  requiresGenerationId = false,
+): Promise<void> {
+  await expect(page).toHaveURL((url) => {
+    if (url.pathname !== `/quiz/${ATTEMPT_ID}`) return false;
+    if (!requiresGenerationId) return true;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      url.searchParams.get("generationId") ?? "",
+    );
+  });
 }
 
 async function seedAttempt(

@@ -1,32 +1,31 @@
 import { captionsToPlainText } from "./caption-text.js";
 
 const MODEL = "deepseek-v4-flash";
-const PROTOCOL_VERSION = 5;
+const PROTOCOL_VERSION = 6;
 const PIPELINE_VERSION = 9;
-const PROMPT_VERSION = "quiz-local-json-stream-v5.1";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.0";
+const PROMPT_VERSION = "quiz-local-json-stream-v5.2";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.1";
+const IMPORT_VERSION = "extension-progressive-import-v4";
+const GENERATION_PROFILE = "stable_non_thinking_v5_2";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
-const GENERATION_OUTPUT_TOKENS = 48_000;
-const MAX_NO_PROGRESS_RETRIES = 3;
-const MAX_GENERATION_ATTEMPTS = MAX_NO_PROGRESS_RETRIES + 1;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
-const QUESTION_CHUNK_SIZE = 5;
+const MAX_GENERATION_ATTEMPTS = 2;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
   "true_false",
   "short_answer",
 ];
 
-class TerminalGenerationError extends Error {
-  constructor(message, reasonCode = "action_required") {
+class GenerationFailure extends Error {
+  constructor(
+    message,
+    reasonCode,
+    { transient = false, retryAfterMs = 0 } = {},
+  ) {
     super(message);
     this.reasonCode = reasonCode;
-  }
-}
-class RetryableGenerationError extends Error {
-  constructor(message, retryAfterMs = 0) {
-    super(message);
+    this.transient = transient;
     this.retryAfterMs = retryAfterMs;
   }
 }
@@ -42,22 +41,29 @@ function retryAfterMilliseconds(value, now = Date.now()) {
 }
 
 export function boundedRetryDelayMilliseconds(
-  consecutiveFailures,
+  _consecutiveFailures,
   retryAfterMs = 0,
 ) {
-  const exponentialDelay = 750 * 2 ** Math.max(0, consecutiveFailures - 1);
+  const exponentialDelay = 750;
   return Math.min(
     MAX_RETRY_DELAY_MS,
     Math.max(exponentialDelay, Math.max(0, retryAfterMs)),
   );
 }
 
-function strictJson(text, operation) {
+function strictJson(
+  text,
+  operation,
+  reasonCode = "truncated_json",
+  transient = false,
+) {
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(
+    throw new GenerationFailure(
       `${operation} returned malformed JSON. No quiz was created.`,
+      reasonCode,
+      { transient },
     );
   }
 }
@@ -79,308 +85,328 @@ function normalize(value) {
     .trim();
 }
 
-function quizResponseSchema(questionCount, questionOffset = 0) {
-  const commonProperties = {
-    id: {
-      type: "string",
-      description: `Sequential global id from q${questionOffset + 1} through q${questionOffset + questionCount}.`,
-    },
-    concept: {
-      type: "string",
-      description: "The exact lesson concept being tested.",
-    },
-    question: {
-      type: "string",
-      description: "A complete, self-contained question or statement.",
-    },
-    explanation: {
-      type: "string",
-      description:
-        "A concise explanation grounded only in the supplied lesson text.",
-    },
+function questionSchemaForType(type, id) {
+  const properties = {
+    id: { const: id },
+    type: { const: type },
+    concept: { type: "string" },
+    question: { type: "string" },
+    explanation: { type: "string" },
   };
+  const required = ["id", "type", "concept", "question", "explanation"];
+  if (type === "multiple_choice") {
+    Object.assign(properties, {
+      choices: {
+        type: "array",
+        minItems: 4,
+        maxItems: 4,
+        items: { type: "string" },
+      },
+      answerIndex: { type: "integer", minimum: 0, maximum: 3 },
+      answer: { type: "string" },
+    });
+    required.push("choices", "answerIndex", "answer");
+  } else if (type === "true_false") {
+    Object.assign(properties, {
+      answer: { type: "boolean" },
+      correction: { type: "string" },
+    });
+    required.push("answer", "correction");
+  } else {
+    Object.assign(properties, {
+      answer: { type: "string" },
+      rubricIdeas: {
+        type: "array",
+        minItems: 1,
+        maxItems: 6,
+        items: { type: "string" },
+      },
+      acceptableAnswers: {
+        type: "array",
+        maxItems: 8,
+        items: { type: "string" },
+      },
+    });
+    required.push("answer", "rubricIdeas", "acceptableAnswers");
+  }
+  return { type: "object", additionalProperties: false, required, properties };
+}
+
+function quizResponseSchema(input) {
   return {
     type: "object",
     additionalProperties: false,
-    required: ["title", "questions"],
+    required: ["questions"],
     properties: {
-      title: {
-        type: "string",
-        description: "A concise title for this specific quiz.",
-      },
       questions: {
         type: "array",
-        minItems: questionCount,
-        maxItems: questionCount,
-        description: `Exactly ${questionCount} questions returned together.`,
-        items: {
-          oneOf: [
-            {
-              type: "object",
-              additionalProperties: false,
-              required: [
-                "id",
-                "type",
-                "concept",
-                "question",
-                "choices",
-                "answerIndex",
-                "answer",
-                "explanation",
-              ],
-              properties: {
-                ...commonProperties,
-                type: { type: "string", enum: ["multiple_choice"] },
-                choices: {
-                  type: "array",
-                  minItems: 4,
-                  maxItems: 4,
-                  items: { type: "string" },
-                  description:
-                    "Exactly four plausible and meaningfully different choices.",
-                },
-                answerIndex: {
-                  type: "integer",
-                  minimum: 0,
-                  maximum: 3,
-                },
-                answer: {
-                  type: "string",
-                  description:
-                    "The exact text of choices[answerIndex], copied without changes.",
-                },
-              },
-            },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: [
-                "id",
-                "type",
-                "concept",
-                "question",
-                "answer",
-                "correction",
-                "explanation",
-              ],
-              properties: {
-                ...commonProperties,
-                type: { type: "string", enum: ["true_false"] },
-                answer: { type: "boolean" },
-                correction: {
-                  type: "string",
-                  description:
-                    "For a false statement, give the corrected statement. For a true statement, explain that it is accurate as written.",
-                },
-              },
-            },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: [
-                "id",
-                "type",
-                "concept",
-                "question",
-                "answer",
-                "rubricIdeas",
-                "acceptableAnswers",
-                "explanation",
-              ],
-              properties: {
-                ...commonProperties,
-                type: { type: "string", enum: ["short_answer"] },
-                answer: {
-                  type: "string",
-                  description:
-                    "A complete reference answer. For a formula question, this must be the standalone canonical formula with no surrounding prose.",
-                },
-                rubricIdeas: {
-                  type: "array",
-                  minItems: 1,
-                  maxItems: 6,
-                  items: { type: "string" },
-                  description:
-                    "Every evidence-supported idea required for a correct answer.",
-                },
-                acceptableAnswers: {
-                  type: "array",
-                  maxItems: 8,
-                  items: { type: "string" },
-                  description:
-                    "Equivalent complete answers or phrasings that must be accepted.",
-                },
-              },
-            },
-          ],
-        },
+        minItems: input.questionCount,
+        maxItems: input.questionCount,
+        prefixItems: input.questionTypePlan.map((type, index) =>
+          questionSchemaForType(type, `q${input.questionOffset + index + 1}`),
+        ),
+        items: false,
       },
     },
   };
 }
 
-function generationMessages(input, previousFailure) {
-  const responseSchema = quizResponseSchema(
-    input.questionCount,
-    input.questionOffset,
-  );
-  const example = {
-    title: "Motion Concept Quiz",
-    questions: [
-      {
-        id: "q1",
-        type: "multiple_choice",
-        concept: "Average speed",
-        question: "Which calculation gives average speed?",
-        choices: [
-          "Total distance divided by total time",
-          "Total time divided by total distance",
-          "Final speed minus initial speed",
-          "Distance multiplied by time",
-        ],
-        answerIndex: 0,
-        answer: "Total distance divided by total time",
-        explanation: "Average speed compares total distance with total time.",
-      },
-      {
-        id: "q2",
-        type: "true_false",
-        concept: "Constant speed",
-        question:
-          "An object moving at constant speed covers equal distances in equal time intervals.",
-        answer: true,
-        correction: "The statement is accurate as written.",
-        explanation:
-          "That equal-distance relationship defines constant speed in the lesson.",
-      },
-      {
-        id: "q3",
-        type: "short_answer",
-        concept: "Acceleration",
-        question: "Explain what it means for an object to accelerate.",
-        answer: "Its velocity changes over time.",
-        rubricIdeas: ["Velocity changes", "The change occurs over time"],
-        acceptableAnswers: ["Its speed or direction changes over time."],
-        explanation: "Acceleration is the rate at which velocity changes.",
-      },
-    ],
+function exampleQuestion(type, id, polarity) {
+  const common = {
+    id,
+    type,
+    concept: "lesson concept",
+    question: "A self-contained question grounded in the lesson?",
+    explanation: "A concise lesson-grounded explanation.",
   };
-  const typePlan = input.questionTypePlan
-    .map((type, index) => `q${input.questionOffset + index + 1}: ${type}`)
+  if (type === "multiple_choice") {
+    return {
+      ...common,
+      choices: [
+        "supported answer",
+        "distractor A",
+        "distractor B",
+        "distractor C",
+      ],
+      answerIndex: 0,
+      answer: "supported answer",
+    };
+  }
+  if (type === "true_false") {
+    return {
+      ...common,
+      answer: polarity,
+      correction: polarity
+        ? "The statement is accurate as written."
+        : "The corrected lesson-grounded statement.",
+    };
+  }
+  return {
+    ...common,
+    answer: "A concise complete reference answer.",
+    rubricIdeas: ["required idea"],
+    acceptableAnswers: [],
+  };
+}
+
+function generationMessages(input, isTransientRetry) {
+  const slotPlan = input.questionTypePlan
+    .map((type, index) => {
+      const id = `q${input.questionOffset + index + 1}`;
+      const polarity = input.trueFalseAnswerPlan[index];
+      return `${id}: ${type}${typeof polarity === "boolean" ? `, answer=${polarity}` : ""}`;
+    })
     .join("\n");
-  const truthPlan = input.trueFalseAnswerPlan
-    .flatMap((answer, index) =>
-      typeof answer === "boolean"
-        ? [`q${input.questionOffset + index + 1}: ${answer}`]
-        : [],
-    )
-    .join("\n");
-  const acceptedQuestions = input.acceptedQuestions?.length
-    ? `\nThese earlier questions are already accepted. Do not repeat their concepts or prompts:\n${input.acceptedQuestions
+  const accepted = input.acceptedQuestions.length
+    ? input.acceptedQuestions
         .map(
           (question) =>
-            `${question.id}: ${question.concept} — ${question.question}`,
+            `${question.id}: ${question.type}; ${question.concept}; ${question.question}`,
         )
-        .join("\n")}\n`
-    : "";
-  const retryInstruction = previousFailure
-    ? `\nThe previous stream stopped at the first unresolved position for this exact reason: ${previousFailure}\nGenerate this entire remaining requested group from scratch and do not repeat that defect.`
-    : "";
+        .join("\n")
+    : "none";
+  const example = {
+    questions: input.questionTypePlan.map((type, index) =>
+      exampleQuestion(
+        type,
+        `q${input.questionOffset + index + 1}`,
+        input.trueFalseAnswerPlan[index],
+      ),
+    ),
+  };
   return [
     {
       role: "system",
-      content: `You are an expert teacher who creates rigorous mixed-format quizzes from lesson transcripts.
+      content: `You create rigorous quizzes from a supplied lesson transcript. Use only claims explicitly supported by that transcript. Ignore greetings, promotions, jokes, repeated filler, and transcription noise. Never infer unseen visuals or add outside facts. Questions must be self-contained, specific, pedagogically useful, and must not mention captions, timestamps, or the video.
 
-Use only concepts explicitly taught in the supplied plain text. Do not add outside facts, infer missing visual information, or invent claims. Ignore greetings, promotions, sponsor messages, jokes, repeated filler, and transcription noise.
-
-Create exactly ${input.questionCount} questions for positions q${input.questionOffset + 1} through q${input.questionOffset + input.questionCount} of a ${input.totalQuestionCount}-question quiz. Generate this entire chunk in one response. Serialize the title before the questions array, and finish each question object before beginning the next one so validated questions can be delivered while the JSON response content is still streaming. Each question must be self-contained, specific, and useful for learning. Favor conceptual understanding, application, and analysis over simple word-for-word recall. Avoid generic stems such as "What does the video explain?" and never mention timestamps or caption segments.${acceptedQuestions}
-
-The type of every slot is server-assigned and mandatory:
-${typePlan}
-${truthPlan ? `\nThe answer polarity of every true/false slot is also mandatory:\n${truthPlan}\n` : ""}
-For multiple choice, provide exactly four unique choices, exactly one supported answer, and three plausible but lesson-contradicted distractors. For true/false, write a complete declarative statement and include a correction or confirmation. For short answer, provide a complete reference answer, all required rubric ideas, and equivalent acceptable answers. When a short-answer question asks for a mathematical formula, put only one standalone canonical formula in answer and put equivalent notation variants in acceptableAnswers; never wrap the canonical answer in explanatory prose. Do not include fields belonging to another question type.${retryInstruction}
-
-Return exactly one JSON object as the complete assistant response content. Begin immediately with the object, serialize each question in order, and do not wrap it in Markdown or prose. Use the exact global IDs q${input.questionOffset + 1} through q${input.questionOffset + input.questionCount}. The answer field must exactly equal choices[answerIndex]. Do not omit any requested question. The required response schema is: ${JSON.stringify(responseSchema)}. Example field structure: ${JSON.stringify(example)}`,
+Return JSON only: one JSON object containing a questions array. Finish each question object before starting the next. Multiple-choice questions need four unique plausible choices, exactly one supported answer, and answer must equal choices[answerIndex]. True/false questions need the assigned polarity and a correction or confirmation. Short answers need a complete answer, every required rubric idea, and optional equivalent answers. A formula answer must be a standalone canonical formula with explicit operators and parenthesized numerators and denominators, for example (f(b)-f(a))/(b-a); put notation variants in acceptableAnswers. Never include fields for another question type.`,
     },
     {
       role: "user",
       content: `Lesson title: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nComplete plain-text lesson transcript:\n${input.plainText}`,
     },
+    {
+      role: "user",
+      content: `Create exactly ${input.questionCount} consecutive questions for this JSON task. This is ${isTransientRetry ? "the single transport retry for" : "the primary request for"} positions q${input.questionOffset + 1} through q${input.questionOffset + input.questionCount} of ${input.totalQuestionCount}.
+
+Mandatory slot plan:\n${slotPlan}\n\nAlready accepted questions; do not repeat or closely paraphrase their prompts:\n${accepted}\n\nExact JSON schema:\n${JSON.stringify(quizResponseSchema(input))}\n\nValid shape example:\n${JSON.stringify(example)}\n\nBegin with {\"questions\":[ and return no Markdown or prose.`,
+    },
   ];
+}
+
+function cleanString(value) {
+  return typeof value === "string" ? value.normalize("NFC").trim() : value;
+}
+
+function cleanStringArray(value, optional = false) {
+  if (value === undefined && optional) return [];
+  return Array.isArray(value) ? value.map(cleanString) : value;
+}
+
+export function normalizeGeneratedQuestion(rawQuestion) {
+  if (
+    !rawQuestion ||
+    typeof rawQuestion !== "object" ||
+    Array.isArray(rawQuestion)
+  ) {
+    return rawQuestion;
+  }
+  const type = cleanString(rawQuestion.type);
+  const common = {
+    id: cleanString(rawQuestion.id),
+    type,
+    concept: cleanString(rawQuestion.concept),
+    question: cleanString(rawQuestion.question),
+    explanation: cleanString(rawQuestion.explanation),
+  };
+  if (type === "multiple_choice") {
+    const choices = cleanStringArray(rawQuestion.choices);
+    let answerIndex = rawQuestion.answerIndex;
+    if (/^[0-3]$/.test(answerIndex)) answerIndex = Number(answerIndex);
+    let answer = cleanString(rawQuestion.answer);
+    if (Array.isArray(choices) && typeof answer === "string") {
+      const matches = choices.filter(
+        (choice) =>
+          typeof choice === "string" && normalize(choice) === normalize(answer),
+      );
+      if (matches.length === 1) answer = matches[0];
+    }
+    return { ...common, choices, answerIndex, answer };
+  }
+  if (type === "true_false") {
+    let answer = rawQuestion.answer;
+    if (typeof answer === "string" && /^(true|false)$/i.test(answer)) {
+      answer = answer.toLocaleLowerCase("en-US") === "true";
+    }
+    return {
+      ...common,
+      answer,
+      correction: cleanString(rawQuestion.correction),
+    };
+  }
+  if (type === "short_answer") {
+    return {
+      ...common,
+      answer: cleanString(rawQuestion.answer),
+      rubricIdeas: cleanStringArray(rawQuestion.rubricIdeas),
+      acceptableAnswers: cleanStringArray(rawQuestion.acceptableAnswers, true),
+    };
+  }
+  return common;
+}
+
+function validationFailure(message, reasonCode = "schema_invalid") {
+  throw new GenerationFailure(message, reasonCode);
+}
+
+function promptSimilarity(left, right) {
+  const canonical = (value) => normalize(value).replace(/\s+/g, " ").trim();
+  const leftValue = canonical(left);
+  const rightValue = canonical(right);
+  if (!leftValue || !rightValue) return 0;
+  if (leftValue === rightValue) return 1;
+  const shingles = (value) => {
+    if (value.length <= 3) return new Set([value]);
+    return new Set(
+      Array.from({ length: value.length - 2 }, (_, index) =>
+        value.slice(index, index + 3),
+      ),
+    );
+  };
+  const leftShingles = shingles(leftValue);
+  const rightShingles = shingles(rightValue);
+  const union = new Set([...leftShingles, ...rightShingles]);
+  let intersection = 0;
+  for (const shingle of leftShingles) {
+    if (rightShingles.has(shingle)) intersection += 1;
+  }
+  return union.size ? intersection / union.size : 0;
+}
+
+function hasBalancedDelimiters(value) {
+  const pairs = { ")": "(", "]": "[", "}": "{" };
+  const stack = [];
+  for (const character of value) {
+    if (["(", "[", "{"].includes(character)) stack.push(character);
+    else if (pairs[character] && stack.pop() !== pairs[character]) return false;
+  }
+  return stack.length === 0;
+}
+
+function isCanonicalFormulaQuestion(question) {
+  const prompt = question.question.toLocaleLowerCase("en-US");
+  if (
+    !/formula|equation|expression|derivative|rate of change|公式|方程|导数/.test(
+      prompt,
+    )
+  ) {
+    return true;
+  }
+  const answer = question.answer.replace(/\s+/g, "");
+  if (
+    !/[=+\-*/^]|[×÷]/.test(answer) ||
+    !hasBalancedDelimiters(answer) ||
+    !/^[\p{L}\p{N}_'()[\]{}.,=+\-*/^×÷]+$/u.test(answer)
+  ) {
+    return false;
+  }
+  if (answer.includes("/") && !/^\(.+\)\/\(.+\)$/.test(answer)) return false;
+  return true;
 }
 
 function validateQuiz(quiz, input) {
   if (!quiz || typeof quiz !== "object" || Array.isArray(quiz)) {
-    throw new Error("DeepSeek returned an invalid quiz object.");
-  }
-  if (Object.keys(quiz).some((key) => key !== "title" && key !== "questions")) {
-    throw new Error("DeepSeek returned an unexpected quiz field.");
-  }
-  if (!nonEmptyString(quiz.title, 300)) {
-    throw new Error("DeepSeek returned an invalid quiz title.");
+    validationFailure("DeepSeek returned an invalid quiz object.");
   }
   if (
     !Array.isArray(quiz.questions) ||
     quiz.questions.length !== input.questionCount
   ) {
-    throw new Error(
+    validationFailure(
       `DeepSeek returned ${Array.isArray(quiz.questions) ? quiz.questions.length : 0} questions instead of ${input.questionCount}.`,
+      "truncated_json",
     );
   }
-  const ids = new Set(input.acceptedQuestions?.map((question) => question.id));
-  const prompts = new Set(
-    input.acceptedQuestions?.map((question) => normalize(question.question)),
-  );
-  for (let index = 0; index < quiz.questions.length; index += 1) {
-    const question = quiz.questions[index];
+  const accepted = input.acceptedQuestions ?? [];
+  const ids = new Set(accepted.map((question) => question.id));
+  const prompts = accepted.map((question) => question.question);
+  const questions = quiz.questions.map((rawQuestion, index) => {
+    const question = normalizeGeneratedQuestion(rawQuestion);
     if (!question || typeof question !== "object" || Array.isArray(question)) {
-      throw new Error(`Question ${index + 1} is not a JSON object.`);
+      validationFailure(`Question ${index + 1} is not a JSON object.`);
     }
     const expectedType = input.questionTypePlan[index];
-    if (question.type !== expectedType) {
-      throw new Error(
-        `Question ${index + 1} must be ${expectedType}, not ${String(question.type)}.`,
-      );
-    }
-    const typeSpecificKeys =
-      question.type === "multiple_choice"
-        ? ["choices", "answerIndex", "answer"]
-        : question.type === "true_false"
-          ? ["answer", "correction"]
-          : ["answer", "rubricIdeas", "acceptableAnswers"];
-    const allowedKeys = new Set([
-      "id",
-      "type",
-      "concept",
-      "question",
-      "explanation",
-      ...typeSpecificKeys,
-    ]);
-    if (Object.keys(question).some((key) => !allowedKeys.has(key))) {
-      throw new Error(`Question ${index + 1} contains an unexpected field.`);
-    }
     if (
-      !nonEmptyString(question.id, 40) ||
-      !nonEmptyString(question.concept, 200) ||
-      !nonEmptyString(question.question, 700) ||
-      !nonEmptyString(question.explanation, 1_000)
-    ) {
-      throw new Error(
-        `Question ${index + 1} contains an empty or invalid field.`,
-      );
-    }
-    if (
+      question.type !== expectedType ||
       question.id !== `q${input.questionOffset + index + 1}` ||
       ids.has(question.id)
     ) {
-      throw new Error(`Question ${index + 1} has an invalid or duplicate id.`);
+      validationFailure(
+        `Question ${index + 1} does not match its assigned id, type, or order.`,
+        "type_or_order_mismatch",
+      );
+    }
+    if (
+      !nonEmptyString(question.concept, 200) ||
+      !nonEmptyString(question.question, 700) ||
+      !nonEmptyString(question.explanation, 1_500)
+    ) {
+      validationFailure(
+        `Question ${index + 1} contains an invalid required field.`,
+      );
+    }
+    if (
+      prompts.some(
+        (prompt) => promptSimilarity(prompt, question.question) >= 0.9,
+      )
+    ) {
+      validationFailure(
+        `Question ${index + 1} duplicates or closely paraphrases an accepted prompt.`,
+        "duplicate_question",
+      );
     }
     ids.add(question.id);
-    const prompt = normalize(question.question);
-    if (!prompt || prompts.has(prompt)) {
-      throw new Error(`Question ${index + 1} duplicates another question.`);
-    }
-    prompts.add(prompt);
+    prompts.push(question.question);
     if (question.type === "multiple_choice") {
       if (
         !Array.isArray(question.choices) ||
@@ -388,16 +414,21 @@ function validateQuiz(quiz, input) {
         question.choices.some((choice) => !nonEmptyString(choice, 500)) ||
         new Set(question.choices.map(normalize)).size !== 4
       ) {
-        throw new Error(`Question ${index + 1} must have four unique choices.`);
+        validationFailure(
+          `Question ${index + 1} must have four unique choices.`,
+          "answer_mapping_invalid",
+        );
       }
       if (
-        !nonEmptyString(question.answer, 500) ||
         !Number.isInteger(question.answerIndex) ||
         question.answerIndex < 0 ||
         question.answerIndex > 3 ||
         question.answer !== question.choices[question.answerIndex]
       ) {
-        throw new Error(`Question ${index + 1} has an invalid answer.`);
+        validationFailure(
+          `Question ${index + 1} has an invalid answer mapping.`,
+          "answer_mapping_invalid",
+        );
       }
     } else if (question.type === "true_false") {
       if (
@@ -405,8 +436,9 @@ function validateQuiz(quiz, input) {
         question.answer !== input.trueFalseAnswerPlan[index] ||
         !nonEmptyString(question.correction, 700)
       ) {
-        throw new Error(
-          `Question ${index + 1} has an invalid true/false answer or correction.`,
+        validationFailure(
+          `Question ${index + 1} has an invalid true/false answer.`,
+          "answer_mapping_invalid",
         );
       }
     } else if (
@@ -419,17 +451,19 @@ function validateQuiz(quiz, input) {
       question.acceptableAnswers.length > 8 ||
       question.acceptableAnswers.some(
         (answer) => !nonEmptyString(answer, 1_000),
-      )
+      ) ||
+      !isCanonicalFormulaQuestion(question)
     ) {
-      throw new Error(
-        `Question ${index + 1} has an invalid short-answer rubric.`,
+      validationFailure(
+        `Question ${index + 1} has an invalid short-answer rubric or formula.`,
       );
     }
-  }
-  return quiz;
+    return question;
+  });
+  return { title: input.title, questions };
 }
 
-function buildQuestionTypePlan(questionTypes, questionCount) {
+function validateQuestionTypes(questionTypes) {
   if (
     !Array.isArray(questionTypes) ||
     questionTypes.length < 1 ||
@@ -439,20 +473,111 @@ function buildQuestionTypePlan(questionTypes, questionCount) {
   ) {
     throw new Error("Choose at least one supported question type.");
   }
-  return Array.from(
-    { length: questionCount },
-    (_, index) => questionTypes[index % questionTypes.length],
+  return [...questionTypes];
+}
+
+function randomUint32FromSeed(seedHex) {
+  let state = Number.parseInt(seedHex.slice(0, 8), 16) >>> 0;
+  if (state === 0) state = 0x9e3779b9;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return state >>> 0;
+  };
+}
+
+function hexFromBytes(bytes) {
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join(
+    "",
   );
 }
 
-function buildTrueFalseAnswerPlan(questionTypePlan) {
-  let trueFalseIndex = 0;
-  return questionTypePlan.map((type) => {
-    if (type !== "true_false") return null;
-    const answer = trueFalseIndex % 2 === 0;
-    trueFalseIndex += 1;
-    return answer;
-  });
+async function sha256Hex(value) {
+  const digest = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return hexFromBytes(new Uint8Array(digest));
+}
+
+function balancedCounts(values, total, randomUint32) {
+  const counts = new Map(
+    values.map((value) => [value, Math.floor(total / values.length)]),
+  );
+  const extras = total % values.length;
+  const extraOrder = shuffled(values, randomUint32);
+  for (let index = 0; index < extras; index += 1) {
+    const value = extraOrder[index];
+    counts.set(value, counts.get(value) + 1);
+  }
+  return counts;
+}
+
+function sequenceFromCounts(first, counts, randomUint32) {
+  const sequence = [first];
+  counts.set(first, (counts.get(first) ?? 0) - 1);
+  const fill = () => {
+    const remaining = [...counts.values()].reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+    if (remaining === 0) return true;
+    const recent = sequence.slice(-2);
+    const candidates = [...counts.entries()]
+      .filter(
+        ([value, count]) =>
+          count > 0 &&
+          !(recent.length === 2 && recent.every((item) => item === value)),
+      )
+      .map(([value, count]) => ({ value, count, tie: randomUint32() }))
+      .sort((left, right) => right.count - left.count || left.tie - right.tie);
+    for (const candidate of candidates) {
+      sequence.push(candidate.value);
+      counts.set(candidate.value, candidate.count - 1);
+      if (fill()) return true;
+      counts.set(candidate.value, candidate.count);
+      sequence.pop();
+    }
+    return false;
+  };
+  if (!fill()) throw new Error("Could not build a balanced question plan.");
+  return sequence;
+}
+
+export function buildQuestionTypePlanFromSeed(
+  questionTypes,
+  questionCount,
+  seedHex,
+) {
+  const selected = validateQuestionTypes(questionTypes);
+  if (![5, 10, 15].includes(questionCount) || !/^[a-f0-9]{64}$/.test(seedHex)) {
+    throw new Error("The seeded question plan input is invalid.");
+  }
+  if (selected.length === 1) {
+    return Array.from({ length: questionCount }, () => selected[0]);
+  }
+  const randomUint32 = randomUint32FromSeed(seedHex);
+  const counts = balancedCounts(selected, questionCount, randomUint32);
+  return sequenceFromCounts(selected[0], counts, randomUint32);
+}
+
+export function buildTrueFalseAnswerPlanFromSeed(questionTypePlan, seedHex) {
+  if (!/^[a-f0-9]{64}$/.test(seedHex)) {
+    throw new Error("The true/false seed is invalid.");
+  }
+  const count = questionTypePlan.filter((type) => type === "true_false").length;
+  if (count === 0) return questionTypePlan.map(() => null);
+  const randomUint32 = randomUint32FromSeed(seedHex);
+  const counts = balancedCounts([true, false], count, randomUint32);
+  const preferredFirst = (randomUint32() & 1) === 0;
+  const first =
+    (counts.get(preferredFirst) ?? 0) > 0 ? preferredFirst : !preferredFirst;
+  const answers = sequenceFromCounts(first, counts, randomUint32);
+  let answerIndex = 0;
+  return questionTypePlan.map((type) =>
+    type === "true_false" ? answers[answerIndex++] : null,
+  );
 }
 
 function secureRandomUint32() {
@@ -537,6 +662,9 @@ function randomizeQuestionAtPosition(
 }
 
 function usageMetrics(usage) {
+  const usageComplete =
+    Number.isInteger(usage?.prompt_tokens) &&
+    Number.isInteger(usage?.completion_tokens);
   return {
     inputTokens: Number.isInteger(usage?.prompt_tokens)
       ? usage.prompt_tokens
@@ -549,6 +677,7 @@ function usageMetrics(usage) {
       : Number.isInteger(usage?.completion_tokens_details?.reasoning_tokens)
         ? usage.completion_tokens_details.reasoning_tokens
         : 0,
+    usageComplete,
   };
 }
 
@@ -662,17 +791,33 @@ function rootPropertyValueStart(responseText, propertyName) {
 
 function parseCompletedJsonResponse(outer) {
   const choice = outer?.choices?.[0];
-  if (!choice) throw new Error("DeepSeek returned no completion choice.");
+  if (!choice) {
+    throw new GenerationFailure(
+      "DeepSeek returned no completion choice.",
+      "empty_content",
+    );
+  }
   if (choice.finish_reason === "length") {
-    throw new Error(
+    throw new GenerationFailure(
       "DeepSeek truncated the JSON response. No quiz was created.",
+      "finish_length",
+    );
+  }
+  if (choice.finish_reason !== "stop") {
+    throw new GenerationFailure(
+      "DeepSeek closed before completing the JSON response.",
+      "network_interrupted",
+      { transient: true },
     );
   }
   if (
-    choice.finish_reason !== "stop" ||
-    typeof choice.message?.content !== "string"
+    typeof choice.message?.content !== "string" ||
+    !choice.message.content.trim()
   ) {
-    throw new Error("DeepSeek did not return the required JSON response.");
+    throw new GenerationFailure(
+      "DeepSeek returned empty JSON content.",
+      "empty_content",
+    );
   }
   return {
     quiz: strictJson(choice.message.content, "DeepSeek JSON response"),
@@ -682,7 +827,11 @@ function parseCompletedJsonResponse(outer) {
 
 async function parseDeepSeekEventStream(response, onQuestion, fallbackTitle) {
   if (!response.body) {
-    throw new Error("DeepSeek returned an empty streaming response.");
+    throw new GenerationFailure(
+      "DeepSeek returned an empty streaming response.",
+      "network_interrupted",
+      { transient: true },
+    );
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -694,9 +843,7 @@ async function parseDeepSeekEventStream(response, onQuestion, fallbackTitle) {
 
   const emitCompletedQuestions = async () => {
     const parsed = parseCompletedQuizObjects(responseContent);
-    const availableTitle = nonEmptyString(parsed.title, 300)
-      ? parsed.title
-      : fallbackTitle;
+    const availableTitle = fallbackTitle;
     if (!nonEmptyString(availableTitle, 300)) return;
     while (emittedQuestions < parsed.questions.length) {
       await onQuestion(
@@ -715,7 +862,12 @@ async function parseDeepSeekEventStream(response, onQuestion, fallbackTitle) {
       .map((line) => line.slice(5).replace(/^ /, ""))
       .join("\n");
     if (!data || data === "[DONE]") return;
-    const event = strictJson(data, "DeepSeek stream");
+    const event = strictJson(
+      data,
+      "DeepSeek stream",
+      "network_interrupted",
+      true,
+    );
     if (event.usage) usage = event.usage;
     const choice = event?.choices?.[0];
     if (!choice) return;
@@ -742,17 +894,33 @@ async function parseDeepSeekEventStream(response, onQuestion, fallbackTitle) {
     }
   } catch (error) {
     await reader.cancel(error).catch(() => undefined);
-    throw error;
+    if (error instanceof GenerationFailure) throw error;
+    throw new GenerationFailure(
+      "The DeepSeek stream was interrupted before it finished.",
+      "network_interrupted",
+      { transient: true },
+    );
   }
   if (eventBuffer.trim()) await processEvent(eventBuffer);
   await emitCompletedQuestions();
+  if (!responseContent.trim()) {
+    throw new GenerationFailure(
+      "DeepSeek returned empty JSON content.",
+      "empty_content",
+    );
+  }
   if (finishReason === "length") {
-    throw new Error(
+    throw new GenerationFailure(
       "DeepSeek truncated the JSON response. No quiz was created.",
+      "finish_length",
     );
   }
   if (finishReason !== "stop") {
-    throw new Error("DeepSeek did not finish the required JSON response.");
+    throw new GenerationFailure(
+      "DeepSeek closed before completing the JSON response.",
+      "network_interrupted",
+      { transient: true },
+    );
   }
   return {
     quiz: strictJson(responseContent, "DeepSeek JSON response"),
@@ -764,7 +932,7 @@ async function callDeepSeekJson(
   input,
   apiKey,
   externalSignal,
-  previousFailure,
+  isTransientRetry,
   onQuestion,
 ) {
   const controller = new AbortController();
@@ -784,59 +952,77 @@ async function callDeepSeekJson(
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: generationMessages(input, previousFailure),
-        thinking: { type: "enabled" },
-        reasoning_effort: "high",
+        messages: generationMessages(input, isTransientRetry),
+        thinking: { type: input.legacyMode ? "enabled" : "disabled" },
+        ...(input.legacyMode ? { reasoning_effort: "high" } : {}),
+        ...(input.legacyMode ? {} : { temperature: 0.2 }),
         response_format: { type: "json_object" },
-        max_tokens: GENERATION_OUTPUT_TOKENS,
+        max_tokens: input.legacyMode
+          ? 48_000
+          : input.questionCount === 1
+            ? 4_096
+            : input.questionCount === 2
+              ? 6_144
+              : 8_192,
         stream: true,
         stream_options: { include_usage: true },
       }),
       signal: controller.signal,
     });
     if (!response.ok) {
-      let message = `DeepSeek rejected the request (${response.status}).`;
-      try {
-        const body = await response.json();
-        if (typeof body?.error?.message === "string") {
-          message = body.error.message;
-        }
-      } catch {
-        // The HTTP status remains the authoritative error.
+      if (response.status === 408) {
+        throw new GenerationFailure(
+          "DeepSeek timed out before returning a question.",
+          "timeout",
+          {
+            transient: true,
+            retryAfterMs: retryAfterMilliseconds(
+              response.headers.get("retry-after"),
+            ),
+          },
+        );
       }
-      if (
-        response.status === 408 ||
-        response.status === 429 ||
-        response.status >= 500
-      ) {
-        throw new RetryableGenerationError(
-          message,
-          retryAfterMilliseconds(response.headers.get("retry-after")),
+      if (response.status === 429 || response.status >= 500) {
+        throw new GenerationFailure(
+          `DeepSeek is temporarily unavailable (${response.status}).`,
+          "transient_http",
+          {
+            transient: true,
+            retryAfterMs: retryAfterMilliseconds(
+              response.headers.get("retry-after"),
+            ),
+          },
         );
       }
       const reasonCode =
-        response.status === 401
-          ? "credential_invalid"
+        response.status === 401 || response.status === 403
+          ? "credential_required"
           : response.status === 402
             ? "billing_required"
-            : response.status === 403
-              ? "permission_denied"
-              : "request_rejected";
-      throw new TerminalGenerationError(message, reasonCode);
+            : "local_state_conflict";
+      throw new GenerationFailure(
+        reasonCode === "credential_required"
+          ? "DeepSeek rejected the configured API key or its permissions."
+          : reasonCode === "billing_required"
+            ? "DeepSeek billing must be restored before generation can continue."
+            : `DeepSeek rejected this generation request (${response.status}).`,
+        reasonCode,
+      );
     }
     const contentType = response.headers.get("content-type") ?? "";
     const result = contentType.includes("text/event-stream")
       ? await parseDeepSeekEventStream(response, onQuestion, input.title)
       : parseCompletedJsonResponse(
-          strictJson(await response.text(), "DeepSeek"),
+          strictJson(
+            await response.text(),
+            "DeepSeek transport envelope",
+            "network_interrupted",
+            true,
+          ),
         );
     if (!contentType.includes("text/event-stream")) {
       for (let index = 0; index < result.quiz.questions.length; index += 1) {
-        await onQuestion(
-          result.quiz.questions[index],
-          index,
-          result.quiz.title,
-        );
+        await onQuestion(result.quiz.questions[index], index, input.title);
       }
     }
     return {
@@ -849,22 +1035,78 @@ async function callDeepSeekJson(
   } catch (error) {
     if (controller.signal.aborted) {
       if (externalSignal?.aborted) {
-        throw new TerminalGenerationError(
+        throw new GenerationFailure(
           "Local generation was cancelled.",
-          "generation_cancelled",
+          "local_state_conflict",
         );
       }
-      throw new RetryableGenerationError(
-        "DeepSeek took longer than 15 minutes. Retry the local generation.",
+      throw new GenerationFailure(
+        "DeepSeek took longer than 15 minutes.",
+        "timeout",
+        { transient: true },
       );
     }
-    throw error instanceof Error
-      ? error
-      : new Error("DeepSeek could not be reached.");
+    if (error instanceof GenerationFailure) throw error;
+    if (error instanceof TypeError || error instanceof DOMException) {
+      throw new GenerationFailure(
+        "The DeepSeek connection was interrupted.",
+        "network_interrupted",
+        { transient: true },
+      );
+    }
+    throw new GenerationFailure(
+      error instanceof Error ? error.message : "DeepSeek could not be reached.",
+      "schema_invalid",
+    );
   } finally {
     clearTimeout(timeout);
     externalSignal?.removeEventListener("abort", abortFromCaller);
   }
+}
+
+function validateQuestionPlan(plan, questionTypes, questionCount) {
+  if (
+    !plan ||
+    typeof plan !== "object" ||
+    !/^[a-f0-9]{64}$/.test(plan.seed) ||
+    !Array.isArray(plan.types) ||
+    plan.types.length !== questionCount
+  ) {
+    throw new GenerationFailure(
+      "The saved question plan is invalid.",
+      "local_state_conflict",
+    );
+  }
+  const expected = buildQuestionTypePlanFromSeed(
+    questionTypes,
+    questionCount,
+    plan.seed,
+  );
+  if (JSON.stringify(plan.types) !== JSON.stringify(expected)) {
+    throw new GenerationFailure(
+      "The saved question plan does not match this attempt.",
+      "local_state_conflict",
+    );
+  }
+  return { seed: plan.seed, types: [...plan.types] };
+}
+
+export function adaptiveChunkQuestionCount(
+  questionTypePlan,
+  startIndex,
+  totalQuestions = questionTypePlan.length,
+) {
+  const remaining = totalQuestions - startIndex;
+  if (remaining <= 0) return 0;
+  if (startIndex === 0) return 1;
+  const candidateCount = Math.min(3, remaining);
+  const candidate = questionTypePlan.slice(
+    startIndex,
+    startIndex + candidateCount,
+  );
+  return candidate.includes("short_answer")
+    ? Math.min(2, remaining)
+    : candidateCount;
 }
 
 export async function generateQuizFromPlainText(
@@ -873,6 +1115,7 @@ export async function generateQuizFromPlainText(
   onProgress = () => {},
   signal,
   onChunk = () => {},
+  onCall = () => {},
 ) {
   const input = {
     title: String(rawInput?.title ?? "Untitled lesson").trim(),
@@ -880,6 +1123,14 @@ export async function generateQuizFromPlainText(
     questionCount: Number(rawInput?.questionCount ?? 15),
     questionTypes: rawInput?.questionTypes ?? SUPPORTED_QUESTION_TYPES,
     jobId: String(rawInput?.jobId ?? "standalone"),
+    generationId:
+      typeof rawInput?.generationId === "string"
+        ? rawInput.generationId
+        : globalThis.crypto.randomUUID(),
+    generationSessionId:
+      typeof rawInput?.generationSessionId === "string"
+        ? rawInput.generationSessionId
+        : globalThis.crypto.randomUUID(),
     transcriptFingerprint: String(
       rawInput?.transcriptFingerprint ?? "standalone",
     ),
@@ -900,11 +1151,49 @@ export async function generateQuizFromPlainText(
       "The complete transcript is too large for the local DeepSeek request. It was not sampled or truncated.",
     );
   }
-  input.questionTypePlan = buildQuestionTypePlan(
-    input.questionTypes,
-    input.questionCount,
+  const legacyMode =
+    rawInput?.generationProfile === "legacy_reasoning_v5_1" ||
+    input.continuation?.promptVersion === "quiz-local-json-stream-v5.0" ||
+    input.continuation?.promptVersion === "quiz-local-json-stream-v5.1";
+  const selectedTypes = validateQuestionTypes(input.questionTypes);
+  let questionPlan;
+  if (input.continuation?.questionPlan) {
+    questionPlan = validateQuestionPlan(
+      input.continuation.questionPlan,
+      selectedTypes,
+      input.questionCount,
+    );
+  } else if (legacyMode) {
+    questionPlan = {
+      seed: undefined,
+      types: Array.from(
+        { length: input.questionCount },
+        (_, index) => selectedTypes[index % selectedTypes.length],
+      ),
+    };
+  } else {
+    const seed = await sha256Hex(
+      `${input.generationId}:${input.jobId}:${input.transcriptFingerprint}:question-types`,
+    );
+    questionPlan = {
+      seed,
+      types: buildQuestionTypePlanFromSeed(
+        selectedTypes,
+        input.questionCount,
+        seed,
+      ),
+    };
+  }
+  input.questionTypePlan = questionPlan.types;
+  const polarityNonce = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(polarityNonce);
+  const polaritySeed = await sha256Hex(
+    `${input.generationSessionId}:${hexFromBytes(polarityNonce)}:true-false`,
   );
-  input.trueFalseAnswerPlan = buildTrueFalseAnswerPlan(input.questionTypePlan);
+  input.trueFalseAnswerPlan = buildTrueFalseAnswerPlanFromSeed(
+    input.questionTypePlan,
+    polaritySeed,
+  );
   const continuationStartIndex = Number(input.continuation?.startIndex ?? 0);
   const continuationQuestions = Array.isArray(
     input.continuation?.acceptedQuestions,
@@ -934,7 +1223,7 @@ export async function generateQuizFromPlainText(
     reasoningTokens: 0,
   };
   const acceptedQuestions = continuationQuestions;
-  let quizTitle = continuationStartIndex ? input.title : undefined;
+  const quizTitle = input.title;
   const multipleChoicePositions = balancedAnswerPositions(
     input.questionTypePlan.filter((type) => type === "multiple_choice").length,
     secureRandomUint32,
@@ -949,21 +1238,61 @@ export async function generateQuizFromPlainText(
     );
     multipleChoiceIndex += 1;
   });
-  let previousFailure;
-  let consecutiveFailures = 0;
-  let unreportedAiCalls = 0;
-  let unreportedRetries = 0;
+  let automaticRetryUsed = false;
+  let retryNextMissing = false;
+  let callIndex = Number.isInteger(rawInput?.callIndexStart)
+    ? rawInput.callIndexStart
+    : 0;
   let lastChunkAt = Date.now();
+  const metadata = legacyMode
+    ? {
+        protocolVersion: input.continuation?.resultProtocolVersion ?? 5,
+        pipelineVersion: PIPELINE_VERSION,
+        model: MODEL,
+        reasoningEffort: "high",
+        promptVersion:
+          input.continuation?.promptVersion ?? "quiz-local-json-stream-v5.1",
+        validatorVersion:
+          input.continuation?.validatorVersion ??
+          "validator-local-progressive-v4.0",
+        importVersion: "extension-progressive-import-v3",
+        generationProfile: "legacy_reasoning_v5_1",
+      }
+    : {
+        protocolVersion: PROTOCOL_VERSION,
+        pipelineVersion: PIPELINE_VERSION,
+        model: MODEL,
+        reasoningEffort: "none",
+        promptVersion: PROMPT_VERSION,
+        validatorVersion: VALIDATOR_VERSION,
+        importVersion: IMPORT_VERSION,
+        generationProfile: GENERATION_PROFILE,
+        generationId: input.generationId,
+        questionPlan,
+      };
 
   while (acceptedQuestions.length < input.questionCount) {
     const questionOffset = acceptedQuestions.length;
     const acceptedBeforeCall = acceptedQuestions.length;
-    const chunkQuestionCount = Math.min(
-      QUESTION_CHUNK_SIZE,
-      input.questionCount - questionOffset,
-    );
+    const chunkQuestionCount = retryNextMissing
+      ? 1
+      : adaptiveChunkQuestionCount(
+          input.questionTypePlan,
+          questionOffset,
+          input.questionCount,
+        );
+    const classification = retryNextMissing
+      ? "automatic_retry"
+      : continuationStartIndex > 0
+        ? "manual_continuation"
+        : "primary";
+    if (classification === "automatic_retry") {
+      totals.retryCount += 1;
+      retryNextMissing = false;
+    }
     const chunkInput = {
       ...input,
+      legacyMode,
       questionCount: chunkQuestionCount,
       totalQuestionCount: input.questionCount,
       questionOffset,
@@ -977,21 +1306,33 @@ export async function generateQuizFromPlainText(
       ),
       acceptedQuestions: [...acceptedQuestions],
     };
-    const callAttempt = consecutiveFailures + 1;
+    const callAttempt = classification === "automatic_retry" ? 2 : 1;
     const chunkProgress = questionOffset / input.questionCount;
     onProgress("creating_questions", 0.2 + chunkProgress * 0.72, {
       attempt: callAttempt,
       maxAttempts: MAX_GENERATION_ATTEMPTS,
-      status: previousFailure ? "retrying" : "generating",
+      status: classification === "automatic_retry" ? "retrying" : "generating",
     });
     totals.aiCalls += 1;
-    unreportedAiCalls += 1;
-    let pendingFinalQuestion;
+    const callStartedAt = Date.now();
+    let outcome = "complete";
+    let retryDelayMs = 0;
+    let callUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      usageComplete: false,
+    };
+    let callFailure;
+    let firstQuestionInCall = true;
 
-    const publishQuestion = (rawQuestion, relativeIndex, title, usage = {}) => {
+    const publishQuestion = (rawQuestion, relativeIndex, title) => {
       const globalIndex = questionOffset + relativeIndex;
       if (globalIndex !== acceptedQuestions.length) {
-        throw new Error("DeepSeek streamed questions out of order.");
+        validationFailure(
+          "DeepSeek streamed questions out of order.",
+          "type_or_order_mismatch",
+        );
       }
       const singleInput = {
         ...input,
@@ -1008,40 +1349,35 @@ export async function generateQuizFromPlainText(
         ),
         acceptedQuestions: [...acceptedQuestions],
       };
-      const validated = validateQuiz(
-        { title, questions: [rawQuestion] },
-        singleInput,
-      );
+      const validated = validateQuiz({ questions: [rawQuestion] }, singleInput);
       const question = randomizeQuestionAtPosition(
         validated.questions[0],
         answerPositionByQuestion.get(globalIndex),
       );
-      quizTitle ??= validated.title;
       acceptedQuestions.push(question);
-      const now = Date.now();
+      const chunkTime = Date.now();
       onChunk({
-        protocolVersion: PROTOCOL_VERSION,
-        pipelineVersion: PIPELINE_VERSION,
-        model: MODEL,
-        reasoningEffort: "high",
-        promptVersion: PROMPT_VERSION,
-        validatorVersion: VALIDATOR_VERSION,
+        ...metadata,
         title: quizTitle,
         startIndex: globalIndex,
         totalQuestions: input.questionCount,
         question,
         metrics: {
-          aiCalls: unreportedAiCalls,
-          retryCount: unreportedRetries,
-          inputTokens: usage.inputTokens ?? 0,
-          outputTokens: usage.outputTokens ?? 0,
-          reasoningTokens: usage.reasoningTokens ?? 0,
-          elapsedMs: Math.max(1, now - lastChunkAt),
+          aiCalls: legacyMode && firstQuestionInCall ? 1 : 0,
+          retryCount:
+            legacyMode &&
+            firstQuestionInCall &&
+            classification === "automatic_retry"
+              ? 1
+              : 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          reasoningTokens: 0,
+          elapsedMs: Math.max(1, chunkTime - lastChunkAt),
         },
       });
-      unreportedAiCalls = 0;
-      unreportedRetries = 0;
-      lastChunkAt = now;
+      firstQuestionInCall = false;
+      lastChunkAt = chunkTime;
       const complete = acceptedQuestions.length === input.questionCount;
       onProgress(
         complete ? "finalizing_questions" : "creating_questions",
@@ -1061,66 +1397,97 @@ export async function generateQuizFromPlainText(
         chunkInput,
         apiKey,
         signal,
-        previousFailure,
+        classification === "automatic_retry",
         (question, relativeIndex, title) => {
           if (relativeIndex >= chunkQuestionCount) {
-            throw new Error("DeepSeek streamed too many questions.");
-          }
-          if (relativeIndex === chunkQuestionCount - 1) {
-            pendingFinalQuestion = { question, relativeIndex, title };
-            return;
+            validationFailure(
+              "DeepSeek streamed too many questions.",
+              "type_or_order_mismatch",
+            );
           }
           publishQuestion(question, relativeIndex, title);
         },
       );
       validateQuiz(result.quiz, chunkInput);
-      if (!pendingFinalQuestion) {
-        throw new Error(
-          "DeepSeek did not stream the final requested question.",
+      if (
+        acceptedQuestions.length - acceptedBeforeCall !==
+        chunkQuestionCount
+      ) {
+        validationFailure(
+          "DeepSeek did not stream every requested question.",
+          "truncated_json",
         );
       }
+      callUsage = result.usage;
       totals.inputTokens += result.usage.inputTokens;
       totals.outputTokens += result.usage.outputTokens;
       totals.reasoningTokens += result.usage.reasoningTokens;
-      publishQuestion(
-        pendingFinalQuestion.question,
-        pendingFinalQuestion.relativeIndex,
-        pendingFinalQuestion.title,
-        result.usage,
-      );
-      previousFailure = undefined;
-      consecutiveFailures = 0;
     } catch (error) {
-      if (error instanceof TerminalGenerationError) throw error;
-      totals.retryCount += 1;
-      unreportedRetries += 1;
-      previousFailure =
-        error instanceof Error
-          ? error.message
-          : "The streamed quiz output was invalid.";
-      consecutiveFailures =
-        acceptedQuestions.length > acceptedBeforeCall
-          ? 0
-          : consecutiveFailures + 1;
-      if (consecutiveFailures > MAX_NO_PROGRESS_RETRIES) throw error;
-      const retryAfterDelay =
-        error instanceof RetryableGenerationError ? error.retryAfterMs : 0;
-      const retryDelayMs = boundedRetryDelayMilliseconds(
-        consecutiveFailures,
-        retryAfterDelay,
-      );
+      callFailure =
+        error instanceof GenerationFailure
+          ? error
+          : new GenerationFailure(
+              error instanceof Error
+                ? error.message
+                : "The generated quiz was invalid.",
+              "schema_invalid",
+            );
+      outcome = callFailure.reasonCode;
+      const acceptedInCall = acceptedQuestions.length - acceptedBeforeCall;
+      if (acceptedInCall === chunkQuestionCount) {
+        // Every requested object is already independently validated and
+        // persisted by the caller. A broken closing envelope cannot create a
+        // missing suffix, so continuing with the next primary chunk is safer
+        // and cheaper than spending the transport retry budget.
+        callFailure = undefined;
+      } else if (callFailure.transient && !automaticRetryUsed) {
+        automaticRetryUsed = true;
+        retryDelayMs = boundedRetryDelayMilliseconds(
+          1,
+          callFailure.retryAfterMs,
+        );
+      }
+    }
+
+    await onCall({
+      generationSessionId: input.generationSessionId,
+      callIndex,
+      startIndex: questionOffset,
+      requestedCount: chunkQuestionCount,
+      acceptedCount: acceptedQuestions.length - acceptedBeforeCall,
+      classification,
+      outcome,
+      retryDelayMs,
+      elapsedMs: Math.max(0, Date.now() - callStartedAt),
+      ...(callUsage.usageComplete
+        ? {
+            inputTokens: callUsage.inputTokens,
+            outputTokens: callUsage.outputTokens,
+            reasoningTokens: callUsage.reasoningTokens,
+          }
+        : {}),
+      usageComplete: callUsage.usageComplete,
+    });
+    callIndex += 1;
+
+    if (!callFailure) continue;
+    if (callFailure.transient && retryDelayMs > 0) {
+      retryNextMissing = true;
       onProgress(
         "creating_questions",
         0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
         {
-          attempt: consecutiveFailures + 1,
+          attempt: 2,
           maxAttempts: MAX_GENERATION_ATTEMPTS,
           status: "retrying",
           retryDelayMs,
+          reasonCode: callFailure.reasonCode,
         },
       );
       await waitForRetry(retryDelayMs, signal);
+      continue;
     }
+    throw callFailure;
   }
 
   const metrics = {
@@ -1129,12 +1496,7 @@ export async function generateQuizFromPlainText(
   };
   if (continuationStartIndex > 0) {
     return {
-      protocolVersion: PROTOCOL_VERSION,
-      pipelineVersion: PIPELINE_VERSION,
-      model: MODEL,
-      reasoningEffort: "high",
-      promptVersion: PROMPT_VERSION,
-      validatorVersion: VALIDATOR_VERSION,
+      ...metadata,
       title: quizTitle,
       generatedStartIndex: continuationStartIndex,
       totalQuestions: input.questionCount,
@@ -1150,12 +1512,7 @@ export async function generateQuizFromPlainText(
     },
   );
   return {
-    protocolVersion: PROTOCOL_VERSION,
-    pipelineVersion: PIPELINE_VERSION,
-    model: MODEL,
-    reasoningEffort: "high",
-    promptVersion: PROMPT_VERSION,
-    validatorVersion: VALIDATOR_VERSION,
+    ...metadata,
     quiz: completeQuiz,
     metrics,
   };
@@ -1163,13 +1520,21 @@ export async function generateQuizFromPlainText(
 
 async function waitForRetry(milliseconds, signal) {
   if (signal?.aborted) {
-    throw new TerminalGenerationError("Local generation was cancelled.");
+    throw new GenerationFailure(
+      "Local generation was cancelled.",
+      "local_state_conflict",
+    );
   }
   await new Promise((resolve, reject) => {
     const timeout = setTimeout(resolve, milliseconds);
     const abort = () => {
       clearTimeout(timeout);
-      reject(new TerminalGenerationError("Local generation was cancelled."));
+      reject(
+        new GenerationFailure(
+          "Local generation was cancelled.",
+          "local_state_conflict",
+        ),
+      );
     };
     signal?.addEventListener("abort", abort, { once: true });
     setTimeout(() => signal?.removeEventListener("abort", abort), milliseconds);
@@ -1182,6 +1547,7 @@ export async function generateLocalQuiz(
   onProgress = () => {},
   signal,
   onChunk = () => {},
+  onCall = () => {},
 ) {
   const plainText = captionsToPlainText(context?.segments);
   return generateQuizFromPlainText(
@@ -1191,6 +1557,9 @@ export async function generateLocalQuiz(
       questionCount: context?.questionCount,
       questionTypes: context?.questionTypes,
       jobId: context?.jobId,
+      generationId: context?.generationId,
+      generationSessionId: context?.generationSessionId,
+      generationProfile: context?.generationProfile,
       transcriptFingerprint: context?.transcriptFingerprint,
       plainText,
       continuation: context?.continuation,
@@ -1199,6 +1568,7 @@ export async function generateLocalQuiz(
     onProgress,
     signal,
     onChunk,
+    onCall,
   );
 }
 
