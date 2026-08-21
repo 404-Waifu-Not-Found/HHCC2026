@@ -4,6 +4,22 @@ import { ApiError } from "../lib/errors";
 import type { AudioStream, SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
 
+const YOUTUBE_INFO_CLIENTS = ["IOS", "ANDROID", "WEB"] as const;
+const YOUTUBE_AUDIO_CLIENT = "IOS" as const;
+const MAX_TIMED_TEXT_BYTES = 8 * 1024 * 1024;
+
+type YouTubeCaptionTrack = {
+  base_url: string;
+  language_code: string;
+  kind?: "asr" | "frc";
+};
+
+type YouTubeTimedTextEvent = {
+  tStartMs?: unknown;
+  dDurationMs?: unknown;
+  segs?: unknown;
+};
+
 async function createYouTubeClient(retrievePlayer: boolean): Promise<Innertube> {
   return Innertube.create({
     lang: "en",
@@ -18,13 +34,136 @@ function getBestThumbnail(thumbnails: Array<{ url: string; width?: number }>): s
   return [...thumbnails].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? "";
 }
 
+function toFiniteMilliseconds(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number.parseFloat(value) : Number.NaN;
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
+}
+
+export function parseYouTubeTimedText(value: unknown): TranscriptSegment[] {
+  if (!value || typeof value !== "object" || !("events" in value) || !Array.isArray(value.events)) return [];
+
+  const parsed = value.events.flatMap((candidate, index) => {
+    if (!candidate || typeof candidate !== "object") return [];
+    const event = candidate as YouTubeTimedTextEvent;
+    const startMs = toFiniteMilliseconds(event.tStartMs);
+    if (startMs === null || !Array.isArray(event.segs)) return [];
+    const text = event.segs
+      .flatMap((segment) => {
+        if (!segment || typeof segment !== "object" || !("utf8" in segment) || typeof segment.utf8 !== "string") {
+          return [];
+        }
+        return [segment.utf8];
+      })
+      .join("")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) return [];
+    return [{ index, startMs, durationMs: toFiniteMilliseconds(event.dDurationMs), text }];
+  });
+
+  return parsed.map((event, index) => {
+    const nextStartMs = parsed[index + 1]?.startMs;
+    const durationEndMs = event.durationMs && event.durationMs > 0 ? event.startMs + event.durationMs : null;
+    const endMs = Math.max(
+      event.startMs + 1,
+      durationEndMs ?? (nextStartMs && nextStartMs > event.startMs ? nextStartMs : event.startMs + 1_000),
+    );
+    return { id: `yt-${event.index + 1}`, startMs: event.startMs, endMs, text: event.text };
+  });
+}
+
+export function selectPreferredYouTubeCaptionTrack<T extends YouTubeCaptionTrack>(tracks: T[]): T | undefined {
+  const languageRank = (languageCode: string): number => {
+    const normalized = languageCode.toLowerCase();
+    if (normalized === "en" || normalized.startsWith("en-")) return 0;
+    if (normalized === "zh" || normalized.startsWith("zh-")) return 1;
+    return 2;
+  };
+  return [...tracks].sort((a, b) => {
+    const languageDifference = languageRank(a.language_code) - languageRank(b.language_code);
+    if (languageDifference !== 0) return languageDifference;
+    return Number(a.kind === "asr") - Number(b.kind === "asr");
+  })[0];
+}
+
+function isYouTubeTimedTextUrl(url: URL): boolean {
+  return url.protocol === "https:" && (url.hostname === "youtube.com" || url.hostname.endsWith(".youtube.com"));
+}
+
+export async function loadYouTubeCaptionSegments(track: YouTubeCaptionTrack): Promise<TranscriptSegment[]> {
+  let url: URL;
+  try {
+    url = new URL(track.base_url);
+  } catch {
+    throw new Error("YouTube returned an invalid timed-text URL.");
+  }
+  if (!isYouTubeTimedTextUrl(url)) throw new Error("YouTube returned an untrusted timed-text URL.");
+  url.searchParams.set("fmt", "json3");
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    redirect: "error",
+  });
+  if (!response.ok) throw new Error(`YouTube timed text returned HTTP ${response.status}.`);
+  const declaredLength = Number.parseInt(response.headers.get("content-length") ?? "", 10);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_TIMED_TEXT_BYTES) {
+    throw new Error("YouTube timed text exceeded the size limit.");
+  }
+  const body = await response.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_TIMED_TEXT_BYTES) {
+    throw new Error("YouTube timed text exceeded the size limit.");
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    throw new Error("YouTube returned malformed timed text.");
+  }
+  const segments = parseYouTubeTimedText(payload);
+  if (segments.length === 0) throw new Error("YouTube timed text contained no usable segments.");
+  return segments;
+}
+
 export class YouTubeAdapter implements SourceAdapter {
   async inspect(url: URL): Promise<SourceVideo> {
     const sourceVideoId = parseYouTubeId(url);
     try {
       const client = await createYouTubeClient(false);
-      const info = await client.getBasicInfo(sourceVideoId, { client: "WEB" });
-      const tracks = info.captions?.caption_tracks ?? [];
+      let info: Awaited<ReturnType<Innertube["getBasicInfo"]>> | undefined;
+      let captionInfo: Awaited<ReturnType<Innertube["getBasicInfo"]>> | undefined;
+      let bestScore = -1;
+      for (const clientName of YOUTUBE_INFO_CLIENTS) {
+        try {
+          const candidate = await client.getBasicInfo(sourceVideoId, { client: clientName });
+          if (candidate.basic_info.title?.trim()) {
+            if (
+              (candidate.captions?.caption_tracks?.length ?? 0) >
+              (captionInfo?.captions?.caption_tracks?.length ?? 0)
+            ) {
+              captionInfo = candidate;
+            }
+            const score =
+              Number(candidate.playability_status?.status === "OK") * 100 +
+              Number((candidate.captions?.caption_tracks?.length ?? 0) > 0) * 10 +
+              Number((candidate.basic_info.duration ?? 0) > 0) * 2 +
+              Number((candidate.basic_info.thumbnail?.length ?? 0) > 0);
+            if (score > bestScore) {
+              info = candidate;
+              bestScore = score;
+            }
+            if (
+              candidate.playability_status?.status === "OK" &&
+              (candidate.captions?.caption_tracks?.length ?? 0) > 0 &&
+              (candidate.basic_info.duration ?? 0) > 0
+            ) {
+              break;
+            }
+          }
+        } catch {
+          // YouTube frequently retires individual client modes. Try the next supported client.
+        }
+      }
+      if (!info?.basic_info.title?.trim()) throw new Error("YouTube returned incomplete video metadata.");
+      const tracks = captionInfo?.captions?.caption_tracks ?? info.captions?.caption_tracks ?? [];
       const captionTracks = tracks.map((track) => ({
         language: track.language_code,
         label: track.name.toString(),
@@ -32,24 +171,12 @@ export class YouTubeAdapter implements SourceAdapter {
       }));
 
       let preferredCaptionSegments: TranscriptSegment[] | undefined;
-      if (tracks.length > 0) {
+      const preferredTrack = selectPreferredYouTubeCaptionTrack(tracks);
+      if (preferredTrack) {
         try {
-          let transcript = await info.getTranscript();
-          const preferredLanguage = transcript.languages.find((language) => /^(English|Chinese|中文|简体)/i.test(language));
-          if (preferredLanguage && preferredLanguage !== transcript.selectedLanguage) {
-            transcript = await transcript.selectLanguage(preferredLanguage);
-          }
-          const segments = transcript.transcript.content?.body?.initial_segments ?? [];
-          preferredCaptionSegments = segments.flatMap((segment, index) => {
-            if (!("start_ms" in segment) || !("end_ms" in segment) || !("snippet" in segment)) return [];
-            const startMs = Number.parseInt(segment.start_ms, 10);
-            const endMs = Number.parseInt(segment.end_ms, 10);
-            const text = segment.snippet.toString().trim();
-            if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || !text) return [];
-            return [{ id: `yt-${index + 1}`, startMs, endMs, text }];
-          });
-        } catch (error) {
-          console.warn("YouTube captions were listed but could not be loaded", error);
+          preferredCaptionSegments = await loadYouTubeCaptionSegments(preferredTrack);
+        } catch {
+          console.warn("YouTube captions were listed but could not be loaded", { sourceVideoId });
         }
       }
 
@@ -57,12 +184,12 @@ export class YouTubeAdapter implements SourceAdapter {
         source: "youtube",
         sourceVideoId,
         canonicalUrl: `https://www.youtube.com/watch?v=${sourceVideoId}`,
-        title: info.basic_info.title?.trim() || "YouTube video",
+        title: info.basic_info.title.trim(),
         thumbnailUrl:
           getBestThumbnail(info.basic_info.thumbnail ?? []) ||
           `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
         durationSeconds: Math.max(0, Math.round(info.basic_info.duration ?? 0)),
-        sourceLanguage: tracks[0]?.language_code ?? null,
+        sourceLanguage: preferredTrack?.language_code ?? tracks[0]?.language_code ?? null,
         captionTracks,
         ...(preferredCaptionSegments?.length ? { preferredCaptionSegments } : {}),
       };
@@ -77,6 +204,7 @@ export class YouTubeAdapter implements SourceAdapter {
       const client = await createYouTubeClient(true);
       const range = parseRange(request.headers.get("range"));
       const body = await client.download(sourceVideoId, {
+        client: YOUTUBE_AUDIO_CLIENT,
         type: "audio",
         quality: "bestefficiency",
         format: "any",
