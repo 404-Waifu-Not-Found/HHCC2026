@@ -1231,6 +1231,10 @@ test("desktop learning journey and visual states", async ({ page }) => {
   const firstAnswer = page.getByRole("button", {
     name: baseQuestion.options[0],
   });
+  await expect(firstAnswer).toBeEnabled();
+  await expect(
+    page.getByLabel(`Interactive question 1 of ${baseQuestion.total}`),
+  ).toBeVisible();
   await firstAnswer.focus();
   await firstAnswer.press("Space");
   await expect(
