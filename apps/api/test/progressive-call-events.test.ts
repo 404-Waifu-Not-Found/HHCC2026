@@ -1418,6 +1418,11 @@ describe("protocol-9 concept-first call lifecycles", () => {
         "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
       )
       .run(Date.now() - 1, QUIZ_ID);
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_call_events SET dispatched_at = ? WHERE quiz_id = ? AND call_index = 1",
+      )
+      .run(Date.now() - 16 * 60_000, QUIZ_ID);
 
     const status = await app.request(
       `/attempts/${ATTEMPT_ID}/generation`,
@@ -1454,12 +1459,13 @@ describe("protocol-9 concept-first call lifecycles", () => {
     expect(
       db.sqlite
         .prepare(
-          "SELECT lifecycle_state, outcome_code FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
+          "SELECT lifecycle_state, outcome_code, elapsed_ms FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
         )
         .get(QUIZ_ID),
     ).toMatchObject({
       lifecycle_state: "abandoned",
       outcome_code: "network_interrupted",
+      elapsed_ms: 900_000,
     });
 
     const retry = conceptFirstLifecycleEvent("started", {
