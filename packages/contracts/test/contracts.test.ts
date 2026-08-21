@@ -8,10 +8,14 @@ import {
   AttemptGenerationResponseSchema,
   ExtensionQuizImportRequestSchema,
   ExtensionQuizProgressiveImportRequestSchema,
+  GenerationRecordV2Schema,
   LibraryCardSchema,
   LocalConceptQuizChunkSchema,
   LocalConceptQuizResultSchema,
+  LocalConceptQuizQuestionChunkSchema,
+  LocalGenerationCallEventSchema,
   LocalQuizContextSchema,
+  QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
   identifyVideoSource,
   questionLimitForSession,
@@ -59,6 +63,7 @@ describe("admin contracts", () => {
           pipelineVersion: 9,
           promptVersion: "quiz-local-json-stream-v5.1",
           validatorVersion: "validator-local-progressive-v4.0",
+          rolloutMode: "disabled",
           states: {
             generating: 1,
             retrying: 2,
@@ -91,9 +96,27 @@ describe("admin contracts", () => {
       aiCalls: 2,
       retryCount: 1,
       elapsedMs: 18_000,
-      reasonCode: "automatic_retries_exhausted",
+      telemetrySource: "authoritative_calls",
+      primaryCalls: 1,
+      automaticRetries: 1,
+      manualContinuations: 0,
+      partialCalls: 1,
+      outcomeCounts: { complete: 1, transient_http: 1 },
+      tokenUsage: {
+        inputTokens: 1_000,
+        outputTokens: 200,
+        reasoningTokens: 0,
+        completeCalls: 1,
+        unknownCalls: 1,
+        complete: false,
+      },
+      firstQuestionLatencyMs: 4_200,
+      reasonCode: "schema_invalid",
       stalled: false,
       lastProgressAt: "2026-08-10T04:00:00.000Z",
+      lastQuestionAt: "2026-08-10T03:59:55.000Z",
+      lastAttemptAt: "2026-08-10T04:00:00.000Z",
+      stateChangedAt: "2026-08-10T03:59:58.000Z",
       createdAt: "2026-08-10T03:59:00.000Z",
       owner: {
         id: "user-1",
@@ -167,6 +190,23 @@ describe("session length", () => {
 });
 
 describe("generated questions", () => {
+  it("binds rollout profiles to their exact extension contracts", () => {
+    expect(
+      QuizGenerationProfileResponseSchema.safeParse({
+        generationProfile: "stable_non_thinking_v5_2",
+        minimumExtensionVersion: "0.8.2",
+        requiredCapability: "question-stream-v2",
+      }).success,
+    ).toBe(true);
+    expect(
+      QuizGenerationProfileResponseSchema.safeParse({
+        generationProfile: "stable_non_thinking_v5_2",
+        minimumExtensionVersion: "0.8.0",
+        requiredCapability: "question-stream-v1",
+      }).success,
+    ).toBe(false);
+  });
+
   it("requires at least one unique supported question type", () => {
     expect(QuizQuestionTypesSchema.safeParse([]).success).toBe(false);
     expect(
@@ -403,6 +443,15 @@ describe("generated questions", () => {
         questionTypes: ["multiple_choice", "true_false", "short_answer"],
         watched: true,
         startIndex: 2,
+        resultProtocolVersion: 5,
+        pipelineVersion: 9,
+        model: "deepseek-v4-flash",
+        reasoningEffort: "high",
+        promptVersion: "quiz-local-json-stream-v5.1",
+        validatorVersion: "validator-local-progressive-v4.0",
+        importVersion: "extension-progressive-import-v3",
+        generationProfile: "legacy_reasoning_v5_1",
+        claim: { state: "available", leaseExpiresAt: null },
         acceptedQuestions,
       },
     };
@@ -419,6 +468,92 @@ describe("generated questions", () => {
         },
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts coherent v5.2 plans, call events, and generation records", () => {
+    const questionPlan = {
+      seed: "a".repeat(64),
+      types: [
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+        "multiple_choice",
+        "true_false",
+      ],
+    } as const;
+    const chunk = {
+      protocolVersion: 6,
+      pipelineVersion: 9,
+      model: "deepseek-v4-flash",
+      reasoningEffort: "none",
+      promptVersion: "quiz-local-json-stream-v5.2",
+      validatorVersion: "validator-local-progressive-v4.1",
+      importVersion: "extension-progressive-import-v4",
+      generationProfile: "stable_non_thinking_v5_2",
+      generationId: "11111111-1111-4111-8111-111111111111",
+      questionPlan,
+      title: "Trusted source title",
+      startIndex: 0,
+      totalQuestions: 5,
+      question: localQuestion("multiple_choice", 0),
+      metrics: {
+        aiCalls: 0,
+        retryCount: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: 0,
+        elapsedMs: 1,
+      },
+    } as const;
+    expect(LocalConceptQuizQuestionChunkSchema.safeParse(chunk).success).toBe(
+      true,
+    );
+    expect(
+      LocalConceptQuizQuestionChunkSchema.safeParse({
+        ...chunk,
+        protocolVersion: 5,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        callIndex: 0,
+        startIndex: 0,
+        requestedCount: 1,
+        acceptedCount: 1,
+        classification: "primary",
+        outcome: "complete",
+        retryDelayMs: 0,
+        elapsedMs: 2_000,
+        inputTokens: 100,
+        outputTokens: 20,
+        reasoningTokens: 0,
+        usageComplete: true,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      GenerationRecordV2Schema.safeParse({
+        version: 2,
+        generationId: "11111111-1111-4111-8111-111111111111",
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        idempotencyKey: "33333333-3333-4333-8333-333333333333",
+        ownerUserId: "owner-user",
+        videoId: "44444444-4444-4444-8444-444444444444",
+        quizLanguage: "en",
+        questionTypes: ["multiple_choice", "true_false", "short_answer"],
+        sessionLength: "short",
+        watched: true,
+        questionPlan,
+        acceptedCount: 0,
+        plannedCount: 5,
+        state: "pending",
+        nextCallIndex: 0,
+        createdAt: 1_786_300_000_000,
+        updatedAt: 1_786_300_000_000,
+      }).success,
+    ).toBe(true);
   });
 });
 

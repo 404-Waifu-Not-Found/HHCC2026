@@ -139,13 +139,36 @@ export const AdminGenerationSchema = z
       .max(3),
     aiCalls: z.number().int().nonnegative(),
     retryCount: z.number().int().nonnegative(),
-    elapsedMs: z.number().int().positive(),
+    elapsedMs: z.number().int().nonnegative(),
+    telemetrySource: z.enum(["authoritative_calls", "legacy_summary"]),
+    primaryCalls: z.number().int().nonnegative(),
+    automaticRetries: z.number().int().nonnegative(),
+    manualContinuations: z.number().int().nonnegative(),
+    partialCalls: z.number().int().nonnegative(),
+    outcomeCounts: z.record(
+      z.string().regex(/^[a-z0-9_]{1,64}$/),
+      z.number().int().nonnegative(),
+    ),
+    tokenUsage: z
+      .object({
+        inputTokens: z.number().int().nonnegative(),
+        outputTokens: z.number().int().nonnegative(),
+        reasoningTokens: z.number().int().nonnegative(),
+        completeCalls: z.number().int().nonnegative(),
+        unknownCalls: z.number().int().nonnegative(),
+        complete: z.boolean(),
+      })
+      .strict(),
+    firstQuestionLatencyMs: z.number().int().nonnegative().nullable(),
     reasonCode: z
       .string()
       .regex(/^[a-z0-9_]{1,64}$/)
       .nullable(),
     stalled: z.boolean(),
     lastProgressAt: z.string().datetime(),
+    lastQuestionAt: z.string().datetime(),
+    lastAttemptAt: z.string().datetime().nullable(),
+    stateChangedAt: z.string().datetime(),
     createdAt: z.string().datetime(),
     owner: z
       .object({
@@ -246,6 +269,7 @@ export const AdminSystemResponseSchema = z.object({
       pipelineVersion: z.number().int().positive(),
       promptVersion: z.string(),
       validatorVersion: z.string(),
+      rolloutMode: z.enum(["disabled", "canary", "enabled"]),
       states: z.object({
         generating: z.number().int().nonnegative(),
         retrying: z.number().int().nonnegative(),

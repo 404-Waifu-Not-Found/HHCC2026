@@ -67,6 +67,8 @@
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
     "ENABLE_YOUTUBE_DEMO_HISTORY": "false",
     "MODEL_MANIFEST_KEY": "models/whisper-tiny/manifest.json",
+    "QUIZ_V5_2_CANARY_USER_IDS": "",
+    "QUIZ_V5_2_ROLLOUT": "disabled",
     "RESEND_FROM": "ClipQuest <hello@clipquest.ccwu.cc>",
   },
   "observability": {

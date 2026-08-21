@@ -1,11 +1,16 @@
 import {
   AttemptGenerationAvailabilitySchema,
+  GenerationAvailabilityReasonCodeSchema,
+  LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
-  LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION,
-  LOCAL_QUIZ_VALIDATOR_VERSION,
   LocalAcceptedQuestionSummarySchema,
+  LocalGenerationProfileSchema,
+  LocalQuestionPlanSchema,
+  LocalQuizProgressiveImportVersionSchema,
   LocalQuizPromptVersionSchema,
+  LocalQuizResultProtocolVersionSchema,
+  LocalQuizValidatorVersionSchema,
   QuizQuestionTypesSchema,
   questionTypePlanForSelection,
   type AttemptGenerationAvailability,
@@ -86,29 +91,62 @@ const TOKEN_ALIASES = new Map([
 export const ProgressiveQuizSummarySchema = z
   .object({
     source: z.literal("extension-local-json-stream"),
-    importVersion: z.literal(LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION),
+    importVersion: LocalQuizProgressiveImportVersionSchema,
+    resultProtocolVersion: LocalQuizResultProtocolVersionSchema.optional(),
     pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
     model: z.literal(LOCAL_QUIZ_MODEL),
-    reasoningEffort: z.literal("high"),
+    reasoningEffort: z.enum(["high", "none"]),
     promptVersion: LocalQuizPromptVersionSchema,
-    validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
+    validatorVersion: LocalQuizValidatorVersionSchema,
+    generationProfile: LocalGenerationProfileSchema.optional(),
+    generationId: z.string().uuid().optional(),
+    questionPlanSeed: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     generationState: z.enum([
       "generating",
       "retrying",
       "retry_required",
       "ready",
     ]),
-    reasonCode: z
-      .string()
-      .regex(/^[a-z0-9_]{1,64}$/)
-      .optional(),
+    reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
     requestedQuestionTypes: QuizQuestionTypesSchema,
+    plannedQuestionTypes: z
+      .array(z.enum(["multiple_choice", "true_false", "short_answer"]))
+      .min(5)
+      .max(15)
+      .optional(),
     generatedQuestionTypes: z.array(
       z.enum(["multiple_choice", "true_false", "short_answer"]),
     ),
     plannedCount: PlannedQuestionCountSchema,
     acceptedCount: z.number().int().min(1).max(15),
     lastProgressAt: z.number().int().positive(),
+    lastQuestionAt: z.number().int().positive().optional(),
+    stateChangedAt: z.number().int().positive().optional(),
+    telemetryAvailable: z.boolean().optional(),
+    qualityFlags: z
+      .array(
+        z
+          .object({
+            ordinal: z.number().int().min(0).max(14),
+            codes: z
+              .array(
+                z.enum([
+                  "concept_overlap",
+                  "low_structural_difficulty",
+                  "high_structural_difficulty",
+                  "similar_distractors",
+                ]),
+              )
+              .min(1)
+              .max(4),
+          })
+          .strict(),
+      )
+      .max(15)
+      .optional(),
     acceptedQuestionSummaries: z
       .array(LocalAcceptedQuestionSummarySchema)
       .min(1)
@@ -122,6 +160,23 @@ export const ProgressiveQuizSummarySchema = z
     elapsedMs: z.number().int().positive(),
   })
   .strict()
+  .transform((value) => ({
+    ...value,
+    resultProtocolVersion:
+      value.resultProtocolVersion ?? LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+    generationProfile:
+      value.generationProfile ?? ("legacy_reasoning_v5_1" as const),
+    plannedQuestionTypes:
+      value.plannedQuestionTypes ??
+      questionTypePlanForSelection(
+        value.requestedQuestionTypes,
+        value.plannedCount,
+      ),
+    lastQuestionAt: value.lastQuestionAt ?? value.lastProgressAt,
+    stateChangedAt: value.stateChangedAt ?? value.lastProgressAt,
+    telemetryAvailable: value.telemetryAvailable ?? false,
+    qualityFlags: value.qualityFlags ?? [],
+  }))
   .superRefine((value, context) => {
     if (
       value.acceptedCount !== value.acceptedQuestionSummaries.length ||
@@ -150,15 +205,42 @@ export const ProgressiveQuizSummarySchema = z
         message: "Only an action-required summary may include a reason code.",
       });
     }
-    const expectedTypes = questionTypePlanForSelection(
-      value.requestedQuestionTypes,
-      value.plannedCount,
-    );
+    if (value.plannedQuestionTypes.length !== value.plannedCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["plannedQuestionTypes"],
+        message: "The persisted question plan must match the planned total.",
+      });
+    }
+    const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
+    const metadataMatches = stable
+      ? value.resultProtocolVersion === 6 &&
+        value.importVersion === "extension-progressive-import-v4" &&
+        value.reasoningEffort === "none" &&
+        value.validatorVersion === "validator-local-progressive-v4.1" &&
+        value.generationProfile === "stable_non_thinking_v5_2" &&
+        Boolean(value.generationId) &&
+        Boolean(value.questionPlanSeed) &&
+        value.telemetryAvailable
+      : value.resultProtocolVersion === 5 &&
+        value.importVersion === "extension-progressive-import-v3" &&
+        value.reasoningEffort === "high" &&
+        value.validatorVersion === "validator-local-progressive-v4.0" &&
+        value.generationProfile === "legacy_reasoning_v5_1";
+    if (!metadataMatches) {
+      context.addIssue({
+        code: "custom",
+        path: ["promptVersion"],
+        message:
+          "Progressive generation metadata versions must remain coherent.",
+      });
+    }
     value.acceptedQuestionSummaries.forEach((question, index) => {
       if (
         question.id !== `q${index + 1}` ||
-        question.type !== expectedTypes[index] ||
-        value.generatedQuestionTypes[index] !== expectedTypes[index]
+        question.type !== value.plannedQuestionTypes[index] ||
+        value.generatedQuestionTypes[index] !==
+          value.plannedQuestionTypes[index]
       ) {
         context.addIssue({
           code: "custom",
@@ -178,13 +260,36 @@ export function assertProgressiveChunkMetadata(
   chunk: Pick<
     LocalConceptQuizQuestionChunk,
     "pipelineVersion" | "model" | "promptVersion" | "validatorVersion"
-  >,
+  > &
+    Partial<
+      Pick<
+        LocalConceptQuizQuestionChunk,
+        | "protocolVersion"
+        | "reasoningEffort"
+        | "importVersion"
+        | "generationProfile"
+        | "generationId"
+        | "questionPlan"
+      >
+    >,
 ): void {
   if (
+    (chunk.protocolVersion ?? LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION) !==
+      summary.resultProtocolVersion ||
     chunk.pipelineVersion !== summary.pipelineVersion ||
     chunk.model !== summary.model ||
+    (chunk.reasoningEffort ?? "high") !== summary.reasoningEffort ||
     chunk.promptVersion !== summary.promptVersion ||
-    chunk.validatorVersion !== summary.validatorVersion
+    chunk.validatorVersion !== summary.validatorVersion ||
+    (chunk.importVersion ?? "extension-progressive-import-v3") !==
+      summary.importVersion ||
+    (chunk.generationProfile ?? "legacy_reasoning_v5_1") !==
+      summary.generationProfile ||
+    chunk.generationId !== summary.generationId ||
+    JSON.stringify(
+      chunk.questionPlan?.types ?? summary.plannedQuestionTypes,
+    ) !== JSON.stringify(summary.plannedQuestionTypes) ||
+    chunk.questionPlan?.seed !== summary.questionPlanSeed
   ) {
     throw new ApiError(
       409,
@@ -200,6 +305,30 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
   quality_status: z.string(),
   quality_summary_json: z.string(),
   authoritative_count: z.coerce.number().int().nonnegative(),
+  call_count: z.coerce.number().int().nonnegative().default(0),
+  primary_calls: z.coerce.number().int().nonnegative().default(0),
+  automatic_retries: z.coerce.number().int().nonnegative().default(0),
+  manual_continuations: z.coerce.number().int().nonnegative().default(0),
+  partial_calls: z.coerce.number().int().nonnegative().default(0),
+  complete_usage_calls: z.coerce.number().int().nonnegative().default(0),
+  total_elapsed_ms: z.coerce.number().int().nonnegative().default(0),
+  total_input_tokens: z.coerce.number().int().nonnegative().default(0),
+  total_output_tokens: z.coerce.number().int().nonnegative().default(0),
+  total_reasoning_tokens: z.coerce.number().int().nonnegative().default(0),
+  outcome_counts_json: z.string().default("{}"),
+  first_question_latency_ms: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .nullable()
+    .default(null),
+  last_attempt_at: z.coerce.number().int().positive().nullable().default(null),
+  claim_lease_expires_at: z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .default(null),
 });
 
 export const PROGRESSIVE_GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -215,6 +344,78 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       FROM questions stored_question
       WHERE stored_question.quiz_id = qb.id
     ) AS authoritative_count
+    ,(
+      SELECT COUNT(*) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+    ) AS call_count
+    ,(
+      SELECT COUNT(*) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id AND event.classification = 'primary'
+    ) AS primary_calls
+    ,(
+      SELECT COUNT(*) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id AND event.classification = 'automatic_retry'
+    ) AS automatic_retries
+    ,(
+      SELECT COUNT(*) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id AND event.classification = 'manual_continuation'
+    ) AS manual_continuations
+    ,(
+      SELECT COUNT(*) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.accepted_count > 0
+        AND event.accepted_count < event.requested_count
+    ) AS partial_calls
+    ,(
+      SELECT COUNT(*) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id AND event.usage_complete = 1
+    ) AS complete_usage_calls
+    ,COALESCE((
+      SELECT SUM(event.elapsed_ms + event.retry_delay_ms)
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+    ), 0) AS total_elapsed_ms
+    ,COALESCE((
+      SELECT SUM(event.input_tokens) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+    ), 0) AS total_input_tokens
+    ,COALESCE((
+      SELECT SUM(event.output_tokens) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+    ), 0) AS total_output_tokens
+    ,COALESCE((
+      SELECT SUM(event.reasoning_tokens) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+    ), 0) AS total_reasoning_tokens
+    ,COALESCE((
+      SELECT json_group_object(outcome_code, outcome_total)
+      FROM (
+        SELECT event.outcome_code, COUNT(*) AS outcome_total
+        FROM quiz_generation_call_events event
+        WHERE event.quiz_id = qb.id
+        GROUP BY event.outcome_code
+      ) outcome_counts
+    ), '{}') AS outcome_counts_json
+    ,(
+      SELECT SUM(event.elapsed_ms + event.retry_delay_ms)
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.call_index <= (
+          SELECT MIN(accepted.call_index)
+          FROM quiz_generation_call_events accepted
+          WHERE accepted.quiz_id = qb.id
+            AND accepted.start_ordinal = 0
+            AND accepted.accepted_count > 0
+        )
+    ) AS first_question_latency_ms
+    ,(
+      SELECT MAX(event.created_at) FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+    ) AS last_attempt_at
+    ,(
+      SELECT claim.lease_expires_at FROM quiz_generation_claims claim
+      WHERE claim.quiz_id = qb.id
+    ) AS claim_lease_expires_at
   FROM quiz_banks qb
   WHERE qb.id = ?
   LIMIT 1`;
@@ -223,10 +424,29 @@ export type ProgressiveGenerationSnapshot = {
   quizId: string;
   pipelineVersion: number;
   qualityStatus: string;
+  /** Exact stored value for optimistic compare-and-swap writes. */
+  qualitySummaryJson: string;
   authoritativeCount: number;
   summary: ProgressiveQuizSummary | null;
   availability: AttemptGenerationAvailability | null;
   stalled: boolean;
+  telemetry: {
+    available: boolean;
+    callCount: number;
+    primaryCalls: number;
+    automaticRetries: number;
+    manualContinuations: number;
+    partialCalls: number;
+    completeUsageCalls: number;
+    elapsedMs: number;
+    inputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number;
+    outcomeCounts: Record<string, number>;
+    firstQuestionLatencyMs: number | null;
+    lastAttemptAt: number | null;
+  };
+  claimLeaseExpiresAt: number | null;
 };
 
 /**
@@ -249,15 +469,34 @@ export async function readProgressiveGenerationSnapshot(
   }
 
   const summary = tryProgressiveQuizSummary(row.data.quality_summary_json);
+  const telemetry = {
+    available: row.data.call_count > 0,
+    callCount: row.data.call_count,
+    primaryCalls: row.data.primary_calls,
+    automaticRetries: row.data.automatic_retries,
+    manualContinuations: row.data.manual_continuations,
+    partialCalls: row.data.partial_calls,
+    completeUsageCalls: row.data.complete_usage_calls,
+    elapsedMs: row.data.total_elapsed_ms,
+    inputTokens: row.data.total_input_tokens,
+    outputTokens: row.data.total_output_tokens,
+    reasoningTokens: row.data.total_reasoning_tokens,
+    outcomeCounts: parseOutcomeCounts(row.data.outcome_counts_json),
+    firstQuestionLatencyMs: row.data.first_question_latency_ms,
+    lastAttemptAt: row.data.last_attempt_at,
+  };
   if (!summary) {
     return {
       quizId: row.data.quiz_id,
       pipelineVersion: row.data.pipeline_version,
       qualityStatus: row.data.quality_status,
+      qualitySummaryJson: row.data.quality_summary_json,
       authoritativeCount: row.data.authoritative_count,
       summary: null,
       availability: null,
       stalled: false,
+      telemetry,
+      claimLeaseExpiresAt: row.data.claim_lease_expires_at,
     };
   }
 
@@ -269,12 +508,19 @@ export async function readProgressiveGenerationSnapshot(
   const stalled =
     (availability.state === "generating" ||
       availability.state === "retrying") &&
-    Date.now() - summary.lastProgressAt > PROGRESSIVE_GENERATION_STALE_AFTER_MS;
+    Date.now() -
+      Math.max(
+        summary.lastQuestionAt,
+        summary.stateChangedAt,
+        telemetry.lastAttemptAt ?? 0,
+      ) >
+      PROGRESSIVE_GENERATION_STALE_AFTER_MS;
 
   return {
     quizId: row.data.quiz_id,
     pipelineVersion: row.data.pipeline_version,
     qualityStatus: row.data.quality_status,
+    qualitySummaryJson: row.data.quality_summary_json,
     authoritativeCount: row.data.authoritative_count,
     summary,
     availability: stalled
@@ -285,7 +531,25 @@ export async function readProgressiveGenerationSnapshot(
         })
       : availability,
     stalled,
+    telemetry,
+    claimLeaseExpiresAt: row.data.claim_lease_expires_at,
   };
+}
+
+function parseOutcomeCounts(value: string): Record<string, number> {
+  try {
+    const raw = JSON.parse(value) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(raw).filter(
+        ([code, count]) =>
+          /^[a-z0-9_]{1,64}$/.test(code) &&
+          Number.isInteger(count) &&
+          Number(count) >= 0,
+      ),
+    ) as Record<string, number>;
+  } catch {
+    return {};
+  }
 }
 
 export function acceptedQuestionSummary(question: LocalConceptQuizQuestion) {

@@ -215,6 +215,31 @@ function createDatabase(): {
       updated_at INTEGER NOT NULL,
       PRIMARY KEY(user_id, video_id)
     );
+    CREATE TABLE quiz_generation_call_events (
+      quiz_id TEXT NOT NULL,
+      generation_session_id TEXT NOT NULL,
+      call_index INTEGER NOT NULL,
+      start_ordinal INTEGER NOT NULL,
+      requested_count INTEGER NOT NULL,
+      accepted_count INTEGER NOT NULL,
+      classification TEXT NOT NULL,
+      outcome_code TEXT NOT NULL,
+      retry_delay_ms INTEGER NOT NULL,
+      elapsed_ms INTEGER NOT NULL,
+      input_tokens INTEGER,
+      output_tokens INTEGER,
+      reasoning_tokens INTEGER,
+      usage_complete INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (quiz_id, generation_session_id, call_index)
+    );
+    CREATE TABLE quiz_generation_claims (
+      quiz_id TEXT PRIMARY KEY,
+      generation_session_id TEXT NOT NULL,
+      claim_key TEXT NOT NULL,
+      lease_expires_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `);
   sqlite
     .prepare(

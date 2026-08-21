@@ -5,6 +5,8 @@ import {
   AttemptAnswerRequestSchema,
   AttemptAnswerResponseSchema,
   AttemptResumeResponseSchema,
+  GenerationClaimRequestSchema,
+  GenerationClaimResponseSchema,
   LOCAL_QUIZ_PIPELINE_VERSION,
   MasteryStateSchema,
   PublicQuestionSchema,
@@ -26,6 +28,7 @@ import { createId, now } from "../lib/ids";
 import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
+  ProgressiveQuizSummarySchema,
   gradeProgressiveShortAnswer,
   readProgressiveGenerationSnapshot,
   type ProgressiveGenerationSnapshot,
@@ -41,6 +44,7 @@ const QuestionTypeSchema = z.enum([
   "ordering",
   "short_answer",
 ]);
+const GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
 const QuestionRowSchema = z.object({
   id: z.string().uuid(),
   quiz_id: z.string().uuid(),
@@ -684,10 +688,145 @@ quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
               questionTypes: summary.requestedQuestionTypes,
               watched: Boolean(attempt.quiz_watched),
               startIndex: summary.acceptedCount,
+              resultProtocolVersion: summary.resultProtocolVersion,
+              pipelineVersion: summary.pipelineVersion,
+              model: summary.model,
+              reasoningEffort: summary.reasoningEffort,
+              promptVersion: summary.promptVersion,
+              validatorVersion: summary.validatorVersion,
+              importVersion: summary.importVersion,
+              generationProfile: summary.generationProfile,
+              generationId: summary.generationId,
+              ...(summary.questionPlanSeed
+                ? {
+                    questionPlan: {
+                      seed: summary.questionPlanSeed,
+                      types: summary.plannedQuestionTypes,
+                    },
+                  }
+                : {}),
+              claim: claimForSnapshot(generationState.snapshot),
               acceptedQuestions: summary.acceptedQuestionSummaries,
             },
           }
         : {}),
+    }),
+  );
+});
+
+quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
+  const user = c.get("user");
+  const input = await parseJson(c, GenerationClaimRequestSchema);
+  const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
+  const generationState = await attemptGenerationState(c.env.DB, attempt);
+  const summary = generationState.snapshot.summary;
+  if (
+    !summary ||
+    generationState.snapshot.qualityStatus !== "generating" ||
+    generationState.generation.state !== "retry_required"
+  ) {
+    throw new ApiError(
+      409,
+      "generation_claim_not_available",
+      "This attempt is not waiting for an explicit continuation.",
+    );
+  }
+
+  const timestamp = now();
+  const existing = await c.env.DB.prepare(
+    "SELECT generation_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+  )
+    .bind(attempt.quiz_id)
+    .first<{
+      generation_session_id: string;
+      claim_key: string;
+      lease_expires_at: number;
+    }>();
+  const replay =
+    existing?.generation_session_id === input.generationSessionId &&
+    existing.claim_key === input.claimKey;
+  if (existing && Number(existing.lease_expires_at) > timestamp && !replay) {
+    throw new ApiError(
+      409,
+      "generation_claim_leased",
+      "Another tab is already continuing this attempt.",
+    );
+  }
+
+  const leaseExpiresAt = timestamp + GENERATION_CLAIM_LEASE_MS;
+  const claimedSummary = ProgressiveQuizSummarySchema.parse({
+    ...summary,
+    generationState: "retry_required",
+    reasonCode:
+      generationState.generation.reasonCode ??
+      summary.reasonCode ??
+      "local_state_conflict",
+    stateChangedAt:
+      summary.generationState === "retry_required"
+        ? summary.stateChangedAt
+        : timestamp,
+  });
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO quiz_generation_claims
+         (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(quiz_id) DO UPDATE SET
+           generation_session_id = excluded.generation_session_id,
+           claim_key = excluded.claim_key,
+           lease_expires_at = excluded.lease_expires_at,
+           updated_at = excluded.updated_at
+         WHERE quiz_generation_claims.lease_expires_at <= ?
+           OR (quiz_generation_claims.generation_session_id = ? AND quiz_generation_claims.claim_key = ?)`,
+    ).bind(
+      attempt.quiz_id,
+      input.generationSessionId,
+      input.claimKey,
+      leaseExpiresAt,
+      timestamp,
+      timestamp,
+      input.generationSessionId,
+      input.claimKey,
+    ),
+    c.env.DB.prepare(
+      `UPDATE quiz_banks SET import_key = ?, quality_summary_json = ?
+         WHERE id = ? AND user_id = ? AND pipeline_version = ? AND quality_status = 'generating'
+           AND quality_summary_json = ?
+           AND EXISTS (
+             SELECT 1 FROM quiz_generation_claims claim
+             WHERE claim.quiz_id = quiz_banks.id
+               AND claim.generation_session_id = ?
+               AND claim.claim_key = ?
+               AND claim.lease_expires_at > ?
+           )`,
+    ).bind(
+      input.claimKey,
+      JSON.stringify(claimedSummary),
+      attempt.quiz_id,
+      user.id,
+      LOCAL_QUIZ_PIPELINE_VERSION,
+      generationState.snapshot.qualitySummaryJson,
+      input.generationSessionId,
+      input.claimKey,
+      timestamp,
+    ),
+  ]);
+  if (results[0]?.meta.changes !== 1 || results[1]?.meta.changes !== 1) {
+    throw new ApiError(
+      409,
+      "generation_claim_conflict",
+      "This attempt was claimed by another continuation.",
+    );
+  }
+  return c.json(
+    GenerationClaimResponseSchema.parse({
+      attemptId: attempt.id,
+      quizId: attempt.quiz_id,
+      generation: generationState.generation,
+      claim: {
+        state: "leased",
+        leaseExpiresAt: new Date(leaseExpiresAt).toISOString(),
+      },
     }),
   );
 });
@@ -727,6 +866,21 @@ function readyGeneration(total: number): AttemptGenerationAvailability {
     availableQuestions: total,
     totalQuestions: total,
   });
+}
+
+function claimForSnapshot(snapshot: ProgressiveGenerationSnapshot) {
+  if (snapshot.availability?.state !== "retry_required") {
+    return { state: "not_required" as const, leaseExpiresAt: null };
+  }
+  const activeLease =
+    snapshot.claimLeaseExpiresAt !== null &&
+    snapshot.claimLeaseExpiresAt > Date.now();
+  return {
+    state: activeLease ? ("leased" as const) : ("available" as const),
+    leaseExpiresAt: activeLease
+      ? new Date(snapshot.claimLeaseExpiresAt!).toISOString()
+      : null,
+  };
 }
 
 async function attemptGenerationState(
