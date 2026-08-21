@@ -2432,7 +2432,10 @@ async function seedAttempt(
   attemptId: string,
   question: PublicQuestion,
 ): Promise<void> {
-  await seed(page, `clipquest:attempt:${attemptId}`, {
+  const ownerUserId = sessionFixture().user.id;
+  await seed(page, `clipquest:attempt:v2:${ownerUserId}:${attemptId}`, {
+    version: 2,
+    ownerUserId,
     attemptId,
     primer: null,
     question,
