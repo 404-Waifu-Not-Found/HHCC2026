@@ -180,15 +180,24 @@ export default function GenerationScreen() {
     [captionWordCount, firstQuestionType, questionCount, videoDurationSeconds],
   );
   const journeySteps = useMemo<JourneyStep[]>(
-    () => [
-      { id: "video", label: t("gettingVideo") },
-      { id: "captions", label: t("preparingAudio") },
-      { id: "model", label: t("downloadingModel") },
-      { id: "transcribing", label: t("transcribing") },
-      { id: "planning", label: t("planningQuestions") },
-      { id: "questions", label: t("creatingQuestions") },
-      { id: "opening", label: t("finalizingQuestions") },
-    ],
+    () =>
+      Platform.OS === "android"
+        ? [
+            { id: "video", label: t("gettingVideo") },
+            { id: "captions", label: t("checkingCaptions") },
+            { id: "planning", label: t("planningQuestions") },
+            { id: "questions", label: t("creatingQuestions") },
+            { id: "opening", label: t("finalizingQuestions") },
+          ]
+        : [
+            { id: "video", label: t("gettingVideo") },
+            { id: "captions", label: t("preparingAudio") },
+            { id: "model", label: t("downloadingModel") },
+            { id: "transcribing", label: t("transcribing") },
+            { id: "planning", label: t("planningQuestions") },
+            { id: "questions", label: t("creatingQuestions") },
+            { id: "opening", label: t("finalizingQuestions") },
+          ],
     [t],
   );
   const [estimatedProgress, setEstimatedProgressState] = useState(0);
@@ -1245,7 +1254,11 @@ export default function GenerationScreen() {
                 <VoxelIcon name="privacy" size={27} color={theme.primary} />
               </View>
               <Text style={[styles.privacyText, { color: theme.textMuted }]}>
-                {t("privateTranscription")}
+                {t(
+                  Platform.OS === "android"
+                    ? "privateTranscriptionAndroid"
+                    : "privateTranscription",
+                )}
               </Text>
             </View>
           </Surface>

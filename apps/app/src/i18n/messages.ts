@@ -76,6 +76,7 @@ export const messages = {
     long: "Long · 15",
     generate: "Create my quiz",
     gettingVideo: "Getting video",
+    checkingCaptions: "Verifying captions",
     preparingAudio: "Checking captions / downloading audio",
     downloadingModel: "Downloading speech model",
     transcribing: "Transcribing on this device",
@@ -131,6 +132,11 @@ export const messages = {
     thumbnailUnavailable: "The thumbnail is taking longer than expected.",
     retryThumbnail: "Reload thumbnail",
     sourceCaptions: "Complete source captions are ready.",
+    sourceCaptionsPreparing: "Checking this video's captions…",
+    sourceCaptionsUnavailable:
+      "This Android beta needs a public YouTube video with usable captions.",
+    sourceCaptionsFailed:
+      "Captions could not be verified. Paste the video again to retry.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
     extensionRequiredTitle: "Install the Chrome extension",
@@ -191,6 +197,8 @@ export const messages = {
     tryAgain: "Try again",
     privateTranscription:
       "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only validated quiz questions so you can answer them and save progress.",
+    privateTranscriptionAndroid:
+      "Captions and your DeepSeek key stay on this device. The app sends caption text directly to DeepSeek; ClipQuest stores only validated quiz questions and learning progress.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -307,6 +315,7 @@ export const messages = {
     long: "长 · 15 题",
     generate: "生成测验",
     gettingVideo: "正在获取视频",
+    checkingCaptions: "正在验证字幕",
     preparingAudio: "正在检查字幕 / 下载音频",
     downloadingModel: "正在下载语音模型",
     transcribing: "正在此设备上转写",
@@ -358,6 +367,10 @@ export const messages = {
     thumbnailUnavailable: "缩略图加载时间比预期更长。",
     retryThumbnail: "重新加载缩略图",
     sourceCaptions: "完整的来源字幕已准备好。",
+    sourceCaptionsPreparing: "正在检查此视频的字幕…",
+    sourceCaptionsUnavailable:
+      "此 Android 测试版需要带有可用字幕的公开 YouTube 视频。",
+    sourceCaptionsFailed: "无法验证字幕，请重新粘贴视频后再试。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
     extensionRequiredTitle: "安装 Chrome 扩展",
     extensionRequiredBody:
@@ -412,6 +425,8 @@ export const messages = {
     tryAgain: "重试",
     privateTranscription:
       "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目，供你作答并保存学习进度。",
+    privateTranscriptionAndroid:
+      "字幕与 DeepSeek 密钥都保留在此设备上。应用会将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目与学习进度。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",

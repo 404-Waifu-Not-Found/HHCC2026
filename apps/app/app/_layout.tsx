@@ -138,8 +138,11 @@ function RootNavigator() {
           title: SITE_TITLE,
           headerShown: false,
           contentStyle: { backgroundColor: theme.background },
-          animation: reduceMotion ? "none" : "fade",
-          animationDuration: reduceMotion ? 0 : 300,
+          // Native route animation is handled inside Screen. Keeping the
+          // navigator option stable prevents a reduced-motion toggle from
+          // detaching the active native scene.
+          animation: Platform.OS === "web" && !reduceMotion ? "fade" : "none",
+          animationDuration: Platform.OS === "web" && !reduceMotion ? 300 : 0,
         }}
       />
     </ExtensionInstallGate>
