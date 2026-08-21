@@ -21,12 +21,6 @@ export type AuthUser = {
   banned: boolean;
 };
 
-export type GenerationQueueMessage = {
-  jobId: string;
-  userId: string;
-  videoId: string;
-};
-
 export type MediaToken = {
   userId: string;
   videoId: string;

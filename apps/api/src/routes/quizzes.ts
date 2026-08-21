@@ -3,6 +3,7 @@ import {
   AttemptAnswerRequestSchema,
   AttemptAnswerResponseSchema,
   AttemptResumeResponseSchema,
+  LOCAL_QUIZ_PIPELINE_VERSION,
   MasteryStateSchema,
   PublicQuestionSchema,
   QuizStartRequestSchema,
@@ -14,14 +15,12 @@ import {
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
-import {
-  gradeWrittenAnswer,
-  StoredTranscriptSchema,
-} from "../generation/deepseek";
+import { gradeWrittenAnswer } from "../lib/ai-services";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
 import { calculateMastery } from "../lib/mastery";
 import { enforceRateLimit } from "../lib/rate-limit";
+import { StoredTranscriptSchema } from "../lib/stored-transcript";
 import { parseJson, parseStoredJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 
@@ -88,9 +87,9 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
   const user = c.get("user");
   const input = await parseJson(c, QuizStartRequestSchema);
   const quiz = await c.env.DB.prepare(
-    "SELECT id, video_id, primer, watched FROM quiz_banks WHERE id = ? AND user_id = ?",
+    "SELECT id, video_id, primer, watched FROM quiz_banks WHERE id = ? AND user_id = ? AND pipeline_version = ? AND quality_status = 'passed'",
   )
-    .bind(c.req.param("quizId"), user.id)
+    .bind(c.req.param("quizId"), user.id, LOCAL_QUIZ_PIPELINE_VERSION)
     .first<{ id: string; video_id: string; primer: string; watched: number }>();
   if (!quiz) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
 
@@ -442,9 +441,9 @@ async function getAttempt(
 ): Promise<AttemptRow> {
   const row = await db
     .prepare(
-      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, (SELECT gj.transcript_key FROM generation_jobs gj WHERE gj.quiz_id = a.quiz_id ORDER BY gj.updated_at DESC LIMIT 1) AS transcript_key FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
+      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, (SELECT gj.transcript_key FROM generation_jobs gj WHERE gj.quiz_id = a.quiz_id ORDER BY gj.updated_at DESC LIMIT 1) AS transcript_key FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id AND q.pipeline_version = ? AND q.quality_status = 'passed' LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
     )
-    .bind(attemptId, userId)
+    .bind(LOCAL_QUIZ_PIPELINE_VERSION, attemptId, userId)
     .first();
   const parsed = AttemptRowSchema.safeParse(row);
   if (!parsed.success)

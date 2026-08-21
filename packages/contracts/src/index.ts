@@ -42,7 +42,11 @@ export const GenerationStageSchema = z.enum([
   "preparing_audio",
   "downloading_model",
   "transcribing_device",
+  "planning_questions",
   "creating_questions",
+  "reviewing_questions",
+  "repairing_questions",
+  "finalizing_questions",
   "complete",
   "failed",
 ]);
@@ -53,7 +57,13 @@ export const TranscriptSegmentSchema = z
     id: z.string().min(1).max(80),
     startMs: z.number().int().nonnegative(),
     endMs: z.number().int().positive(),
-    text: z.string().trim().min(1).max(2_000),
+    text: z
+      .string()
+      .min(1)
+      .max(2_000)
+      .refine((text) => text.trim().length > 0, {
+        message: "Transcript text must contain visible content",
+      }),
   })
   .refine((segment) => segment.endMs > segment.startMs, {
     message: "endMs must be greater than startMs",
@@ -304,6 +314,7 @@ export const TranscriptUploadRequestSchema = z
         "server_captions",
         "youtube_signed_captions",
         "youtube_text_provider",
+        "youtube_browser_extension",
         "device_whisper",
       ])
       .optional(),
@@ -358,33 +369,60 @@ export const GenerationStatusSchema = z.object({
 });
 export type GenerationStatus = z.infer<typeof GenerationStatusSchema>;
 
-export const ConceptSchema = z.object({
-  id: z.string().min(1).max(80),
-  title: z.string().min(1).max(160),
-  summary: z.string().min(1).max(600),
-  evidenceSegmentIds: z.array(z.string()).min(1),
-});
+export const ConceptSchema = z
+  .object({
+    id: z.string().min(1).max(80),
+    title: z.string().min(1).max(160),
+    summary: z.string().min(1).max(600),
+    evidenceSegmentIds: z.array(z.string()).min(1),
+  })
+  .strict();
 export type Concept = z.infer<typeof ConceptSchema>;
 
-const QuestionBaseSchema = z.object({
-  id: z.string().min(1).max(80),
-  conceptId: z.string().min(1).max(80),
-  prompt: z.string().min(4).max(1_200),
-  explanation: z.string().min(4).max(600),
-  evidenceSegmentIds: z
-    .array(z.string())
-    .min(1)
-    .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
-  difficulty: z.number().int().min(1).max(5),
-  reformulatedPrompt: z.string().min(4).max(1_200),
-});
+const QuestionBaseSchema = z
+  .object({
+    id: z.string().min(1).max(80),
+    conceptId: z.string().min(1).max(80),
+    prompt: z.string().min(4).max(1_200),
+    explanation: z.string().min(4).max(600),
+    evidenceSegmentIds: z
+      .array(z.string())
+      .min(1)
+      .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
+    difficulty: z.number().int().min(1).max(5),
+    reformulatedPrompt: z.string().min(4).max(1_200),
+  })
+  .strict();
+
+export function normalizeQuizOption(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .replace(/[\p{P}\p{S}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export const MultipleChoiceQuestionSchema = QuestionBaseSchema.extend({
   type: z.literal("multiple_choice"),
-  options: z.array(z.string().min(1).max(500)).min(2).max(6),
-  correctAnswer: z.number().int().nonnegative(),
-}).refine((question) => question.correctAnswer < question.options.length, {
-  message: "correctAnswer must index an option",
+  options: z.array(z.string().trim().min(1).max(500)).length(4),
+  correctAnswer: z.number().int().min(0).max(3),
+}).superRefine((question, context) => {
+  const normalized = question.options.map(normalizeQuizOption);
+  if (normalized.some((option) => !option)) {
+    context.addIssue({
+      code: "custom",
+      path: ["options"],
+      message: "Options must contain meaningful text",
+    });
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    context.addIssue({
+      code: "custom",
+      path: ["options"],
+      message: "Options must be unique after normalization",
+    });
+  }
 });
 
 export const TrueFalseQuestionSchema = QuestionBaseSchema.extend({
@@ -419,15 +457,65 @@ export const GeneratedQuestionSchema = z.discriminatedUnion("type", [
 ]);
 export type GeneratedQuestion = z.infer<typeof GeneratedQuestionSchema>;
 
-export const QuizGenerationSchema = z.object({
-  educational: z.literal(true),
-  classificationReason: z.string().min(4).max(500),
-  sourceLanguage: z.string().min(2).max(35),
-  primer: z.string().min(20).max(2_000),
-  concepts: z.array(ConceptSchema).min(2).max(20),
-  questions: z.array(GeneratedQuestionSchema).min(5).max(30),
-});
+export const QuizGenerationSchema = z
+  .object({
+    educational: z.literal(true),
+    classificationReason: z.string().min(4).max(500),
+    sourceLanguage: z.string().min(2).max(35),
+    primer: z.string().min(20).max(2_000),
+    concepts: z.array(ConceptSchema).min(2).max(20),
+    questions: z.array(GeneratedQuestionSchema).min(5).max(30),
+  })
+  .strict();
 export type QuizGeneration = z.infer<typeof QuizGenerationSchema>;
+
+export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
+export const LOCAL_QUIZ_PIPELINE_VERSION = 5 as const;
+export const LOCAL_QUIZ_MODEL = "deepseek-v4-flash" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-v1.0" as const;
+export const LOCAL_QUIZ_VALIDATOR_VERSION = "validator-local-v1.0" as const;
+
+export const LocalQuizContextSchema = z
+  .object({
+    protocolVersion: z.literal(LOCAL_QUIZ_PROTOCOL_VERSION),
+    jobId: z.string().uuid(),
+    videoId: z.string().uuid(),
+    title: z.string().min(1).max(500),
+    quizLanguage: LanguageSchema,
+    questionTypes: QuizQuestionTypesSchema,
+    questionCount: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    transcriptFingerprint: z.string().regex(/^[a-f0-9]{8}$/),
+    transcriptLanguage: z.string().min(2).max(35),
+    segments: z
+      .array(TranscriptSegmentSchema)
+      .min(1)
+      .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
+  })
+  .strict();
+export type LocalQuizContext = z.infer<typeof LocalQuizContextSchema>;
+
+export const LocalQuizSubmissionSchema = z
+  .object({
+    protocolVersion: z.literal(LOCAL_QUIZ_PROTOCOL_VERSION),
+    pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
+    model: z.literal(LOCAL_QUIZ_MODEL),
+    reasoningEffort: z.literal("high"),
+    promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
+    validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
+    transcriptFingerprint: z.string().regex(/^[a-f0-9]{8}$/),
+    generation: QuizGenerationSchema,
+    metrics: z
+      .object({
+        aiCalls: z.literal(1),
+        inputTokens: z.number().int().nonnegative(),
+        outputTokens: z.number().int().nonnegative(),
+        reasoningTokens: z.number().int().nonnegative(),
+        elapsedMs: z.number().int().positive(),
+      })
+      .strict(),
+  })
+  .strict();
+export type LocalQuizSubmission = z.infer<typeof LocalQuizSubmissionSchema>;
 
 export const QuizStartRequestSchema = z.object({
   mode: z.enum(["learn", "review"]).default("learn"),

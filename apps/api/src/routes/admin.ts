@@ -21,7 +21,6 @@ import { now } from "../lib/ids";
 import { parseJson } from "../lib/validation";
 import { requireAdminPermission } from "../middleware/admin";
 import type { ApiBindings } from "../middleware/authenticated";
-import type { GenerationQueueMessage } from "../types";
 
 const ListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -375,56 +374,6 @@ adminRouter.get("/jobs", requireAdminPermission("jobs:read"), async (c) => {
     }),
   );
 });
-
-adminRouter.post(
-  "/jobs/:jobId/retry",
-  requireAdminPermission("jobs:manage"),
-  async (c) => {
-    const actor = c.get("user");
-    const input = await parseJson(c, AdminReasonRequestSchema);
-    const job = await getManagedJob(c.env.DB, c.req.param("jobId"));
-    if (job.state === "complete")
-      throw new ApiError(
-        409,
-        "generation_complete",
-        "This lesson is already complete.",
-      );
-    if (job.cancel_requested || job.error_code === "generation_cancelled") {
-      throw new ApiError(
-        409,
-        "generation_cancelled",
-        "A cancelled generation cannot be retried.",
-      );
-    }
-    const statements = [];
-    if (job.state === "failed") {
-      statements.push(
-        c.env.DB.prepare(
-          "UPDATE generation_jobs SET state = 'queued', stage = 'creating_questions', progress = 0, error_code = NULL, error_message = NULL, updated_at = ? WHERE id = ? AND state = 'failed' AND cancel_requested = 0",
-        ).bind(now(), job.id),
-      );
-    }
-    statements.push(
-      adminAuditStatement(c.env.DB, {
-        actorUserId: actor.id,
-        action: "generation.retry",
-        targetType: "generation_job",
-        targetId: job.id,
-        reason: input.reason,
-        metadata: { previousState: job.state },
-      }),
-    );
-    await c.env.DB.batch(statements);
-    if (job.state !== "running") {
-      await c.env.GENERATION_QUEUE.send({
-        jobId: job.id,
-        userId: job.user_id,
-        videoId: job.video_id,
-      } satisfies GenerationQueueMessage);
-    }
-    return c.json(AdminMutationResponseSchema.parse({ ok: true }));
-  },
-);
 
 adminRouter.post(
   "/jobs/:jobId/cancel",
