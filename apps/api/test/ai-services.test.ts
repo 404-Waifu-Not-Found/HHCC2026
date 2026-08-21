@@ -74,6 +74,7 @@ describe("gradeShortAnswerWithAi", () => {
       tool_choice: { type: "function", function: { name: "grade_answer" } },
     });
     expect(body.messages[0]?.content).toContain("untrusted data");
+    expect(body.messages[0]?.content).toContain("incidental qualifiers");
     expect(payload).toMatchObject({
       question: "What does chlorophyll absorb?",
       sampleAnswer: "Light energy.",

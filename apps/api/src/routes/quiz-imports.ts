@@ -48,7 +48,10 @@ import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 
 const QUIZ_IMPORT_VERSION = "extension-quiz-import-v3" as const;
-const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
+// Match the attempt claim lease: background local generation must survive a
+// learner pause and a delayed browser heartbeat without being stolen by
+// automatic recovery while a DeepSeek call is still active.
+const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 5 * 60 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
 // Keep the authoritative Worker budget aligned with the local engine: one
 // primary call plus two automatic repairs for a failed ordinal.

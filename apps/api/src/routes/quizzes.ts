@@ -44,7 +44,13 @@ const QuestionTypeSchema = z.enum([
   "ordering",
   "short_answer",
 ]);
-const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
+// A learner can reasonably spend more than thirty seconds reading, answering,
+// or reviewing feedback while the local DeepSeek stream continues in the
+// background.  The old lease let the next status poll steal that live claim
+// and mark its active call as abandoned. Heartbeats still renew this lease;
+// the longer window only protects a healthy stream from short UI pauses or a
+// delayed browser heartbeat.
+const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 5 * 60 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
 const AUTOMATIC_RECOVERY_RETRY_LIMIT = 3;
 const AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
