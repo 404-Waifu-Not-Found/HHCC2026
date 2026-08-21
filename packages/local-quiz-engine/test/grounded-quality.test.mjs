@@ -16,6 +16,20 @@ test("learner-facing quality rejects presentation characterization wording", () 
   );
 });
 
+test("learner-facing quality rejects inverted catenation definitions", () => {
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "With four valence electrons, carbon often catenates, which means it bonds to hydrogen.",
+      concept: "carbon catenation",
+      answerText: "False",
+      explanation:
+        "Catenation means carbon bonds to other carbon atoms, not hydrogen.",
+    }),
+    "source_grounding_invalid",
+  );
+});
+
 test("prompt-first grounding rejects an unrelated domain but keeps a supported paraphrase", () => {
   const primary =
     "Black and white images represent each pixel with a binary value indicating whether it is black or white.";

@@ -335,6 +335,13 @@ const MALFORMED_WH_ACTION_STEM_PATTERN =
 // presentation wording the condition being tested.
 const PRESENTATION_CHARACTERIZATION_PATTERN =
   /\b(?:when|if)\s+(?:it|this|that|the\s+[^?]{1,90})\s+(?:is|was|are|were)\s+(?:described|presented|framed|characterized|referred\s+to)\b|\b(?:described|presented|framed|characterized|referred\s+to)\s+as\s+(?:motivated|important|central|useful|helpful|interesting|effective|valuable|necessary|key|significant)\b/iu;
+// Definition polarity must not be inverted inside a true/false assertion.
+// Catenation is the canonical example: it means carbon bonds to carbon (it
+// does not mean bonding to hydrogen). This narrow guard rejects the malformed
+// learner-visible claim and lets the normal local-AI retry select a supported
+// definition instead of preserving a misleading question.
+const CONTRADICTORY_CHEMISTRY_DEFINITION_PATTERN =
+  /\b(?:catenat(?:e|es|ed|ing)|catenation)\b[^?!.]{0,100}\b(?:bond(?:s|ed|ing)?|attach(?:es|ed|ing)?)\b[^?!.]{0,60}\b(?:hydrogen|h)\b/iu;
 const PLURAL_HOW_SINGULAR_PRONOUN_PATTERN =
   /^\s*how\s+(?:do|can|could|may|might)\b/iu;
 const NAMED_CASE_RECALL_PATTERN =
@@ -589,6 +596,9 @@ export function questionConceptFailure(candidate) {
   }
   if (PRESENTATION_CHARACTERIZATION_PATTERN.test(question)) {
     return "source_framing_invalid";
+  }
+  if (CONTRADICTORY_CHEMISTRY_DEFINITION_PATTERN.test(inspected)) {
+    return "source_grounding_invalid";
   }
   if (
     FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
