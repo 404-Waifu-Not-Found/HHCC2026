@@ -9,11 +9,26 @@ export type FirstQuestionEtaInput = {
   firstQuestionType: QuizQuestionType;
 };
 
+export type FirstQuestionRetryEtaPhase = {
+  attempt: number;
+  maxAttempts: number;
+  retryDelayMs: number;
+  startedAtMs: number;
+  estimatedDurationMs: number;
+};
+
+type FirstQuestionRetryProgress = {
+  attempt?: number;
+  maxAttempts?: number;
+  retryDelayMs?: number;
+};
+
 const DEFAULT_CAPTION_WORD_COUNT = 2_500;
 const ESTIMATED_CAPTION_WORDS_PER_MINUTE = 155;
 const MAX_CALIBRATED_CAPTION_WORD_COUNT = 12_000;
 const MIN_FIRST_QUESTION_ETA_MS = 15_000;
 const MAX_FIRST_QUESTION_ETA_MS = 35_000;
+const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
 
 const FIRST_QUESTION_TYPE_ADJUSTMENT_MS: Record<QuizQuestionType, number> = {
   true_false: 0,
@@ -74,6 +89,49 @@ export function estimatedFirstQuestionDurationMs(
       MIN_FIRST_QUESTION_ETA_MS,
       Math.min(MAX_FIRST_QUESTION_ETA_MS, estimateMs),
     ),
+  );
+}
+
+/**
+ * Start one retry ETA phase. Repeated progress events for the same attempt
+ * preserve the original phase clock so a streaming retry cannot continually
+ * reset its own countdown.
+ */
+export function updateFirstQuestionRetryEtaPhase(
+  current: FirstQuestionRetryEtaPhase | undefined,
+  progress: FirstQuestionRetryProgress,
+  baseEstimateMs: number,
+  nowMs = Date.now(),
+): FirstQuestionRetryEtaPhase | undefined {
+  if (
+    !Number.isInteger(progress.attempt) ||
+    !Number.isInteger(progress.maxAttempts) ||
+    !Number.isInteger(progress.retryDelayMs) ||
+    (progress.attempt ?? 0) < 1 ||
+    (progress.maxAttempts ?? 0) < (progress.attempt ?? 0) ||
+    (progress.retryDelayMs ?? -1) < 0
+  ) {
+    return current;
+  }
+  if (current?.attempt === progress.attempt) return current;
+
+  const retryDelayMs = Math.min(MAX_RETRY_DELAY_MS, progress.retryDelayMs ?? 0);
+  return {
+    attempt: progress.attempt!,
+    maxAttempts: progress.maxAttempts!,
+    retryDelayMs,
+    startedAtMs: nowMs,
+    estimatedDurationMs: retryDelayMs + Math.max(0, baseEstimateMs),
+  };
+}
+
+export function firstQuestionRetryRemainingMs(
+  phase: FirstQuestionRetryEtaPhase,
+  nowMs = Date.now(),
+): number {
+  return Math.max(
+    0,
+    phase.estimatedDurationMs - Math.max(0, nowMs - phase.startedAtMs),
   );
 }
 

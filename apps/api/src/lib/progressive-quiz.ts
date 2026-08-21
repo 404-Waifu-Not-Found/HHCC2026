@@ -3,16 +3,18 @@ import {
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
   LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION,
-  LOCAL_QUIZ_PROMPT_VERSION,
   LOCAL_QUIZ_VALIDATOR_VERSION,
   LocalAcceptedQuestionSummarySchema,
+  LocalQuizPromptVersionSchema,
   QuizQuestionTypesSchema,
   questionTypePlanForSelection,
   type AttemptGenerationAvailability,
   type LocalConceptQuizQuestion,
+  type LocalConceptQuizQuestionChunk,
 } from "@clipquest/contracts";
 import { z } from "zod";
 import { ApiError } from "./errors";
+import { compareFormulaAnswer } from "./math-expression";
 
 const PlannedQuestionCountSchema = z.union([
   z.literal(5),
@@ -88,7 +90,7 @@ export const ProgressiveQuizSummarySchema = z
     pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
     model: z.literal(LOCAL_QUIZ_MODEL),
     reasoningEffort: z.literal("high"),
-    promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
+    promptVersion: LocalQuizPromptVersionSchema,
     validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
     generationState: z.enum([
       "generating",
@@ -170,6 +172,27 @@ export const ProgressiveQuizSummarySchema = z
 export type ProgressiveQuizSummary = z.infer<
   typeof ProgressiveQuizSummarySchema
 >;
+
+export function assertProgressiveChunkMetadata(
+  summary: ProgressiveQuizSummary,
+  chunk: Pick<
+    LocalConceptQuizQuestionChunk,
+    "pipelineVersion" | "model" | "promptVersion" | "validatorVersion"
+  >,
+): void {
+  if (
+    chunk.pipelineVersion !== summary.pipelineVersion ||
+    chunk.model !== summary.model ||
+    chunk.promptVersion !== summary.promptVersion ||
+    chunk.validatorVersion !== summary.validatorVersion
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_generation_metadata_mismatch",
+      "Every streamed question must use the quiz's original generation metadata.",
+    );
+  }
+}
 
 const ProgressiveGenerationSnapshotRowSchema = z.object({
   quiz_id: z.string().uuid(),
@@ -340,6 +363,13 @@ export function gradeProgressiveShortAnswer(input: {
   requiredIdeas: string[];
   acceptableAlternatives: string[];
 }): boolean {
+  const formulaComparison = compareFormulaAnswer(
+    input.answer,
+    input.acceptableAlternatives,
+  );
+  if (formulaComparison === "match") return true;
+  if (formulaComparison === "mismatch") return false;
+
   const normalizedAnswer = normalizeRubricText(input.answer);
   const answerTokens = rubricTokens(input.answer);
   if (!normalizedAnswer || answerTokens.size === 0) return false;

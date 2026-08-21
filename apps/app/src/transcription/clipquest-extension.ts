@@ -66,12 +66,14 @@ type ExtensionGenerationProgressMessage = {
   attempt?: number;
   maxAttempts?: number;
   status?: "generating" | "retrying" | "complete";
+  retryDelayMs?: number;
 };
 
 export type LocalGenerationProgress = {
   attempt?: number;
   maxAttempts?: number;
   status?: "generating" | "retrying" | "complete";
+  retryDelayMs?: number;
 };
 
 type ExtensionGenerationResultMessage = {
@@ -185,11 +187,19 @@ function isGenerationProgressMessage(
     message.progress >= 0 &&
     message.progress <= 1 &&
     (message.attempt === undefined ||
-      (Number.isInteger(message.attempt) && message.attempt >= 1)) &&
+      (Number.isInteger(message.attempt) &&
+        message.attempt >= 1 &&
+        message.attempt <= 10)) &&
     (message.maxAttempts === undefined ||
-      (Number.isInteger(message.maxAttempts) && message.maxAttempts >= 1)) &&
+      (Number.isInteger(message.maxAttempts) &&
+        message.maxAttempts >= 1 &&
+        message.maxAttempts <= 10)) &&
     (message.status === undefined ||
-      ["generating", "retrying", "complete"].includes(message.status))
+      ["generating", "retrying", "complete"].includes(message.status)) &&
+    (message.retryDelayMs === undefined ||
+      (Number.isInteger(message.retryDelayMs) &&
+        message.retryDelayMs >= 0 &&
+        message.retryDelayMs <= 300_000))
   );
 }
 
@@ -496,6 +506,7 @@ export async function requestExtensionLocalQuiz(
           attempt: event.data.attempt,
           maxAttempts: event.data.maxAttempts,
           status: event.data.status,
+          retryDelayMs: event.data.retryDelayMs,
         });
         return;
       }

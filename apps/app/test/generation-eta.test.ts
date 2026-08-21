@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   countCaptionWords,
   estimatedFirstQuestionDurationMs,
+  firstQuestionRetryRemainingMs,
+  updateFirstQuestionRetryEtaPhase,
 } from "../src/generation/eta";
 
 describe("first-question ETA", () => {
@@ -105,5 +107,56 @@ describe("caption word counting", () => {
   it("produces word-equivalents for unspaced CJK captions", () => {
     expect(countCaptionWords([{ text: "你好世界" }])).toBe(2);
     expect(countCaptionWords([{ text: "学習です" }])).toBe(2);
+  });
+});
+
+describe("retry-aware first-question ETA", () => {
+  it("adds the actual retry delay and resets only for a new attempt", () => {
+    const first = updateFirstQuestionRetryEtaPhase(
+      undefined,
+      { attempt: 2, maxAttempts: 4, retryDelayMs: 5_000 },
+      20_000,
+      1_000,
+    );
+    expect(first).toEqual({
+      attempt: 2,
+      maxAttempts: 4,
+      retryDelayMs: 5_000,
+      startedAtMs: 1_000,
+      estimatedDurationMs: 25_000,
+    });
+    expect(
+      updateFirstQuestionRetryEtaPhase(
+        first,
+        { attempt: 2, maxAttempts: 4, retryDelayMs: 9_000 },
+        20_000,
+        8_000,
+      ),
+    ).toBe(first);
+
+    expect(
+      updateFirstQuestionRetryEtaPhase(
+        first,
+        { attempt: 3, maxAttempts: 4, retryDelayMs: 2_000 },
+        20_000,
+        8_000,
+      ),
+    ).toMatchObject({
+      attempt: 3,
+      startedAtMs: 8_000,
+      estimatedDurationMs: 22_000,
+    });
+  });
+
+  it("never returns a negative retry countdown", () => {
+    const phase = updateFirstQuestionRetryEtaPhase(
+      undefined,
+      { attempt: 2, maxAttempts: 4, retryDelayMs: 1_000 },
+      15_000,
+      10_000,
+    );
+    expect(phase).toBeDefined();
+    expect(firstQuestionRetryRemainingMs(phase!, 20_000)).toBe(6_000);
+    expect(firstQuestionRetryRemainingMs(phase!, 40_000)).toBe(0);
   });
 });

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 import {
+  boundedRetryDelayMilliseconds,
   generateQuizFromPlainText,
   randomizeMultipleChoiceOptions,
 } from "../src/local-generator.js";
@@ -348,7 +349,7 @@ test("release builds preserve the loaded unpacked extension directory", () => {
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.0");
+  assert.equal(manifest.version, "0.8.1");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -361,6 +362,18 @@ test("the popup exposes only DeepSeek configuration", () => {
   assert.doesNotMatch(popupHtml, /Download \.txt/);
   assert.doesNotMatch(popup, /youtubeVideoId|quiz-output|download-text/);
   assert.match(background, /captionsToPlainText/);
+});
+
+test("release 0.8.1 uses prompt v5.1 with canonical formula guidance", () => {
+  assert.match(generator, /quiz-local-json-stream-v5\.1/);
+  assert.match(generator, /standalone canonical formula/);
+  assert.match(generator, /equivalent notation variants/);
+});
+
+test("retry delays honor backoff and Retry-After within a safe bound", () => {
+  assert.equal(boundedRetryDelayMilliseconds(1, 0), 750);
+  assert.equal(boundedRetryDelayMilliseconds(2, 10_000), 10_000);
+  assert.equal(boundedRetryDelayMilliseconds(3, 900_000), 300_000);
 });
 
 test("caption acquisition never creates a visible fetch tab", () => {
@@ -1166,5 +1179,12 @@ test("duplicate prompts are rejected and the retry starts after accepted questio
   );
   assert.equal(result.metrics.aiCalls, 2);
   assert.equal(result.metrics.retryCount, 1);
-  assert.ok(progress.some((event) => event.detail?.status === "retrying"));
+  assert.ok(
+    progress.some(
+      (event) =>
+        event.detail?.status === "retrying" &&
+        event.detail?.maxAttempts === 4 &&
+        event.detail?.retryDelayMs === 750,
+    ),
+  );
 });

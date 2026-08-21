@@ -29,6 +29,9 @@ import { Surface } from "../../src/components/Surface";
 import {
   countCaptionWords,
   estimatedFirstQuestionDurationMs,
+  firstQuestionRetryRemainingMs,
+  updateFirstQuestionRetryEtaPhase,
+  type FirstQuestionRetryEtaPhase,
 } from "../../src/generation/eta";
 import {
   cancelProgressiveGenerationTask,
@@ -92,6 +95,8 @@ export default function GenerationScreen() {
   const [localTranscription, setLocalTranscription] = useState(false);
   const [captionWordCount, setCaptionWordCount] = useState<number>();
   const [videoDurationSeconds, setVideoDurationSeconds] = useState<number>();
+  const [retryEtaPhase, setRetryEtaPhase] =
+    useState<FirstQuestionRetryEtaPhase>();
   const questionTypes = useMemo<QuizQuestionType[]>(() => {
     const parsed = QuizQuestionTypesSchema.safeParse(
       params.questionTypes?.split(",").filter(Boolean),
@@ -163,6 +168,7 @@ export default function GenerationScreen() {
     estimatedProgressRef.current = 0;
     setEstimatedProgressState(0);
     setJourneyElapsedMs(0);
+    setRetryEtaPhase(undefined);
   }, []);
 
   useEffect(() => {
@@ -266,8 +272,15 @@ export default function GenerationScreen() {
           "ClipQuest could not verify a complete transcript for this video.",
         );
       }
-      setCaptionWordCount(countCaptionWords(segments));
+      const completeCaptionWordCount = countCaptionWords(segments);
+      setCaptionWordCount(completeCaptionWordCount);
       updateStage("creating_questions");
+      const retryBaseEstimateMs = estimatedFirstQuestionDurationMs({
+        captionWordCount: completeCaptionWordCount,
+        videoDurationSeconds: imported.video.durationSeconds || undefined,
+        questionCount,
+        firstQuestionType,
+      });
       const context: LocalQuizContext = {
         protocolVersion: 1,
         jobId: idempotencyKey,
@@ -408,7 +421,16 @@ export default function GenerationScreen() {
           signal,
           (nextStage, _progress, detail) => {
             updateStage(nextStage);
-            if (detail.status === "retrying") enqueueRetrying();
+            if (detail.status === "retrying") {
+              setRetryEtaPhase((current) =>
+                updateFirstQuestionRetryEtaPhase(
+                  current,
+                  detail,
+                  retryBaseEstimateMs,
+                ),
+              );
+              enqueueRetrying();
+            }
           },
           enqueueQuestion,
         );
@@ -446,6 +468,7 @@ export default function GenerationScreen() {
       params.videoId,
       params.watched,
       beginJourney,
+      firstQuestionType,
       questionCount,
       questionTypes,
       t,
@@ -494,6 +517,9 @@ export default function GenerationScreen() {
     0,
     Math.ceil((journeyDurationMs - journeyElapsedMs) / 1_000),
   );
+  const retrySecondsLeft = retryEtaPhase
+    ? Math.ceil(firstQuestionRetryRemainingMs(retryEtaPhase) / 1_000)
+    : undefined;
   const compactFooter = width < breakpoints.compact;
   const stageTitle = failed
     ? t("generationFailed")
@@ -606,11 +632,28 @@ export default function GenerationScreen() {
                   {t("firstQuestionEta")}
                 </Text>
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
-                  {estimatedSecondsLeft > 0
-                    ? formatFirstQuestionRemaining(estimatedSecondsLeft, locale)
-                    : t("firstQuestionTakingLonger")}
+                  {retryEtaPhase && retrySecondsLeft !== undefined
+                    ? formatRetryFirstQuestionRemaining(
+                        retryEtaPhase,
+                        retrySecondsLeft,
+                        locale,
+                      )
+                    : estimatedSecondsLeft > 0
+                      ? formatFirstQuestionRemaining(
+                          estimatedSecondsLeft,
+                          locale,
+                        )
+                      : t("firstQuestionTakingLonger")}
                 </Text>
               </View>
+              {retryEtaPhase ? (
+                <Text
+                  accessibilityLiveRegion="polite"
+                  style={styles.visuallyHidden}
+                >
+                  {formatRetryTransition(retryEtaPhase, locale)}
+                </Text>
+              ) : null}
             </View>
           </Surface>
         </MotionView>
@@ -745,6 +788,31 @@ function formatFirstQuestionRemaining(
     : `Question 1 in about ${minutes} min`;
 }
 
+function formatRetryFirstQuestionRemaining(
+  phase: FirstQuestionRetryEtaPhase,
+  seconds: number,
+  locale: "en" | "zh-CN",
+): string {
+  if (seconds <= 0) {
+    return locale === "zh-CN"
+      ? `第 ${phase.attempt}/${phase.maxAttempts} 次尝试仍在生成第一题`
+      : `Retry ${phase.attempt}/${phase.maxAttempts} is still streaming`;
+  }
+  const roundedSeconds = Math.max(5, Math.ceil(seconds / 5) * 5);
+  return locale === "zh-CN"
+    ? `正在重试 ${phase.attempt}/${phase.maxAttempts} · 第一题预计约 ${roundedSeconds} 秒后出现`
+    : `Retrying ${phase.attempt}/${phase.maxAttempts} · about ${roundedSeconds} seconds to question 1`;
+}
+
+function formatRetryTransition(
+  phase: FirstQuestionRetryEtaPhase,
+  locale: "en" | "zh-CN",
+): string {
+  return locale === "zh-CN"
+    ? `正在开始第 ${phase.attempt}/${phase.maxAttempts} 次尝试`
+    : `Starting retry ${phase.attempt} of ${phase.maxAttempts}`;
+}
+
 const styles = StyleSheet.create({
   page: { width: "100%", gap: spacing[5], paddingTop: spacing[2] },
   top: { alignItems: "center", gap: spacing[4], paddingVertical: spacing[3] },
@@ -814,6 +882,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
+  },
+  visuallyHidden: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    overflow: "hidden",
+    opacity: 0.01,
   },
   privacySurface: { padding: spacing[4] },
   privacyRow: { flexDirection: "row", alignItems: "center", gap: spacing[4] },

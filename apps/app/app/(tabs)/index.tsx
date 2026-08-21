@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   LibraryResponseSchema,
@@ -58,6 +57,13 @@ import {
   saveQuestPreferences,
 } from "../../src/state/creation";
 import {
+  claimPendingVideoHandoff,
+  clearPendingVideoHandoff,
+  createAndSavePendingVideoHandoff,
+  markPendingVideoHandoffState,
+  type PendingVideoHandoffV2,
+} from "../../src/state/pending-video-handoff";
+import {
   borders,
   breakpoints,
   radii,
@@ -68,7 +74,6 @@ import {
 type VisibleLibrary = Pick<LibraryResponse, "dueReviews" | "saved">;
 
 const emptyLibrary: VisibleLibrary = { dueReviews: [], saved: [] };
-const PENDING_URL_KEY = "clipquest:pending-url:v1";
 
 export default function HomeScreen() {
   const { t, theme, locale } = useSettings();
@@ -80,6 +85,7 @@ export default function HomeScreen() {
   const params = useLocalSearchParams<QuickOpenSearchParams>();
   const quickOpen = parseQuickOpenRequest(params);
   const quickOpenUrl = quickOpen?.url;
+  const userId = session?.user.id;
   const userEditedUrl = useRef(false);
   const importingRef = useRef(false);
   const consumedQuickOpenUrl = useRef<string | undefined>(undefined);
@@ -88,25 +94,12 @@ export default function HomeScreen() {
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string>();
+  const [activeHandoff, setActiveHandoff] = useState<PendingVideoHandoffV2>();
   const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
     ...DEFAULT_QUIZ_QUESTION_TYPES,
   ]);
   const [libraryError, setLibraryError] = useState<string>();
   const { open, openingId, error: openError } = useOpenVideoCard();
-
-  useEffect(() => {
-    let active = true;
-    void AsyncStorage.getItem(PENDING_URL_KEY)
-      .then((pendingUrl) => {
-        if (active && pendingUrl && !userEditedUrl.current) setUrl(pendingUrl);
-      })
-      .catch(() => {
-        // A draft is a convenience. Storage failure must not block manual import.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -133,7 +126,7 @@ export default function HomeScreen() {
   );
 
   const importVideo = useCallback(
-    async (rawUrl = url) => {
+    async (rawUrl = url, handoff?: PendingVideoHandoffV2) => {
       if (importingRef.current) return;
       const trimmed = rawUrl.trim();
       if (!identifyVideoSource(trimmed)) {
@@ -144,13 +137,28 @@ export default function HomeScreen() {
       importingRef.current = true;
       setImporting(true);
       setImportError(undefined);
+      let importHandoff = handoff;
       try {
+        if (importHandoff) {
+          if (!userId || importHandoff.claimedUserId !== userId) {
+            await clearPendingVideoHandoff(importHandoff.id);
+            return;
+          }
+          const inFlight = await markPendingVideoHandoffState(
+            importHandoff.id,
+            userId,
+            "in_flight",
+          );
+          if (!inFlight) return;
+          importHandoff = inFlight;
+          setActiveHandoff(inFlight);
+        }
         const imported = await apiRequest(
           "/api/videos/import",
           { method: "POST", body: jsonBody({ url: trimmed }) },
           VideoImportResponseSchema,
         );
-        const idempotencyKey = Crypto.randomUUID();
+        const idempotencyKey = importHandoff?.id ?? Crypto.randomUUID();
         void Image.prefetch(imported.video.thumbnailUrl, "memory-disk").catch(
           () => false,
         );
@@ -172,13 +180,22 @@ export default function HomeScreen() {
           quizLanguage: locale,
           questionTypes,
         });
-        await AsyncStorage.removeItem(PENDING_URL_KEY);
+        if (importHandoff) await clearPendingVideoHandoff(importHandoff.id);
+        setActiveHandoff(undefined);
         setUrl("");
         router.push({
           pathname: "/create/[videoId]",
           params: { videoId: imported.video.id },
         });
       } catch (cause) {
+        if (importHandoff && userId) {
+          const retryRequired = await markPendingVideoHandoffState(
+            importHandoff.id,
+            userId,
+            "retry_required",
+          ).catch(() => null);
+          if (retryRequired) setActiveHandoff(retryRequired);
+        }
         setImportError(
           cause instanceof Error ? cause.message : t("videoImportFailed"),
         );
@@ -187,17 +204,64 @@ export default function HomeScreen() {
         setImporting(false);
       }
     },
-    [locale, questionTypes, t, url],
+    [locale, questionTypes, t, url, userId],
   );
 
   useEffect(() => {
-    if (!quickOpenUrl || consumedQuickOpenUrl.current === quickOpenUrl) return;
+    if (!quickOpenUrl) {
+      consumedQuickOpenUrl.current = undefined;
+      return;
+    }
+    if (!userId || consumedQuickOpenUrl.current === quickOpenUrl) return;
     consumedQuickOpenUrl.current = quickOpenUrl;
     userEditedUrl.current = true;
     setUrl(quickOpenUrl);
     router.setParams({ url: undefined, autostart: undefined });
-    void importVideo(quickOpenUrl);
-  }, [importVideo, quickOpenUrl]);
+    void createAndSavePendingVideoHandoff({
+      url: quickOpenUrl,
+      source: "quick_open",
+      claimedUserId: userId,
+    })
+      .then((handoff) => {
+        setActiveHandoff(handoff);
+        return importVideo(handoff.url, handoff);
+      })
+      .catch((cause) => {
+        setImportError(
+          cause instanceof Error ? cause.message : t("videoImportFailed"),
+        );
+      });
+  }, [importVideo, quickOpenUrl, t, userId]);
+
+  useEffect(() => {
+    if (!userId || quickOpenUrl) return;
+    let active = true;
+    void claimPendingVideoHandoff(userId)
+      .then(async (handoff) => {
+        if (!active || !handoff) return;
+        userEditedUrl.current = true;
+        setUrl(handoff.url);
+        if (handoff.state === "in_flight") {
+          const retryRequired = await markPendingVideoHandoffState(
+            handoff.id,
+            userId,
+            "retry_required",
+          );
+          if (active && retryRequired) setActiveHandoff(retryRequired);
+          return;
+        }
+        setActiveHandoff(handoff);
+        if (handoff.state === "pending") {
+          await importVideo(handoff.url, handoff);
+        }
+      })
+      .catch(() => {
+        // The learner can still paste a URL if session storage is unavailable.
+      });
+    return () => {
+      active = false;
+    };
+  }, [importVideo, quickOpenUrl, userId]);
 
   const accountLabel = session?.user.name ?? session?.user.email;
   const secondaryError = libraryError ?? openError;
@@ -272,6 +336,10 @@ export default function HomeScreen() {
                   value.length - url.length > 8 &&
                   Boolean(identifyVideoSource(value.trim()));
                 userEditedUrl.current = true;
+                if (activeHandoff && value !== activeHandoff.url) {
+                  void clearPendingVideoHandoff(activeHandoff.id);
+                  setActiveHandoff(undefined);
+                }
                 setUrl(value);
                 setImportError(undefined);
                 if (pastedSupportedLink) void importVideo(value);
@@ -281,7 +349,7 @@ export default function HomeScreen() {
               keyboardType="url"
               returnKeyType="go"
               editable={!importing}
-              onSubmitEditing={() => void importVideo()}
+              onSubmitEditing={() => void importVideo(url, activeHandoff)}
             />
 
             <View
@@ -296,9 +364,11 @@ export default function HomeScreen() {
                 trailingIcon={
                   <VoxelIcon name="next" size={20} color={theme.textOnAction} />
                 }
-                onPress={() => void importVideo()}
+                onPress={() => void importVideo(url, activeHandoff)}
               >
-                {t("makeQuest")}
+                {activeHandoff?.state === "retry_required"
+                  ? t("retry")
+                  : t("makeQuest")}
               </PrimaryButton>
             </View>
           </Surface>

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ProgressiveQuizSummarySchema,
+  assertProgressiveChunkMetadata,
   generationAvailability,
   gradeProgressiveShortAnswer,
   parseProgressiveQuizSummary,
@@ -179,6 +180,34 @@ describe("progressive quiz storage state", () => {
     );
   });
 
+  it("keeps existing v5.0 banks readable and rejects mixed later chunks", () => {
+    const current = ProgressiveQuizSummarySchema.parse(summary());
+    expect(current.promptVersion).toBe("quiz-local-json-stream-v5.0");
+    expect(() =>
+      assertProgressiveChunkMetadata(current, {
+        pipelineVersion: 9,
+        model: "deepseek-v4-flash",
+        promptVersion: "quiz-local-json-stream-v5.0",
+        validatorVersion: "validator-local-progressive-v4.0",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertProgressiveChunkMetadata(current, {
+        pipelineVersion: 9,
+        model: "deepseek-v4-flash",
+        promptVersion: "quiz-local-json-stream-v5.1",
+        validatorVersion: "validator-local-progressive-v4.0",
+      }),
+    ).toThrow("Every streamed question must use the quiz's original");
+
+    expect(
+      ProgressiveQuizSummarySchema.safeParse({
+        ...summary(),
+        promptVersion: "quiz-local-json-stream-v5.1",
+      }).success,
+    ).toBe(true);
+  });
+
   it("adds pipeline-9 indexes without dropping the pipeline-7 index", () => {
     const migration = readFileSync(
       resolve(
@@ -240,5 +269,39 @@ describe("progressive short-answer grading", () => {
     expect(gradeProgressiveShortAnswer({ answer: "积分", ...rubric })).toBe(
       false,
     );
+  });
+
+  describe("formula-aware grading", () => {
+    const quotientRuleRubric = {
+      requiredIdeas: [
+        "differentiate the numerator and denominator",
+        "subtract the cross products in the correct order",
+        "divide by the square of the denominator",
+      ],
+      acceptableAlternatives: ["(u'v - uv') / v^2"],
+    };
+
+    it.each([
+      "(v·u′ - u·v′) / v²",
+      "((du/dx) v - u (dv/dx)) / (v^2)",
+      "For u(x)/v(x), the derivative is [v u'(x) - v'(x) u(x)] / v².",
+    ])("accepts a quotient-rule equivalent: %s", (answer) => {
+      expect(
+        gradeProgressiveShortAnswer({ answer, ...quotientRuleRubric }),
+      ).toBe(true);
+    });
+
+    it.each([
+      "(uv' - u'v) / v²",
+      "(u'v + uv') / v²",
+      "(u'v - uv') / v",
+      "(u'v - uv') / u²",
+      "u'v - uv' / v²",
+      "differentiate numerator denominator subtract square",
+    ])("rejects a structurally wrong formula: %s", (answer) => {
+      expect(
+        gradeProgressiveShortAnswer({ answer, ...quotientRuleRubric }),
+      ).toBe(false);
+    });
   });
 });

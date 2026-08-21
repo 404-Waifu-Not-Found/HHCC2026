@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { identifyVideoSource } from "@clipquest/contracts";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -9,6 +8,7 @@ import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { Surface } from "../../src/components/Surface";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { createAndSavePendingVideoHandoff } from "../../src/state/pending-video-handoff";
 import { spacing, typography } from "../../src/theme/tokens";
 
 export default function WelcomeScreen() {
@@ -32,7 +32,10 @@ export default function WelcomeScreen() {
     setSaving(true);
     setError(undefined);
     try {
-      await AsyncStorage.setItem("clipquest:pending-url:v1", trimmed);
+      await createAndSavePendingVideoHandoff({
+        url: trimmed,
+        source: "welcome",
+      });
       router.push("/(auth)/sign-up");
     } finally {
       setSaving(false);

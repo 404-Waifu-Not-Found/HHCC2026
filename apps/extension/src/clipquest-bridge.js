@@ -86,6 +86,7 @@
             attempt: response.attempt,
             maxAttempts: response.maxAttempts,
             status: response.status,
+            retryDelayMs: response.retryDelayMs,
           });
           return;
         }

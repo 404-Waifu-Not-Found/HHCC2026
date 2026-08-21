@@ -1,6 +1,6 @@
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Redirect, Tabs } from "expo-router";
-import type { ComponentProps } from "react";
+import { useEffect, type ComponentProps } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -9,9 +9,10 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { authClient } from "../../src/lib/auth-client";
+import { useAppSession } from "../../src/lib/auth-client";
 import { BrandLockup } from "../../src/components/BrandLockup";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { observePendingHandoffUser } from "../../src/state/pending-video-handoff";
 import {
   borders,
   breakpoints,
@@ -34,10 +35,14 @@ type LearningTabBarProps = Parameters<
 >[0];
 
 export default function TabLayout() {
-  const { data, isPending } = authClient.useSession();
+  const { data, isPending } = useAppSession();
   const { reduceMotion, t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
+
+  useEffect(() => {
+    if (data?.user.id) void observePendingHandoffUser(data.user.id);
+  }, [data?.user.id]);
 
   if (isPending) {
     return (

@@ -5,14 +5,12 @@ import {
   ExtensionQuizImportResponseSchema,
   ExtensionQuizProgressiveImportRequestSchema,
   ExtensionQuizProgressiveImportResponseSchema,
-  LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
   LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION,
-  LOCAL_QUIZ_PROMPT_VERSION,
-  LOCAL_QUIZ_VALIDATOR_VERSION,
   type ExtensionQuizImportRequest,
   type ExtensionQuizProgressiveImportRequest,
   type LocalConceptQuizQuestion,
+  type LocalConceptQuizQuestionChunk,
   questionTypePlanForSelection,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
@@ -24,6 +22,7 @@ import { enforceRateLimit } from "../lib/rate-limit";
 import {
   ProgressiveQuizSummarySchema,
   acceptedQuestionSummary,
+  assertProgressiveChunkMetadata,
   readProgressiveGenerationSnapshot,
   tryProgressiveQuizSummary,
   type ProgressiveQuizSummary,
@@ -123,6 +122,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
       "This quiz does not support current progressive question delivery.",
     );
   }
+  assertProgressiveChunkMetadata(summary, input.chunk);
   if (input.chunk.totalQuestions !== summary.plannedCount) {
     throw new ApiError(
       409,
@@ -228,6 +228,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
         input.chunk.question,
         input.chunk.startIndex,
         summary.plannedCount,
+        input.chunk,
         questionId,
       ),
       c.env.DB.prepare(
@@ -396,11 +397,11 @@ async function persistProgressiveQuiz(input: {
   const summary = ProgressiveQuizSummarySchema.parse({
     source: "extension-local-json-stream",
     importVersion: LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION,
-    pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
-    model: LOCAL_QUIZ_MODEL,
+    pipelineVersion: chunk.pipelineVersion,
+    model: chunk.model,
     reasoningEffort: "high",
-    promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
-    validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+    promptVersion: chunk.promptVersion,
+    validatorVersion: chunk.validatorVersion,
     generationState: "generating",
     requestedQuestionTypes: input.input.questionTypes,
     generatedQuestionTypes: [question.type],
@@ -439,7 +440,14 @@ async function persistProgressiveQuiz(input: {
         input.importKey,
         timestamp,
       ),
-    questionInsert(input.db, input.quizId, question, 0, chunk.totalQuestions),
+    questionInsert(
+      input.db,
+      input.quizId,
+      question,
+      0,
+      chunk.totalQuestions,
+      chunk,
+    ),
     input.db
       .prepare(
         "INSERT INTO mastery (user_id, video_id, state, updated_at) VALUES (?, ?, 'not_started', ?) ON CONFLICT(user_id, video_id) DO NOTHING",
@@ -591,11 +599,11 @@ async function persistImportedQuiz(input: {
   const summary = {
     source: "extension-local-tool",
     importVersion: QUIZ_IMPORT_VERSION,
-    pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
-    model: LOCAL_QUIZ_MODEL,
+    pipelineVersion: generatedQuiz.pipelineVersion,
+    model: generatedQuiz.model,
     reasoningEffort: "high",
-    promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
-    validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+    promptVersion: generatedQuiz.promptVersion,
+    validatorVersion: generatedQuiz.validatorVersion,
     qualityStatus: "passed",
     requestedQuestionTypes: input.input.questionTypes,
     generatedQuestionTypes: questions.map((question) => question.type),
@@ -639,6 +647,7 @@ async function persistImportedQuiz(input: {
         question,
         ordinal,
         questions.length,
+        generatedQuiz,
       ),
     ),
     input.db
@@ -669,6 +678,10 @@ function questionInsert(
   question: LocalConceptQuizQuestion,
   ordinal: number,
   questionCount: number,
+  metadata: Pick<
+    LocalConceptQuizQuestionChunk,
+    "pipelineVersion" | "model" | "promptVersion" | "validatorVersion"
+  >,
   questionId = createId(),
 ): D1PreparedStatement {
   const stored = storedQuestionFields(question);
@@ -697,9 +710,10 @@ function questionInsert(
         blueprintSlot: question.id,
         concept: question.concept,
         questionType: question.type,
-        model: LOCAL_QUIZ_MODEL,
-        promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
-        validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+        pipelineVersion: metadata.pipelineVersion,
+        model: metadata.model,
+        promptVersion: metadata.promptVersion,
+        validatorVersion: metadata.validatorVersion,
         schemaValidated: true,
         transcriptStored: false,
       }),

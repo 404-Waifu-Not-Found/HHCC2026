@@ -112,6 +112,28 @@ describe("generated questions", () => {
     ).toBe(false);
   });
 
+  it("accepts prompt v5.0 and v5.1 while rejecting unknown prompt metadata", () => {
+    const quiz = localQuizResult(5);
+    expect(
+      LocalConceptQuizResultSchema.safeParse({
+        ...quiz,
+        promptVersion: "quiz-local-json-stream-v5.0",
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalConceptQuizResultSchema.safeParse({
+        ...quiz,
+        promptVersion: "quiz-local-json-stream-v5.1",
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalConceptQuizResultSchema.safeParse({
+        ...quiz,
+        promptVersion: "quiz-local-json-stream-v5.2",
+      }).success,
+    ).toBe(false);
+  });
+
   it("requires the local quiz count to match its session length", () => {
     expect(
       ExtensionQuizImportRequestSchema.safeParse({

@@ -3,13 +3,14 @@ import { captionsToPlainText } from "./caption-text.js";
 const MODEL = "deepseek-v4-flash";
 const PROTOCOL_VERSION = 5;
 const PIPELINE_VERSION = 9;
-const PROMPT_VERSION = "quiz-local-json-stream-v5.0";
+const PROMPT_VERSION = "quiz-local-json-stream-v5.1";
 const VALIDATOR_VERSION = "validator-local-progressive-v4.0";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const GENERATION_OUTPUT_TOKENS = 48_000;
 const MAX_NO_PROGRESS_RETRIES = 3;
 const MAX_GENERATION_ATTEMPTS = MAX_NO_PROGRESS_RETRIES + 1;
+const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
 const QUESTION_CHUNK_SIZE = 5;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
@@ -38,6 +39,17 @@ function retryAfterMilliseconds(value, now = Date.now()) {
   }
   const date = Date.parse(value);
   return Number.isFinite(date) ? Math.max(0, date - now) : 0;
+}
+
+export function boundedRetryDelayMilliseconds(
+  consecutiveFailures,
+  retryAfterMs = 0,
+) {
+  const exponentialDelay = 750 * 2 ** Math.max(0, consecutiveFailures - 1);
+  return Math.min(
+    MAX_RETRY_DELAY_MS,
+    Math.max(exponentialDelay, Math.max(0, retryAfterMs)),
+  );
 }
 
 function strictJson(text, operation) {
@@ -180,7 +192,8 @@ function quizResponseSchema(questionCount, questionOffset = 0) {
                 type: { type: "string", enum: ["short_answer"] },
                 answer: {
                   type: "string",
-                  description: "A complete reference answer.",
+                  description:
+                    "A complete reference answer. For a formula question, this must be the standalone canonical formula with no surrounding prose.",
                 },
                 rubricIdeas: {
                   type: "array",
@@ -285,7 +298,7 @@ Create exactly ${input.questionCount} questions for positions q${input.questionO
 The type of every slot is server-assigned and mandatory:
 ${typePlan}
 ${truthPlan ? `\nThe answer polarity of every true/false slot is also mandatory:\n${truthPlan}\n` : ""}
-For multiple choice, provide exactly four unique choices, exactly one supported answer, and three plausible but lesson-contradicted distractors. For true/false, write a complete declarative statement and include a correction or confirmation. For short answer, provide a complete reference answer, all required rubric ideas, and equivalent acceptable answers. Do not include fields belonging to another question type.${retryInstruction}
+For multiple choice, provide exactly four unique choices, exactly one supported answer, and three plausible but lesson-contradicted distractors. For true/false, write a complete declarative statement and include a correction or confirmation. For short answer, provide a complete reference answer, all required rubric ideas, and equivalent acceptable answers. When a short-answer question asks for a mathematical formula, put only one standalone canonical formula in answer and put equivalent notation variants in acceptableAnswers; never wrap the canonical answer in explanatory prose. Do not include fields belonging to another question type.${retryInstruction}
 
 Return exactly one JSON object as the complete assistant response content. Begin immediately with the object, serialize each question in order, and do not wrap it in Markdown or prose. Use the exact global IDs q${input.questionOffset + 1} through q${input.questionOffset + input.questionCount}. The answer field must exactly equal choices[answerIndex]. Do not omit any requested question. The required response schema is: ${JSON.stringify(responseSchema)}. Example field structure: ${JSON.stringify(example)}`,
     },
@@ -1090,6 +1103,12 @@ export async function generateQuizFromPlainText(
           ? 0
           : consecutiveFailures + 1;
       if (consecutiveFailures > MAX_NO_PROGRESS_RETRIES) throw error;
+      const retryAfterDelay =
+        error instanceof RetryableGenerationError ? error.retryAfterMs : 0;
+      const retryDelayMs = boundedRetryDelayMilliseconds(
+        consecutiveFailures,
+        retryAfterDelay,
+      );
       onProgress(
         "creating_questions",
         0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
@@ -1097,12 +1116,10 @@ export async function generateQuizFromPlainText(
           attempt: consecutiveFailures + 1,
           maxAttempts: MAX_GENERATION_ATTEMPTS,
           status: "retrying",
+          retryDelayMs,
         },
       );
-      const exponentialDelay = 750 * 2 ** Math.max(0, consecutiveFailures - 1);
-      const retryAfterDelay =
-        error instanceof RetryableGenerationError ? error.retryAfterMs : 0;
-      await waitForRetry(Math.max(exponentialDelay, retryAfterDelay), signal);
+      await waitForRetry(retryDelayMs, signal);
     }
   }
 

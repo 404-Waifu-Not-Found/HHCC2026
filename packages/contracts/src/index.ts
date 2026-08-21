@@ -308,7 +308,14 @@ export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
 export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 5 as const;
 export const LOCAL_QUIZ_PIPELINE_VERSION = 9 as const;
 export const LOCAL_QUIZ_MODEL = "deepseek-v4-flash" as const;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.0" as const;
+export const LocalQuizPromptVersionSchema = z.enum([
+  "quiz-local-json-stream-v5.0",
+  "quiz-local-json-stream-v5.1",
+]);
+export type LocalQuizPromptVersion = z.infer<
+  typeof LocalQuizPromptVersionSchema
+>;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.1" as const;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
   "validator-local-progressive-v4.0" as const;
 export const LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION =
@@ -511,7 +518,7 @@ export const LocalConceptQuizResultSchema = z
     pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
     model: z.literal(LOCAL_QUIZ_MODEL),
     reasoningEffort: z.literal("high"),
-    promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
+    promptVersion: LocalQuizPromptVersionSchema,
     validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
     quiz: LocalConceptQuizSchema,
     metrics: LocalQuizMetricsSchema,
@@ -527,7 +534,7 @@ export const LocalConceptQuizContinuationResultSchema = z
     pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
     model: z.literal(LOCAL_QUIZ_MODEL),
     reasoningEffort: z.literal("high"),
-    promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
+    promptVersion: LocalQuizPromptVersionSchema,
     validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
     title: z.string().trim().min(1).max(300),
     generatedStartIndex: z.number().int().min(1).max(14),
@@ -549,7 +556,7 @@ export const LocalConceptQuizQuestionChunkSchema = z
     pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
     model: z.literal(LOCAL_QUIZ_MODEL),
     reasoningEffort: z.literal("high"),
-    promptVersion: z.literal(LOCAL_QUIZ_PROMPT_VERSION),
+    promptVersion: LocalQuizPromptVersionSchema,
     validatorVersion: z.literal(LOCAL_QUIZ_VALIDATOR_VERSION),
     title: z.string().trim().min(1).max(300),
     startIndex: z.number().int().min(0).max(14),
