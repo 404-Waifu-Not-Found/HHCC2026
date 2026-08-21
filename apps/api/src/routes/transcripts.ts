@@ -137,7 +137,7 @@ generationRouter.get("/idempotency/:key", async (c) => {
   const key = IdempotencyKeySchema.safeParse(c.req.param("key"));
   if (!key.success) throw new ApiError(404, "generation_not_found", "Generation job not found.");
   const job = await findJobByIdempotencyKey(c.env.DB, user.id, key.data);
-  if (!job) throw new ApiError(404, "generation_not_found", "Generation job not found.");
+  if (!job) return c.json(null);
   return c.json(TranscriptUploadResponseSchema.parse({ jobId: job.id, stage: job.stage }));
 });
 

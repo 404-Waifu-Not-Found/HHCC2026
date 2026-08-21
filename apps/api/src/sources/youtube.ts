@@ -456,7 +456,11 @@ export class YouTubeAdapter implements SourceAdapter {
       };
     } catch (error) {
       console.error("YouTube audio stream failed", error);
-      throw new ApiError(502, "audio_stream_unavailable", "The audio stream could not be prepared.");
+      throw new ApiError(
+        502,
+        "audio_stream_unavailable",
+        "YouTube temporarily blocked audio delivery. Retry shortly or try another video.",
+      );
     }
   }
 }

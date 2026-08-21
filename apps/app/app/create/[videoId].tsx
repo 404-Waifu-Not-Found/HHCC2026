@@ -12,6 +12,7 @@ import { useSettings } from "../../src/providers/SettingsProvider";
 import { loadImportedVideo } from "../../src/state/creation";
 import { radii, typography } from "../../src/theme/tokens";
 import { canTranscribeInBrowser } from "../../src/transcription/limits";
+import { blurActiveWebElement } from "../../src/lib/web-focus";
 
 export default function CreateQuestScreen() {
   const { videoId } = useLocalSearchParams<{ videoId: string }>();
@@ -43,10 +44,13 @@ export default function CreateQuestScreen() {
   }
   const tooLong = video.requiresLocalTranscription && video.video.durationSeconds > 5_400;
   const tooLongForWeb = video.requiresLocalTranscription && Platform.OS === "web" && !canTranscribeInBrowser(video.video.durationSeconds);
-  const proceed = () => router.push({
-    pathname: "/generation/[videoId]",
-    params: { videoId: video.video.id, watched: String(watched), quizLanguage, sessionLength },
-  });
+  const proceed = () => {
+    blurActiveWebElement();
+    router.push({
+      pathname: "/generation/[videoId]",
+      params: { videoId: video.video.id, watched: String(watched), quizLanguage, sessionLength },
+    });
+  };
 
   return (
     <Screen>

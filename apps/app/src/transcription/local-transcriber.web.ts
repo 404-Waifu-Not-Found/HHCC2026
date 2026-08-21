@@ -6,6 +6,7 @@ import { canTranscribeInBrowser } from "./limits";
 import { assertTranscriptQuality } from "./quality";
 import type { LocalTranscriptionOptions, LocalTranscriptionResult, ModelStatus } from "./types";
 import { TranscriptionPausedError } from "./types";
+import { readResponseErrorMessage } from "../lib/response-error";
 
 type Checkpoint = { completedChunks: number; segments: TranscriptSegment[] };
 type WorkerMessage =
@@ -96,7 +97,10 @@ export async function removeLocalModel(): Promise<boolean> {
 
 async function downloadMedia(url: string, signal: AbortSignal, onProgress: (value: number) => void) {
   const response = await fetch(url, { credentials: "include", signal });
-  if (!response.ok || !response.body) throw new Error(`Audio delivery failed (${response.status}).`);
+  if (!response.ok) {
+    throw new Error(await readResponseErrorMessage(response, `Audio delivery failed (${response.status}).`));
+  }
+  if (!response.body) throw new Error("Audio delivery returned no data.");
   const total = Number(response.headers.get("content-length") ?? 0);
   const reader = response.body.getReader();
   const pieces: Uint8Array[] = [];

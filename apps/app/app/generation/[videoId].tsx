@@ -63,11 +63,13 @@ export default function GenerationScreen() {
         const found = await apiRequest(
           `/api/generation/idempotency/${encodeURIComponent(storedGeneration.idempotencyKey)}`,
           { signal },
-          TranscriptUploadResponseSchema,
+          TranscriptUploadResponseSchema.nullable(),
         );
-        queuedJobId = found.jobId;
-        storedGeneration = { ...storedGeneration, jobId: queuedJobId };
-        await saveGenerationState(imported.video.id, storedGeneration);
+        if (found) {
+          queuedJobId = found.jobId;
+          storedGeneration = { ...storedGeneration, jobId: queuedJobId };
+          await saveGenerationState(imported.video.id, storedGeneration);
+        }
       } catch (cause) {
         if (!(cause instanceof ClientApiError && cause.status === 404)) throw cause;
       }
