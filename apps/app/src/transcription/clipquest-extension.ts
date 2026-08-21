@@ -47,6 +47,11 @@ const WEBSITE_SOURCE = "clipquest-website";
 const EXTENSION_SOURCE = "clipquest-extension";
 const DETECTION_TIMEOUT_MS = 900;
 const EXTRACTION_TIMEOUT_MS = 55_000;
+// DeepSeek request construction can include bounded local evidence selection
+// before fetch is dispatched. Keep this watchdog long enough for slower mobile
+// browsers/extension service workers without changing the overall generation
+// timeout or blocking quiz navigation.
+const LOCAL_GENERATION_DISPATCH_TIMEOUT_MS = 60_000;
 
 type ExtensionReadyMessage = {
   channel: typeof CHANNEL;
@@ -754,7 +759,7 @@ export async function requestExtensionLocalQuiz(
               ),
             ),
           ),
-        10_000,
+        LOCAL_GENERATION_DISPATCH_TIMEOUT_MS,
       );
       resetIdleWatchdog();
     }
