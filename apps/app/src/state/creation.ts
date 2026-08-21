@@ -19,8 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LEGACY_CREATION_PREFIX = "clipquest:creation:";
 const CREATION_PREFIX = "clipquest:creation:v3:";
-const LEGACY_TRANSCRIPT_CHECKPOINT_PREFIX =
-  "clipquest:transcript-checkpoint:";
+const LEGACY_TRANSCRIPT_CHECKPOINT_PREFIX = "clipquest:transcript-checkpoint:";
 const TRANSCRIPT_CHECKPOINT_PREFIX = "clipquest:transcript-checkpoint:v2:";
 const accountPart = (userId: string) => encodeURIComponent(userId);
 const keyFor = (userId: string, videoId: string) =>
@@ -28,6 +27,8 @@ const keyFor = (userId: string, videoId: string) =>
 const generationKeyFor = (videoId: string) => `clipquest:generation:${videoId}`;
 const generationV2KeyFor = (generationId: string) =>
   `clipquest:generation:v2:${generationId}`;
+const GENERATION_V2_PREFIX = "clipquest:generation:v2:";
+const LEGACY_GENERATION_PREFIX = "clipquest:generation:";
 const attemptGenerationKeyFor = (attemptId: string) =>
   `clipquest:generation-attempt:v2:${attemptId}`;
 const preferencesKeyFor = (videoId: string) =>
@@ -136,16 +137,42 @@ export async function clearAccountCreationState(
   const keys = await AsyncStorage.getAllKeys();
   const accountCreationPrefix = `${CREATION_PREFIX}${accountPart(ownerUserId)}:`;
   const accountCheckpointPrefix = `${TRANSCRIPT_CHECKPOINT_PREFIX}${accountPart(ownerUserId)}:`;
-  const removable = keys.filter(
-    (candidate) =>
-      candidate.startsWith(accountCreationPrefix) ||
-      candidate.startsWith(accountCheckpointPrefix) ||
-      (candidate.startsWith(LEGACY_CREATION_PREFIX) &&
-        !candidate.startsWith(CREATION_PREFIX)) ||
-      (candidate.startsWith(LEGACY_TRANSCRIPT_CHECKPOINT_PREFIX) &&
-        !candidate.startsWith(TRANSCRIPT_CHECKPOINT_PREFIX)),
+  const removable = new Set(
+    keys.filter(
+      (candidate) =>
+        candidate.startsWith(accountCreationPrefix) ||
+        candidate.startsWith(accountCheckpointPrefix) ||
+        (candidate.startsWith(LEGACY_CREATION_PREFIX) &&
+          !candidate.startsWith(CREATION_PREFIX)) ||
+        (candidate.startsWith(LEGACY_TRANSCRIPT_CHECKPOINT_PREFIX) &&
+          !candidate.startsWith(TRANSCRIPT_CHECKPOINT_PREFIX)) ||
+        (candidate.startsWith(LEGACY_GENERATION_PREFIX) &&
+          !candidate.startsWith(GENERATION_V2_PREFIX) &&
+          !candidate.startsWith("clipquest:generation-attempt:v2:")),
+    ),
   );
-  if (removable.length > 0) await AsyncStorage.multiRemove(removable);
+  const generationKeys = keys.filter((candidate) =>
+    candidate.startsWith(GENERATION_V2_PREFIX),
+  );
+  if (generationKeys.length > 0) {
+    const records = await AsyncStorage.multiGet(generationKeys);
+    for (const [storageKey, raw] of records) {
+      if (!raw) continue;
+      try {
+        const record = GenerationRecordSchema.parse(JSON.parse(raw));
+        if (record.ownerUserId !== ownerUserId) continue;
+        removable.add(storageKey);
+        if (record.attemptId) {
+          removable.add(attemptGenerationKeyFor(record.attemptId));
+        }
+      } catch {
+        removable.add(storageKey);
+      }
+    }
+  }
+  if (removable.size > 0) {
+    await AsyncStorage.multiRemove([...removable]);
+  }
 }
 
 export async function saveQuestPreferences(

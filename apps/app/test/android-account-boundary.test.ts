@@ -15,6 +15,9 @@ describe("native account storage boundary", () => {
 
     expect(creation).toContain("clipquest:creation:v3:");
     expect(creation).toContain("ownerUserId");
+    expect(creation).toContain("GenerationRecordSchema.parse");
+    expect(creation).toContain("record.ownerUserId !== ownerUserId");
+    expect(creation).toContain("attemptGenerationKeyFor(record.attemptId)");
     expect(creation).toContain("!candidate.startsWith(CREATION_PREFIX)");
     expect(creation).toContain(
       "!candidate.startsWith(TRANSCRIPT_CHECKPOINT_PREFIX)",
