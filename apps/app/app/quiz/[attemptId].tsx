@@ -127,7 +127,10 @@ function presentCorrectAnswer(
     return translate(answer ? "true" : "false");
   if (question.type === "ordering" && Array.isArray(answer))
     return answer
-      .map((itemIndex, index) => `${index + 1}. ${question.items?.[itemIndex] ?? ""}`)
+      .map(
+        (itemIndex, index) =>
+          `${index + 1}. ${question.items?.[itemIndex] ?? ""}`,
+      )
       .join("\n");
   if (question.type === "short_answer" && typeof answer === "string")
     return answer;

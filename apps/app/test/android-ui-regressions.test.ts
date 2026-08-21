@@ -103,7 +103,9 @@ describe("Android UI regressions", () => {
   it("keeps a compact quiz feedback action visible beside long explanations", () => {
     const feedback = source("src/components/FeedbackPanel.tsx");
 
-    expect(feedback).toContain("const compactMaxHeight = Math.round(height * 0.46)");
+    expect(feedback).toContain(
+      "const compactMaxHeight = Math.round(height * 0.46)",
+    );
     expect(feedback).toContain("<ScrollView");
     expect(feedback).toContain("compact && { maxHeight: compactMaxHeight }");
     expect(feedback).toContain("compact && styles.actionCompact");
