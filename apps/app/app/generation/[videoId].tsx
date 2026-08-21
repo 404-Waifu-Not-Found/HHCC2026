@@ -366,7 +366,7 @@ export default function GenerationScreen() {
         );
         attemptId = start.attemptId;
         latestGeneration = start.generation;
-        await saveAttemptStart(start);
+        await saveAttemptStart(session.user.id, start);
         await bindAttemptToGeneration(
           generationRecord.generationId,
           start.attemptId,

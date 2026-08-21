@@ -1,55 +1,139 @@
-import type { PublicQuestion, QuizStartResponse } from "@clipquest/contracts";
+import {
+  PublicQuestionSchema,
+  type PublicQuestion,
+  type QuizStartResponse,
+} from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type StoredAttempt = {
+  version: 2;
+  ownerUserId: string;
   attemptId: string;
   primer: string | null;
   question: PublicQuestion | null;
   primerSeen: boolean;
 };
 
-const keyFor = (attemptId: string) => `clipquest:attempt:${attemptId}`;
+const ATTEMPT_PREFIX = "clipquest:attempt:v2:";
+const LEGACY_ATTEMPT_PREFIX = "clipquest:attempt:";
 
-export async function saveAttemptStart(start: QuizStartResponse): Promise<void> {
+const keyFor = (userId: string, attemptId: string) =>
+  `${ATTEMPT_PREFIX}${userId}:${attemptId}`;
+const legacyKeyFor = (attemptId: string) =>
+  `${LEGACY_ATTEMPT_PREFIX}${attemptId}`;
+
+function parseStoredAttempt(
+  raw: string,
+  userId: string,
+  attemptId: string,
+): StoredAttempt | null {
+  try {
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    const question = PublicQuestionSchema.nullable().safeParse(value.question);
+    if (
+      value.version !== 2 ||
+      value.ownerUserId !== userId ||
+      value.attemptId !== attemptId ||
+      (value.primer !== null && typeof value.primer !== "string") ||
+      typeof value.primerSeen !== "boolean" ||
+      !question.success
+    ) {
+      return null;
+    }
+    return {
+      version: 2,
+      ownerUserId: userId,
+      attemptId,
+      primer: value.primer as string | null,
+      question: question.data,
+      primerSeen: value.primerSeen,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function saveAttemptStart(
+  userId: string,
+  start: QuizStartResponse,
+): Promise<void> {
   const value: StoredAttempt = {
+    version: 2,
+    ownerUserId: userId,
     attemptId: start.attemptId,
     primer: start.primer,
     question: start.question,
     primerSeen: !start.primer,
   };
-  await AsyncStorage.setItem(keyFor(start.attemptId), JSON.stringify(value));
+  await Promise.all([
+    AsyncStorage.setItem(
+      keyFor(userId, start.attemptId),
+      JSON.stringify(value),
+    ),
+    AsyncStorage.removeItem(legacyKeyFor(start.attemptId)),
+  ]);
 }
 
-export async function loadAttempt(attemptId: string): Promise<StoredAttempt | null> {
-  const raw = await AsyncStorage.getItem(keyFor(attemptId));
+export async function loadAttempt(
+  userId: string,
+  attemptId: string,
+): Promise<StoredAttempt | null> {
+  await AsyncStorage.removeItem(legacyKeyFor(attemptId));
+  const key = keyFor(userId, attemptId);
+  const raw = await AsyncStorage.getItem(key);
   if (!raw) return null;
-  try {
-    return JSON.parse(raw) as StoredAttempt;
-  } catch {
-    await AsyncStorage.removeItem(keyFor(attemptId));
-    return null;
-  }
+  const parsed = parseStoredAttempt(raw, userId, attemptId);
+  if (!parsed) await AsyncStorage.removeItem(key);
+  return parsed;
 }
 
-export async function saveAttemptQuestion(attemptId: string, question: PublicQuestion | null): Promise<void> {
-  const current = await loadAttempt(attemptId);
+export async function saveAttemptQuestion(
+  userId: string,
+  attemptId: string,
+  question: PublicQuestion | null,
+): Promise<void> {
+  const current = await loadAttempt(userId, attemptId);
+  const value: StoredAttempt = {
+    version: 2,
+    ownerUserId: userId,
+    attemptId,
+    primer: current?.primer ?? null,
+    question,
+    primerSeen: current?.primerSeen ?? true,
+  };
+  await AsyncStorage.setItem(keyFor(userId, attemptId), JSON.stringify(value));
+}
+
+export async function markPrimerSeen(
+  userId: string,
+  attemptId: string,
+): Promise<void> {
+  const current = await loadAttempt(userId, attemptId);
+  if (!current) return;
   await AsyncStorage.setItem(
-    keyFor(attemptId),
-    JSON.stringify({
-      attemptId,
-      primer: current?.primer ?? null,
-      question,
-      primerSeen: current?.primerSeen ?? true,
-    } satisfies StoredAttempt),
+    keyFor(userId, attemptId),
+    JSON.stringify({ ...current, primerSeen: true }),
   );
 }
 
-export async function markPrimerSeen(attemptId: string): Promise<void> {
-  const current = await loadAttempt(attemptId);
-  if (!current) return;
-  await AsyncStorage.setItem(keyFor(attemptId), JSON.stringify({ ...current, primerSeen: true }));
+export async function clearAttempt(
+  userId: string,
+  attemptId: string,
+): Promise<void> {
+  await Promise.all([
+    AsyncStorage.removeItem(keyFor(userId, attemptId)),
+    AsyncStorage.removeItem(legacyKeyFor(attemptId)),
+  ]);
 }
 
-export async function clearAttempt(attemptId: string): Promise<void> {
-  await AsyncStorage.removeItem(keyFor(attemptId));
+export async function clearAccountAttemptState(userId: string): Promise<void> {
+  const keys = await AsyncStorage.getAllKeys();
+  const accountPrefix = `${ATTEMPT_PREFIX}${userId}:`;
+  const removable = keys.filter(
+    (key) =>
+      key.startsWith(accountPrefix) ||
+      (key.startsWith(LEGACY_ATTEMPT_PREFIX) &&
+        !key.startsWith(ATTEMPT_PREFIX)),
+  );
+  if (removable.length > 0) await AsyncStorage.multiRemove(removable);
 }

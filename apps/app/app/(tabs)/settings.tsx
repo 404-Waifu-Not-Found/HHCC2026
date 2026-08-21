@@ -20,6 +20,7 @@ import { authClient, useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { clearPendingVideoHandoffs } from "../../src/state/pending-video-handoff";
 import { clearAccountCreationState } from "../../src/state/creation";
+import { clearAccountAttemptState } from "../../src/state/attempt";
 import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
 import { removeLocalGenerationCredential } from "../../src/generation/local-generation-client";
 import { clearNativeGenerationOutboxes } from "../../src/generation/android-generation-outbox";
@@ -83,6 +84,7 @@ export default function SettingsScreen() {
         userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
         userId ? clearAccountCreationState(userId) : Promise.resolve(),
+        userId ? clearAccountAttemptState(userId) : Promise.resolve(),
         clearPendingVideoHandoffs(),
       ]);
       router.replace("/(auth)/sign-in");
@@ -108,6 +110,7 @@ export default function SettingsScreen() {
         userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
         userId ? clearAccountCreationState(userId) : Promise.resolve(),
+        userId ? clearAccountAttemptState(userId) : Promise.resolve(),
         clearPendingVideoHandoffs(),
       ]);
       router.replace("/(auth)/sign-in");

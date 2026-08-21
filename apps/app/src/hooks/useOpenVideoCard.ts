@@ -32,6 +32,7 @@ export function useOpenVideoCard() {
           return;
         }
         if (card.quizId) {
+          if (!userId) throw new Error("Sign in to open this quiz.");
           const startSettings = card.startSettings ?? {
             sessionLength: "medium" as const,
           };
@@ -47,7 +48,7 @@ export function useOpenVideoCard() {
             },
             QuizStartResponseSchema,
           );
-          await saveAttemptStart(start);
+          await saveAttemptStart(userId, start);
           router.push({
             pathname: "/quiz/[attemptId]",
             params: { attemptId: start.attemptId },

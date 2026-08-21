@@ -38,6 +38,7 @@ describe("native account storage boundary", () => {
     for (const file of [settings, layout]) {
       expect(file).toContain("clearNativeGenerationOutboxes");
       expect(file).toContain("clearAccountCreationState");
+      expect(file).toContain("clearAccountAttemptState");
       expect(file).toContain("cancelPreGenerationForAccount");
     }
     expect(settings).toContain("Promise.allSettled");

@@ -28,6 +28,7 @@ import { pauseAllProgressiveGenerationTasks } from "../src/generation/progressiv
 import { useAppSession } from "../src/lib/auth-client";
 import { clearReviewReminderDeviceState } from "../src/notifications/review-reminders";
 import { clearAccountCreationState } from "../src/state/creation";
+import { clearAccountAttemptState } from "../src/state/attempt";
 import { cancelPreGenerationForAccount } from "../src/generation/prework";
 import { nativeRouteForUrl } from "../src/navigation/native-deep-links";
 import { createSerialTaskQueue } from "../src/lib/serial-task-queue";
@@ -147,6 +148,7 @@ function NativeAccountBoundary() {
           clearReviewReminderDeviceState(previousUserId),
           clearNativeGenerationOutboxes(previousUserId),
           clearAccountCreationState(previousUserId),
+          clearAccountAttemptState(previousUserId),
         ]);
       }
       if (currentUserId) {
