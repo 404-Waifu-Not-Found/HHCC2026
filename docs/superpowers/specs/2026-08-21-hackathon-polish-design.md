@@ -32,7 +32,7 @@ demo (a session recap of missed concepts).
    repository. The README is a 45 KB engineering release log with no
    judge-facing entry point.
 7. The completion screen shows score, mastery, question count and a PDF
-   action, but never tells the learner *which* concepts they missed. The demo
+   action, but never tells the learner _which_ concepts they missed. The demo
    script and project description both promise "concepts worth reviewing".
 
 ## Scope
@@ -120,3 +120,13 @@ on retry, finishes, and asserts the recap content.
 `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`,
 `npm run test:e2e` all green locally on Windows after the line-ending fix;
 the same commands run in CI on Ubuntu.
+
+## Findings during implementation
+
+- The extension build script shelled out to the `zip` CLI, which is absent on
+  Windows; `dev:web`, `build`, and the Playwright web server all aborted. A
+  dependency-free, deterministic Node ZIP writer now backs it up
+  (`apps/extension/scripts/zip-archive.mjs`), with `zip` still preferred where
+  installed so the tracked release asset stays byte-identical.
+- The Playwright `seed` helper needs a loaded app page before it can touch
+  `localStorage`; the recap journey navigates to `/welcome` first.
