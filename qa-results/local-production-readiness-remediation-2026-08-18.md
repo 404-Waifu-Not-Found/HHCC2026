@@ -69,8 +69,9 @@
 
 ### Dependency audit
 
-- Current workspace graph after the safe patches: 27 advisories (`1 low`, `8 moderate`, `18 high`, `0 critical`).
+- Current production-dependency graph after the safe patches: 25 advisories (`0 low`, `8 moderate`, `17 high`, `0 critical`).
 - Hono, Wrangler, and Workers types are on the verified patch releases listed above. Direct `sharp` remains `0.35.3`.
+- The third-pass lockfile refresh safely upgraded `esbuild` to `0.28.2` and `nanoid` to `3.3.18`, eliminating the previous low-severity development-server exposure and one high-severity Nano ID loop advisory without changing declared application dependencies.
 - Remaining advisories are inherited through the current Expo 57, React Native 0.86, native-build, ONNX, Sharp-transitive, and Hugging Face dependency trees. Available audit suggestions require incompatible SDK/framework downgrades or have no upstream fix; `npm audit fix --force` was intentionally not used.
 
 ## Security review coverage
@@ -104,6 +105,27 @@ A second fresh fixed-range diff scan covered all 36 files changed between the pr
 - Coverage: 36/36 changed files reviewed.
 - Reportable findings: 2 low, both fixed in `4965e00`.
 - Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/8d999fefb33897666e2e332700f3fb24f017aff2_20260817T192733Z_vmbjhcb6/report.md`
+
+A third fixed-range scan reviewed every one of the 37 source files changed between the production baseline and commit `871f89f`. It covered seven trust surfaces, produced no candidate findings, and sealed with zero reportable security findings. The dependency-only lockfile refresh occurred after this source review and does not change executable source.
+
+- Diff scan ID: `b86a64c2-349f-4699-9a03-d62872fa84be`
+- Reviewed committed range: `a4d85ac2da45cfa9b8e2b33081db2ecfc13a6497..871f89f5c58ff0a466c57df457be06305385d053`
+- Coverage: 37/37 changed source files reviewed across seven trust surfaces.
+- Reportable findings: 0.
+- Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/871f89f5c58ff0a466c57df457be06305385d053_20260817T195712Z_3hm_gsdq/report.md`
+
+## Third-pass full verification
+
+After a clean `npm ci --legacy-peer-deps` using the refreshed lockfile, the complete verification suite passed again:
+
+- Formatting, lint, TypeScript, all workspace tests, all 23 Playwright scenarios, the web/Worker build, Cloudflare type generation, both Wrangler dry-runs, Expo Doctor 21/21, and the asset-graph verifier all passed.
+- Test totals remained API 163, app 120, extension 228, contracts 25, shared engine 5, shell verifier 2, and release scripts 8. The extension suite includes the recorded 100-bank generation benchmark.
+- The exported web application contains 31 routes; 470 same-origin asset references across 32 generated shells were resolved successfully.
+- Android rebuilt successfully with the required JDK 17 toolchain (`397` Gradle tasks). The installed API 36 emulator artifact rendered the authenticated learner home after Metro was correctly started in development-client LAN mode; post-launch logs contained no fatal Android or React Native entry.
+- iOS rebuilt successfully for the iPhone 17 Pro simulator and rendered the responsive sign-in screen; post-launch logs contained no fatal, uncaught, termination, or missing-entitlement entry.
+- A machine-default JDK 25 Android invocation still fails in native CMake configuration; this is the documented unsupported toolchain path. The JDK 17 command is the reproducible native build gate.
+- A loopback-only Metro invocation cannot serve Android through its `10.0.2.2` host bridge. The verified simulator command uses development-client LAN mode; this is a QA-harness requirement, not an application-source defect.
+- No additional application, UI, privacy-boundary, or authorization defect was found in this pass. User-owned untracked QA evidence remained untouched.
 
 ### Read-only live browser smoke
 
