@@ -294,6 +294,10 @@ const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
 const HOW_CAN_QUESTION_PATTERN = /^\s*how\s+(?:can|could|may|might)\b/iu;
 const CONCESSIVE_NON_ANSWER_PATTERN =
   /^\s*(?:(?:it|they|this|that)\s+(?:can|could|may|might)\s+)?even\s+(?:without|despite|when|if)\b/iu;
+const MALFORMED_WH_ACTION_STEM_PATTERN =
+  /^\s*what\s+(?:condition|factor|cause|process|method)\s+(?:do|does|did|can|could|will|would)\b.{0,160}\b(?:provide|support|affect|influence|enable|allow)\b/iu;
+const PLURAL_HOW_SINGULAR_PRONOUN_PATTERN =
+  /^\s*how\s+(?:do|can|could|may|might)\b/iu;
 const HOW_CAN_MECHANISM_ANSWER_PATTERN =
   /^(?:when|if|by|because|through|due\s+to|as\s+(?:a\s+result|\p{L}+\s+(?:declines?|falls?|rises?|increases?|decreases?)))\b|\b(?:loss|lack|reduction|removal|failure|disruption|decline|depletion|fragmentation|mutation|competition|pressure)\b.{0,120}\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|(?:当|如果|通过|因为|由于|随着|导致|使得?|削弱|降低|减少|破坏|增加)/iu;
 const HOW_OUTCOME_QUESTION_PATTERN =
@@ -425,6 +429,15 @@ export function questionConceptFailure(candidate) {
   if (
     HOW_CAN_QUESTION_PATTERN.test(question) &&
     CONCESSIVE_NON_ANSWER_PATTERN.test(directAnswerSource)
+  ) {
+    return "question_answer_kind_mismatch";
+  }
+  if (MALFORMED_WH_ACTION_STEM_PATTERN.test(question)) {
+    return "question_answer_kind_mismatch";
+  }
+  if (
+    PLURAL_HOW_SINGULAR_PRONOUN_PATTERN.test(question) &&
+    /^\s*(?:it|this)\b/iu.test(directAnswerSource)
   ) {
     return "question_answer_kind_mismatch";
   }
@@ -825,6 +838,23 @@ export function candidateDuplicatesAccepted(
   const cluster = conceptClusterForCandidate(candidate);
   if (!claimKey || !cluster) return true;
   if (accepted.some((question) => question.claimKey === claimKey)) return true;
+  const candidateAnswer =
+    candidate?.type === "multiple_choice"
+      ? (candidate?.correctAnswer ??
+        candidate?.answerText ??
+        candidate?.answerSpan)
+      : undefined;
+  if (
+    candidateAnswer &&
+    accepted.some(
+      (question) =>
+        question.type === "multiple_choice" &&
+        question.answer &&
+        conceptSimilarity(question.answer, candidateAnswer) >= 0.8,
+    )
+  ) {
+    return true;
+  }
   if (
     accepted.some(
       (question) =>
@@ -1166,6 +1196,36 @@ function hasUniqueSafeCaptionSurfaceMatch(candidate, source) {
   return matches === 1;
 }
 
+function correctObviousCaptionPlural(value) {
+  const original = String(value ?? "").trim();
+  if (!original) return null;
+  const corrected = original.replace(
+    /\b(hundred|thousand|million|billion)\s+of\b/giu,
+    (match, magnitude, offset, source) => {
+      const previousToken = source
+        .slice(0, offset)
+        .match(/(?:^|\s)([\p{L}\p{N}]+)\s*$/u)?.[1]
+        ?.toLocaleLowerCase("en-US");
+      if (
+        previousToken &&
+        /^(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|several|many|few|\d+)$/u.test(
+          previousToken,
+        )
+      ) {
+        return match;
+      }
+      return `${magnitude}s of`;
+    },
+  );
+  if (
+    corrected === original ||
+    !isSafeCaptionSurfaceCorrection(original, corrected)
+  ) {
+    return null;
+  }
+  return corrected;
+}
+
 export function applyVerifiedMutation(supportedStatement, mutation) {
   if (
     !mutation ||
@@ -1421,6 +1481,12 @@ export function groundedMultipleChoiceCandidate(
           exactRequestedAnswerSpan,
           learnerAnswer,
         )));
+  const localExactAnswerCorrection =
+    quizLanguage === "en"
+      ? correctObviousCaptionPlural(
+          exactRequestedAnswerSpan ?? exactLearnerAnswerSpan,
+        )
+      : null;
   if (
     !groundedAnswer ||
     !learnerAnswer ||
@@ -1448,9 +1514,11 @@ export function groundedMultipleChoiceCandidate(
       ? learnerAnswer
       : safeLearnerSurfaceCorrection
         ? learnerAnswer
-        : (exactRequestedAnswerSpan ??
-          exactLearnerAnswerSpan ??
-          groundedAnswer);
+        : localExactAnswerCorrection
+          ? localExactAnswerCorrection
+          : (exactRequestedAnswerSpan ??
+            exactLearnerAnswerSpan ??
+            groundedAnswer);
   return {
     correctAnswer: storedAnswer,
     distractors: distractors.map((entry) => entry.text.trim()),

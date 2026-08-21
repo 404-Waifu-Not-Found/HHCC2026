@@ -198,6 +198,26 @@ test("v5.8 requires How-does choices to state an outcome or mechanism", () => {
     ),
     true,
   );
+  for (const [question, answer] of [
+    [
+      "What condition do liana vines provide for trees in the Amazon rainforest?",
+      "growing thick wooden stems that support these towering trees",
+    ],
+    [
+      "How do corals support other organisms in reef ecosystems?",
+      "It provides key microhabitats, shelter, and breeding grounds.",
+    ],
+  ]) {
+    assert.equal(
+      questionConceptFailure({
+        concept: "ecosystem support",
+        question,
+        answerText: answer,
+        explanation: "The organisms support one another.",
+      }),
+      "question_answer_kind_mismatch",
+    );
+  }
 });
 
 test("v5.8 corrects only bounded caption spelling in a grounded answer", () => {
@@ -255,6 +275,44 @@ test("v5.8 corrects only bounded caption spelling in a grounded answer", () => {
     ),
     null,
     "a corrected private span must not authorize a different exact learner answer",
+  );
+});
+
+test("v5.8 repairs an obvious caption plural locally", () => {
+  const evidence =
+    "Coral supports biodiversity in reef ecosystems. It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks.";
+  const candidate = {
+    evidenceQuote: evidence,
+    answerSpan:
+      "It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks",
+    answerText:
+      "It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks",
+    distractors: [
+      "It reduces the number of species in the reef.",
+      "It competes with every other species for resources.",
+      "It provides food only for herbivorous fish.",
+    ],
+  };
+  assert.deepEqual(groundedMultipleChoiceCandidate(candidate, evidence), {
+    correctAnswer:
+      "It provides key microhabitats, shelter and breeding grounds for thousands of species of fish, crustaceans and mollusks",
+    distractors: candidate.distractors,
+  });
+
+  const quantifiedEvidence =
+    "The survey covers one hundred of the selected wetland sites.";
+  const quantifiedCandidate = {
+    ...candidate,
+    evidenceQuote: quantifiedEvidence,
+    answerSpan: "one hundred of the selected wetland sites",
+    answerText: "one hundred of the selected wetland sites",
+  };
+  assert.deepEqual(
+    groundedMultipleChoiceCandidate(quantifiedCandidate, quantifiedEvidence),
+    {
+      correctAnswer: "one hundred of the selected wetland sites",
+      distractors: candidate.distractors,
+    },
   );
 });
 
@@ -1170,6 +1228,40 @@ test("resolved answer propositions block the live climate projection paraphrase"
           value: "condition for climate projections",
           cluster: "condition for climate projections",
         },
+      },
+      accepted,
+      5,
+    ),
+    true,
+  );
+});
+
+test("resolved answer propositions block the live coral habitat duplicate", () => {
+  const first = {
+    type: "multiple_choice",
+    concept: "coral reef biodiversity support",
+    objectiveCategory: "mechanism",
+    question: "How does coral support biodiversity in reef ecosystems?",
+    correctAnswer:
+      "It provides key microhabitats, shelter and breeding grounds for thousand of species of fish, crustaceans and mollusks.",
+  };
+  const accepted = [
+    {
+      ...first,
+      answer: first.correctAnswer,
+      claimKey: claimKeyForCandidate(first),
+      conceptCluster: conceptClusterForCandidate(first),
+    },
+  ];
+  assert.equal(
+    candidateDuplicatesAccepted(
+      {
+        type: "multiple_choice",
+        concept: "coral reef interdependence",
+        objectiveCategory: "method",
+        question: "How do corals support other organisms in reef ecosystems?",
+        correctAnswer:
+          "It provides key microhabitats, shelter and breeding grounds for thousands of species of fish, crustaceans and mollusks.",
       },
       accepted,
       5,
