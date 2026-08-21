@@ -12,12 +12,51 @@ import {
   hasPromptFirstV511FormulaEvidence,
   hasPromptFirstV512FormulaEvidence,
   normalizeGeneratedQuestion,
+  promptFirstLearnerQualityFailure,
   promptFirstV512AssessmentText,
   promptFirstV512DistinctContext,
   promptFirstV512EvidenceIndex,
   promptFirstV512RepeatsAcceptedFamily,
   serializeFormulaTokens,
 } from "../src/local-generator.js";
+
+test("rejects a false true/false item whose explanation labels the statement true", () => {
+  assert.equal(
+    promptFirstLearnerQualityFailure(
+      {
+        type: "true_false",
+        concept: "current and resistance",
+        question: "Increasing resistance increases current at fixed voltage.",
+        answer: false,
+        correction: "Increasing resistance decreases current at fixed voltage.",
+        explanation:
+          "The statement is true because current changes with resistance.",
+      },
+      "Increasing resistance decreases current at fixed voltage.",
+      "Increasing resistance decreases current at fixed voltage.",
+    ),
+    "polarity_mismatch",
+  );
+});
+
+test("rejects a true true/false item whose explanation labels the statement false", () => {
+  assert.equal(
+    promptFirstLearnerQualityFailure(
+      {
+        type: "true_false",
+        concept: "current and resistance",
+        question: "Increasing resistance decreases current at fixed voltage.",
+        answer: true,
+        correction: "Increasing resistance decreases current at fixed voltage.",
+        explanation:
+          "The statement is false because current changes with resistance.",
+      },
+      "Increasing resistance decreases current at fixed voltage.",
+      "Increasing resistance decreases current at fixed voltage.",
+    ),
+    "polarity_mismatch",
+  );
+});
 
 test("v5.12 evidence allocation avoids an already used narrative window", () => {
   const input = {

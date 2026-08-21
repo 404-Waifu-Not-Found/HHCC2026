@@ -22,6 +22,16 @@ describe("quiz answer presentation", () => {
     expect(trueFalseBranch).not.toContain("leading=");
   });
 
+  it("announces reason-first feedback as an assertive accessible detail", async () => {
+    const source = await readFile(
+      resolve(appRoot, "src/components/FeedbackPanel.tsx"),
+      "utf8",
+    );
+    expect(source).toContain("accessible");
+    expect(source).toContain('accessibilityRole="alert"');
+    expect(source).toContain('accessibilityLiveRegion="assertive"');
+  });
+
   it("sends the completion action to the Library route named by its label", async () => {
     const source = await quizSource();
     const completionBranch = source.slice(

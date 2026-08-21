@@ -5076,12 +5076,6 @@ export function constructConceptFirstTrueFalseQuestion(
     return null;
   }
   const directExplanation = String(candidate?.explanation ?? "").trim();
-  const explanation =
-    directExplanation &&
-    normalizeGroundedText(directExplanation) !==
-      normalizeGroundedText(resolvedSupported)
-      ? directExplanation
-      : `This statement is accurate: ${resolvedSupported}`;
   if (preferredPolarity === false) {
     const mutation = localFalseMutation(resolvedSupported);
     if (mutation) {
@@ -5089,7 +5083,11 @@ export function constructConceptFirstTrueFalseQuestion(
         question: mutation.question,
         answer: false,
         correction: resolvedSupported,
-        explanation,
+        // A model explanation is often written for the supported fact, not
+        // for the locally mutated false statement. Generate this explanation
+        // from the exact mutation so the learner never sees a true/false
+        // polarity contradiction after a local repair.
+        explanation: `The supported fact is: ${resolvedSupported} The displayed statement changes ${mutation.sourceValue} to ${mutation.replacementValue}.`,
         mutationKind: "local_allowlisted",
       };
     }
@@ -5103,7 +5101,15 @@ export function constructConceptFirstTrueFalseQuestion(
     question: resolvedSupported,
     answer: true,
     correction: resolvedSupported,
-    explanation,
+    explanation:
+      directExplanation &&
+      normalizeGroundedText(directExplanation) !==
+        normalizeGroundedText(resolvedSupported) &&
+      !/\b(?:the|this|that)\s+(?:statement|claim)\s+(?:is|was)\s+(?:false|incorrect|wrong)\b/iu.test(
+        directExplanation,
+      )
+        ? directExplanation
+        : `This statement is accurate: ${resolvedSupported}`,
     mutationKind: "none",
   };
 }

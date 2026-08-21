@@ -2657,6 +2657,23 @@ test("v5.8 never flips a planned false item back to true", () => {
   );
 });
 
+test("v5.8 rewrites a false explanation from the exact local mutation", () => {
+  const evidence =
+    "Increasing the resistance decreases current when voltage remains fixed.";
+  const question = constructConceptFirstTrueFalseQuestion(
+    {
+      evidenceQuote: evidence,
+      supportedFact: evidence,
+      explanation: "The statement is accurate as written.",
+    },
+    evidence,
+    false,
+  );
+  assert.equal(question?.answer, false);
+  assert.match(question?.explanation ?? "", /supported fact|changes/iu);
+  assert.doesNotMatch(question?.explanation ?? "", /statement is accurate/iu);
+});
+
 test("v5.8 resolves a concise supported fact from a longer evidence window", () => {
   const evidence =
     "Cytokines coordinate immune communication. They activate B and T cells before the adaptive response expands.";

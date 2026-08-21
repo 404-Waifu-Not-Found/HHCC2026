@@ -5728,6 +5728,23 @@ function promptFirstV512FalseContrastAddsBareNegation(
   return countBareNegations(falseStatement) > countBareNegations(trueStatement);
 }
 
+function promptFirstTrueFalseExplanationPolarityFailure(question) {
+  if (question?.type !== "true_false") return null;
+  const explanation = normalizedAssertion(question.explanation);
+  if (!explanation) return "schema_invalid";
+  const labelsTrue =
+    /\b(?:the|this|that)\s+(?:statement|claim)\s+(?:is|was)\s+(?:true|accurate|correct|valid)\b/iu;
+  const labelsFalse =
+    /\b(?:the|this|that)\s+(?:statement|claim)\s+(?:is|was)\s+(?:false|incorrect|wrong|invalid)\b/iu;
+  if (question.answer === false && labelsTrue.test(explanation)) {
+    return "polarity_mismatch";
+  }
+  if (question.answer === true && labelsFalse.test(explanation)) {
+    return "polarity_mismatch";
+  }
+  return null;
+}
+
 function promptFirstGradingTarget(question) {
   if (question.type === "multiple_choice") {
     return question.correctAnswer ?? question.answer;
@@ -5771,6 +5788,10 @@ export function promptFirstLearnerQualityFailure(
   const target = normalize(rawTarget);
   const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
   if (!prompt || !target) return null;
+
+  const explanationPolarityFailure =
+    promptFirstTrueFalseExplanationPolarityFailure(question);
+  if (explanationPolarityFailure) return explanationPolarityFailure;
 
   // Prompt-first output does not carry a client-visible sourceEvidence field,
   // so enforce the same direct-concept boundary here before accepting it.
