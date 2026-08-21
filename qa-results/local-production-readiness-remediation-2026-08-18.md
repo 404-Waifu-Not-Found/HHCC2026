@@ -45,6 +45,9 @@
 | 31  | Low security        | The locally cached primer and current quiz question were keyed only by attempt ID and loaded before authoritative resume. A second account on the same shared device could see stale public quiz content by opening a retained attempt URL.              | Attempt cache v2 is keyed by user and attempt, includes a validated owner/version envelope, deletes ambiguous legacy records, and clears only the departing account's records on sign-out, deletion, or user change. Owner-isolation regressions pass.                                 |
 | 32  | Privacy maintenance | A dormant exported Worker helper could send a learner answer, rubric, and evidence to DeepSeek if accidentally reconnected, contradicting the current storage-only deterministic-grading architecture even though no active route called it.             | Removed the model-grading helper and its learner/evidence types. A source-boundary test prevents `gradeWrittenAnswer`, learner-answer, required-idea, or transcript-segment model payloads from returning to the Worker.                                                               |
 | 33  | Test fidelity       | Playwright's attempt seeder still wrote the intentionally retired unowned cache envelope, so the secured app discarded it and three UI journeys continued with the authoritative previous question.                                                      | The E2E helper now writes the same account-scoped v2 envelope as the app. The three initially failed journeys pass in isolation and all 23 pass again in the restarted canonical run.                                                                                                  |
+| 34  | Low security        | Worker integrations buffered several third-party responses without a cumulative byte ceiling, and their request deadlines ended after response headers rather than covering a stalled response body.                                                     | Added shared bounded streaming readers and request/body deadlines. DeepSeek classification, Resend, Expo Push, YouTube OAuth, watch-page, and oEmbed reads now fail safely at endpoint-specific limits; five focused tests cover declared length, chunked overflow, split UTF-8, request timeout, and body timeout. |
+| 35  | Low security        | Native automatic recovery could reuse an attempt/quiz-matching local generation record without also proving that the record belonged to the current authenticated user.                                                                                   | Recovery record selection now requires owner, quiz, and attempt identity together. A focused two-owner regression proves that a record from another account is rejected before resume.                                                                                                  |
+| 36  | Test fidelity       | The root formatting and lint scripts covered selected app and Worker paths rather than the complete maintained source/test surface, allowing omitted files to drift or contain warnings without failing CI.                                                | Expanded both gates across app, API, extension, contracts, shared engine, scripts, and tests; made lint warnings fatal; declared the extension's Chrome global; formatted the previously omitted files; and removed three genuinely unused symbols exposed by the broader gate.             |
 
 ## Verification evidence
 
@@ -175,6 +178,30 @@ A fresh standard security scan reviewed seven repository trust surfaces at the p
 ### Read-only live browser smoke
 
 The currently deployed official site was inspected in the authenticated Chrome session without mutating user data. Home, Library, and Settings rendered with the expected navigation, populated review cards, account controls, theme/language controls, and responsive desktop layout. The checked routes produced no browser console warnings or errors. This is evidence for the existing production deployment only; it does not imply that the local candidate has been deployed.
+
+## Sixth-pass outbound-boundary and recovery verification
+
+The sixth pass began with a fresh full baseline, then used a standard security scan and a complete parent-led code review to inspect authentication/origin controls, account-local state, progressive generation races, deterministic grading, extension and native clients, third-party resources, and privacy boundaries. The scan identified the one low-severity outbound-response availability issue recorded as problem 34. Problems 35 and 36 were found while validating the surrounding recovery and repository-quality boundaries. All three are fixed in the local candidate.
+
+- Scan ID: `a99072da-d634-4e8c-8ccf-dd574e2ca2d7`
+- Reviewed snapshot: `91a473f6f0c0a57ca20a79211da241933ce30368`
+- Reportable findings: 1 low, fixed in the current candidate.
+- Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/91a473f6f0c0a57ca20a79211da241933ce30368_20260817T212108Z_fh2_0bvb/report.md`
+- Independent baseline caveat: delegation was prohibited by the active runtime instructions, so the scan used the documented parent-led sequential fallback and did not perform a production penetration test.
+
+The complete canonical gate was restarted after the final stalled-response-body regression was added:
+
+- Formatting, expanded zero-warning lint, TypeScript, all workspace tests, all 23 Playwright journeys, web/Worker builds, Cloudflare type generation, both Wrangler dry-runs, Expo Doctor 21/21, and the generated-shell asset verifier pass.
+- Workspace totals are API 172, release scripts 8, app 124, shell verifier 2, extension 228, contracts 25, and shared engine 5: 564 tests. The extension total includes the recorded 100-bank generation benchmark.
+- The web export contains 31 routes, and all 470 same-origin asset references across 32 generated HTML shells resolve.
+- Android rebuilt with JDK 17 (`BUILD SUCCESSFUL`, 397 Gradle tasks) for min SDK 29 and target/compile SDK 36. The current machine no longer exposed an installed Android emulator or `adb`, so this pass did not replace the fifth-pass successful API 36 runtime evidence.
+- iOS rebuilt for the iPhone 17 Pro simulator (`BUILD SUCCEEDED`), installed, and launched. The first Debug launch correctly reported that Metro was absent; after Metro became ready, the same artifact rendered the responsive native sign-in screen. Filtered logs contained no fatal, uncaught, or missing-script error after the successful launch.
+- The extension ZIP produced by the final build has SHA-256 `51b564a1d2e21f74e72491952cdf2a0d178c5d0bb79bddfe7e6d3d26ecc73ded`.
+- The Android debug APK has SHA-256 `70512ef28aa7fef2f4144564f445e2396d07749d292a5b0124a7bab05f87fadf`; it remains unsigned release evidence only.
+- A tracked-file secret scan found no API key, private key, keystore, provisioning profile, or service credential. The only environment-like tracked file was the documented `.dev.vars.example` template.
+- `npm audit` remains 25 inherited advisories (`0 low`, `8 moderate`, `17 high`, `0 critical`). No incompatible forced Expo/React Native downgrade was applied.
+- Computer Use could enumerate the iOS Simulator but its accessibility capture timed out twice. Platform-native simulator commands and a captured screenshot supplied the runtime evidence; interactive Computer Use coverage is therefore not claimed for this pass.
+- User-owned untracked QA artifacts remained untouched and un-staged.
 
 ## External release gates still required
 
