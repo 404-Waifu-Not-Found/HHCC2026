@@ -22,6 +22,7 @@ import {
   LocalQuizContextSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
+  CheatSheetDocumentSchema,
   PushRegisterResponseSchema,
   PushUnregisterRequestSchema,
   PushUnregisterResponseSchema,
@@ -33,6 +34,38 @@ import {
   type LocalConceptQuizResult,
   type QuizQuestionType,
 } from "../src/index";
+
+const validCheatSheetDocument = {
+  title: "Anesthesia mechanisms",
+  source: "youtube",
+  summary: "Regional anesthetics block ion passage through nerve membranes.",
+  keyConcepts: ["Ion-channel blockade prevents pain-signal transmission."],
+  definitions: [
+    {
+      term: "Regional anesthetic",
+      definition:
+        "A drug that blocks ion passage through nerve-membrane proteins.",
+    },
+  ],
+  formulas: [],
+  rememberThis: ["Use direct electrical and ion-channel wording."],
+  generatedAt: "2026-08-20T04:00:00.000Z",
+  sourceRevision: "quiz-1:123",
+} as const;
+
+describe("cheat-sheet quality contracts", () => {
+  it("rejects mechanism metaphors before an artifact can be uploaded", () => {
+    expect(CheatSheetDocumentSchema.parse(validCheatSheetDocument)).toEqual(
+      validCheatSheetDocument,
+    );
+    expect(
+      CheatSheetDocumentSchema.safeParse({
+        ...validCheatSheetDocument,
+        summary: "Regional anesthetics create a chemical barricade.",
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("admin contracts", () => {
   it("rejects unknown roles and never models secret values", () => {

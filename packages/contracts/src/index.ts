@@ -2869,6 +2869,9 @@ export const CheatSheetContextSchema = z
   .strict();
 export type CheatSheetContext = z.infer<typeof CheatSheetContextSchema>;
 
+const CHEAT_SHEET_FORBIDDEN_WORDING =
+  /\b(?:chemical|electrical)\s+(?:barricade|wall|shield)\b/iu;
+
 export const CheatSheetDocumentSchema = z
   .object({
     title: z.string().min(1).max(240),
@@ -2888,7 +2891,26 @@ export const CheatSheetDocumentSchema = z
     generatedAt: z.string().datetime(),
     sourceRevision: z.string().min(1).max(128),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const text = [
+      value.title,
+      value.source,
+      value.summary,
+      ...value.keyConcepts,
+      ...value.definitions.flatMap((item) => [item.term, item.definition]),
+      ...value.formulas,
+      ...value.rememberThis,
+    ].join("\n");
+    if (CHEAT_SHEET_FORBIDDEN_WORDING.test(text)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [],
+        message:
+          "Cheat sheets must use direct mechanism wording instead of chemical/electrical barricade, wall, or shield metaphors.",
+      });
+    }
+  });
 export type CheatSheetDocument = z.infer<typeof CheatSheetDocumentSchema>;
 
 export const CheatSheetResponseSchema = z

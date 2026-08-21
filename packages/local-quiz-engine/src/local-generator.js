@@ -8471,7 +8471,7 @@ export async function generateLocalCheatSheet(
           {
             role: "system",
             content:
-              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied quiz primer, prompts, and explanations. Do not invent facts.",
+              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied quiz primer, prompts, and explanations. Use direct technical mechanism wording; do not turn mechanisms into metaphors such as a chemical/electrical barricade, wall, or shield. Do not invent facts.",
           },
           { role: "user", content: JSON.stringify(context) },
         ],
@@ -8519,6 +8519,24 @@ export async function generateLocalCheatSheet(
   if (!bounded.title || !bounded.source || !bounded.summary) {
     throw new Error(
       "DeepSeek returned an incomplete cheat sheet; AI-generated title, source, and summary are required.",
+    );
+  }
+  const cheatSheetText = [
+    bounded.title,
+    bounded.source,
+    bounded.summary,
+    ...bounded.keyConcepts,
+    ...bounded.definitions.flatMap((item) => [item.term, item.definition]),
+    ...bounded.formulas,
+    ...bounded.rememberThis,
+  ].join("\n");
+  if (
+    /\b(?:chemical|electrical)\s+(?:barricade|wall|shield)\b/iu.test(
+      cheatSheetText,
+    )
+  ) {
+    throw new Error(
+      "DeepSeek returned metaphorical mechanism wording; regenerate the cheat sheet with a direct electrical or ion-channel explanation.",
     );
   }
   return bounded;
