@@ -20,6 +20,10 @@
   <img alt="Swift" src="https://img.shields.io/badge/Swift-F05138?style=for-the-badge&logo=swift&logoColor=white" />
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" />
   <img alt="SQL" src="https://img.shields.io/badge/SQL-336791?style=for-the-badge&logoColor=white" />
+  <img alt="HTML" src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" />
+  <img alt="CSS" src="https://img.shields.io/badge/CSS-663399?style=for-the-badge&logo=css&logoColor=white" />
+  <img alt="Groovy" src="https://img.shields.io/badge/Groovy-4298B8?style=for-the-badge&logo=apachegroovy&logoColor=white" />
+  <img alt="Ruby" src="https://img.shields.io/badge/Ruby-CC342D?style=for-the-badge&logo=ruby&logoColor=white" />
   <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" />
 </p>
 
@@ -29,6 +33,7 @@
   <a href="#visual-system">Visual system</a> ·
   <a href="#journey">Learning journey</a> ·
   <a href="#screenshots">Screenshots</a> ·
+  <a href="#tech-stack">Tech stack</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#verification">Verification</a> ·
@@ -220,6 +225,33 @@ The role-gated operations console uses the same semantic colors and voxel vocabu
 | Desktop overview                                                                           | Mobile people management                                                                   |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | ![ClipQuest operations overview](./docs/screenshots/final/admin-overview-desktop-1440.png) | ![ClipQuest mobile people management](./docs/screenshots/final/admin-users-mobile-390.png) |
+
+<p align="right"><a href="#top">↑ Back to top</a></p>
+
+<a id="tech-stack"></a>
+
+## 🧩 Tech stack and repository languages
+
+The language inventory below comes from the tracked repository, including the native module and platform build definitions—not only the web application.
+
+| Language or format                 | Where ClipQuest uses it                                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| TypeScript and TSX                 | Expo routes and components, Cloudflare Worker API, shared Zod contracts, Playwright, tests, and build configuration            |
+| JavaScript and ESM (`.js`, `.mjs`) | Manifest V3 extension runtime, caption processing, local quiz generation, web workers, asset scripts, and packaging            |
+| SQL                                | Fourteen ordered D1 migrations for authentication, quiz storage, reliability, administration, and local mixed-question imports |
+| Swift                              | iOS implementation of the local audio-decoder Expo module                                                                      |
+| Kotlin                             | Android implementation of the local audio-decoder Expo module                                                                  |
+| HTML                               | Extension popup markup and the checked-in local extension QA harness                                                           |
+| CSS                                | Extension popup presentation and interaction states                                                                            |
+| Groovy                             | Android Gradle build definition for the native decoder module                                                                  |
+| Ruby                               | CocoaPods `.podspec` definition for the iOS decoder module                                                                     |
+| JSON and JSONC                     | Package manifests, Expo/EAS configuration, extension manifest, model metadata, QA summaries, and Wrangler configuration        |
+| XML                                | Android native resource configuration                                                                                          |
+| Markdown                           | Product, operations, design-research, platform-asset, and deployment documentation                                             |
+| Web App Manifest                   | Installable PWA identity, icons, theme colors, and launch behavior                                                             |
+| WebVTT and plain text              | Non-secret caption QA fixtures and normalized-caption acceptance artifacts                                                     |
+
+The primary product runtime is TypeScript/React Native, the browser extension is JavaScript/HTML/CSS, the edge and data layer is TypeScript/SQL on Cloudflare, and native audio decoding is implemented separately in Swift and Kotlin.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
