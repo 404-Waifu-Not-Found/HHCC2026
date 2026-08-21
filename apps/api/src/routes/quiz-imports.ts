@@ -940,9 +940,7 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       isLifecycleCallEvent(input) &&
         input.lastStreamActivityElapsedMs !== undefined
         ? timestamp + input.lastStreamActivityElapsedMs
-        : isLifecycleCallEvent(input) && input.lifecycleState === "started"
-          ? timestamp
-          : null,
+        : null,
     )
     .run();
   if (result.meta.changes !== 1) {

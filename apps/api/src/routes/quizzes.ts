@@ -31,6 +31,7 @@ import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
   ProgressiveQuizSummarySchema,
+  ACTIVE_GENERATION_CALL_RECOVERY_GRACE_MS,
   readProgressiveGenerationSnapshot,
   type ProgressiveGenerationSnapshot,
 } from "../lib/progressive-quiz";
@@ -862,6 +863,25 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       409,
       "generation_cooldown_active",
       "Automatic generation is cooling down before its next recovery cycle.",
+    );
+  }
+  if (
+    automatic &&
+    generationState.generation.state !== "generation_failed" &&
+    generationState.snapshot.activeCall &&
+    Date.now() -
+      Math.max(
+        generationState.snapshot.activeCallDispatchedAt ?? 0,
+        generationState.snapshot.activeCallLastStreamActivityAt ??
+          generationState.snapshot.activeCallDispatchedAt ??
+          0,
+      ) <
+      ACTIVE_GENERATION_CALL_RECOVERY_GRACE_MS
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_active",
+      "A local generation call is still active; recovery will wait for it to finish.",
     );
   }
   if (

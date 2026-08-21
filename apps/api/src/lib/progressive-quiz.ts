@@ -688,12 +688,26 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
     .max(24)
     .nullable()
     .default(null),
+  active_call_dispatched_at: z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .default(null),
+  active_call_last_stream_activity_at: z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .default(null),
   retry_ordinals_json: z.string().default("[]"),
   previous_outcome: LocalGenerationCallOutcomeSchema.nullable().default(null),
 });
 
 export const PROGRESSIVE_GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
 export const AUTOMATIC_GENERATION_STALE_AFTER_MS = 45 * 1_000;
+/** Keep recovery from stealing a freshly dispatched local model call. */
+export const ACTIVE_GENERATION_CALL_RECOVERY_GRACE_MS = 2 * 60 * 1_000;
 
 const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
   transport: [
@@ -976,6 +990,22 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       ORDER BY event.call_index DESC
       LIMIT 1
     ) AS active_call_ordinal_attempt
+    ,(
+      SELECT event.dispatched_at
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_dispatched_at
+    ,(
+      SELECT event.last_stream_activity_at
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_last_stream_activity_at
     ,COALESCE((
       SELECT json_group_array(attempted.ordinal)
       FROM (
@@ -1060,6 +1090,8 @@ export type ProgressiveGenerationSnapshot = {
     | null;
   latestGenerationSessionId: string | null;
   nextCallIndex: number;
+  activeCallDispatchedAt: number | null;
+  activeCallLastStreamActivityAt: number | null;
   activeCall: {
     lifecycleState: "started";
     callIndex: number;
@@ -1147,6 +1179,8 @@ export async function readProgressiveGenerationSnapshot(
       nextRetryKind: row.data.next_retry_kind,
       latestGenerationSessionId: row.data.latest_generation_session_id,
       nextCallIndex: row.data.next_call_index,
+      activeCallDispatchedAt: row.data.active_call_dispatched_at,
+      activeCallLastStreamActivityAt: row.data.active_call_last_stream_activity_at,
       activeCall,
       retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
       previousOutcome: row.data.previous_outcome,
@@ -1167,6 +1201,18 @@ export async function readProgressiveGenerationSnapshot(
     summary.generationProfile === "prompt_first_auto_v5_11" ||
     summary.generationProfile === "prompt_first_auto_v5_12" ||
     summary.resultProtocolVersion === 5;
+  const activeCallLastActivityAt = activeCall
+    ? Math.max(
+        row.data.active_call_dispatched_at ?? 0,
+        row.data.active_call_last_stream_activity_at ??
+          row.data.active_call_dispatched_at ??
+          0,
+      )
+    : 0;
+  const activeCallRecoveryGraceElapsed =
+    !activeCall ||
+    Date.now() - activeCallLastActivityAt >=
+      ACTIVE_GENERATION_CALL_RECOVERY_GRACE_MS;
   const stalled =
     (availability.state === "generating" ||
       availability.state === "retrying" ||
@@ -1180,7 +1226,8 @@ export async function readProgressiveGenerationSnapshot(
       (automatic
         ? AUTOMATIC_GENERATION_STALE_AFTER_MS
         : PROGRESSIVE_GENERATION_STALE_AFTER_MS) &&
-    (!automatic || (row.data.claim_lease_expires_at ?? 0) <= Date.now());
+    (!automatic || (row.data.claim_lease_expires_at ?? 0) <= Date.now()) &&
+    activeCallRecoveryGraceElapsed;
 
   return {
     quizId: row.data.quiz_id,
@@ -1205,6 +1252,8 @@ export async function readProgressiveGenerationSnapshot(
     nextRetryKind: row.data.next_retry_kind,
     latestGenerationSessionId: row.data.latest_generation_session_id,
     nextCallIndex: row.data.next_call_index,
+    activeCallDispatchedAt: row.data.active_call_dispatched_at,
+    activeCallLastStreamActivityAt: row.data.active_call_last_stream_activity_at,
     activeCall,
     retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
     previousOutcome: row.data.previous_outcome,

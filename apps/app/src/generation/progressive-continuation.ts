@@ -910,6 +910,7 @@ function isLeaseConflict(error: unknown): boolean {
     [
       "generation_claim_leased",
       "generation_claim_conflict",
+      "generation_call_active",
       "generation_recovery_lease_conflict",
       "generation_recovery_lease_lost",
     ].includes(error.code)
