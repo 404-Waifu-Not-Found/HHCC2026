@@ -17,6 +17,7 @@
     "run_worker_first": [
       "/api/*",
       "/health",
+      "/.well-known/assetlinks.json",
       "/",
       "/_sitemap*",
       "/admin",

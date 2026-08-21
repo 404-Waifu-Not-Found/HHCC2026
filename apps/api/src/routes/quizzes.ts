@@ -777,6 +777,7 @@ quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
               validatorVersion: summary.validatorVersion,
               importVersion: summary.importVersion,
               generationProfile: summary.generationProfile,
+              client: summary.client,
               generationId: summary.generationId,
               generationSessionId:
                 generationState.snapshot.latestGenerationSessionId ??

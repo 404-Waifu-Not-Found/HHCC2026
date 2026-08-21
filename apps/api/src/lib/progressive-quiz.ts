@@ -8,6 +8,7 @@ import {
   LocalAcceptedQuestionSummarySchema,
   LocalGenerationCallOutcomeSchema,
   LocalGenerationProfileSchema,
+  LocalGenerationClientSchema,
   LocalQuestionPlanSchema,
   LocalSourceSelectionMetricsSchema,
   LocalQuizProgressiveImportVersionSchema,
@@ -20,6 +21,7 @@ import {
   type AutomaticRetryKind,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
+  type LocalGenerationClient,
   type LocalGenerationCallOutcome,
   type LocalShortAnswerRubricV2,
 } from "@clipquest/contracts";
@@ -137,7 +139,8 @@ const TOKEN_ALIASES = new Map([
 
 export const ProgressiveQuizSummarySchema = z
   .object({
-    source: z.literal("extension-local-json-stream"),
+    source: z.enum(["extension-local-json-stream", "client-local-json-stream"]),
+    client: LocalGenerationClientSchema.optional(),
     importVersion: LocalQuizProgressiveImportVersionSchema,
     resultProtocolVersion: LocalQuizResultProtocolVersionSchema.optional(),
     pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
@@ -525,9 +528,20 @@ export function assertProgressiveChunkMetadata(
         | "recoverySessionId"
         | "questionPlan"
         | "promptFingerprint"
+        | "client"
       >
     >,
+  options: { allowClientTransition?: boolean } = {},
 ): void {
+  // recoverySessionId identifies a short browser/app lease rather than the
+  // immutable bank. A validated outbox chunk may legitimately arrive after
+  // the owner has reacquired the same generation under a new recovery lease.
+  const originalClientKind = summary.client?.kind ?? "chrome_extension";
+  const clientMatches = summary.client
+    ? JSON.stringify(chunk.client) === JSON.stringify(summary.client)
+    : chunk.client === undefined || chunk.client.kind === "chrome_extension";
+  const clientTransitionAllowed =
+    chunk.client?.kind !== originalClientKind && options.allowClientTransition;
   if (
     (chunk.protocolVersion ?? LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION) !==
       summary.resultProtocolVersion ||
@@ -542,12 +556,12 @@ export function assertProgressiveChunkMetadata(
       summary.generationProfile ||
     chunk.generationId !== summary.generationId ||
     chunk.generationSessionId !== summary.generationSessionId ||
-    chunk.recoverySessionId !== summary.recoverySessionId ||
     JSON.stringify(
       chunk.questionPlan?.types ?? summary.plannedQuestionTypes,
     ) !== JSON.stringify(summary.plannedQuestionTypes) ||
     chunk.questionPlan?.seed !== summary.questionPlanSeed ||
-    chunk.promptFingerprint !== summary.promptFingerprint
+    chunk.promptFingerprint !== summary.promptFingerprint ||
+    (!clientMatches && !clientTransitionAllowed)
   ) {
     throw new ApiError(
       409,
@@ -555,6 +569,38 @@ export function assertProgressiveChunkMetadata(
       "Every streamed question must use the quiz's original generation metadata.",
     );
   }
+}
+
+export function sharedEngineClientTransitionAllowed(
+  summary: ProgressiveQuizSummary,
+  nextClient: LocalGenerationClient | undefined,
+): boolean {
+  const originalKind = summary.client?.kind ?? "chrome_extension";
+  const minimumVersion =
+    nextClient?.kind === "android_app" ? "0.2.0" : "0.8.18";
+  return (
+    nextClient !== undefined &&
+    originalKind === "chrome_extension" &&
+    nextClient.kind === "android_app" &&
+    nextClient.capability === "question-stream-v7" &&
+    semanticVersionAtLeast(nextClient.version, minimumVersion) &&
+    summary.resultProtocolVersion === 10 &&
+    (summary.promptVersion === "quiz-local-json-stream-v5.11" ||
+      summary.promptVersion === "quiz-local-json-stream-v5.12") &&
+    (summary.validatorVersion === "validator-minimal-gradeability-v5.2" ||
+      summary.validatorVersion === "validator-minimal-gradeability-v5.3")
+  );
+}
+
+function semanticVersionAtLeast(actual: string, minimum: string): boolean {
+  const left = actual.split(".").map(Number);
+  const right = minimum.split(".").map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if ((left[index] ?? 0) !== (right[index] ?? 0)) {
+      return (left[index] ?? 0) > (right[index] ?? 0);
+    }
+  }
+  return true;
 }
 
 const ProgressiveGenerationSnapshotRowSchema = z.object({

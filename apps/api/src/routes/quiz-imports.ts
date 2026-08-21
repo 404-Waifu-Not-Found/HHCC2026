@@ -38,6 +38,7 @@ import {
   ProgressiveQuizSummarySchema,
   acceptedQuestionSummary,
   assertProgressiveChunkMetadata,
+  sharedEngineClientTransitionAllowed,
   readProgressiveGenerationSnapshot,
   retryKindMatchesGenerationOutcome,
   tryProgressiveQuizSummary,
@@ -57,6 +58,52 @@ const MAX_V5_9_AUTOMATIC_RETRIES = 30;
 const MAX_V5_10_AUTOMATIC_RETRIES = 30;
 const MAX_V5_11_AUTOMATIC_RETRIES = 30;
 const MAX_V5_12_AUTOMATIC_RETRIES = 30;
+
+function versionAtLeast(actual: string, minimum: string): boolean {
+  const left = actual.split(".").map(Number);
+  const right = minimum.split(".").map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if ((left[index] ?? 0) !== (right[index] ?? 0)) {
+      return (left[index] ?? 0) > (right[index] ?? 0);
+    }
+  }
+  return true;
+}
+
+function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
+  if (!chunk.client) return;
+  const minimum = chunk.client.kind === "android_app" ? "0.2.0" : "0.8.17";
+  if (!versionAtLeast(chunk.client.version, minimum)) {
+    throw new ApiError(
+      403,
+      "local_generation_client_outdated",
+      `ClipQuest ${chunk.client.kind === "android_app" ? "Android" : "Local AI"} ${minimum} or newer is required.`,
+    );
+  }
+}
+
+function assertGenerationEventClient(
+  summary: ProgressiveQuizSummary,
+  event: LocalGenerationCallEvent,
+): void {
+  const originalClientKind = summary.client?.kind ?? "chrome_extension";
+  const clientMatches = summary.client
+    ? JSON.stringify(summary.client) === JSON.stringify(event.client)
+    : event.client === undefined || event.client.kind === "chrome_extension";
+  if (
+    !clientMatches &&
+    !(
+      event.client?.kind !== originalClientKind &&
+      sharedEngineClientTransitionAllowed(summary, event.client)
+    )
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_generation_client_mismatch",
+      "Generation telemetry must use the quiz's original client.",
+    );
+  }
+}
 
 type AutomaticGenerationCallEvent =
   | LegacyAutomaticRecoveryCallEvent
@@ -199,6 +246,7 @@ quizImportsRouter.post("/progressive", async (c) => {
     windowSeconds: 60,
   });
   const input = await parseJson(c, ExtensionQuizProgressiveImportRequestSchema);
+  assertNewGenerationClient(input.chunk);
   if (
     !generationProfileAllowsNewBank(
       c.env,
@@ -284,7 +332,13 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
       "This quiz does not support current progressive question delivery.",
     );
   }
-  assertProgressiveChunkMetadata(summary, input.chunk);
+  const clientTransitionAllowed = sharedEngineClientTransitionAllowed(
+    summary,
+    input.chunk.client,
+  );
+  assertProgressiveChunkMetadata(summary, input.chunk, {
+    allowClientTransition: clientTransitionAllowed,
+  });
   if (input.chunk.totalQuestions !== summary.plannedCount) {
     throw new ApiError(
       409,
@@ -367,6 +421,12 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
   const timestamp = now();
   const nextSummary = ProgressiveQuizSummarySchema.parse({
     ...summary,
+    source: clientTransitionAllowed
+      ? input.chunk.client?.kind === "android_app"
+        ? "client-local-json-stream"
+        : "extension-local-json-stream"
+      : summary.source,
+    client: clientTransitionAllowed ? input.chunk.client : summary.client,
     generationState: complete ? "ready" : "generating",
     reasonCode: undefined,
     retryOrdinal: undefined,
@@ -527,6 +587,7 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       "This quiz does not support current progressive question delivery.",
     );
   }
+  assertGenerationEventClient(snapshot.summary, input);
   if (
     input.startIndex >= snapshot.summary.plannedCount ||
     input.startIndex + input.requestedCount > snapshot.summary.plannedCount
@@ -1076,7 +1137,11 @@ async function persistProgressiveQuiz(input: {
     ? []
     : questionQualityFlags(question, []);
   const summary = ProgressiveQuizSummarySchema.parse({
-    source: "extension-local-json-stream",
+    source:
+      chunk.client?.kind === "android_app"
+        ? "client-local-json-stream"
+        : "extension-local-json-stream",
+    client: chunk.client,
     importVersion:
       chunk.importVersion ??
       (chunk.promptVersion === "quiz-local-json-stream-v5.12" ||

@@ -9,6 +9,7 @@ import {
   gradeProgressiveShortAnswerDecision,
   parseProgressiveQuizSummary,
   readProgressiveGenerationSnapshot,
+  sharedEngineClientTransitionAllowed,
   tryProgressiveQuizSummary,
 } from "../src/lib/progressive-quiz";
 import {
@@ -211,6 +212,46 @@ describe("progressive quiz storage state", () => {
         promptVersion: "quiz-local-json-stream-v5.1",
       }).success,
     ).toBe(true);
+  });
+
+  it("allows an explicit shared-engine transition only for compatible current banks", () => {
+    const legacy = ProgressiveQuizSummarySchema.parse(summary());
+    const current = {
+      ...legacy,
+      resultProtocolVersion: 10 as const,
+      promptVersion: "quiz-local-json-stream-v5.12" as const,
+      validatorVersion: "validator-minimal-gradeability-v5.3" as const,
+      client: {
+        kind: "chrome_extension" as const,
+        version: "0.8.18",
+        capability: "question-stream-v7" as const,
+      },
+    };
+    const android = {
+      kind: "android_app" as const,
+      version: "0.2.0",
+      capability: "question-stream-v7" as const,
+    };
+    expect(sharedEngineClientTransitionAllowed(current, android)).toBe(true);
+    expect(
+      sharedEngineClientTransitionAllowed(
+        { ...current, client: android },
+        current.client,
+      ),
+    ).toBe(false);
+    expect(
+      sharedEngineClientTransitionAllowed(
+        { ...current, client: undefined },
+        android,
+      ),
+    ).toBe(true);
+    expect(sharedEngineClientTransitionAllowed(legacy, android)).toBe(false);
+    expect(
+      sharedEngineClientTransitionAllowed(current, {
+        ...android,
+        version: "0.1.9",
+      }),
+    ).toBe(false);
   });
 
   it("adds pipeline-9 indexes without dropping the pipeline-7 index", () => {

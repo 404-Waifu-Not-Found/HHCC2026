@@ -513,6 +513,12 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
         backendEnabled: false,
         extensionEnabled: true,
         extensionRequired: true,
+        androidEnabled: true,
+        androidApp: {
+          minimumVersion: "0.2.0",
+          requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+          foregroundOnly: true,
+        },
         model: LOCAL_QUIZ_MODEL,
         pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
         promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
