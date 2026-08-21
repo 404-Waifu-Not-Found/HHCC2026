@@ -61,7 +61,6 @@ export function AppTextInput({
                 ? theme.primary
                 : theme.borderStrong,
           },
-          focused && styles.fieldFocused,
           Platform.OS === "web" && {
             transitionDuration: `${motion.fast}ms`,
             transitionProperty: "border-color, background-color",
@@ -102,6 +101,18 @@ export function AppTextInput({
           ]}
         />
         {trailing ? <View style={styles.adornment}>{trailing}</View> : null}
+        {focused ? (
+          <View
+            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[
+              styles.focusRing,
+              large && styles.focusRingLarge,
+              { borderColor: error ? theme.error : theme.primary },
+            ]}
+          />
+        ) : null}
       </View>
       {error ? (
         <Text
@@ -134,6 +145,7 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.label,
   },
   field: {
+    position: "relative",
     minHeight: controls.inputHeight,
     flexDirection: "row",
     alignItems: "center",
@@ -146,8 +158,17 @@ const styles = StyleSheet.create({
     borderRadius: radii.large,
     paddingHorizontal: spacing[5],
   },
-  fieldFocused: {
+  focusRing: {
+    position: "absolute",
+    top: -borders.standard,
+    right: -borders.standard,
+    bottom: -borders.standard,
+    left: -borders.standard,
     borderWidth: borders.selected,
+    borderRadius: radii.medium,
+  },
+  focusRingLarge: {
+    borderRadius: radii.large,
   },
   input: {
     minWidth: 0,
