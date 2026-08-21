@@ -39,7 +39,7 @@ This table is a dated observation, not a substitute for checking the live servic
 
 ## Current web and Android source candidate
 
-The current supported contract uses extension `0.8.18`, result protocol `10`, capability `question-stream-v7`, pipeline `9`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, progressive import `v8`, and generation profile `prompt_first_auto_v5_12` when assigned. Chrome 0.8.17 remains accepted. Android 0.2.0 consumes the same engine and reports `android_app` client metadata; web reports `chrome_extension`.
+The current supported contract uses extension `0.8.19`, result protocol `10`, capability `question-stream-v7`, pipeline `9`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, progressive import `v8`, and generation profile `prompt_first_auto_v5_12` when assigned. Chrome 0.8.17 remains accepted. Android 0.2.0 consumes the same engine and reports `android_app` client metadata; web reports `chrome_extension`.
 
 The checked-in rollout keeps v5.12 disabled and v5.11 enabled. `/health` reports the supported contract and effective default separately; `/api/local-ai/profile` is authoritative for a learner. Protocol 10 accepts every well-formed, gradeable singleton immediately and retries only transport/service failures or unusable storage/grading structures. Existing banks preserve their original prompt, validator, telemetry, client integrity, and continuation behavior without metadata mixing.
 
@@ -168,9 +168,9 @@ Do not distribute a locally debug-signed Gradle artifact. See [Android private b
 
 ## Generation rollout gate
 
-Do not enable `QUIZ_V5_12_ROLLOUT` merely because extension 0.8.18 is installed or `/health` advertises prompt v5.12. Source-level regression tests are necessary but do not clear the canary or production gate. Before canary or general enablement:
+Do not enable `QUIZ_V5_12_ROLLOUT` merely because extension 0.8.19 is installed or `/health` advertises prompt v5.12. Source-level regression tests are necessary but do not clear the canary or production gate. Before canary or general enablement:
 
-1. Deploy one immutable pushed Worker/app candidate with v5.12 still disabled, install its matching extension-0.8.18 ZIP, and record the exact Worker version, Git SHA, and extension checksum.
+1. Deploy one immutable pushed Worker/app candidate with v5.12 still disabled, install its matching extension-0.8.19 ZIP, and record the exact Worker version, Git SHA, and extension checksum.
 2. Verify that the authenticated `/api/local-ai/profile` still assigns the intended fallback profile before canary. Then set `QUIZ_V5_12_ROLLOUT=canary`, add only the `unoxyrich` user ID, and prove that one newly persisted bank uses `prompt_first_auto_v5_12`, prompt v5.12, validator v5.3, protocol 10, pipeline 9, and progressive import v8.
 3. Run at least 100 complete healthy banks across 5/10/15 lengths, all question-type combinations, English/CJK, short/long captions, formula-heavy lessons, and manual/automatic captions.
 4. Require at least 99% healthy first-pass completion, 100% eligible completion without learner recovery actions, zero new `manual_continuation` rows, exact HTTP-call/event reconciliation, no shortened completion, and no accepted-question replacement.

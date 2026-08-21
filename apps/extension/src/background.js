@@ -231,11 +231,11 @@ async function injectYouTubeExtractor(tabId) {
   await chrome.scripting.executeScript({
     target: { tabId },
     world: "MAIN",
-    files: ["youtube-page.js"],
+    files: ["bounded-response.js", "youtube-page.js"],
   });
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ["caption-core.js", "youtube-content.js"],
+    files: ["bounded-response.js", "caption-core.js", "youtube-content.js"],
   });
 }
 

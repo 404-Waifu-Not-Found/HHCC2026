@@ -41,6 +41,7 @@ for (const file of ["manifest.json", "LICENSE", "NOTICE.md"]) {
 }
 for (const file of [
   "background.js",
+  "bounded-response.js",
   "caption-core.js",
   "caption-text.js",
   "clipquest-bridge.js",

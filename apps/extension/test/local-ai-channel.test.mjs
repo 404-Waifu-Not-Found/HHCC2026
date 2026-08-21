@@ -183,6 +183,16 @@ test("release builds preserve the loaded unpacked extension directory", () => {
 test("release builds include every background module dependency", async () => {
   assert.match(background, /\.\/generation-outbox\.js/);
   assert.match(buildScript, /"generation-outbox\.js"/);
+  assert.match(buildScript, /"bounded-response\.js"/);
+  assert.deepEqual(manifest.content_scripts[1].js, [
+    "bounded-response.js",
+    "youtube-page.js",
+  ]);
+  assert.equal(manifest.content_scripts[2].js[0], "bounded-response.js");
+  assert.match(
+    background,
+    /files: \["bounded-response\.js", "youtube-page\.js"\]/,
+  );
   assert.match(
     await readFile(
       new URL("../src/generation-outbox.js", import.meta.url),
@@ -199,7 +209,7 @@ test("release ZIPs normalize metadata for reproducible matching artifacts", () =
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.18");
+  assert.equal(manifest.version, "0.8.19");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -214,7 +224,7 @@ test("the popup exposes only DeepSeek configuration", () => {
   assert.match(background, /captionsToPlainText/);
 });
 
-test("release 0.8.18 uses prompt-first v5.12 and the gradeability validator", () => {
+test("release 0.8.19 uses prompt-first v5.12 and the gradeability validator", () => {
   assert.match(generator, /quiz-local-json-stream-v5\.12/);
   assert.match(generator, /quiz-local-json-stream-v5\.11/);
   assert.match(generator, /quiz-local-json-stream-v5\.10/);
@@ -459,4 +469,7 @@ test("caption extraction returns an independently observed video duration", asyn
   assert.match(pageBridge, /player\?\.getDuration\?\.\(\)/);
   assert.match(contentScript, /trustworthy video duration/);
   assert.match(contentScript, /durationSeconds/);
+  assert.match(pageBridge, /observeCaptionResponse/);
+  assert.match(pageBridge, /Caption observation timed out/);
+  assert.doesNotMatch(pageBridge, /\.clone\(\)\s*\.text\(\)/);
 });

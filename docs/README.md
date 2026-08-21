@@ -34,7 +34,7 @@ This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 mi
 
 ## Current web-generation source candidate
 
-The current supported source contract is extension `0.8.18`, result protocol `10`, capability `question-stream-v7`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, pipeline `9`, progressive import `v8`, and profile `prompt_first_auto_v5_12` when assigned. Android 0.2.0 consumes the same shared engine. The checked-in rollout keeps v5.12 disabled and v5.11 enabled, so the authenticated profile—not this supported-version list—is authoritative for a new bank.
+The current supported source contract is extension `0.8.19`, result protocol `10`, capability `question-stream-v7`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, pipeline `9`, progressive import `v8`, and profile `prompt_first_auto_v5_12` when assigned. Android 0.2.0 consumes the same shared engine. The checked-in rollout keeps v5.12 disabled and v5.11 enabled, so the authenticated profile—not this supported-version list—is authoritative for a new bank.
 
 Automated regression coverage retains legacy recovery and grading behavior while adding exact prompt-fingerprint/request-body checks, one-character streaming, local MC mapping, model-authored polarity, all four short-answer modes, structural-only retry classification, immutable accepted prefixes, and protocol-10 call lifecycle reconciliation.
 

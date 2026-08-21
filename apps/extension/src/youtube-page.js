@@ -6,6 +6,9 @@
 
   const REQUEST_EVENT = "clipquest:youtube:tracks-request:v1";
   const RESPONSE_EVENT = "clipquest:youtube:tracks-response:v1";
+  const boundedResponse = globalThis.ClipQuestBoundedResponse;
+  const MAX_CAPTION_BYTES = 8 * 1024 * 1024;
+  const MAX_PLAYER_RESPONSE_BYTES = 2 * 1024 * 1024;
   let capturedCaption = null;
 
   function rememberCaption(url, body) {
@@ -27,16 +30,32 @@
   }
 
   const originalFetch = globalThis.fetch;
+  async function observeCaptionResponse(url, response) {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(new Error("Caption observation timed out.")),
+      15_000,
+    );
+    try {
+      const body = await boundedResponse.readBoundedResponseText(
+        response.clone(),
+        {
+          maxBytes: MAX_CAPTION_BYTES,
+          signal: controller.signal,
+        },
+      );
+      rememberCaption(url, body);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   globalThis.fetch = async function clipQuestObservedFetch(...args) {
     const response = await originalFetch.apply(this, args);
     try {
       const url = typeof args[0] === "string" ? args[0] : args[0]?.url;
       if (String(url).includes("/api/timedtext")) {
-        void response
-          .clone()
-          .text()
-          .then((body) => rememberCaption(url, body))
-          .catch(() => undefined);
+        void observeCaptionResponse(url, response).catch(() => undefined);
       }
     } catch {
       // The player response must remain untouched if observation fails.
@@ -152,29 +171,40 @@
     if (!settings) {
       throw new Error("YouTube page configuration is unavailable.");
     }
-    const response = await fetch(
-      `https://www.youtube.com/youtubei/v1/player?key=${encodeURIComponent(settings.apiKey)}&prettyPrint=false`,
-      {
-        method: "POST",
-        credentials: "omit",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          videoId,
-          contentCheckOk: false,
-          racyCheckOk: false,
-          context: {
-            client: {
-              clientName: "ANDROID",
-              clientVersion: "20.10.38",
-              androidSdkVersion: 35,
-              hl: "en",
-              gl: "US",
+    const { response, text: playerText } =
+      await boundedResponse.fetchBoundedText(
+        `https://www.youtube.com/youtubei/v1/player?key=${encodeURIComponent(settings.apiKey)}&prettyPrint=false`,
+        {
+          method: "POST",
+          credentials: "omit",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            videoId,
+            contentCheckOk: false,
+            racyCheckOk: false,
+            context: {
+              client: {
+                clientName: "ANDROID",
+                clientVersion: "20.10.38",
+                androidSdkVersion: 35,
+                hl: "en",
+                gl: "US",
+              },
             },
-          },
-        }),
-      },
-    );
-    const playerResponse = await response.json().catch(() => null);
+          }),
+        },
+        {
+          fetchImpl: originalFetch,
+          maxBytes: MAX_PLAYER_RESPONSE_BYTES,
+          timeoutMs: 15_000,
+        },
+      );
+    let playerResponse = null;
+    try {
+      playerResponse = JSON.parse(playerText);
+    } catch {
+      // The status-aware error below is safer than exposing a response body.
+    }
     if (!response.ok || playerResponse?.playabilityStatus?.status !== "OK") {
       throw new Error(
         playerResponse?.playabilityStatus?.reason ??
@@ -193,11 +223,19 @@
       throw new Error("YouTube returned an unsafe caption URL.");
     }
     captionUrl.searchParams.set("fmt", "json3");
-    const captionResponse = await fetch(captionUrl, {
-      cache: "no-store",
-      credentials: "omit",
-    });
-    const body = await captionResponse.text();
+    const { response: captionResponse, text: body } =
+      await boundedResponse.fetchBoundedText(
+        captionUrl,
+        {
+          cache: "no-store",
+          credentials: "omit",
+        },
+        {
+          fetchImpl: originalFetch,
+          maxBytes: MAX_CAPTION_BYTES,
+          timeoutMs: 15_000,
+        },
+      );
     if (!captionResponse.ok || !body.trim()) {
       throw new Error(
         `YouTube alternate captions failed (${captionResponse.status}).`,
@@ -273,7 +311,7 @@
     if (settings.visitorData) {
       headers["x-goog-visitor-id"] = settings.visitorData;
     }
-    const response = await fetch(
+    const { response, text } = await boundedResponse.fetchBoundedText(
       `https://www.youtube.com/youtubei/v1/${endpoint}?key=${encodeURIComponent(settings.apiKey)}`,
       {
         method: "POST",
@@ -281,8 +319,18 @@
         headers,
         body: JSON.stringify({ context: settings.context, ...payload }),
       },
+      {
+        fetchImpl: originalFetch,
+        maxBytes: MAX_PLAYER_RESPONSE_BYTES,
+        timeoutMs: 15_000,
+      },
     );
-    const body = await response.json().catch(() => null);
+    let body = null;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      // The status-aware error below is safer than exposing a response body.
+    }
     if (!response.ok || !body || body.error) {
       throw new Error(
         body?.error?.message ??
