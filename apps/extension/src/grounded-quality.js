@@ -1480,32 +1480,43 @@ export function constructConceptFirstTrueFalseQuestion(
   const groundingSource = evidenceAppearsInText(evidence, focusExcerpt)
     ? evidence
     : focusExcerpt;
-  if (
-    !supported ||
-    !normalizeGroundedText(groundingSource).includes(
-      normalizeGroundedText(supported),
-    )
-  ) {
+  const exactSupported = resolveUniqueEvidenceAnswerSpan(
+    supported,
+    groundingSource,
+    groundingSource,
+  );
+  const resolvedSupported =
+    exactSupported ??
+    (answerSupportedByEvidence(supported, groundingSource)
+      ? supported.normalize("NFC").trim()
+      : null);
+  if (!resolvedSupported) {
     return null;
   }
   const directExplanation = String(candidate?.explanation ?? "").trim();
+  const explanation =
+    directExplanation &&
+    normalizeGroundedText(directExplanation) !==
+      normalizeGroundedText(resolvedSupported)
+      ? directExplanation
+      : `This statement is accurate: ${resolvedSupported}`;
   if (preferredPolarity === false) {
-    const mutation = localFalseMutation(supported);
+    const mutation = localFalseMutation(resolvedSupported);
     if (mutation) {
       return {
         question: mutation.question,
         answer: false,
-        correction: supported,
-        explanation: directExplanation || supported,
+        correction: resolvedSupported,
+        explanation,
         mutationKind: "local_allowlisted",
       };
     }
   }
   return {
-    question: supported,
+    question: resolvedSupported,
     answer: true,
-    correction: supported,
-    explanation: directExplanation || supported,
+    correction: resolvedSupported,
+    explanation,
     mutationKind: "none",
   };
 }

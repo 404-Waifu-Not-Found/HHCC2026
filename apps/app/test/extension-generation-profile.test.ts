@@ -125,6 +125,39 @@ describe("extension generation profile compatibility", () => {
     }
   });
 
+  it("keeps first-question admission independent from call telemetry", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../app/generation/[videoId].tsx",
+      ),
+      "utf8",
+    );
+    expect(source).toContain("let questionIngestion = Promise.resolve()");
+    expect(source).toContain("let callIngestion = Promise.resolve()");
+    expect(source).toContain(
+      "if (!attemptId) await startAttempt(response.quizId)",
+    );
+    const admissionBlock = source.slice(
+      source.indexOf("lastProgressKey = undefined"),
+      source.indexOf("void questionIngestion.catch"),
+    );
+    expect(
+      admissionBlock.indexOf("startAttempt(response.quizId)"),
+    ).toBeLessThan(admissionBlock.indexOf("schedulePendingCallFlush()"));
+  });
+
+  it("shows retry ETA only while question one is still missing", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../app/generation/[videoId].tsx",
+      ),
+      "utf8",
+    );
+    expect(source).toContain("if (!attemptId && detail.retryOrdinal === 1)");
+  });
+
   it("reacquires safe video metadata when the local import cache is gone", () => {
     const source = readFileSync(
       resolve(

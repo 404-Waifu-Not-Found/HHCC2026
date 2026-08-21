@@ -613,6 +613,22 @@ test("v5.8 constructs true-false polarity locally from one supported fact", () =
   assert.equal(trueQuestion?.question, evidence);
 });
 
+test("v5.8 resolves a concise supported fact from a longer evidence window", () => {
+  const evidence =
+    "Cytokines coordinate immune communication. They activate B and T cells before the adaptive response expands.";
+  const question = constructConceptFirstTrueFalseQuestion(
+    {
+      evidenceQuote: evidence,
+      supportedFact: "They activate B and T cells",
+    },
+    evidence,
+    true,
+  );
+  assert.equal(question?.answer, true);
+  assert.equal(question?.question, "They activate B and T cells");
+  assert.match(question?.explanation ?? "", /statement is accurate/iu);
+});
+
 test("source framing is removed without rewriting the concept question", () => {
   assert.equal(
     stripQuestionSourceFraming(

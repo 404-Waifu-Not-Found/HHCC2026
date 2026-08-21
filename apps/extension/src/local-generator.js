@@ -259,11 +259,28 @@ function conceptFirstQuestionSchemaForType(type, id) {
     };
   }
   if (type === "true_false") {
+    const {
+      question: _question,
+      explanation: _explanation,
+      ...trueFalseCommon
+    } = common;
     return {
       type: "object",
       additionalProperties: false,
-      required: [...commonRequired, "supportedFact"],
-      properties: { ...common, supportedFact: { type: "string" } },
+      required: [
+        ...commonRequired.filter(
+          (field) => field !== "question" && field !== "explanation",
+        ),
+        "supportedFact",
+      ],
+      properties: {
+        ...trueFalseCommon,
+        supportedFact: {
+          type: "string",
+          description:
+            "One concise self-contained factual statement supported by evidenceQuote. It may copy evidenceQuote exactly or restate only its complete literal claim. Do not choose truth polarity, mutate it, or return an answer boolean.",
+        },
+      },
     };
   }
   const shortBase = {
@@ -625,9 +642,6 @@ function conceptFirstExampleQuestion(type, id) {
       type,
       concept: "placeholder concept",
       objectiveCategory: "relationship",
-      question: evidenceQuote,
-      explanation:
-        "Quantity B increases under the defined condition when quantity A increases.",
       evidenceQuote,
       supportedFact: evidenceQuote,
     };
@@ -682,7 +696,7 @@ function generationMessagesV58(input, isTransientRetry) {
     type === "multiple_choice"
       ? "Emit the JSON properties in the exact evidence-first schema order. Choose evidenceQuote first by copying one concise contiguous span from the eligible evidence. Then copy the shortest unique contiguous answerSpan character-for-character from evidenceQuote that completely answers the assessment; do not paraphrase, summarize, change morphology, or drop punctuation inside it. Derive answerText next, before writing concept or question. When evidence says 'the answer is X' or 'this factor is X', answerSpan must be X rather than the surrounding presentation clause. answerSpan must itself be a complete grammatical answer to the exact question: never select a transition, scene-setting phrase, exception, example, or concessive fragment such as 'even without catastrophic events'. Never select figurative weave, tapestry, strand, link, unravel, fabric-of-nature, or jacket wording as an answer; if the focus offers no literal complete answer, choose a different supported claim in the focus. If the evidence is already in the selected quiz language, answerText must equal answerSpan except that one obvious one-character caption spelling or plural error may be corrected; never change a concept, direction, comparison, quantity, or qualifier. Otherwise translate answerSpan faithfully. Only after locking that answer, write a direct question which the complete answerText answers grammatically and uniquely. Read the question followed by answerText as one question-and-answer pair before emitting it. If answerText is only a term, name, noun phrase, or factor such as 'biodiversity', ask What or Which; never ask How or Why. A How-can question requires a cause, condition, or mechanism, and answerText itself must name that cause, condition, or mechanism; the explanation cannot supply missing content, and answerText must not merely restate the outcome or what can be absent. Any How-does/How-do question using affect, contribute, support, strengthen, influence, impact, help, enable, determine, relate, depend, or secure requires answerText to state an actual outcome, relationship, or mechanism; a component list or descriptive fragment is invalid. Never write malformed stems such as 'What condition do X provide?'; ask 'How does X support Y?' when the answer is an action. Match pronoun number: a How-do question about plural actors cannot be answered with an unexplained singular 'It'. Distractors must remain grammatically responsive to the stem but need not repeat the correct answer's causal vocabulary. Do not reuse an accepted answer span or test the same mechanism again under a renamed concept; choose a different supported objective. In English the question must begin with an allowlisted direct interrogative or imperative from the system instruction. Return distractors as exactly six concise candidate strings in the selected quiz language, with no objects, reasons, labels, or extra fields. Cover six different misconception patterns: reversed relation, missing condition, wrong mechanism, overgeneralization, adjacent concept, and no-effect claim. No candidate may be an alias, defensible restatement, or semantic equivalent of answerText or another candidate. ClipQuest compares the candidates pairwise and stores only the first three unambiguous choices, so order the strongest candidates first. Preserve every causal, comparative, quantitative, and directional qualifier: if evidence supports only lower, higher, less, more, reduced, increased, loss, lack, or absence of a concept, keep that qualifier in the question or state the complete directional relationship in answerText. Do not use a pronoun whose antecedent changes the scope of the evidence. Do not return choices or answerIndex; ClipQuest constructs and shuffles them locally."
       : type === "true_false"
-        ? "Return one direct supportedFact contained in evidenceQuote. Do not choose truth polarity, mutate the statement, or return an answer boolean; ClipQuest constructs a safe true or false item locally."
+        ? "Return one concise self-contained supportedFact that states only the complete literal claim supported by evidenceQuote. It may copy evidenceQuote exactly or omit unrelated surrounding words without changing the claim. Do not return question or explanation fields, choose truth polarity, mutate the statement, or return an answer boolean; ClipQuest constructs the learner-facing statement, polarity, correction, and explanation locally."
         : "Choose exactly one shortAnswerMode. Use atomic_term for a single term or name, proposition for a concise explanatory claim with 1-3 independent requiredIdeas, enumeration for 2-8 indispensable requiredItems, and formula only with canonical formulaTokens. Do not manufacture paraphrase lists; ClipQuest derives safe variants locally.";
   const repair = input.repairGuidance
     ? `\nRepair requirement for this same missing ordinal: ${input.repairGuidance}`
@@ -966,10 +980,13 @@ export function normalizeGeneratedQuestion(
   if (type === "true_false") {
     if (groundedMode) {
       if (conceptFirstV58Mode) {
+        const supportedFact = cleanString(rawQuestion.supportedFact);
         return {
           ...common,
-          supportedFact: cleanString(rawQuestion.supportedFact),
-          supportedStatement: cleanString(rawQuestion.supportedFact),
+          question: supportedFact,
+          explanation: supportedFact,
+          supportedFact,
+          supportedStatement: supportedFact,
         };
       }
       return {
@@ -1629,10 +1646,18 @@ function validateQuiz(quiz, input) {
   const prompts = accepted.map((question) => question.question);
   const questions = quiz.questions.map((rawQuestion, index) => {
     const expectedId = `q${input.questionOffset + index + 1}`;
+    const rawConceptCandidate =
+      input.conceptFirstV58Mode && rawQuestion?.type === "true_false"
+        ? {
+            ...rawQuestion,
+            question: rawQuestion.supportedFact,
+            explanation: rawQuestion.supportedFact,
+          }
+        : rawQuestion;
     const rawConceptFailure = input.strictConceptMode
-      ? questionConceptFailure(rawQuestion)
+      ? questionConceptFailure(rawConceptCandidate)
       : input.rawConceptValidationMode &&
-          !questionTestsTaughtConcept(rawQuestion)
+          !questionTestsTaughtConcept(rawConceptCandidate)
         ? "schema_invalid"
         : null;
     const rawQuestionKindRepair =
@@ -1657,7 +1682,7 @@ function validateQuiz(quiz, input) {
     }
     if (
       input.conceptFirstV58Mode &&
-      !questionMatchesQuizLanguage(rawQuestion, input.quizLanguage)
+      !questionMatchesQuizLanguage(rawConceptCandidate, input.quizLanguage)
     ) {
       validationFailure(
         `Question ${index + 1} contains learner-visible text outside the selected quiz language.`,
