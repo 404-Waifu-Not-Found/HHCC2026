@@ -1,6 +1,7 @@
 import type { LibraryCard } from "@clipquest/contracts";
 import { VoxelIcon } from "./VoxelIcon";
 import {
+  Alert,
   Platform,
   Pressable,
   StyleSheet,
@@ -30,11 +31,18 @@ export function VideoCard({
   onPress(): void;
   compact?: boolean;
   fill?: boolean;
-  onExport?(): void;
+  onExport?(): void | Promise<void>;
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const horizontal = !compact && width >= 720;
+  // Home's compact carousel should read as a deliberate single-card surface
+  // on phones, not a desktop-width card with a distracting clipped sliver.
+  // Library rows use `fill`, so their responsive list geometry stays intact.
+  const compactCardWidth =
+    compact && !fill && width < 720
+      ? Math.min(360, Math.max(280, width - spacing[8]))
+      : undefined;
   const actionLabel =
     card.action === "continue"
       ? t("continue")
@@ -49,118 +57,131 @@ export function VideoCard({
         : theme.textMuted;
 
   return (
-    <MotionPressable
-      accessibilityRole="button"
-      accessibilityLabel={`${card.title}. ${t(masteryKeys[card.mastery])}. ${actionLabel}`}
-      onPress={onPress}
-      style={({ pressed, hovered }) => [
+    <View
+      style={[
         styles.card,
         fill && styles.fill,
-        horizontal && styles.horizontal,
+        compactCardWidth ? { width: compactCardWidth } : undefined,
         {
           backgroundColor: theme.surface,
-          borderColor: hovered ? theme.primary : theme.border,
-          borderBottomColor: hovered
-            ? theme.primaryPressed
-            : theme.borderStrong,
-        },
-        {
-          borderBottomWidth: borders.tactileDepth + borders.standard,
-          opacity: pressed ? 0.94 : 1,
-        },
-        Platform.OS === "web" && {
-          transitionDuration: `${motion.fast}ms`,
-          transitionProperty: "transform, border-color",
-          outlineColor: theme.focus,
+          borderColor: theme.border,
+          borderBottomColor: theme.borderStrong,
         },
       ]}
     >
-      <View style={[styles.media, horizontal && styles.mediaHorizontal]}>
-        <ReliableThumbnail
-          uri={card.thumbnailUrl}
-          accessibilityLabel={card.title}
-          recyclingKey={card.videoId}
-          testID={`video-card-thumbnail-${card.videoId}`}
-          style={styles.image}
-        />
-        <MotionView
-          preset="from-left"
-          delay={80}
-          style={[
-            styles.sourceBadge,
-            { backgroundColor: "rgba(11,20,48,0.78)" },
-          ]}
-        >
-          <VoxelIcon name="video" size={15} color="#FFFFFF" />
-          <Text style={styles.source}>YouTube</Text>
-        </MotionView>
-      </View>
-      <View style={styles.body}>
-        <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>
-          {card.title}
-        </Text>
-        <View style={styles.meta}>
-          <View
-            style={[styles.badge, { backgroundColor: theme.surfaceSunken }]}
+      <MotionPressable
+        accessibilityRole="button"
+        accessibilityLabel={`${card.title}, ${t(masteryKeys[card.mastery])}, ${actionLabel}`}
+        onPress={onPress}
+        style={({ pressed, hovered }) => [
+          styles.main,
+          horizontal && styles.mainHorizontal,
+          {
+            borderColor: hovered ? theme.primary : "transparent",
+            opacity: pressed ? 0.94 : 1,
+          },
+          Platform.OS === "web" && {
+            transitionDuration: `${motion.fast}ms`,
+            transitionProperty: "transform, border-color",
+            outlineColor: theme.focus,
+          },
+        ]}
+      >
+        <View style={[styles.media, horizontal && styles.mediaHorizontal]}>
+          <ReliableThumbnail
+            uri={card.thumbnailUrl}
+            accessibilityLabel={card.title}
+            recyclingKey={card.videoId}
+            testID={`video-card-thumbnail-${card.videoId}`}
+            style={styles.image}
+          />
+          <MotionView
+            preset="from-left"
+            delay={80}
+            style={[
+              styles.sourceBadge,
+              { backgroundColor: "rgba(11,20,48,0.78)" },
+            ]}
           >
-            <View style={[styles.dot, { backgroundColor: masteryColor }]} />
-            <Text style={[styles.badgeText, { color: theme.textMuted }]}>
-              {t(masteryKeys[card.mastery])}
+            <VoxelIcon name="video" size={15} color="#FFFFFF" />
+            <Text style={styles.source}>YouTube</Text>
+          </MotionView>
+        </View>
+        <View style={styles.body}>
+          <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>
+            {card.title}
+          </Text>
+          <View style={styles.meta}>
+            <View
+              style={[styles.badge, { backgroundColor: theme.surfaceSunken }]}
+            >
+              <View style={[styles.dot, { backgroundColor: masteryColor }]} />
+              <Text style={[styles.badgeText, { color: theme.textMuted }]}>
+                {t(masteryKeys[card.mastery])}
+              </Text>
+            </View>
+            {card.bestScore !== null ? (
+              <Text style={[styles.score, { color: masteryColor }]}>
+                {Math.round(card.bestScore)}%
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </MotionPressable>
+      <View style={[styles.actionRow, { borderTopColor: theme.divider }]}>
+        <Text style={[styles.action, { color: theme.primary }]}>
+          {actionLabel}
+        </Text>
+        <VoxelIcon name="next" size={20} color={theme.primary} />
+        {card.cheatSheet.status === "none" ? (
+          <View
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel={`${t("notesNotReady")}. Complete a quiz to enable notes export.`}
+            accessibilityHint="Complete a quiz to enable notes export."
+            style={styles.exportStatus}
+          >
+            <Text style={[styles.exportText, { color: theme.textMuted }]}>
+              {t("notesNotReady")}
             </Text>
           </View>
-          {card.bestScore !== null ? (
-            <Text style={[styles.score, { color: masteryColor }]}>
-              {Math.round(card.bestScore)}%
-            </Text>
-          ) : null}
-        </View>
-        <MotionView
-          preset="from-right"
-          delay={120}
-          style={[styles.actionRow, { borderTopColor: theme.divider }]}
-        >
-          <Text style={[styles.action, { color: theme.primary }]}>
-            {actionLabel}
-          </Text>
-          <VoxelIcon name="next" size={20} color={theme.primary} />
+        ) : (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={
               card.cheatSheet.status === "ready"
                 ? t("exportNotes")
-                : card.cheatSheet.status === "failed"
-                  ? t("retryNotes")
-                  : t("notesNotReady")
+                : t("retryNotes")
             }
-            disabled={!onExport || card.cheatSheet.status === "none"}
-            onPress={(event) => {
-              event.stopPropagation();
-              onExport?.();
+            accessibilityState={{ disabled: !onExport }}
+            onPress={() => {
+              if (!onExport) return;
+              void Promise.resolve(onExport()).catch((cause) => {
+                Alert.alert(
+                  t("exportNotes"),
+                  cause instanceof Error
+                    ? cause.message
+                    : "The cheat sheet could not be exported.",
+                );
+              });
             }}
             style={({ pressed }) => [
               styles.exportButton,
               {
                 borderColor: theme.borderStrong,
-                opacity:
-                  !onExport || card.cheatSheet.status === "none"
-                    ? 0.45
-                    : pressed
-                      ? 0.7
-                      : 1,
+                opacity: !onExport ? 0.45 : pressed ? 0.7 : 1,
               },
             ]}
           >
             <Text style={[styles.exportText, { color: theme.textMuted }]}>
               {card.cheatSheet.status === "ready"
                 ? t("exportNotes")
-                : card.cheatSheet.status === "failed"
-                  ? t("retryNotes")
-                  : t("notesNotReady")}
+                : t("retryNotes")}
             </Text>
           </Pressable>
-        </MotionView>
+        )}
       </View>
-    </MotionPressable>
+    </View>
   );
 }
 
@@ -170,7 +191,16 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     overflow: "hidden",
     borderWidth: borders.standard,
+    borderBottomWidth: borders.tactileDepth + borders.standard,
     borderRadius: radii.feature,
+  },
+  main: {
+    width: "100%",
+    borderWidth: borders.hairline,
+    borderRadius: radii.feature,
+  },
+  mainHorizontal: {
+    flexDirection: "row",
   },
   fill: {
     width: "100%",
@@ -252,10 +282,13 @@ const styles = StyleSheet.create({
     minHeight: 36,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: spacing[1],
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: spacing[2],
     borderTopWidth: borders.hairline,
     paddingTop: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
   },
   action: {
     fontFamily: typography.bodyBold,
@@ -271,5 +304,8 @@ const styles = StyleSheet.create({
   exportText: {
     fontFamily: typography.bodyBold,
     fontSize: 11,
+  },
+  exportStatus: {
+    paddingHorizontal: spacing[2],
   },
 });

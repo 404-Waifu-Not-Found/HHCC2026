@@ -661,6 +661,15 @@ export async function requestExtensionLocalQuiz(
         isGenerationProgressMessage(event.data) &&
         event.data.requestId === id
       ) {
+        // The extension emits this heartbeat as soon as it accepts the
+        // request, before prompt-first evidence selection and hashing. That
+        // work can be CPU-heavy on a large transcript, so a progress event is
+        // authoritative proof that the handoff succeeded even when the first
+        // DeepSeek lifecycle event has not been emitted yet.
+        if (dispatchTimeout) {
+          clearTimeout(dispatchTimeout);
+          dispatchTimeout = undefined;
+        }
         resetIdleWatchdog();
         onProgress(event.data.stage, event.data.progress, {
           attempt: event.data.attempt,

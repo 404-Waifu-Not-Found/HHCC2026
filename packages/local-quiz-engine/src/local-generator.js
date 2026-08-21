@@ -31,7 +31,11 @@ const VALIDATOR_VERSION = "validator-minimal-gradeability-v5.3";
 const IMPORT_VERSION = "extension-progressive-import-v8";
 const GENERATION_PROFILE = "prompt_first_auto_v5_12";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
-const MAX_TRANSCRIPT_CHARACTERS = 320_000;
+// Complete captions stay on the client. Prompt-first requests send only the
+// bounded evidence window to DeepSeek, so the local selection guard can honor
+// the shared 750k-character transcript contract instead of rejecting longer
+// educational videos before AI generation begins.
+const MAX_TRANSCRIPT_CHARACTERS = 750_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
 // Keep recovery useful without turning a transient/local model problem into
 // dozens of repeated DeepSeek calls. One primary call plus at most two
@@ -5335,6 +5339,7 @@ function validateQuiz(quiz, input) {
         question,
         input.focusExcerpt,
         input.promptFirstPrimaryClaims?.[index],
+        input.promptFirstV512Mode === true,
       );
       if (qualityFailure) {
         validationFailure(
@@ -5723,6 +5728,23 @@ function promptFirstV512FalseContrastAddsBareNegation(
   return countBareNegations(falseStatement) > countBareNegations(trueStatement);
 }
 
+function promptFirstTrueFalseExplanationPolarityFailure(question) {
+  if (question?.type !== "true_false") return null;
+  const explanation = normalizedAssertion(question.explanation);
+  if (!explanation) return "schema_invalid";
+  const labelsTrue =
+    /\b(?:the|this|that)\s+(?:statement|claim)\s+(?:is|was)\s+(?:true|accurate|correct|valid)\b/iu;
+  const labelsFalse =
+    /\b(?:the|this|that)\s+(?:statement|claim)\s+(?:is|was)\s+(?:false|incorrect|wrong|invalid)\b/iu;
+  if (question.answer === false && labelsTrue.test(explanation)) {
+    return "polarity_mismatch";
+  }
+  if (question.answer === true && labelsFalse.test(explanation)) {
+    return "polarity_mismatch";
+  }
+  return null;
+}
+
 function promptFirstGradingTarget(question) {
   if (question.type === "multiple_choice") {
     return question.correctAnswer ?? question.answer;
@@ -5755,16 +5777,52 @@ function promptFirstV512ExactlyDuplicatesAccepted(question, acceptedQuestions) {
   });
 }
 
-function promptFirstLearnerQualityFailure(
+export function promptFirstLearnerQualityFailure(
   question,
   focusExcerpt,
   primaryClaim,
+  enforceSourceGrounding = false,
 ) {
   const prompt = normalize(question.question ?? "");
   const rawTarget = String(promptFirstGradingTarget(question) ?? "");
   const target = normalize(rawTarget);
   const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
   if (!prompt || !target) return null;
+
+  const explanationPolarityFailure =
+    promptFirstTrueFalseExplanationPolarityFailure(question);
+  if (explanationPolarityFailure) return explanationPolarityFailure;
+
+  // Prompt-first output does not carry a client-visible sourceEvidence field,
+  // so enforce the same direct-concept boundary here before accepting it.
+  // This catches presentation wording such as “when it is described as
+  // motivated” instead of spending another grading retry on a malformed stem.
+  if (
+    /\b(?:when|if)\s+(?:it|this|that|the\s+[^?]{1,90})\s+(?:is|was|are|were)\s+(?:described|presented|framed|characterized|referred\s+to)\b|\b(?:described|presented|framed|characterized|referred\s+to)\s+as\s+(?:motivated|important|central|useful|helpful|interesting|effective|valuable|necessary|key|significant)\b/iu.test(
+      `${prompt} ${target}`,
+    )
+  ) {
+    return "source_framing_invalid";
+  }
+
+  // The assigned primary claim is the authoritative grounding window for a
+  // singleton. A generated item with almost no meaningful token overlap is a
+  // topic switch (for example, package-tracking frequency inside a binary
+  // image lesson), not a learner answer problem. Reject only when both the
+  // claim and the wider selected excerpt fail to support the item so valid
+  // paraphrases and translated terms remain eligible.
+  const learnerText = `${question.concept ?? ""} ${prompt} ${rawTarget}`;
+  const primary = String(primaryClaim ?? "").trim();
+  const broadEvidence = String(focusExcerpt ?? "").trim();
+  const targetIsFormula = Boolean(formulaFingerprint(rawTarget));
+  if (enforceSourceGrounding && primary && broadEvidence && !targetIsFormula) {
+    const primaryOverlap = promptFirstEvidenceOverlap(learnerText, primary);
+    const targetOverlap = promptFirstEvidenceOverlap(rawTarget, primary);
+    const broadOverlap = promptFirstEvidenceOverlap(learnerText, broadEvidence);
+    if (primaryOverlap < 0.14 && targetOverlap < 0.22 && broadOverlap < 0.1) {
+      return "source_grounding_invalid";
+    }
+  }
 
   // Repeated concepts are acceptable, but a false item may not simply restate
   // the supported true claim with a false polarity. Require a real contrast.
@@ -5930,6 +5988,7 @@ function validatePromptFirstQuiz(quiz, input) {
     question,
     input.focusExcerpt,
     input.promptFirstPrimaryClaim,
+    input.promptFirstV512Mode === true,
   );
   if (qualityFailure) {
     validationFailure(
@@ -6682,8 +6741,13 @@ async function callDeepSeekJson(
                 : input.questionCount === 2
                   ? 6_144
                   : 8_192,
-          stream: true,
-          stream_options: { include_usage: true },
+          // Chrome MV3 service workers can be terminated while an otherwise
+          // healthy SSE body is quiet. The extension opts into one bounded
+          // JSON envelope per singleton; native clients retain streamed SSE.
+          stream: input.disableStreaming !== true,
+          ...(input.disableStreaming === true
+            ? {}
+            : { stream_options: { include_usage: true } }),
         }),
         signal: controller.signal,
       },
@@ -6899,6 +6963,7 @@ export async function generateQuizFromPlainText(
     continuation: rawInput?.continuation,
     cryptoImpl,
     secureRandom,
+    disableStreaming: rawInput?.disableStreaming === true,
   };
   if (!input.title) throw new Error("The lesson title is missing.");
   if (![5, 10, 15].includes(input.questionCount)) {
@@ -8207,6 +8272,7 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "rubric_invalid",
       "question_tautology_invalid",
       "quiz_language_mismatch",
+      "source_grounding_invalid",
     ].includes(reasonCode)
   ) {
     return "content_repair";
@@ -8259,6 +8325,8 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
   const targetedGuidance = {
     source_framing_invalid:
       'Use the repair-context objective and private evidence to rewrite the same supported objective as a direct, self-contained assessment. No learner-visible field may mention or attribute anything to a lesson, source, reference, evidence, excerpt, video, lecture, transcript, presenter, narrator, or speaker. Do not use the words "mentioned", "listed", "stated", "discussed", "shown", "described", or "provided" to refer to presentation memory. State the conceptual explanation directly.',
+    source_grounding_invalid:
+      "Discard the topic-switched candidate and write one direct question about the assigned primary claim and its nearby instructional evidence. Keep the requested type and grading target grounded in that claim; do not introduce a different domain, unrelated example, or outside fact.",
     course_logistics_invalid:
       "Discard the administrative candidate. Choose a different supported definition, relationship, mechanism, method, formula, causal explanation, or application from the eligible instructional evidence.",
     low_pedagogical_value:
@@ -8355,6 +8423,7 @@ export async function generateLocalQuiz(
       automaticRetryCount: context?.continuation?.automaticRetryCount,
       fetchImpl: adapters.fetch,
       cryptoImpl: adapters.crypto,
+      disableStreaming: adapters.disableStreaming === true,
     },
     apiKey,
     onProgress,
@@ -8402,7 +8471,7 @@ export async function generateLocalCheatSheet(
           {
             role: "system",
             content:
-              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied quiz primer, prompts, and explanations. Do not invent facts.",
+              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied quiz primer, prompts, and explanations. Use direct technical mechanism wording; do not turn mechanisms into metaphors such as a chemical/electrical barricade, wall, or shield. Do not invent facts.",
           },
           { role: "user", content: JSON.stringify(context) },
         ],
@@ -8450,6 +8519,24 @@ export async function generateLocalCheatSheet(
   if (!bounded.title || !bounded.source || !bounded.summary) {
     throw new Error(
       "DeepSeek returned an incomplete cheat sheet; AI-generated title, source, and summary are required.",
+    );
+  }
+  const cheatSheetText = [
+    bounded.title,
+    bounded.source,
+    bounded.summary,
+    ...bounded.keyConcepts,
+    ...bounded.definitions.flatMap((item) => [item.term, item.definition]),
+    ...bounded.formulas,
+    ...bounded.rememberThis,
+  ].join("\n");
+  if (
+    /\b(?:chemical|electrical)\s+(?:barricade|wall|shield)\b/iu.test(
+      cheatSheetText,
+    )
+  ) {
+    throw new Error(
+      "DeepSeek returned metaphorical mechanism wording; regenerate the cheat sheet with a direct electrical or ion-channel explanation.",
     );
   }
   return bounded;
@@ -8629,7 +8716,7 @@ async function requestLocalAnswerGradeAttempt(
           {
             role: "system",
             content:
-              "You are ClipQuest's gentle answer grader. Grade the learner response against the question itself. Accept concise, grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, judge the statement's actual factual polarity rather than trusting a requested label. For multiple choice, judge the selected option against the question. For short answers, prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
+              "You are ClipQuest's gentle answer grader. Grade the learner response against the question itself. Accept concise, grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, judge the statement's actual factual polarity rather than trusting a requested label. For multiple choice, judge the selected option against the question. For short-answer propositions, be generous: if the learner states the central relationship correctly and gives at least one relevant supporting fact, mark it correct even when a secondary detail is omitted. Require every item only when the prompt explicitly asks for a list/count/formula. Prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
           },
           {
             role: "user",

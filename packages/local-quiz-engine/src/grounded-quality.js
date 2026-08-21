@@ -321,6 +321,10 @@ const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
   /\b(?:entire\s+)?fabric\s+of\s+(?:the\s+)?(?:reef|ecosystem|community|life|nature)\b/iu,
   /\bjacket\s+of\s+gases\b/iu,
   /\b(?:remove|removes|removed|removing)\s+(?:the\s+)?blocks\b/iu,
+  // A live anesthesia bank described ion-channel blocking as a "chemical
+  // barricade". That metaphor obscures the actual electrical/ion mechanism
+  // and should be regenerated as a direct statement about nerve transmission.
+  /\b(?:chemical|electrical)\s+(?:barricade|wall|shield)\b/iu,
   /(?:编织|织网|织物|线头|解开整张网|生态系统的结构|生态网络|气体外套)/u,
 ];
 
@@ -329,6 +333,19 @@ const CONCESSIVE_NON_ANSWER_PATTERN =
   /^\s*(?:(?:it|they|this|that)\s+(?:can|could|may|might)\s+)?even\s+(?:without|despite|when|if)\b/iu;
 const MALFORMED_WH_ACTION_STEM_PATTERN =
   /^\s*what\s+(?:condition|factor|cause|process|method)\s+(?:do|does|did|can|could|will|would)\b.{0,160}\b(?:provide|support|affect|influence|enable|allow)\b/iu;
+// A learner should be assessed on the concept itself, not on how a presenter
+// characterized it. Keep this bounded: technical uses such as “the enzyme is
+// described as catalytic” are still allowed unless the stem makes the
+// presentation wording the condition being tested.
+const PRESENTATION_CHARACTERIZATION_PATTERN =
+  /\b(?:when|if)\s+(?:it|this|that|the\s+[^?]{1,90})\s+(?:is|was|are|were)\s+(?:described|presented|framed|characterized|referred\s+to)\b|\b(?:described|presented|framed|characterized|referred\s+to)\s+as\s+(?:motivated|important|central|useful|helpful|interesting|effective|valuable|necessary|key|significant)\b/iu;
+// Definition polarity must not be inverted inside a true/false assertion.
+// Catenation is the canonical example: it means carbon bonds to carbon (it
+// does not mean bonding to hydrogen). This narrow guard rejects the malformed
+// learner-visible claim and lets the normal local-AI retry select a supported
+// definition instead of preserving a misleading question.
+const CONTRADICTORY_CHEMISTRY_DEFINITION_PATTERN =
+  /\b(?:catenat(?:e|es|ed|ing)|catenation)\b[^?!.]{0,100}\b(?:bond(?:s|ed|ing)?|attach(?:es|ed|ing)?)\b[^?!.]{0,60}\b(?:hydrogen|h)\b/iu;
 const PLURAL_HOW_SINGULAR_PRONOUN_PATTERN =
   /^\s*how\s+(?:do|can|could|may|might)\b/iu;
 const NAMED_CASE_RECALL_PATTERN =
@@ -580,6 +597,12 @@ export function questionConceptFailure(candidate) {
   }
   if (EXTERNAL_AUTHORITY_QUESTION_PATTERN.test(question)) {
     return "source_framing_invalid";
+  }
+  if (PRESENTATION_CHARACTERIZATION_PATTERN.test(question)) {
+    return "source_framing_invalid";
+  }
+  if (CONTRADICTORY_CHEMISTRY_DEFINITION_PATTERN.test(inspected)) {
+    return "source_grounding_invalid";
   }
   if (
     FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
@@ -5057,12 +5080,6 @@ export function constructConceptFirstTrueFalseQuestion(
     return null;
   }
   const directExplanation = String(candidate?.explanation ?? "").trim();
-  const explanation =
-    directExplanation &&
-    normalizeGroundedText(directExplanation) !==
-      normalizeGroundedText(resolvedSupported)
-      ? directExplanation
-      : `This statement is accurate: ${resolvedSupported}`;
   if (preferredPolarity === false) {
     const mutation = localFalseMutation(resolvedSupported);
     if (mutation) {
@@ -5070,7 +5087,11 @@ export function constructConceptFirstTrueFalseQuestion(
         question: mutation.question,
         answer: false,
         correction: resolvedSupported,
-        explanation,
+        // A model explanation is often written for the supported fact, not
+        // for the locally mutated false statement. Generate this explanation
+        // from the exact mutation so the learner never sees a true/false
+        // polarity contradiction after a local repair.
+        explanation: `The supported fact is: ${resolvedSupported} The displayed statement changes ${mutation.sourceValue} to ${mutation.replacementValue}.`,
         mutationKind: "local_allowlisted",
       };
     }
@@ -5084,7 +5105,15 @@ export function constructConceptFirstTrueFalseQuestion(
     question: resolvedSupported,
     answer: true,
     correction: resolvedSupported,
-    explanation,
+    explanation:
+      directExplanation &&
+      normalizeGroundedText(directExplanation) !==
+        normalizeGroundedText(resolvedSupported) &&
+      !/\b(?:the|this|that)\s+(?:statement|claim)\s+(?:is|was)\s+(?:false|incorrect|wrong)\b/iu.test(
+        directExplanation,
+      )
+        ? directExplanation
+        : `This statement is accurate: ${resolvedSupported}`,
     mutationKind: "none",
   };
 }

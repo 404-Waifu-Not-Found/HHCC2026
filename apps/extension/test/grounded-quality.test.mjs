@@ -380,6 +380,16 @@ test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () =
     }),
     null,
   );
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "Is a regional anesthetic a chemical barricade that blocks pain signals?",
+      concept: "regional anesthetic nerve-blocking mechanism",
+      explanation:
+        "Regional anesthetics block ion passage through nerve-membrane proteins.",
+    }),
+    "low_pedagogical_value",
+  );
 });
 
 test("instructional excerpts reject numeric course metadata without losing concepts", () => {
@@ -2655,6 +2665,23 @@ test("v5.8 never flips a planned false item back to true", () => {
     ),
     null,
   );
+});
+
+test("v5.8 rewrites a false explanation from the exact local mutation", () => {
+  const evidence =
+    "Increasing the resistance decreases current when voltage remains fixed.";
+  const question = constructConceptFirstTrueFalseQuestion(
+    {
+      evidenceQuote: evidence,
+      supportedFact: evidence,
+      explanation: "The statement is accurate as written.",
+    },
+    evidence,
+    false,
+  );
+  assert.equal(question?.answer, false);
+  assert.match(question?.explanation ?? "", /supported fact|changes/iu);
+  assert.doesNotMatch(question?.explanation ?? "", /statement is accurate/iu);
 });
 
 test("v5.8 resolves a concise supported fact from a longer evidence window", () => {

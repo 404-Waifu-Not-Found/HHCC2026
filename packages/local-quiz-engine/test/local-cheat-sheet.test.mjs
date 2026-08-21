@@ -83,3 +83,33 @@ test("cheat sheets reject missing AI fields instead of using context fallbacks",
     /AI-generated title, source, and summary are required/,
   );
 });
+
+test("cheat sheets reject metaphorical mechanism wording instead of storing it", async () => {
+  await assert.rejects(
+    generateLocalCheatSheet(context, "sk-test-key", undefined, {
+      fetch: async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    title: "AI title",
+                    source: "AI source",
+                    summary:
+                      "Regional anesthetics create a chemical barricade.",
+                    keyConcepts: [],
+                    definitions: [],
+                    formulas: [],
+                    rememberThis: [],
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    }),
+    /metaphorical mechanism wording/,
+  );
+});

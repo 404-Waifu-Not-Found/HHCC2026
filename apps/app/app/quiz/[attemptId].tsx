@@ -155,6 +155,7 @@ export default function QuizScreen() {
   const cheatSheetContextRef = useRef<
     { videoId: string; quizId: string } | undefined
   >(undefined);
+  const cheatSheetSyncRef = useRef<Promise<void> | undefined>(undefined);
   const recoveryAttemptedRef = useRef(false);
 
   const updateGeneration = useCallback(
@@ -289,19 +290,50 @@ export default function QuizScreen() {
   }
 
   async function syncCheatSheet() {
+    if (cheatSheetId) return;
+    if (cheatSheetSyncRef.current) {
+      await cheatSheetSyncRef.current;
+      return;
+    }
     const pending = pendingCheatSheetRef.current;
     if (!pending) return;
+    const task = (async () => {
+      let failed = false;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const uploaded = await uploadCheatSheet(pending);
+          setCheatSheetId(uploaded.id);
+          return;
+        } catch {
+          failed = true;
+          if (attempt < 2)
+            await new Promise((resolve) =>
+              setTimeout(resolve, [500, 1_500][attempt]),
+            );
+        }
+      }
+      if (failed) setCheatSheetStatus("failed");
+    })();
+    cheatSheetSyncRef.current = task;
     try {
-      const uploaded = await uploadCheatSheet(pending);
-      setCheatSheetId(uploaded.id);
-    } catch {
-      setCheatSheetStatus("failed");
+      await task;
+    } finally {
+      if (cheatSheetSyncRef.current === task) {
+        cheatSheetSyncRef.current = undefined;
+      }
     }
   }
 
   useEffect(() => {
-    if (showCompletion && cheatSheetStatus === "ready") void syncCheatSheet();
-  }, [cheatSheetStatus, showCompletion]);
+    if (
+      showCompletion &&
+      pendingCheatSheetRef.current &&
+      !cheatSheetId &&
+      cheatSheetStatus !== "preparing"
+    ) {
+      void syncCheatSheet();
+    }
+  }, [cheatSheetId, cheatSheetStatus, showCompletion]);
 
   const resume = useCallback(async () => {
     const resumed = await apiRequest(
@@ -315,9 +347,13 @@ export default function QuizScreen() {
   const retryGeneration = useCallback(() => {
     recoveryAttemptedRef.current = false;
     setError(undefined);
-    void ensureProgressiveAttemptRecovery(attemptId).catch((cause) => {
-      setError(cause instanceof Error ? cause.message : t("quizResumeFailed"));
-    });
+    void ensureProgressiveAttemptRecovery(attemptId, { force: true }).catch(
+      (cause) => {
+        setError(
+          cause instanceof Error ? cause.message : t("quizResumeFailed"),
+        );
+      },
+    );
   }, [attemptId, t]);
 
   useEffect(() => {
@@ -465,7 +501,9 @@ export default function QuizScreen() {
       )
         return;
       recoveryAttemptedRef.current = true;
-      void ensureProgressiveAttemptRecovery(attemptId).finally(() => {
+      void ensureProgressiveAttemptRecovery(attemptId, {
+        allowActionRequired: true,
+      }).finally(() => {
         recoveryAttemptedRef.current = false;
       });
     });
@@ -510,20 +548,19 @@ export default function QuizScreen() {
                 ? "True"
                 : "False"
               : String(submittedAnswer);
-        const localGradePromise = Promise.race([
-          requestLocalAnswerGrade({
+        const gradingController = new AbortController();
+        const gradingTimeout = setTimeout(() => {
+          gradingController.abort(new Error("Local grading timed out."));
+        }, 30_000);
+        const localGradePromise = requestLocalAnswerGrade(
+          {
             question: presentQuizPrompt(question.prompt),
             response: responseText,
             questionType: question.type,
             ...(question.options ? { options: question.options } : {}),
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Local grading timed out.")),
-              30_000,
-            ),
-          ),
-        ]);
+          },
+          gradingController.signal,
+        ).finally(() => clearTimeout(gradingTimeout));
         void localGradePromise
           .then((grade) => setLocalGrade(grade))
           .catch(() => undefined);
@@ -702,7 +739,7 @@ export default function QuizScreen() {
                 }
               />
             </StaggerItem>
-            {completedTotal ? (
+            {completedTotal !== undefined ? (
               <StaggerItem
                 index={2}
                 style={[
@@ -731,15 +768,29 @@ export default function QuizScreen() {
                   cheatSheetStatus !== "failed")
               }
               onPress={() => {
-                if (cheatSheetId)
-                  void exportCheatSheet(cheatSheetId, cheatSheetTitle).catch(
-                    () => setCheatSheetStatus("failed"),
-                  );
-                else if (pendingCheatSheetRef.current)
+                if (pendingCheatSheetRef.current)
                   void exportCheatSheetPdf(
                     pendingCheatSheetRef.current.pdf,
                     cheatSheetTitle,
-                  ).catch(() => setCheatSheetStatus("failed"));
+                  ).catch((cause) => {
+                    setCheatSheetStatus("failed");
+                    setError(
+                      cause instanceof Error
+                        ? cause.message
+                        : "The cheat sheet could not be exported.",
+                    );
+                  });
+                else if (cheatSheetId)
+                  void exportCheatSheet(cheatSheetId, cheatSheetTitle).catch(
+                    (cause) => {
+                      setCheatSheetStatus("failed");
+                      setError(
+                        cause instanceof Error
+                          ? cause.message
+                          : "The cheat sheet could not be exported.",
+                      );
+                    },
+                  );
                 else if (cheatSheetContextRef.current) {
                   setCheatSheetStatus("preparing");
                   void prepareCheatSheet(
@@ -767,6 +818,14 @@ export default function QuizScreen() {
               {t("returnToLibrary")}
             </PrimaryButton>
           </MotionView>
+          {error ? (
+            <Text
+              accessibilityRole="alert"
+              style={[styles.error, { color: theme.error }]}
+            >
+              {error}
+            </Text>
+          ) : null}
         </FeedbackMotion>
       </Screen>
     );

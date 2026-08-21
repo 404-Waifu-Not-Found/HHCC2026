@@ -12,13 +12,40 @@ import {
 import type { SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
 
-const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const YOUTUBE_CAPTION_CLIENTS = ["IOS", "ANDROID"] as const;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
 const MAX_AUDIO_BYTES = 180 * 1024 * 1024;
 const METADATA_FETCH_TIMEOUT_MS = 15_000;
 const AUDIO_FETCH_TIMEOUT_MS = 30_000;
+const AUDIO_UPSTREAM_ATTEMPTS = 3;
+const AUDIO_RETRY_DELAY_MS = 250;
+
+type YouTubeAudioFormatRequest = {
+  client: "IOS" | "ANDROID";
+  type: "audio" | "video+audio";
+};
+
+/**
+ * YouTube's iOS audio-only URLs are compact, but the CDN currently rejects a
+ * full-file request without a Range header from some Worker egress IPs. The
+ * Android client exposes a progressive MP4 that accepts a normal 200 response
+ * and still contains the source audio track. Keep the request choice explicit
+ * so a native/browser full download does not get stuck on that CDN quirk.
+ */
+export function selectYouTubeAudioFormatRequests(
+  hasRange: boolean,
+): readonly YouTubeAudioFormatRequest[] {
+  return hasRange
+    ? [
+        { client: "IOS", type: "audio" },
+        { client: "ANDROID", type: "video+audio" },
+      ]
+    : [
+        { client: "ANDROID", type: "video+audio" },
+        { client: "IOS", type: "audio" },
+      ];
+}
 
 type YouTubeCaptionTrack = {
   base_url: string;
@@ -41,6 +68,46 @@ type TimedTextPayload = {
     segs?: { utf8?: string }[];
   }[];
 };
+
+/**
+ * YouTube's signed media URLs are short-lived and occasionally return a
+ * transient 403/429/5xx even when the same video is immediately available
+ * through a freshly resolved format. Keep this retry narrow: permanent
+ * client/source errors should still surface without hiding them.
+ */
+export function isRetryableYouTubeAudioStatus(status: number): boolean {
+  return status === 401 || status === 403 || status === 429 || status >= 500;
+}
+
+function waitForAudioRetry(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, AUDIO_RETRY_DELAY_MS));
+}
+
+function safeAudioErrorCode(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return undefined;
+  const message = error.message;
+  const innerTubeStatus = message.match(
+    /^Request to https:\/\/[^/]+\/youtubei\/v1\/[^ ]+ failed with status code (\d+)$/,
+  )?.[1];
+  if (innerTubeStatus) return `innertube_http_${innerTubeStatus}`;
+  if (message === "No matching formats found") return "format_missing";
+  if (message === "No valid URL to decipher") return "url_not_decipherable";
+  return /^(audio_(?:http_\d+|url_missing|stream_unavailable)|The server responded with a non 2xx status code)$/.test(
+    message,
+  )
+    ? message
+    : undefined;
+}
+
+function createAudioClientParameter(): string {
+  const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  const random = new Uint32Array(16);
+  crypto.getRandomValues(random);
+  return Array.from(random, (value) => alphabet[value % alphabet.length]).join(
+    "",
+  );
+}
 
 class YouTubeMetadataLoadError extends Error {
   constructor(readonly reason: string) {
@@ -559,41 +626,132 @@ export class YouTubeAdapter implements SourceAdapter {
   ): Promise<import("./types").AudioStream> {
     const startedAt = Date.now();
     try {
-      const client = await createYouTubeClient(true);
-      const info = await client.getInfo(sourceVideoId, {
-        client: YOUTUBE_INFO_CLIENT,
-      });
-      const format = info.chooseFormat({
-        type: "audio",
-        quality: "bestefficiency",
-      });
-      if (!format.url) throw new Error("audio_url_missing");
-      const declaredLength = Number(format.content_length ?? 0);
-      if (declaredLength > MAX_AUDIO_BYTES) {
-        throw new ApiError(
-          422,
-          "audio_too_large",
-          "This video's audio is too large for browser transcription.",
-        );
-      }
+      // Progressive Android formats carry a usable direct URL and do not need
+      // the player JavaScript. Keeping that client separate avoids the
+      // player-decipher path that can fail in the Workers runtime, while the
+      // compact iOS audio profile retains player retrieval when it is needed.
+      const progressiveClient = await createYouTubeClient(false);
+      const signedAudioClient = await createYouTubeClient(true);
       const headers = new Headers({
-        Accept: "audio/*,*/*;q=0.8",
+        Accept: "*/*",
         "Cache-Control": "no-store",
+        DNT: "?1",
+        Origin: "https://www.youtube.com",
+        Referer: "https://www.youtube.com",
       });
       const range = request.headers.get("range");
       if (range) headers.set("Range", range);
-      const response = await fetchWithTimeout(
-        format.url,
-        { headers },
-        AUDIO_FETCH_TIMEOUT_MS,
-      );
-      if (!response.ok || !response.body)
-        throw new Error(`audio_http_${response.status}`);
+      let opened:
+        | {
+            response: Response;
+            body: ReadableStream<Uint8Array>;
+            contentType: string;
+            formatLength: number;
+          }
+        | undefined;
+      let lastError: unknown;
+      const formatRequests = selectYouTubeAudioFormatRequests(Boolean(range));
+      for (let attempt = 1; attempt <= AUDIO_UPSTREAM_ATTEMPTS; attempt += 1) {
+        const formatRequest =
+          formatRequests[(attempt - 1) % formatRequests.length]!;
+        try {
+          // Resolve the signed format again on every retry. Reusing the URL
+          // is the common cause of a repeat 403/503 after a transient edge
+          // failure.
+          const formatClient =
+            formatRequest.type === "video+audio"
+              ? progressiveClient
+              : signedAudioClient;
+          const format =
+            formatRequest.type === "video+audio"
+              ? (
+                  await progressiveClient.getBasicInfo(sourceVideoId, {
+                    client: formatRequest.client,
+                  })
+                ).chooseFormat({
+                  type: formatRequest.type,
+                  quality: "bestefficiency",
+                })
+              : await formatClient.getStreamingData(sourceVideoId, {
+                  client: formatRequest.client,
+                  type: formatRequest.type,
+                  quality: "bestefficiency",
+                });
+          if (!format.url) throw new Error("audio_url_missing");
+          const audioUrl = new URL(format.url);
+          audioUrl.searchParams.set("cpn", createAudioClientParameter());
+          const declaredLength = Number(format.content_length ?? 0);
+          if (declaredLength > MAX_AUDIO_BYTES) {
+            throw new ApiError(
+              422,
+              "audio_too_large",
+              "This video's audio is too large for browser transcription.",
+            );
+          }
+          const response = await fetchWithTimeout(
+            audioUrl,
+            { headers },
+            AUDIO_FETCH_TIMEOUT_MS,
+          );
+          if (response.ok && response.body) {
+            opened = {
+              response,
+              body: response.body,
+              contentType:
+                response.headers.get("content-type") ??
+                format.mime_type?.split(";")[0] ??
+                "audio/mp4",
+              formatLength: declaredLength,
+            };
+            break;
+          }
+          const status = response.status;
+          await response.body?.cancel(`audio_http_${status}`);
+          lastError = new Error(`audio_http_${status}`);
+          if (
+            attempt >= AUDIO_UPSTREAM_ATTEMPTS ||
+            !isRetryableYouTubeAudioStatus(status)
+          ) {
+            break;
+          }
+          console.warn(
+            JSON.stringify({
+              scope: "youtube_audio",
+              event: "stream.retry",
+              sourceVideoId,
+              attempt,
+              client: formatRequest.client,
+              formatType: formatRequest.type,
+              status,
+            }),
+          );
+          await waitForAudioRetry();
+        } catch (error) {
+          if (error instanceof ApiError) throw error;
+          lastError = error;
+          if (attempt >= AUDIO_UPSTREAM_ATTEMPTS) break;
+          console.warn(
+            JSON.stringify({
+              scope: "youtube_audio",
+              event: "stream.retry",
+              sourceVideoId,
+              attempt,
+              client: formatRequest.client,
+              formatType: formatRequest.type,
+              errorName: safeErrorName(error),
+              errorCode: safeAudioErrorCode(error),
+            }),
+          );
+          await waitForAudioRetry();
+        }
+      }
+      if (!opened) throw lastError ?? new Error("audio_stream_unavailable");
+      const { response, body, contentType, formatLength } = opened;
       const responseLength = Number(
         response.headers.get("content-length") ?? 0,
       );
-      if (responseLength > MAX_AUDIO_BYTES) {
-        await response.body.cancel("audio_too_large");
+      if (formatLength > MAX_AUDIO_BYTES || responseLength > MAX_AUDIO_BYTES) {
+        await body.cancel("audio_too_large");
         throw new ApiError(
           422,
           "audio_too_large",
@@ -610,11 +768,8 @@ export class YouTubeAdapter implements SourceAdapter {
         }),
       );
       return {
-        body: limitAudioStream(response.body),
-        contentType:
-          response.headers.get("content-type") ??
-          format.mime_type?.split(";")[0] ??
-          "audio/mp4",
+        body: limitAudioStream(body),
+        contentType,
         ...(response.headers.get("content-length")
           ? { contentLength: response.headers.get("content-length")! }
           : {}),
@@ -633,6 +788,7 @@ export class YouTubeAdapter implements SourceAdapter {
           event: "stream.failed",
           sourceVideoId,
           errorName: safeErrorName(error),
+          errorCode: safeAudioErrorCode(error),
           elapsedMs: Date.now() - startedAt,
         }),
       );

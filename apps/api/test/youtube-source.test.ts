@@ -1,12 +1,34 @@
 import { describe, expect, it } from "vitest";
 import {
   extractYouTubePlayerResponse,
+  isRetryableYouTubeAudioStatus,
   parseYouTubePlayerResponse,
   parseYouTubeTimedText,
+  selectYouTubeAudioFormatRequests,
   selectPreferredYouTubeCaptionTrack,
 } from "../src/sources/youtube";
 
 describe("YouTube metadata", () => {
+  it("only retries transient signed-audio failures", () => {
+    expect(isRetryableYouTubeAudioStatus(401)).toBe(true);
+    expect(isRetryableYouTubeAudioStatus(403)).toBe(true);
+    expect(isRetryableYouTubeAudioStatus(429)).toBe(true);
+    expect(isRetryableYouTubeAudioStatus(503)).toBe(true);
+    expect(isRetryableYouTubeAudioStatus(404)).toBe(false);
+    expect(isRetryableYouTubeAudioStatus(416)).toBe(false);
+  });
+
+  it("uses a progressive Android source for full downloads and compact iOS audio for ranges", () => {
+    expect(selectYouTubeAudioFormatRequests(false)).toEqual([
+      { client: "ANDROID", type: "video+audio" },
+      { client: "IOS", type: "audio" },
+    ]);
+    expect(selectYouTubeAudioFormatRequests(true)).toEqual([
+      { client: "IOS", type: "audio" },
+      { client: "ANDROID", type: "video+audio" },
+    ]);
+  });
+
   it("extracts bounded player metadata without being confused by braces inside strings", () => {
     const html = `<script>var ytInitialPlayerResponse = ${JSON.stringify({
       videoDetails: {

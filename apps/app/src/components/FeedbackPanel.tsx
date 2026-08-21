@@ -69,7 +69,13 @@ export function FeedbackPanel({
             {title}
           </Text>
           {detail ? (
-            <MathText selectable style={[styles.detail, { color: theme.text }]}>
+            <MathText
+              accessible
+              accessibilityRole="alert"
+              accessibilityLiveRegion="assertive"
+              selectable
+              style={[styles.detail, { color: theme.text }]}
+            >
               {detail}
             </MathText>
           ) : null}

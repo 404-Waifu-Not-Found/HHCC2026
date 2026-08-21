@@ -75,6 +75,9 @@ describe("gradeShortAnswerWithAi", () => {
     });
     expect(body.messages[0]?.content).toContain("untrusted data");
     expect(body.messages[0]?.content).toContain("incidental qualifiers");
+    expect(body.messages[0]?.content).toContain(
+      "central relationship correctly and supports it with at least one relevant fact",
+    );
     expect(payload).toMatchObject({
       question: "What does chlorophyll absorb?",
       sampleAnswer: "Light energy.",

@@ -11,7 +11,12 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib/dist/pdf-lib.esm.js";
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import { apiBinaryRequest, apiRequest, jsonBody } from "./api";
+import {
+  apiBinaryRequest,
+  apiRequest,
+  ClientApiError,
+  jsonBody,
+} from "./api";
 import { requestLocalCheatSheet } from "../generation/local-generation-client";
 
 export async function generateCheatSheetDocumentWithLocalAi(
@@ -89,7 +94,23 @@ export async function exportCheatSheet(
   sheetId: string,
   title: string,
 ): Promise<void> {
-  const response = await apiBinaryRequest(`/api/cheat-sheets/${sheetId}/file`);
+  let response: Response | undefined;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      response = await apiBinaryRequest(`/api/cheat-sheets/${sheetId}/file`);
+      break;
+    } catch (cause) {
+      const retryable =
+        cause instanceof ClientApiError &&
+        cause.status === 404 &&
+        (cause.code === "cheat_sheet_unavailable" ||
+          cause.code === "cheat_sheet_not_ready" ||
+          cause.code === "request_failed");
+      if (!retryable || attempt === 2) throw cause;
+      await new Promise((resolve) => setTimeout(resolve, [350, 900][attempt]));
+    }
+  }
+  if (!response) throw new Error("The cheat sheet is not ready.");
   const bytes = new Uint8Array(await response.arrayBuffer());
   await exportCheatSheetPdf(bytes, title);
 }
@@ -123,11 +144,17 @@ export async function exportCheatSheetPdf(
   await FileSystem.writeAsStringAsync(uri, toBase64(bytes), {
     encoding: FileSystem.EncodingType.Base64,
   });
-  if (await Sharing.isAvailableAsync())
-    await Sharing.shareAsync(uri, {
-      mimeType: "application/pdf",
-      dialogTitle: title,
-    });
+  // A simulator (and some managed Android profiles) can report that no
+  // native share target is available. Do not silently swallow that state:
+  // the learner needs an actionable failure instead of believing the PDF was
+  // exported when only a cache file was written.
+  if (!(await Sharing.isAvailableAsync())) {
+    throw new Error("Native sharing is unavailable on this device.");
+  }
+  await Sharing.shareAsync(uri, {
+    mimeType: "application/pdf",
+    dialogTitle: title,
+  });
 }
 
 export async function loadCheatSheetContext(

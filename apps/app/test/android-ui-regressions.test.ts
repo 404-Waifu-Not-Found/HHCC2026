@@ -52,12 +52,19 @@ describe("Android UI regressions", () => {
   it("does not claim native captions are ready while prework is pending", () => {
     const creation = source("app/create/[videoId].tsx");
     const generation = source("app/generation/[videoId].tsx");
+    const localClient = source(
+      "src/generation/local-generation-client.android.ts",
+    );
 
     expect(creation).toContain('nativeCaptionState === "running"');
     expect(creation).toContain('t("sourceCaptionsPreparing")');
-    expect(creation).toContain("loading={captionsPending || localAiPending}");
+    expect(creation).toContain("loading={captionsPending}");
+    expect(creation).toContain(
+      "The local-client probe is diagnostic. It may wait on native",
+    );
     expect(generation).toContain('"privateTranscriptionAndroid"');
     expect(generation).toContain('label: t("checkingCaptions")');
+    expect(localClient).toContain("disableStreaming: true");
   });
 
   it("never calls browser focus listeners from a native quiz", () => {
@@ -83,5 +90,26 @@ describe("Android UI regressions", () => {
     expect(tabs).toContain("borderRadius: radii.medium");
     expect(settings).toContain("useState(true)");
     expect(settings).toContain('typeof parsed.reduceMotion === "boolean"');
+  });
+
+  it("uses an ordered full-width card stack on compact Home layouts", () => {
+    const home = source("app/(tabs)/index.tsx");
+
+    expect(home).toContain("compact ? styles.cardStack : styles.cardRow");
+    expect(home).toContain("styles.cardStackItem");
+    expect(home).toContain("compact={compact}");
+  });
+
+  it("keeps card navigation and export as separate native controls", () => {
+    const videoCard = source("src/components/VideoCard.tsx");
+
+    expect(videoCard).toContain('accessibilityRole="button"');
+    expect(videoCard).toContain("styles.main");
+    expect(videoCard).toContain("styles.actionRow");
+    expect(videoCard).toContain("accessibilityLabel={");
+    expect(videoCard).toContain("card.cheatSheet.status");
+    expect(videoCard).not.toContain("event.stopPropagation()");
+    expect(videoCard).toContain('accessibilityRole="text"');
+    expect(videoCard).not.toContain("onPress={() => undefined}");
   });
 });

@@ -243,7 +243,7 @@ function QuestList({
                   ? () => onOpen(card)
                   : card.cheatSheet.sheetId
                     ? () =>
-                        void exportCheatSheet(
+                        exportCheatSheet(
                           card.cheatSheet.sheetId!,
                           card.title,
                         )

@@ -54,6 +54,10 @@ test("local answer grading sends question and response to a required tool call",
     body.messages[1].content,
     /lets charge move through the circuit/,
   );
+  assert.match(
+    body.messages[0].content,
+    /central relationship correctly and gives at least one relevant supporting fact/,
+  );
   assert.equal(result.correct, true);
   assert.equal(result.reason, "Your response identifies the key mechanism.");
   assert.equal(result.source, "deepseek_local");

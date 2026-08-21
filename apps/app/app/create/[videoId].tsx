@@ -211,8 +211,6 @@ export default function CreateQuestScreen() {
   ).replace(/[—–]/g, "-");
   const captionsBlocked =
     Platform.OS === "android" && (captionsUnavailable || captionsFailed);
-  const localAiPending =
-    Platform.OS !== "web" && localAiConfigured === undefined;
   const localAiMissing = Platform.OS !== "web" && localAiConfigured === false;
   const proceed = async () => {
     blurActiveWebElement();
@@ -280,7 +278,11 @@ export default function CreateQuestScreen() {
       footer={
         <View style={styles.footerInner}>
           <PrimaryButton
-            loading={captionsPending || localAiPending}
+            // The local-client probe is diagnostic. It may wait on native
+            // auth/secure-store state; it must not strand the learner on the
+            // Video ready screen. The generation route re-checks the key
+            // before dispatching any AI request.
+            loading={captionsPending}
             disabled={tooLong || tooLongForWeb || captionsBlocked}
             onPress={
               localAiMissing

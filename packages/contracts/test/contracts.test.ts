@@ -22,6 +22,7 @@ import {
   LocalQuizContextSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
+  CheatSheetDocumentSchema,
   PushRegisterResponseSchema,
   PushUnregisterRequestSchema,
   PushUnregisterResponseSchema,
@@ -33,6 +34,38 @@ import {
   type LocalConceptQuizResult,
   type QuizQuestionType,
 } from "../src/index";
+
+const validCheatSheetDocument = {
+  title: "Anesthesia mechanisms",
+  source: "youtube",
+  summary: "Regional anesthetics block ion passage through nerve membranes.",
+  keyConcepts: ["Ion-channel blockade prevents pain-signal transmission."],
+  definitions: [
+    {
+      term: "Regional anesthetic",
+      definition:
+        "A drug that blocks ion passage through nerve-membrane proteins.",
+    },
+  ],
+  formulas: [],
+  rememberThis: ["Use direct electrical and ion-channel wording."],
+  generatedAt: "2026-08-20T04:00:00.000Z",
+  sourceRevision: "quiz-1:123",
+} as const;
+
+describe("cheat-sheet quality contracts", () => {
+  it("rejects mechanism metaphors before an artifact can be uploaded", () => {
+    expect(CheatSheetDocumentSchema.parse(validCheatSheetDocument)).toEqual(
+      validCheatSheetDocument,
+    );
+    expect(
+      CheatSheetDocumentSchema.safeParse({
+        ...validCheatSheetDocument,
+        summary: "Regional anesthetics create a chemical barricade.",
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("admin contracts", () => {
   it("rejects unknown roles and never models secret values", () => {
@@ -900,7 +933,7 @@ describe("generated questions", () => {
     ).toBe(true);
   });
 
-  it("accepts protocol-10 prompt-first questions and only minimal failure telemetry", () => {
+  it("accepts protocol-10 prompt-first questions and validator retry telemetry", () => {
     expect(
       PromptFirstQuestionSchema.safeParse({
         type: "multiple_choice",
@@ -932,6 +965,25 @@ describe("generated questions", () => {
         outcome: "choice_structure_invalid",
         retryDelayMs: 200,
         elapsedMs: 500,
+        usageComplete: false,
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        protocolVersion: 10,
+        purpose: "generation",
+        lifecycleState: "completed",
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        recoverySessionId: "33333333-3333-4333-8333-333333333333",
+        callIndex: 3,
+        startIndex: 1,
+        ordinalAttempt: 1,
+        requestedCount: 1,
+        acceptedCount: 0,
+        classification: "primary",
+        outcome: "unsupported_absolute_claim",
+        retryDelayMs: 0,
+        elapsedMs: 900,
         usageComplete: false,
       }).success,
     ).toBe(true);

@@ -116,10 +116,25 @@ test("long local generation uses a heartbeat port", () => {
   assert.match(bridge, /setInterval\([\s\S]*type: "heartbeat"/);
   assert.match(
     bridge,
+    /type: "generation-progress"[\s\S]*stage: "creating_questions"[\s\S]*status: "generating"/,
+  );
+  assert.match(
+    bridge,
     /"question-stream-v1",[\s\S]*"question-stream-v2",[\s\S]*"question-stream-v3",[\s\S]*"ensure-source-ready-v1"/,
   );
   assert.match(bridge, /type: "generation-call"/);
   assert.match(background, /type: "call"/);
+  assert.match(background, /disableStreaming: true/);
+  assert.match(bridge, /MAX_GENERATION_PORT_RECONNECTS = 2/);
+  assert.match(bridge, /function scheduleReconnect\(\)/);
+  assert.match(
+    bridge,
+    /attachPort\(chrome\.runtime\.connect\(\{ name: LOCAL_AI_PORT \}\)\)/,
+  );
+  assert.match(
+    background,
+    /automaticGenerationContext\(generationContext\)[\s\S]*progress\("creating_questions", 0\.2/,
+  );
   assert.doesNotMatch(popup, /chrome\.runtime\.connect/);
 });
 
