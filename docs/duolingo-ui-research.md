@@ -185,7 +185,7 @@ Duolingo's official system makes green the dominant brand anchor, white the prim
 ### Original illustration and icon language
 
 - Duolingo's public illustration guidance favors a few simple shapes, recognizable silhouettes, minimal detail, limited colors, and generous negative space. ClipQuest translates those principles into coarse isometric voxel construction rather than copying flat vectors.
-- Every product icon is generated as its own still image. The family locks one orthographic three-quarter camera, one module scale, 12-30 visible cuboids, a 6-14 module dominant span, and a uniform `#F4F4F4` porcelain field.
+- Every product icon is generated as its own still image. The family locks one orthographic three-quarter camera, one module scale, 12-30 visible cuboids, and a 6-14 module dominant span. Canonical artwork uses a transparent background so it can sit naturally on every semantic surface; required launcher backplates use structural green rather than a white field.
 - Spring Glow communicates core learning, Blue Cream information and processing, Amber Dusk warnings, Grapefruit errors, and Moon Pearl neutral utilities. Only whole-preset tone shifts are used.
 - The learning prism combines a green video frame, a light quiz-card prism, a yellow knowledge marker, and a restrained blue companion block. It has no human or animal traits, moods, poses, or reaction variants.
 - The same prism silhouette produces the ClipQuest mark, favicon/PWA art, launcher and splash art, and browser-extension icons through a deterministic derivative script. Canonical generated sources are never resized in place.

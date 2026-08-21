@@ -5,29 +5,41 @@ import sharp from "sharp";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = resolve(appRoot, "assets/brand/learning-prism.png");
-const canvas = "#F7F9F4";
+const launcherBackground = "#19683A";
 
 async function ensureParent(path) {
   await mkdir(dirname(path), { recursive: true });
 }
 
 const trimmed = await sharp(source)
-  .trim({ background: "#F4F4F4", threshold: 5 })
+  .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 1 })
   .png()
   .toBuffer();
 
-async function renderSquare(path, size, inset = 0.12, format = "png") {
+async function renderSquare(
+  path,
+  size,
+  inset = 0.12,
+  format = "png",
+  background = null,
+) {
   await ensureParent(path);
   const subject = await sharp(trimmed)
     .resize({
       width: Math.round(size * (1 - inset * 2)),
       height: Math.round(size * (1 - inset * 2)),
       fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
     .png()
     .toBuffer();
   const pipeline = sharp({
-    create: { width: size, height: size, channels: 3, background: canvas },
+    create: {
+      width: size,
+      height: size,
+      channels: background ? 3 : 4,
+      background: background ?? { r: 0, g: 0, b: 0, alpha: 0 },
+    },
   }).composite([{ input: subject, gravity: "center" }]);
   if (format === "webp") {
     await pipeline.webp({ quality: 96, lossless: true }).toFile(path);
@@ -36,26 +48,39 @@ async function renderSquare(path, size, inset = 0.12, format = "png") {
   }
 }
 
-const pngTargets = [
+const transparentPngTargets = [
   ["public/favicon.png", 64, 0.08],
-  ["public/apple-touch-icon.png", 180, 0.12],
   ["public/icon-192.png", 192, 0.12],
   ["public/icon-512.png", 512, 0.12],
-  ["assets/platform/app-icon-1024.png", 1024, 0.11],
   ["assets/platform/adaptive-icon.png", 1024, 0.2],
   ["assets/platform/splash-icon.png", 1024, 0.22],
-  [
-    "ios/ClipQuest/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
-    1024,
-    0.11,
-  ],
   ["assets/platform/extension/icon-16.png", 16, 0.04],
   ["assets/platform/extension/icon-48.png", 48, 0.08],
   ["assets/platform/extension/icon-128.png", 128, 0.1],
 ];
 
-for (const [path, size, inset] of pngTargets) {
+for (const [path, size, inset] of transparentPngTargets) {
   await renderSquare(resolve(appRoot, path), size, inset);
+}
+
+const opaquePngTargets = [
+  ["public/apple-touch-icon.png", 180, 0.12],
+  ["assets/platform/app-icon-1024.png", 1024, 0.11],
+  [
+    "ios/ClipQuest/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
+    1024,
+    0.11,
+  ],
+];
+
+for (const [path, size, inset] of opaquePngTargets) {
+  await renderSquare(
+    resolve(appRoot, path),
+    size,
+    inset,
+    "png",
+    launcherBackground,
+  );
 }
 
 const androidScales = {
@@ -72,6 +97,7 @@ for (const [density, size] of Object.entries(androidScales)) {
       size,
       name.includes("round") ? 0.18 : 0.12,
       "webp",
+      launcherBackground,
     );
   }
 }
@@ -96,7 +122,7 @@ for (const [density, size] of Object.entries(splashSizes)) {
 
 await writeFile(
   resolve(appRoot, "assets/platform/README.md"),
-  "# Generated ClipQuest platform assets\n\nRun `npm run brand:assets -w @clipquest/app` after changing the canonical learning prism. Do not edit these derivatives by hand.\n",
+  "# Generated ClipQuest platform assets\n\nRun `npm run brand:assets -w @clipquest/app` after changing the canonical learning prism. Canonical artwork and foreground derivatives remain transparent; required Apple and legacy launcher backplates use structural green. Do not edit these derivatives by hand.\n",
 );
 
 console.log(

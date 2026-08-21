@@ -4,7 +4,8 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "brand:assets": "node scripts/generate-brand-assets.mjs",
+    "brand:transparent": "node scripts/remove-asset-backgrounds.mjs",
+    "brand:assets": "npm run brand:transparent && node scripts/generate-brand-assets.mjs",
     "dev": "expo start",
     "prepare:web": "node scripts/prepare-web-runtime.mjs",
     "web": "npm run prepare:web && expo start --web",

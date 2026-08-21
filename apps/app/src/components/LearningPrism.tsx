@@ -34,7 +34,7 @@ export function LearningPrism({
 
 const styles = StyleSheet.create({
   wrap: { overflow: "hidden" },
-  tile: { borderRadius: 20, backgroundColor: "#F4F4F4" },
+  tile: { borderRadius: 20, backgroundColor: "transparent" },
   hero: { borderRadius: 24 },
   image: { width: "100%", height: "100%" },
 });

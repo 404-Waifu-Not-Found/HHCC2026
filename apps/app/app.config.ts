@@ -24,7 +24,7 @@ const config: ExpoConfig = {
     package: "cc.ccwu.clipquest",
     adaptiveIcon: {
       foregroundImage: "./assets/platform/adaptive-icon.png",
-      backgroundColor: "#F7F9F4",
+      backgroundColor: "#19683A",
     },
   },
   plugins: [

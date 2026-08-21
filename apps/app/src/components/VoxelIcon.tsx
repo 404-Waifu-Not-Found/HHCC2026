@@ -113,14 +113,13 @@ export function VoxelIconTile({
 
 const styles = StyleSheet.create({
   icon: {
-    backgroundColor: "#F4F4F4",
-    borderRadius: 6,
+    backgroundColor: "transparent",
   },
   tile: {
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
     borderRadius: 12,
-    backgroundColor: "#F4F4F4",
+    backgroundColor: "transparent",
   },
 });

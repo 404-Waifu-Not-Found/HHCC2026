@@ -38,7 +38,7 @@ async function sourceFiles(path: string): Promise<string[]> {
 }
 
 describe("ClipQuest rebrand assets", () => {
-  it("resolves every typed voxel icon to a normalized canonical PNG", async () => {
+  it("resolves every typed voxel icon to a transparent canonical PNG", async () => {
     const iconRoot = resolve(appRoot, "assets/icons/voxel");
     const files = (await readdir(iconRoot)).sort();
     expect(files).toEqual(voxelIconNames.map((name) => `${name}.png`).sort());
@@ -47,8 +47,8 @@ describe("ClipQuest rebrand assets", () => {
       const image = sharp(resolve(iconRoot, `${name}.png`));
       const metadata = await image.metadata();
       const stats = await image.stats();
-      expect(metadata).toMatchObject({ width: 512, height: 512, channels: 3 });
-      expect(metadata.hasAlpha).toBe(false);
+      expect(metadata).toMatchObject({ width: 512, height: 512, channels: 4 });
+      expect(metadata.hasAlpha).toBe(true);
       expect(stats.entropy).toBeGreaterThan(1);
 
       const { data, info } = await image
@@ -61,25 +61,61 @@ describe("ClipQuest rebrand assets", () => {
         (info.width * info.height - 1) * info.channels,
       ];
       for (const offset of cornerOffsets) {
-        expect([...data.subarray(offset, offset + 3)]).toEqual([244, 244, 244]);
+        expect(data[offset + 3]).toBe(0);
       }
     }
   }, 30_000);
 
   it("keeps platform identity nonblank and replaces placeholder artwork", async () => {
-    const targets = [
+    const splashDensities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"];
+    const transparentTargets = [
       "assets/brand/learning-prism.png",
-      "assets/platform/app-icon-1024.png",
       "assets/platform/adaptive-icon.png",
       "assets/platform/splash-icon.png",
       "public/favicon.png",
       "public/icon-192.png",
       "public/icon-512.png",
-      "ios/ClipQuest/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
-      "android/app/src/main/res/mipmap-mdpi/ic_launcher.webp",
-      "android/app/src/main/res/drawable-mdpi/splashscreen_logo.png",
+      "assets/platform/extension/icon-16.png",
+      "assets/platform/extension/icon-48.png",
+      "assets/platform/extension/icon-128.png",
+      ...splashDensities.map(
+        (density) =>
+          `android/app/src/main/res/drawable-${density}/splashscreen_logo.png`,
+      ),
     ];
-    for (const target of targets) {
+    for (const target of transparentTargets) {
+      const image = sharp(resolve(appRoot, target));
+      const metadata = await image.metadata();
+      const stats = await image.stats();
+      expect(metadata.width).toBeGreaterThanOrEqual(16);
+      expect(metadata.height).toBe(metadata.width);
+      expect(metadata.hasAlpha).toBe(true);
+      expect(stats.entropy).toBeGreaterThan(1);
+
+      const { data, info } = await image
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const cornerOffsets = [
+        3,
+        (info.width - 1) * info.channels + 3,
+        (info.height - 1) * info.width * info.channels + 3,
+        (info.width * info.height - 1) * info.channels + 3,
+      ];
+      for (const offset of cornerOffsets) expect(data[offset]).toBe(0);
+    }
+
+    const androidDensities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"];
+    const opaqueLauncherTargets = [
+      "public/apple-touch-icon.png",
+      "assets/platform/app-icon-1024.png",
+      "ios/ClipQuest/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
+      ...androidDensities.flatMap((density) => [
+        `android/app/src/main/res/mipmap-${density}/ic_launcher.webp`,
+        `android/app/src/main/res/mipmap-${density}/ic_launcher_round.webp`,
+      ]),
+    ];
+    for (const target of opaqueLauncherTargets) {
       const image = sharp(resolve(appRoot, target));
       const metadata = await image.metadata();
       const stats = await image.stats();
@@ -87,6 +123,13 @@ describe("ClipQuest rebrand assets", () => {
       expect(metadata.height).toBe(metadata.width);
       expect(stats.entropy).toBeGreaterThan(1);
       expect(stats.isOpaque).toBe(true);
+
+      const corner = await image
+        .extract({ left: 0, top: 0, width: 1, height: 1 })
+        .removeAlpha()
+        .raw()
+        .toBuffer();
+      expect([...corner]).toEqual([25, 104, 58]);
     }
   });
 

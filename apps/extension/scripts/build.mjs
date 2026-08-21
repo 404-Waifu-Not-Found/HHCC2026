@@ -36,8 +36,25 @@ for (const size of [16, 48, 128]) {
 }
 
 const iconStats = await sharp(appIcon).stats();
-if (iconStats.entropy < 1 || iconStats.isOpaque === false) {
-  throw new Error("Canonical learning prism is blank or not an opaque image.");
+const iconMetadata = await sharp(appIcon).metadata();
+const { data: iconPixels, info: iconInfo } = await sharp(appIcon)
+  .ensureAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true });
+const iconCornerAlphaOffsets = [
+  3,
+  (iconInfo.width - 1) * iconInfo.channels + 3,
+  (iconInfo.height - 1) * iconInfo.width * iconInfo.channels + 3,
+  (iconInfo.width * iconInfo.height - 1) * iconInfo.channels + 3,
+];
+if (
+  iconStats.entropy < 1 ||
+  iconMetadata.hasAlpha !== true ||
+  iconCornerAlphaOffsets.some((offset) => iconPixels[offset] !== 0)
+) {
+  throw new Error(
+    "Canonical learning prism is blank or does not have a transparent background.",
+  );
 }
 
 JSON.parse(readFileSync(resolve(extensionOutput, "manifest.json"), "utf8"));
