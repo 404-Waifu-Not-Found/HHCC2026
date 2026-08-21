@@ -58,6 +58,26 @@ function waitForAudioRetry(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, AUDIO_RETRY_DELAY_MS));
 }
 
+function safeAudioErrorCode(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return undefined;
+  const message = error.message;
+  return /^(audio_(?:http_\d+|url_missing|stream_unavailable)|The server responded with a non 2xx status code)$/.test(
+    message,
+  )
+    ? message
+    : undefined;
+}
+
+function createAudioClientParameter(): string {
+  const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  const random = new Uint32Array(16);
+  crypto.getRandomValues(random);
+  return Array.from(random, (value) => alphabet[value % alphabet.length]).join(
+    "",
+  );
+}
+
 class YouTubeMetadataLoadError extends Error {
   constructor(readonly reason: string) {
     super("YouTube metadata could not be loaded.");
@@ -577,8 +597,11 @@ export class YouTubeAdapter implements SourceAdapter {
     try {
       const client = await createYouTubeClient(true);
       const headers = new Headers({
-        Accept: "audio/*,*/*;q=0.8",
+        Accept: "*/*",
         "Cache-Control": "no-store",
+        DNT: "?1",
+        Origin: "https://www.youtube.com",
+        Referer: "https://www.youtube.com",
       });
       const range = request.headers.get("range");
       if (range) headers.set("Range", range);
@@ -596,14 +619,14 @@ export class YouTubeAdapter implements SourceAdapter {
           // Resolve the signed format again on every retry. Reusing the URL
           // is the common cause of a repeat 403/503 after a transient edge
           // failure.
-          const info = await client.getInfo(sourceVideoId, {
+          const format = await client.getStreamingData(sourceVideoId, {
             client: YOUTUBE_INFO_CLIENT,
-          });
-          const format = info.chooseFormat({
             type: "audio",
             quality: "bestefficiency",
           });
           if (!format.url) throw new Error("audio_url_missing");
+          const audioUrl = new URL(format.url);
+          audioUrl.searchParams.set("cpn", createAudioClientParameter());
           const declaredLength = Number(format.content_length ?? 0);
           if (declaredLength > MAX_AUDIO_BYTES) {
             throw new ApiError(
@@ -613,7 +636,7 @@ export class YouTubeAdapter implements SourceAdapter {
             );
           }
           const response = await fetchWithTimeout(
-            format.url,
+            audioUrl,
             { headers },
             AUDIO_FETCH_TIMEOUT_MS,
           );
@@ -659,6 +682,7 @@ export class YouTubeAdapter implements SourceAdapter {
               sourceVideoId,
               attempt,
               errorName: safeErrorName(error),
+              errorCode: safeAudioErrorCode(error),
             }),
           );
           await waitForAudioRetry();
@@ -707,6 +731,7 @@ export class YouTubeAdapter implements SourceAdapter {
           event: "stream.failed",
           sourceVideoId,
           errorName: safeErrorName(error),
+          errorCode: safeAudioErrorCode(error),
           elapsedMs: Date.now() - startedAt,
         }),
       );
