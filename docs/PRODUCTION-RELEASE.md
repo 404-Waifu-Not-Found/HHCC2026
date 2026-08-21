@@ -4,18 +4,24 @@ ClipQuest deploys its Cloudflare Worker and content-hashed static assets as one 
 
 ## Last verified production baseline
 
-Verified on 2026-08-13:
+Verified on 2026-08-18:
 
-| Item                          | Production value                                                       |
-| ----------------------------- | ---------------------------------------------------------------------- |
-| Worker version                | `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2`                                 |
-| Worker tag / Git SHA          | `297747e`                                                              |
-| Extension installed in Chrome | `0.8.8`                                                                |
-| Current generation metadata   | prompt v5.8, validator v4.7, protocol 9, pipeline 9                    |
-| Generation rollout            | canary; general enablement blocked                                     |
-| Blocking live gate            | local route served a non-ClipQuest TLS certificate; matrix not counted |
+| Item                        | Production value                                                        |
+| --------------------------- | ----------------------------------------------------------------------- |
+| Worker version              | `8350cd9a-e7ba-4b7e-883e-cd85796b8895`                                  |
+| Worker tag / Git SHA        | `5d4a9e4146a4968c786439a92ad4b86c98a9332a`                              |
+| Extension source artifact   | `0.8.19`; Chrome 0.8.17 remains the minimum accepted version            |
+| Current generation metadata | prompt v5.12, validator v5.3, protocol 10, pipeline 9                   |
+| Generation rollout          | v5.12 disabled; v5.11 effective default                                 |
+| Native client metadata      | Android and iOS 0.2.0 with `question-stream-v7`, foreground-only        |
+| D1 migration                | `0020_generation_call_lifecycle.sql`                                    |
+| Remaining release gate      | immutable v5.12 canary plus complete Chrome/native real-client matrices |
 
-The public Cloudflare edge served the exact SHA and coherent shell/assets. The official-site Chrome matrix was halted rather than bypassing `NET::ERR_CERT_COMMON_NAME_INVALID`. See the [dated 0.8.8 canary report](../qa-results/concept-first-extension-0.8.8-canary-blocked-2026-08-13.md).
+The public Cloudflare edge reports the exact SHA, version affinity, supported prompt metadata, and storage-only architecture. This baseline is deployment evidence only: it does not enable v5.12 or clear the official-site and physical-device matrices.
+
+### Historical 2026-08-13 baseline
+
+Worker `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2` from Git `297747e` served the 0.8.8/v5.8 canary configuration. Its official-site Chrome matrix was halted rather than bypassing `NET::ERR_CERT_COMMON_NAME_INVALID`. See the [dated 0.8.8 canary report](../qa-results/concept-first-extension-0.8.8-canary-blocked-2026-08-13.md).
 
 ### Historical 2026-08-11 baseline
 

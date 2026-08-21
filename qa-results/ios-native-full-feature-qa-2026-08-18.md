@@ -8,28 +8,28 @@ No product code, configuration, deployment, database schema, or historical user 
 
 ## Test environment
 
-| Item | Observed value |
-| --- | --- |
-| Device | iPhone 17 Pro simulator |
-| OS | iOS 26.2 |
-| App bundle | `cc.ccwu.clipquest` |
-| App version | `0.2.0` (build `1`) |
-| Tested local Git SHA | `2902f1dd8c4d4614309713f351cbb01be59583ee` |
-| Current `origin/main` during test | `a8bab6a33656bfb5afae9f9e1d96c27575ac06c8` |
-| Branch state | local `main` was two commits ahead of `origin/main` |
-| Production Worker version | `0002ea3c-6a51-4ad6-84ad-f130f0a13931` |
-| Production Worker tag | `02da4dc2b8226242e465b3793acb463c4df63bc1` |
-| Production generation rollout | `disabled`; effective default `prompt_first_auto_v5_11` |
-| Production client requirements | Chrome extension and Android app only; no iOS client is advertised |
+| Item                              | Observed value                                                     |
+| --------------------------------- | ------------------------------------------------------------------ |
+| Device                            | iPhone 17 Pro simulator                                            |
+| OS                                | iOS 26.2                                                           |
+| App bundle                        | `cc.ccwu.clipquest`                                                |
+| App version                       | `0.2.0` (build `1`)                                                |
+| Tested local Git SHA              | `2902f1dd8c4d4614309713f351cbb01be59583ee`                         |
+| Current `origin/main` during test | `a8bab6a33656bfb5afae9f9e1d96c27575ac06c8`                         |
+| Branch state                      | local `main` was two commits ahead of `origin/main`                |
+| Production Worker version         | `0002ea3c-6a51-4ad6-84ad-f130f0a13931`                             |
+| Production Worker tag             | `02da4dc2b8226242e465b3793acb463c4df63bc1`                         |
+| Production generation rollout     | `disabled`; effective default `prompt_first_auto_v5_11`            |
+| Production client requirements    | Chrome extension and Android app only; no iOS client is advertised |
 
 ## Disposable accounts
 
 Two production disposable learner accounts were created through the native sign-up UI. Passwords and verification tokens are intentionally omitted.
 
-| Account | Result | Authoritative stored data |
-| --- | --- | --- |
-| `iosqa685597` | Created, email delivered, verified through the official link, signed in, signed out | 1 imported video, 0 quiz banks, 0 attempts |
-| `iosqb685597` | Created and verification email delivered; simulator shut down before verification/sign-in completion | 0 videos, 0 quiz banks, 0 attempts |
+| Account       | Result                                                                                               | Authoritative stored data                  |
+| ------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `iosqa685597` | Created, email delivered, verified through the official link, signed in, signed out                  | 1 imported video, 0 quiz banks, 0 attempts |
+| `iosqb685597` | Created and verification email delivered; simulator shut down before verification/sign-in completion | 0 videos, 0 quiz banks, 0 attempts         |
 
 The first account's password-reset email was also delivered successfully. The accounts were not deleted because permanent account deletion requires a separate destructive-action confirmation; retaining them also preserves the QA evidence.
 
@@ -72,15 +72,15 @@ The first account's password-reset email was also delivered successfully. The ac
 
 The imported five-question all-types run displayed **“Question 1 in about 20 sec.”** The generation screen became visible approximately **6.535 seconds** after the Create action, but it was already terminally stopped at `Getting video · 1/7`, `3%` with `A compatible local generation client is required.`
 
-| Metric | Result |
-| --- | --- |
-| Displayed q1 ETA | 20 seconds |
-| Time to stopped generation screen | 6.535 seconds |
-| Time to interactive q1 | Never |
-| Stored questions | 0 |
-| Stored quiz banks | 0 |
-| Stored attempts | 0 |
-| ETA error | Unbounded / not measurable because readiness is impossible |
+| Metric                            | Result                                                     |
+| --------------------------------- | ---------------------------------------------------------- |
+| Displayed q1 ETA                  | 20 seconds                                                 |
+| Time to stopped generation screen | 6.535 seconds                                              |
+| Time to interactive q1            | Never                                                      |
+| Stored questions                  | 0                                                          |
+| Stored quiz banks                 | 0                                                          |
+| Stored attempts                   | 0                                                          |
+| ETA error                         | Unbounded / not measurable because readiness is impossible |
 
 This ETA must not be counted in calibration data. The client should determine capability/configuration before presenting a q1 countdown, and a terminal capability failure must not continue to display a countdown or partial progress.
 
@@ -180,18 +180,18 @@ The defects above were remediated locally after the initial QA pass. This follow
 
 ### Resolution summary
 
-| Finding | Local disposition | Evidence / remaining boundary |
-| --- | --- | --- |
-| CQ-IOS-001 | Implemented | Added an iOS `LocalGenerationClient` using the shared engine, native streaming fetch, account-scoped Keychain storage, protocol-safe callbacks, and `ios_app` client metadata. Worker/contracts now accept iOS native banks locally. Production remains unchanged until deployment. |
-| CQ-IOS-002 | Implemented | Generation configuration/capability preflight now runs before the q1 countdown. A terminal preflight failure stops ETA/progress and renders `Question 1 unavailable` plus `Local generation unavailable` instead of a continuing percentage. Credentialed ETA calibration remains pending. |
-| CQ-IOS-003 | Implemented | Native privacy and recovery copy now describes on-device/native generation instead of a browser extension. |
-| CQ-IOS-004 | Verified locally | Forgot Password now includes `Back · Sign in`; the signed iOS simulator build returned to Sign in successfully. |
-| CQ-IOS-005 | Verified locally | A native deep-link boundary maps `clipquest://sign-in`, reset-password, verification, Library, and quiz URLs to Expo Router paths. `clipquest://sign-in` opened Sign in in the signed simulator build instead of the not-found route. |
-| CQ-IOS-006 | Not reproduced | The rebuilt, locally signed release app remained alive through launch, Forgot Password navigation, and custom-scheme replay. The original unexplained simulator shutdown has no diagnostic evidence and is not declared fixed until a longer device run reproduces or clears it. |
-| CQ-IOS-007 | Implemented; device accessibility replay pending | Shared text inputs now set `secureTextEntry` only when explicitly requested. Source/tests cover the invariant, but the simulator control accessibility tree does not expose inner React Native fields reliably enough to close the VoiceOver/device gate. |
-| CQ-IOS-008 | Implemented | Added iOS generation-client, native deep-link, contract, and Chrome-to-iOS continuation regression coverage. |
-| CQ-IOS-009 | Implemented locally | Local AI settings, native generation, recovery, caption-only source behavior, and review-reminder platform reporting now cover iOS as well as Android. End-to-end credentialed parity remains an acceptance task. |
-| CQ-IOS-010 | Mitigated locally | Unsupported/unconfigured generation is rejected during preflight before a false active generation journey begins. Production Library behavior must be replayed after deployment. |
+| Finding    | Local disposition                                | Evidence / remaining boundary                                                                                                                                                                                                                                                              |
+| ---------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CQ-IOS-001 | Implemented                                      | Added an iOS `LocalGenerationClient` using the shared engine, native streaming fetch, account-scoped Keychain storage, protocol-safe callbacks, and `ios_app` client metadata. Worker/contracts now accept iOS native banks locally. Production remains unchanged until deployment.        |
+| CQ-IOS-002 | Implemented                                      | Generation configuration/capability preflight now runs before the q1 countdown. A terminal preflight failure stops ETA/progress and renders `Question 1 unavailable` plus `Local generation unavailable` instead of a continuing percentage. Credentialed ETA calibration remains pending. |
+| CQ-IOS-003 | Implemented                                      | Native privacy and recovery copy now describes on-device/native generation instead of a browser extension.                                                                                                                                                                                 |
+| CQ-IOS-004 | Verified locally                                 | Forgot Password now includes `Back · Sign in`; the signed iOS simulator build returned to Sign in successfully.                                                                                                                                                                            |
+| CQ-IOS-005 | Verified locally                                 | A native deep-link boundary maps `clipquest://sign-in`, reset-password, verification, Library, and quiz URLs to Expo Router paths. `clipquest://sign-in` opened Sign in in the signed simulator build instead of the not-found route.                                                      |
+| CQ-IOS-006 | Not reproduced                                   | The rebuilt, locally signed release app remained alive through launch, Forgot Password navigation, and custom-scheme replay. The original unexplained simulator shutdown has no diagnostic evidence and is not declared fixed until a longer device run reproduces or clears it.           |
+| CQ-IOS-007 | Implemented; device accessibility replay pending | Shared text inputs now set `secureTextEntry` only when explicitly requested. Source/tests cover the invariant, but the simulator control accessibility tree does not expose inner React Native fields reliably enough to close the VoiceOver/device gate.                                  |
+| CQ-IOS-008 | Implemented                                      | Added iOS generation-client, native deep-link, contract, and Chrome-to-iOS continuation regression coverage.                                                                                                                                                                               |
+| CQ-IOS-009 | Implemented locally                              | Local AI settings, native generation, recovery, caption-only source behavior, and review-reminder platform reporting now cover iOS as well as Android. End-to-end credentialed parity remains an acceptance task.                                                                          |
+| CQ-IOS-010 | Mitigated locally                                | Unsupported/unconfigured generation is rejected during preflight before a false active generation journey begins. Production Library behavior must be replayed after deployment.                                                                                                           |
 
 ### Signed simulator replay
 
@@ -226,3 +226,35 @@ The defects above were remediated locally after the initial QA pass. This follow
 ### Current decision
 
 **Improved locally, but still NOT READY for public iOS beta distribution.** The P0 implementation gaps are closed in the working tree, while deployment and credentialed device acceptance remain deliberately unclaimed. No commit, push, migration, or deployment was performed during this remediation pass.
+
+## Physical iPhone build and installation follow-up — 2026-08-18
+
+This follow-up supersedes only the earlier statement that no physical-device artifact had been produced. It does not supersede the credentialed quiz-generation, accessibility, notification, or distribution gates.
+
+### Device and artifact
+
+| Item                 | Observed value                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| Physical device      | Rich's iPhone, iPhone 15 Pro (`iPhone16,1`)                                               |
+| Device OS            | iOS 27.0 beta (`24A5408d`)                                                                |
+| Connection           | Paired USB; Developer Mode and developer disk-image services available                    |
+| Bundle               | `cc.ccwu.clipquest`                                                                       |
+| Version / build      | `0.2.0` / `1`                                                                             |
+| Configuration        | Release                                                                                   |
+| Architecture         | arm64                                                                                     |
+| App size             | 57 MB                                                                                     |
+| JavaScript runtime   | Embedded Hermes `main.jsbundle`; Metro is not required                                    |
+| Signing              | Apple Development / Rich Liu Personal Team                                                |
+| Provisioning profile | `iOS Team Provisioning Profile: cc.ccwu.clipquest`                                        |
+| Install result       | Passed through `xcrun devicectl device install app`                                       |
+| Launch result        | Blocked by the iPhone's one-time explicit trust requirement for the Personal Team profile |
+
+The arm64 executable and embedded JavaScript bundle were independently hashed after signing. `codesign --verify --deep --strict` passed, and the installed bundle's designated requirement was valid. The checked-in production entitlements were not weakened: a temporary untracked empty-entitlement override was used solely to create the Personal Team device artifact, then removed. Apple Personal Teams do not support the Push Notifications capability, so this local device build cannot test notifications and is not a distribution candidate.
+
+### Current production boundary
+
+At the time of this follow-up, production Worker `8350cd9a-e7ba-4b7e-883e-cd85796b8895` from Git `5d4a9e4146a4968c786439a92ad4b86c98a9332a` received 100% of traffic. `/health` advertised the iOS 0.2.0 client with `question-stream-v7`, while prompt v5.12 remained disabled and v5.11 was the effective default. Remote D1 was migrated through `0020_generation_call_lifecycle.sql`.
+
+### Remaining physical-device gate
+
+The learner must approve **Settings → General → VPN & Device Management → Developer App → Trust** on the iPhone before the installed app can launch. After that one-time approval, the release still requires a funded account-scoped DeepSeek key and complete 5-, 10-, and 15-question device runs covering ETA, progressive readiness, all grading modes, formatted math, background recovery, Library/review/mastery, VoiceOver, and privacy inspection. Installation alone is not physical-device acceptance or public iOS beta readiness.
