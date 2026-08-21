@@ -287,6 +287,9 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
   await expect(formPane).toBeVisible();
   await expect(divider).toBeVisible();
   await expect(
+    brandPane.getByText("Turn serious videos into lasting knowledge"),
+  ).toBeVisible();
+  await expect(
     formPane.getByRole("heading", { name: "Welcome back" }),
   ).toBeVisible();
 
@@ -311,6 +314,7 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
       brandBackground: getComputedStyle(brand).backgroundColor,
       formBackground: getComputedStyle(form).backgroundColor,
       dividerShadow: getComputedStyle(split).boxShadow,
+      logoWidth: brand.querySelector("img")?.getBoundingClientRect().width,
       hasOverflow:
         document.documentElement.scrollWidth >
         document.documentElement.clientWidth + 1,
@@ -322,6 +326,8 @@ test("sign-in splits on desktop and collapses cleanly on mobile", async ({
   expect(desktopLayout.dividerX).toBeCloseTo(720, 0);
   expect(desktopLayout.brandBackground).not.toBe(desktopLayout.formBackground);
   expect(desktopLayout.dividerShadow).not.toBe("none");
+  expect(desktopLayout.dividerShadow).toContain("24px 0px 24px -8px");
+  expect(desktopLayout.logoWidth).toBe(300);
   expect(desktopLayout.hasOverflow).toBe(false);
 
   await page.setViewportSize({ width: 390, height: 844 });

@@ -85,10 +85,20 @@ export function AuthShell({
               ]}
             >
               <View style={styles.splitBrand}>
-                <LearningPrism size={220} variant="hero" />
-                <Text style={[styles.splitBrandName, { color: theme.primary }]}>
-                  {t("appName")}
-                </Text>
+                <LearningPrism size={300} variant="hero" />
+                <View style={styles.splitBrandCopy}>
+                  <Text
+                    style={[styles.splitBrandName, { color: theme.primary }]}
+                  >
+                    {t("appName")}
+                  </Text>
+                  <Text
+                    testID="auth-split-tagline"
+                    style={[styles.splitTagline, { color: theme.text }]}
+                  >
+                    {t("authShellTagline")}
+                  </Text>
+                </View>
               </View>
             </View>
             <View
@@ -103,15 +113,15 @@ export function AuthShell({
                   ? {
                       boxShadow:
                         theme.mode === "dark"
-                          ? "0 0 34px 12px rgba(0, 0, 0, 0.42)"
-                          : "0 0 28px 8px rgba(25, 104, 58, 0.18)",
+                          ? "28px 0 28px -10px rgba(0, 0, 0, 0.42)"
+                          : "24px 0 24px -8px rgba(25, 104, 58, 0.18)",
                     }
                   : {
                       shadowColor:
                         theme.mode === "dark"
                           ? theme.surfaceSunken
                           : theme.primaryPressed,
-                      shadowOffset: { width: 0, height: 0 },
+                      shadowOffset: { width: 24, height: 0 },
                       shadowOpacity: 0.3,
                       shadowRadius: 20,
                       elevation: 8,
@@ -217,16 +227,28 @@ const styles = StyleSheet.create({
   },
   splitBrand: {
     width: "100%",
-    maxWidth: 440,
+    maxWidth: 520,
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing[5],
+    gap: spacing[6],
+  },
+  splitBrandCopy: {
+    alignItems: "center",
+    gap: spacing[2],
   },
   splitBrandName: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.bodyLarge,
     letterSpacing: 1.2,
     textTransform: "uppercase",
+  },
+  splitTagline: {
+    maxWidth: 440,
+    textAlign: "center",
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.title,
+    lineHeight: typography.lineHeight.title,
+    letterSpacing: -0.5,
   },
   intro: {
     flex: 1,
