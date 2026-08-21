@@ -6,30 +6,23 @@ This file is the non-secret continuation point for moving ClipQuest to another c
 
 ## Immediate continuation objective
 
-Complete a real production Chrome learner flow with the current local ClipQuest extension:
-
-1. Use a fresh public YouTube lesson with usable captions.
-2. Select multiple choice, true/false, and short answer in a medium 10-question session.
-3. Measure from clicking **Create my quiz** until the first complete, answerable question is visible. The requirement is less than 15 seconds.
-4. Verify generation uses zero `automatic_retry` call events and never exposes a learner Continue or Retry control.
-5. Answer all 10 questions through the normal interface, including short answers.
-6. Reach the completion screen without a generation warning, dead end, or manual recovery step.
-7. Click **Download PDF** or **Export notes**, capture the actual downloaded file, render every PDF page, and inspect its text, wrapping, sections, formulas, and visual layout.
-8. If any condition fails, reproduce the cause, add a regression test, implement a source fix, push/deploy it, reload the extension, and repeat with a different fresh YouTube link. Do not claim success from unit tests, a Create page, a generated first question, or an Export click alone.
+The previously interrupted production-browser goal is complete. The next computer should start by pulling `main`, rebuilding/reloading the unpacked extension, restoring the local DeepSeek key through the extension UI, and rerunning a short smoke check against production. Do not repeat the historical repair unless the current checkout or production `/health` no longer matches the verified implementation and Worker IDs below.
 
 ## Current Git and production state
 
 - Repository: `https://github.com/UnoxyRich/ClipQuest`
 - Default branch: `main`
-- Tracked baseline before this handoff bundle: `ee37102ad091a19ae3d6ecdd4270cde3792f77a1`
-- That baseline was already pushed to `origin/main` before this handoff commit.
+- Deployed implementation commit: `f74d2453c423911cdb3ff9f3518ae4d19a9ffe41`
+- Implementation commit message: `Fix true-false polarity and duplicate retries`
+- `HEAD`, `origin/main`, and GitHub `refs/heads/main` all matched that commit before the handoff-only documentation update.
 - Production URL: `https://clipquest.ccwu.cc`
-- Production Worker at handoff time: `3fc4c5b9-540a-4f35-bbdf-e7f69c868f59`
-- Production version tag at handoff time: `ee37102ad091a19ae3d6ecdd4270cde3792f77a1`
+- Production Worker at handoff time: `d62df941-478f-4113-8eaa-7bebf5ffefec`
+- Production version tag at handoff time: `f74d2453c423911cdb3ff9f3518ae4d19a9ffe41`
 - Required browser extension version: `0.8.31`
 - Required capability: `question-stream-v7`
 - Backend quiz generation is disabled. Chrome generation must run through the local extension; the server stores validated quiz/progress data.
-- The production health response was HTTP 200 immediately before writing this handoff.
+- The guarded Cloudflare release completed successfully: preview and override verification passed, the Worker was promoted to 100%, and all 9 shell plus 9 entry-bundle probes passed at +0, +120, +300, and +600 seconds.
+- Production `/health` returned HTTP 200 and identified the Worker/version tag above immediately before this update.
 
 After cloning or pulling, verify rather than trusting the snapshot:
 
@@ -75,9 +68,9 @@ Expected ZIP:
 
 `apps/extension/dist/clipquest-captions-extension.zip`
 
-At the handoff baseline, all 244 extension tests passed and both distributed ZIP copies had SHA-256:
+At the deployed implementation, all 245 extension tests passed and both distributed ZIP copies had SHA-256:
 
-`4601321cdda7df9af508228739ad906c10c32c1e3b2b05b066b97776a9af6cf5`
+`bb4bcd59cc261eb3ad141c20501a241e5839547af2f5cb10d8bc061ac86b9006`
 
 Chrome installation is device-local and cannot be transferred by Git. On the new computer:
 
@@ -120,44 +113,76 @@ npm run build
 npm run cf:dry-run
 ```
 
-## Exact live-browser interruption
+## Completed live-browser acceptance
 
-The last live attempt used this captioned TED-Ed video:
+The final all-in-one acceptance used a new public captioned TED-Ed lesson:
 
-`https://www.youtube.com/watch?v=qD0_yWgifDM`
+- URL: `https://www.youtube.com/watch?v=PSRJfaAYkW4`
+- Source video ID: `PSRJfaAYkW4`
+- Title: **How does your immune system work? - Emma Bryce**
+- ClipQuest video ID: `da562754-eb9f-49f4-88fe-c50dde54e2ef`
+- Caption language: English
+- Persisted caption source category: `unknown`
+- Caption evidence: 90 segments and 732 words
+- Generation request ID: `47e693e4-c2b7-44f9-9cf0-fbad01172582`
+- Generation session ID: `b275132a-6cce-49f5-83fe-3c05674d4191`
+- Quiz ID: `079b1c00-b6ac-4001-a51a-418beb61f29c`
+- Attempt ID: `9a4fa85b-5d1a-4b73-9a0e-dc8f0d25ba79`
 
-Title: **The science of spiciness - Rose Eveleth**
+The browser clicked **Create my quiz** at `2026-08-21T05:53:28.127Z`. A strict DOM probe required the complete prompt, four enabled choices, progress, and the Check control; it passed at `2026-08-21T05:53:34.535Z`, for a first-answerable latency of **6,408 ms**. The learner screen simultaneously showed `1/10 questions ready`, proving the first question was usable while the remaining bank continued generating.
 
-The signed-in production account imported the video successfully and reached a medium 10-question Create page with all three question types enabled. After clicking **Create my quiz**, the learner reached the generation route, but production could not detect an installed current extension. Around seven seconds after the click, the page showed:
+The run used medium/10 with multiple choice, true/false, and short answer enabled. All 10 learner-visible questions were answered through the normal interface, including three short responses. Every response received coherent positive feedback, the attempt completed without a warning, dead end, manual Continue, or Retry control, and the completion screen reported 100%, 10 questions, and a working **Download PDF** button.
 
-- `Quiz creation stopped`
-- `Local generation unavailable`
-- `Question 1 unavailable`
-- `ClipQuest 0.8.31 or newer is required.`
+Production D1 is the authoritative generation record:
 
-The failed generation ID was:
+- Attempt status: `complete`
+- Score/correct/answered: `100 / 10 / 10`
+- Quiz quality status: `passed`
+- Pipeline version: `9`
+- Primary generation calls: `5`
+- Accepted questions: `10`
+- `automatic_retry` or non-null `retry_kind` events: `0`
+- Call classifications: `primary,primary,primary,primary,primary`
+- Per-call elapsed range: 1,685–3,337 ms
 
-`1244c810-fc9f-4d50-9b51-f7c80af5495a`
+The final bank contained coherent true and false statements. Positive antigen and inflammation statements stored `true`; the spleen-origin and “exact causes are well understood” statements stored `false`, with explanations matching their polarity. The browser answers and feedback agreed with those stored answers.
 
-This was an installed-browser-state failure. No caption extraction, DeepSeek call, retry, persisted first question, completed quiz, or PDF export occurred. Do not treat it as evidence about model latency or quiz quality. Use a different fresh video after loading the correct extension.
+The completion PDF downloaded to:
 
-Chrome's protected `chrome://extensions` page rejected automation, including attempts to substitute another browser-control surface. The extension load/reload must therefore be performed manually once on the destination computer. All normal ClipQuest page interactions can then be automated in the live Chrome session.
+`/Users/unoxyrich/Downloads/How-does-your-immune-system-work---Emma-Bryce-cheat-sheet.pdf`
 
-## Live acceptance evidence to collect
+An ignored inspection copy is at `tmp/pdfs/immune-live/source.pdf` on the source computer. It is 1,688 bytes, one unencrypted Letter page, PDF 1.7, rendered by `pdf-lib`, with SHA-256:
 
-Capture a compact run record containing:
+`d23b59a58f0d98e729a88271181b13ad0e11a71ea92f4ad67d77322e581a75f6`
 
-- Video URL, ID, title, duration, caption language, and whether captions are human-authored or automatic.
-- Extension version and capability visible to the website.
-- Generation ID, video ID, quiz ID, and attempt ID.
-- Wall-clock timestamps for Create click and first complete question render.
-- The first-question latency in milliseconds.
-- The count of primary and `automatic_retry` call events.
-- Each learner-visible question type, prompt, chosen response, feedback, and navigation result.
-- Completion score and confirmation that the completion screen remains independent of notes generation.
-- The downloaded PDF path, byte size, SHA-256, page count, extracted required section headings, and rendered-page inspection result.
+`pdfinfo`, `pdftotext`, and a 150-DPI full-page render verified the title wraps safely and the Summary, Key concepts, Definitions, and Remember this sections are readable with no clipping, overlap, or missing content.
 
-For authoritative zero-retry evidence, query production telemetry for the generated quiz rather than inferring from the absence of a retry button. The relevant D1 table is `quiz_generation_call_events`; `classification = 'automatic_retry'` must have a count of zero for the run. Primary call count and accepted question coverage should also be reconciled with the requested 10-question bank.
+An earlier post-deploy run on **The science of skin - Emma Bryce** independently verified the specific true/false polarity repair. Its positive dermal-collagen statement stored `true`, was answered `True`, and produced correct positive feedback. That attempt also finished 10/10 with zero retries and produced a clean one-page PDF. IDs: video `94f06c77-dbd0-4076-b934-1f218000f139`, quiz `0f7a9ef9-c443-4835-8d80-8da2dabf1750`, attempt `2909559d-603b-48f4-97dc-8b7a141b7fa3`.
+
+## Implemented repair and verification
+
+Commit `f74d2453c423911cdb3ff9f3518ae4d19a9ffe41` contains the production repair:
+
+- Stable v5.2 local generation reconciles contradictory true/false output when the model labels a statement false but its correction simply restates that exact statement.
+- The API import boundary applies the same defensive normalization, protecting already-installed extension clients as well as newly rebuilt clients.
+- Incorrect answers schedule an adaptive retry only when `reformulated_prompt` is genuinely different after Unicode, case, whitespace, and punctuation normalization; identical prompts no longer repeat.
+- Regression tests cover local polarity normalization, API storage normalization, and rejection of exact duplicate adaptive retries.
+- The tracked downloadable extension ZIP was rebuilt with the new source.
+
+Validation passed before deployment:
+
+- Full `npm test`
+- Contracts: 26/26
+- API: 209/209
+- App: 164/164
+- Extension: 245/245
+- Headless quiz: 6/6
+- Local quiz engine: 29/29
+- YouTube source: 7/7
+- API release scripts: 8/8
+- App web-asset scripts: 2/2
+- Type checking for contracts, API (including Wrangler types), and app
+- `git diff --check` and staged secret scan
 
 ## Important implementation locations
 
@@ -220,16 +245,4 @@ The following are intentionally not committed because they are machine-local, re
 
 ## Definition of done for the interrupted goal
 
-The interrupted browser goal is complete only when one fresh production run proves all of the following at once:
-
-- Correct installed extension is active and configured.
-- Video captions import normally.
-- First complete question appears in less than 15 seconds.
-- Generation records zero automatic retries.
-- No learner-visible manual retry or continuation action is needed.
-- All 10 questions are answerable and completed smoothly.
-- Completion state persists normally.
-- Notes PDF is ready, downloads successfully, opens, and passes full-page visual/content inspection.
-- Any code required to reach that state is committed, pushed, deployed, and verified on a second fresh video after the fix.
-
-Anything less is progress, not acceptance.
+Complete as of 2026-08-21. The final fresh production run proved an active configured extension, caption import, a 6.408-second first complete question, zero automatic retries, no manual generation recovery, normal completion of all 10 questions, 100% persisted completion state, and a downloaded/fully inspected notes PDF. The source repair is committed, pushed, deployed, soaked for 600 seconds, and independently verified on two fresh videos.
