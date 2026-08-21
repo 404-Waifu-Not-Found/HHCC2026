@@ -3872,6 +3872,59 @@ test("v5.12 sends the grading-consistent local-polarity contract", async (contex
   );
 });
 
+test("v5.12 continuation normalizes a missing retry kind to a schema-safe structural retry", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => promptFirstResponse(init.body);
+
+  const input = promptFirstInput(5, ["multiple_choice"]);
+  input.continuation = {
+    startIndex: 1,
+    resultProtocolVersion: 10,
+    promptVersion: "quiz-local-json-stream-v5.12",
+    validatorVersion: "validator-minimal-gradeability-v5.3",
+    promptFingerprint: createHash("sha256")
+      .update(PROMPT_FIRST_SYSTEM_PROMPT)
+      .digest("hex"),
+    generationProfile: "prompt_first_auto_v5_12",
+    nextCallIndex: 0,
+    nextOrdinalAttempt: 2,
+    automaticRetryCount: 1,
+    retryBudgetUsedCount: 1,
+    retryKind: "automatic_resume",
+    retryOrdinals: [2],
+    acceptedQuestions: [
+      {
+        id: "q1",
+        type: "multiple_choice",
+        concept: "accepted concept",
+        question: "Which mechanism explains accepted concept?",
+      },
+    ],
+  };
+
+  const result = await generateQuizFromPlainText(
+    input,
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.generatedStartIndex, 1);
+  assert.equal(result.totalQuestions, 5);
+  const firstRetry = calls.find(
+    (event) =>
+      event.lifecycleState === "started" &&
+      event.classification === "automatic_retry",
+  );
+  assert.equal(firstRetry?.retryKind, "structural");
+});
+
 test("v5.12 retries an exact repeated question and grading target", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
@@ -4524,6 +4577,35 @@ test("v5.11 assigns false polarity locally without a changed-detail contract", a
       (question) => question.type === "true_false" && question.answer === false,
     ),
   );
+});
+
+test("v5.11 keeps an echoed supported fact true instead of persisting a false contradiction", () => {
+  const supportedStatement =
+    "A femboy is a male-presenting person who adopts feminine attributes while still identifying as male.";
+  const question = normalizeGeneratedQuestion(
+    {
+      type: "true_false",
+      concept: "femboy definition",
+      question: supportedStatement,
+      correction:
+        "A femboy is a female-presenting person who adopts masculine attributes while still identifying as female.",
+      explanation:
+        "The definition specifies a male-presenting person who retains a male identity.",
+    },
+    {
+      expectedId: "q2",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV511Mode: true,
+      promptFirstPrimaryClaim: supportedStatement,
+      expectedTrueFalseAnswer: false,
+    },
+  );
+
+  assert.equal(question.question, supportedStatement);
+  assert.equal(question.answer, true);
+  assert.equal(question.correction, supportedStatement);
+  assert.equal(question.localPolarityFallback, true);
 });
 
 test("v5.11 keeps a collapsed false candidate as a supported true item without retrying", async (context) => {
@@ -6212,20 +6294,14 @@ test("a formula question without a valid token structure uses only bounded autom
     ),
     (error) => error?.reasonCode === "schema_invalid",
   );
-  assert.equal(fetchCount, 5);
+  assert.equal(fetchCount, 3);
   assert.deepEqual(
     events.map((event) => event.classification),
-    [
-      "primary",
-      "automatic_retry",
-      "automatic_retry",
-      "automatic_retry",
-      "automatic_retry",
-    ],
+    ["primary", "automatic_retry", "automatic_retry"],
   );
   assert.deepEqual(
     events.slice(1).map((event) => event.retryKind),
-    ["content_repair", "content_repair", "content_repair", "content_repair"],
+    ["content_repair", "content_repair"],
   );
 });
 
@@ -6271,7 +6347,7 @@ for (const failure of [
         ? "empty_content"
         : "truncated_output";
   }
-  test(`${failure.name} exhausts exactly four bounded automatic retries`, async (context) => {
+  test(`${failure.name} exhausts exactly two bounded automatic repairs`, async (context) => {
     const originalFetch = globalThis.fetch;
     let fetchCount = 0;
     const events = [];
@@ -6293,33 +6369,19 @@ for (const failure of [
       ),
       (error) => error?.reasonCode === failure.expected,
     );
-    assert.equal(fetchCount, 5);
-    assert.equal(events.length, 5);
+    assert.equal(fetchCount, 3);
+    assert.equal(events.length, 3);
     assert.deepEqual(
       events.map((event) => event.classification),
-      [
-        "primary",
-        "automatic_retry",
-        "automatic_retry",
-        "automatic_retry",
-        "automatic_retry",
-      ],
+      ["primary", "automatic_retry", "automatic_retry"],
     );
     assert.deepEqual(
       events.map((event) => event.outcome),
-      [
-        failure.expected,
-        failure.expected,
-        failure.expected,
-        failure.expected,
-        failure.expected,
-      ],
+      [failure.expected, failure.expected, failure.expected],
     );
     assert.equal(events[1].retryKind, failure.retryKind);
     assert.equal(events[2].retryKind, failure.retryKind);
-    assert.equal(events[3].retryKind, failure.retryKind);
-    assert.equal(events[4].retryKind, failure.retryKind);
-    assert.equal(events[4].retryDelayMs, 0);
+    assert.equal(events[2].retryDelayMs, 0);
   });
 }
 
@@ -6433,7 +6495,7 @@ test("a confirmed transient failure retries only the missing singleton", async (
       (event) =>
         event.detail.status === "retrying" &&
         event.detail.attempt === 2 &&
-        event.detail.maxAttempts === 5 &&
+        event.detail.maxAttempts === 3 &&
         event.detail.retryDelayMs >= 800,
     ),
   );

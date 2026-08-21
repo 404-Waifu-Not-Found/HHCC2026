@@ -1356,13 +1356,19 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   );
   expect(questionTypeBoxes.every(Boolean)).toBe(true);
   expect(
-    Math.max(...questionTypeBoxes.map((box) => box?.width ?? 0)) -
-      Math.min(...questionTypeBoxes.map((box) => box?.width ?? 0)),
+    Math.abs(
+      (questionTypeBoxes[0]?.width ?? 0) - (questionTypeBoxes[1]?.width ?? 0),
+    ),
   ).toBeLessThanOrEqual(1);
+  expect(questionTypeBoxes[2]?.width ?? 0).toBeGreaterThan(
+    (questionTypeBoxes[0]?.width ?? 0) * 1.8,
+  );
   expect(
-    Math.max(...questionTypeBoxes.map((box) => box?.x ?? 0)) -
-      Math.min(...questionTypeBoxes.map((box) => box?.x ?? 0)),
+    Math.abs((questionTypeBoxes[2]?.x ?? 0) - (questionTypeBoxes[0]?.x ?? 0)),
   ).toBeLessThanOrEqual(1);
+  expect(questionTypeBoxes[1]?.x ?? 0).toBeGreaterThan(
+    questionTypeBoxes[0]?.x ?? 0,
+  );
 
   const mobileTabBoxes = await Promise.all(
     ["Home", "Library", "Settings"].map((name) =>
@@ -1716,6 +1722,21 @@ test("admin operations console is responsive and uses real management contracts"
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/users");
   await expect(page.getByRole("heading", { name: "People" })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Generation streams" }),
+  ).toContainText("Streams");
+  const adminSearchField = await page
+    .getByPlaceholder("Search by name, email, title, or ID")
+    .boundingBox();
+  const adminSearchButton = await page
+    .getByRole("button", { name: "Search" })
+    .boundingBox();
+  expect(adminSearchField).not.toBeNull();
+  expect(adminSearchButton).not.toBeNull();
+  expect(adminSearchButton?.width ?? 0).toBeGreaterThan(290);
+  expect(adminSearchButton?.x ?? 0).toBeLessThanOrEqual(
+    (adminSearchField?.x ?? 0) + 1,
+  );
   const overflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth -

@@ -440,6 +440,57 @@ describe("progressive short-answer grading", () => {
     ).toEqual({ correct: false, path: "required_idea_missing" });
   });
 
+  it("accepts concise generated-rubric paraphrases observed in native QA", () => {
+    const biasIdea =
+      "The biases are organized into a vector, and the entire vector is added to the previous matrix-vector product.";
+    expect(
+      gradeProgressiveShortAnswerDecision({
+        answer:
+          "They are a bias vector added to the weighted matrix product before applying the activation function.",
+        requiredIdeas: [biasIdea],
+        acceptableAlternatives: [biasIdea],
+        rubricV2: {
+          version: 2,
+          mode: "proposition",
+          requiredIdeas: [biasIdea],
+          acceptableAnswers: [biasIdea],
+        },
+      }),
+    ).toMatchObject({ correct: true });
+
+    const trainedIdea =
+      "When an image is fed in, the pattern of activations propagates through the layers, and the brightest neuron in the output layer indicates the network's chosen digit.";
+    const trainedAlternative =
+      "The brightest neuron of the output layer is the network's choice for what digit the image represents.";
+    expect(
+      gradeProgressiveShortAnswerDecision({
+        answer:
+          "Its weights and biases were adjusted from training examples so the output neuron for the correct digit receives the highest activation.",
+        requiredIdeas: [trainedIdea],
+        acceptableAlternatives: [trainedIdea, trainedAlternative],
+        rubricV2: {
+          version: 2,
+          mode: "proposition",
+          requiredIdeas: [trainedIdea],
+          acceptableAnswers: [trainedIdea, trainedAlternative],
+        },
+      }),
+    ).toMatchObject({ correct: true });
+    expect(
+      gradeProgressiveShortAnswerDecision({
+        answer: "The network was trained.",
+        requiredIdeas: [trainedIdea],
+        acceptableAlternatives: [trainedIdea, trainedAlternative],
+        rubricV2: {
+          version: 2,
+          mode: "proposition",
+          requiredIdeas: [trainedIdea],
+          acceptableAnswers: [trainedIdea, trainedAlternative],
+        },
+      }),
+    ).toEqual({ correct: false, path: "required_idea_missing" });
+  });
+
   describe("formula-aware grading", () => {
     const quotientRuleRubric = {
       requiredIdeas: [

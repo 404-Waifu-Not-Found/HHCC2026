@@ -12,6 +12,10 @@ import {
   LocalConceptQuizGenerationResultSchema,
   LocalConceptQuizQuestionChunkSchema,
   LocalQuizContextSchema,
+  CheatSheetContextSchema,
+  CheatSheetDocumentSchema,
+  LocalAnswerGradeSchema,
+  LocalAnswerGradeRequestSchema,
   MAX_COMPLETE_TRANSCRIPT_SEGMENTS,
   TranscriptSegmentSchema,
   type GenerationStage,
@@ -45,6 +49,21 @@ const WEBSITE_SOURCE = "clipquest-website";
 const EXTENSION_SOURCE = "clipquest-extension";
 const DETECTION_TIMEOUT_MS = 900;
 const EXTRACTION_TIMEOUT_MS = 55_000;
+// DeepSeek request construction can include bounded local evidence selection
+// before fetch is dispatched. Keep this watchdog long enough for slower mobile
+// browsers/extension service workers without changing the overall generation
+// timeout or blocking quiz navigation.
+// Dispatch should fail quickly enough to hand the accepted question prefix to
+// the bounded recovery path. DeepSeek's stream itself has a separate idle
+// watchdog; this timeout only covers the extension handoff before a call has
+// started.
+const LOCAL_GENERATION_DISPATCH_TIMEOUT_MS = 20_000;
+// A lifecycle "started" event is emitted before DeepSeek begins streaming.
+// Grounded evidence selection can be quiet for well over thirty seconds on a
+// real mobile/network path, so do not abort a healthy call just because no
+// question chunk has arrived yet. The engine still enforces its bounded
+// request and recovery budgets.
+const LOCAL_GENERATION_IDLE_TIMEOUT_MS = 180_000;
 
 type ExtensionReadyMessage = {
   channel: typeof CHANNEL;
@@ -632,7 +651,7 @@ export async function requestExtensionLocalQuiz(
               ),
             ),
           ),
-        60_000,
+        LOCAL_GENERATION_IDLE_TIMEOUT_MS,
       );
     };
     const receive = (event: MessageEvent<unknown>) => {
@@ -752,13 +771,154 @@ export async function requestExtensionLocalQuiz(
               ),
             ),
           ),
-        10_000,
+        LOCAL_GENERATION_DISPATCH_TIMEOUT_MS,
       );
       resetIdleWatchdog();
     }
     window.addEventListener("message", receive);
     signal.addEventListener("abort", abort, { once: true });
     post({ type: "generate", requestId: id, context });
+  });
+}
+
+export async function requestExtensionLocalCheatSheet(
+  rawContext: import("@clipquest/contracts").CheatSheetContext,
+  signal?: AbortSignal,
+): Promise<import("@clipquest/contracts").CheatSheetDocument> {
+  const context = CheatSheetContextSchema.parse(rawContext);
+  const extension = await detectClipQuestExtension();
+  if (!extension.available || !extension.configured)
+    throw new Error(
+      "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+    );
+  const id = requestId();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
+      window.removeEventListener("message", receive);
+      callback();
+    };
+    const abort = () =>
+      finish(() =>
+        reject(
+          signal?.reason ??
+            new DOMException("The request was cancelled.", "AbortError"),
+        ),
+      );
+    const receive = (event: MessageEvent<unknown>) => {
+      if (
+        event.source !== window ||
+        event.origin !== window.location.origin ||
+        !isGenerationResultMessage(event.data) ||
+        event.data.requestId !== id
+      )
+        return;
+      const response = event.data.response;
+      if (!response?.ok)
+        return finish(() =>
+          reject(
+            new Error(response?.error ?? "Cheat-sheet generation failed."),
+          ),
+        );
+      const parsed = CheatSheetDocumentSchema.safeParse({
+        ...(response.result && typeof response.result === "object"
+          ? response.result
+          : {}),
+        generatedAt: new Date().toISOString(),
+        sourceRevision: context.sourceRevision,
+      });
+      if (!parsed.success)
+        return finish(() =>
+          reject(new Error("The extension returned an invalid cheat sheet.")),
+        );
+      finish(() => resolve(parsed.data));
+    };
+    const timeout = setTimeout(
+      () =>
+        finish(() =>
+          reject(new Error("The ClipQuest extension request timed out.")),
+        ),
+      120_000,
+    );
+    window.addEventListener("message", receive);
+    signal?.addEventListener("abort", abort, { once: true });
+    post({ type: "generate", kind: "cheat-sheet", requestId: id, context });
+  });
+}
+
+export async function requestExtensionLocalAnswerGrade(
+  rawRequest: import("@clipquest/contracts").LocalAnswerGradeRequest,
+  signal?: AbortSignal,
+): Promise<import("@clipquest/contracts").LocalAnswerGrade> {
+  const request = LocalAnswerGradeRequestSchema.parse(rawRequest);
+  const extension = await detectClipQuestExtension();
+  if (!extension.available || !extension.configured)
+    throw new Error(
+      "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+    );
+  if (!extension.capabilities.includes("answer-grading-v1")) {
+    throw new Error(
+      "Update ClipQuest Local AI to enable softer answer grading.",
+    );
+  }
+  const id = requestId();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
+      window.removeEventListener("message", receive);
+      callback();
+    };
+    const abort = () =>
+      finish(() =>
+        reject(
+          signal?.reason ??
+            new DOMException("The request was cancelled.", "AbortError"),
+        ),
+      );
+    const receive = (event: MessageEvent<unknown>) => {
+      const data =
+        event.data && typeof event.data === "object"
+          ? (event.data as Record<string, unknown>)
+          : null;
+      if (
+        event.source !== window ||
+        event.origin !== window.location.origin ||
+        data?.channel !== CHANNEL ||
+        data?.source !== EXTENSION_SOURCE ||
+        data?.type !== "answer-grade-result" ||
+        data?.requestId !== id
+      )
+        return;
+      const response = data.response as
+        { ok?: boolean; error?: string; result?: unknown } | undefined;
+      if (!response?.ok) {
+        return finish(() =>
+          reject(new Error(response?.error ?? "Answer grading failed.")),
+        );
+      }
+      const parsed = LocalAnswerGradeSchema.safeParse(response.result);
+      if (!parsed.success) {
+        return finish(() =>
+          reject(new Error("The extension returned an invalid answer grade.")),
+        );
+      }
+      finish(() => resolve(parsed.data));
+    };
+    const timeout = setTimeout(
+      () => finish(() => reject(new Error("Answer grading timed out."))),
+      45_000,
+    );
+    window.addEventListener("message", receive);
+    signal?.addEventListener("abort", abort, { once: true });
+    post({ type: "grade-answer", requestId: id, request });
   });
 }
 

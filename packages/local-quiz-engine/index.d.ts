@@ -6,6 +6,8 @@ import type {
   LocalConceptQuizQuestionChunk,
   LocalGenerationCallEvent,
   LocalQuizContext,
+  LocalAnswerGrade,
+  LocalAnswerGradeRequest,
 } from "@clipquest/contracts";
 
 export type LocalEngineProgress = {
@@ -31,6 +33,16 @@ export type LocalQuizEngineAdapters = {
   };
 };
 
+export const LOCAL_GENERATION_RETRY_POLICY: {
+  readonly maxTransportRetriesPerOrdinal: number;
+  readonly maxContentRetriesPerOrdinal: number;
+  readonly maxStructuralRetriesPerOrdinal: number;
+  readonly maxAutomaticRetries: number;
+  readonly maxHotRetriesPerRecoveryCycle: number;
+  readonly maxActiveRecoveryMs: number;
+  readonly streamIdleTimeoutMs: number;
+};
+
 export function generateLocalQuiz(
   context: LocalQuizContext,
   apiKey: string,
@@ -49,3 +61,23 @@ export function testDeepSeekKey(
   apiKey: string,
   fetchImpl?: typeof globalThis.fetch,
 ): Promise<true>;
+export function generateLocalCheatSheet(
+  context: unknown,
+  apiKey: string,
+  signal?: AbortSignal,
+  adapters?: LocalQuizEngineAdapters,
+): Promise<{
+  title: string;
+  source: string;
+  summary: string;
+  keyConcepts: string[];
+  definitions: { term: string; definition: string }[];
+  formulas: string[];
+  rememberThis: string[];
+}>;
+export function gradeLocalAnswerWithDeepSeek(
+  input: LocalAnswerGradeRequest,
+  apiKey: string,
+  signal?: AbortSignal,
+  adapters?: LocalQuizEngineAdapters,
+): Promise<LocalAnswerGrade>;

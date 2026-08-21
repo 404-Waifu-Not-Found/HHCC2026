@@ -1,7 +1,11 @@
 import type {
   AutomaticRetryKind,
+  CheatSheetContext,
+  CheatSheetDocument,
   GenerationFailureCode,
   GenerationStage,
+  LocalAnswerGrade,
+  LocalAnswerGradeRequest,
   LocalConceptQuizGenerationResult,
   LocalConceptQuizQuestionChunk,
   LocalGenerationCallEvent,
@@ -41,6 +45,16 @@ export type LocalGenerationRequest = (
   onQuestion?: (chunk: LocalConceptQuizQuestionChunk) => void | Promise<void>,
   onCall?: (event: LocalGenerationCallEvent) => void | Promise<void>,
 ) => Promise<LocalConceptQuizGenerationResult>;
+
+export type LocalCheatSheetRequest = (
+  context: CheatSheetContext,
+  signal?: AbortSignal,
+) => Promise<CheatSheetDocument>;
+
+export type LocalAnswerGradeRequestFn = (
+  request: LocalAnswerGradeRequest,
+  signal?: AbortSignal,
+) => Promise<LocalAnswerGrade>;
 
 export type LocalGenerationOutboxReplay = {
   questions: number;

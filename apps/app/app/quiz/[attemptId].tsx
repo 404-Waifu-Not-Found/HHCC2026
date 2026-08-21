@@ -12,7 +12,15 @@ import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  AppState,
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { AnswerCard, type AnswerState } from "../../src/components/AnswerCard";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { EmptyState } from "../../src/components/EmptyState";
@@ -27,6 +35,15 @@ import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
+import {
+  exportCheatSheet,
+  exportCheatSheetPdf,
+  generateCheatSheetDocumentWithLocalAi,
+  loadCheatSheetContext,
+  recordCheatSheetFailure,
+  renderCheatSheetPdf,
+  uploadCheatSheet,
+} from "../../src/lib/cheat-sheet";
 import { useAppSession } from "../../src/lib/auth-client";
 import {
   presentQuizPrompt,
@@ -44,7 +61,10 @@ import {
   subscribeToAttemptGeneration,
 } from "../../src/generation/progressive-coordinator";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { subscribeToLocalGenerationClient } from "../../src/generation/local-generation-client";
+import {
+  requestLocalAnswerGrade,
+  subscribeToLocalGenerationClient,
+} from "../../src/generation/local-generation-client";
 import {
   FeedbackMotion,
   MotionSkeleton,
@@ -68,17 +88,39 @@ import {
 
 type Answer = number | boolean | number[] | string;
 
+function learnerFeedbackDetail(
+  feedback: AttemptAnswerResponse,
+  localGrade: import("@clipquest/contracts").LocalAnswerGrade | undefined,
+  translate: (
+    key: "answerReason" | "answerMarkedCorrect" | "answerMarkedIncorrect",
+  ) => string,
+): string {
+  const localDecisionMatches =
+    localGrade !== undefined && localGrade.correct === feedback.correct;
+  const reason = localDecisionMatches
+    ? localGrade.reason
+    : feedback.explanation;
+  const verdict = feedback.correct
+    ? translate("answerMarkedCorrect")
+    : translate("answerMarkedIncorrect");
+  return `${translate("answerReason")}: ${reason}\n\n${verdict}`;
+}
+
 export default function QuizScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const { data: session, isPending: sessionPending } = useAppSession();
   const userId = session?.user.id;
   const { t, theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const compactCompletion = width < breakpoints.compact;
   const [question, setQuestion] = useState<PublicQuestion>();
   const [primer, setPrimer] = useState<string | null>(null);
   const [showPrimer, setShowPrimer] = useState(false);
   const [answer, setAnswer] = useState<Answer>();
   const [orderingTouched, setOrderingTouched] = useState(false);
   const [feedback, setFeedback] = useState<AttemptAnswerResponse>();
+  const [localGrade, setLocalGrade] =
+    useState<import("@clipquest/contracts").LocalAnswerGrade>();
   const [score, setScore] = useState<number>();
   const [mastery, setMastery] = useState<MasteryState>();
   const [showCompletion, setShowCompletion] = useState(false);
@@ -93,6 +135,26 @@ export default function QuizScreen() {
   const [questionActivation, setQuestionActivation] = useState(0);
   const [questionInteractionReady, setQuestionInteractionReady] =
     useState(false);
+  const [cheatSheetStatus, setCheatSheetStatus] = useState<
+    "preparing" | "ready" | "failed"
+  >("preparing");
+  const [cheatSheetId, setCheatSheetId] = useState<string>();
+  const [cheatSheetTitle, setCheatSheetTitle] = useState<string>(
+    "ClipQuest cheat sheet",
+  );
+  const cheatSheetStartedRef = useRef(false);
+  const pendingCheatSheetRef = useRef<
+    | {
+        videoId: string;
+        quizId: string;
+        document: import("@clipquest/contracts").CheatSheetDocument;
+        pdf: Uint8Array;
+      }
+    | undefined
+  >(undefined);
+  const cheatSheetContextRef = useRef<
+    { videoId: string; quizId: string } | undefined
+  >(undefined);
   const recoveryAttemptedRef = useRef(false);
 
   const updateGeneration = useCallback(
@@ -125,6 +187,7 @@ export default function QuizScreen() {
     );
     setOrderingTouched(false);
     setFeedback(undefined);
+    setLocalGrade(undefined);
     setError(undefined);
     setWaitingForQuestions(false);
   }, []);
@@ -152,6 +215,15 @@ export default function QuizScreen() {
       setFeedback(undefined);
       setError(undefined);
       updateGeneration(resumed.generation);
+      if (resumed.quizId && resumed.videoId && !cheatSheetStartedRef.current) {
+        cheatSheetStartedRef.current = true;
+        cheatSheetContextRef.current = {
+          quizId: resumed.quizId,
+          videoId: resumed.videoId,
+        };
+        setCheatSheetTitle(resumed.title ?? "ClipQuest cheat sheet");
+        void prepareCheatSheet(resumed.quizId, resumed.videoId);
+      }
       if (resumed.completed) {
         setQuestion(undefined);
         setAnswer(undefined);
@@ -159,6 +231,7 @@ export default function QuizScreen() {
         setScore(resumed.score ?? 0);
         setMastery(resumed.mastery ?? "learning");
         setShowCompletion(true);
+        void syncCheatSheet();
         return;
       }
       if (!resumed.question) {
@@ -185,6 +258,51 @@ export default function QuizScreen() {
     [activateQuestion, attemptId, t, updateGeneration, userId],
   );
 
+  async function prepareCheatSheet(quizId: string, videoId: string) {
+    let lastError = "Local cheat-sheet generation failed.";
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const context = await loadCheatSheetContext(quizId);
+        setCheatSheetTitle(context.title);
+        const document = await generateCheatSheetDocumentWithLocalAi(context);
+        const pdf = await renderCheatSheetPdf(document);
+        pendingCheatSheetRef.current = { videoId, quizId, document, pdf };
+        setCheatSheetStatus("ready");
+        return;
+      } catch (cause) {
+        lastError = cause instanceof Error ? cause.message : lastError;
+        if (attempt < 2)
+          await new Promise((resolve) =>
+            setTimeout(resolve, [1_000, 3_000][attempt]),
+          );
+      }
+    }
+    setCheatSheetStatus("failed");
+    const context = await loadCheatSheetContext(quizId).catch(() => undefined);
+    if (context)
+      void recordCheatSheetFailure({
+        videoId,
+        quizId,
+        sourceRevision: context.sourceRevision,
+        lastError,
+      });
+  }
+
+  async function syncCheatSheet() {
+    const pending = pendingCheatSheetRef.current;
+    if (!pending) return;
+    try {
+      const uploaded = await uploadCheatSheet(pending);
+      setCheatSheetId(uploaded.id);
+    } catch {
+      setCheatSheetStatus("failed");
+    }
+  }
+
+  useEffect(() => {
+    if (showCompletion && cheatSheetStatus === "ready") void syncCheatSheet();
+  }, [cheatSheetStatus, showCompletion]);
+
   const resume = useCallback(async () => {
     const resumed = await apiRequest(
       `/api/attempts/${attemptId}/resume`,
@@ -193,6 +311,14 @@ export default function QuizScreen() {
     );
     await applyResume(resumed);
   }, [applyResume, attemptId]);
+
+  const retryGeneration = useCallback(() => {
+    recoveryAttemptedRef.current = false;
+    setError(undefined);
+    void ensureProgressiveAttemptRecovery(attemptId).catch((cause) => {
+      setError(cause instanceof Error ? cause.message : t("quizResumeFailed"));
+    });
+  }, [attemptId, t]);
 
   useEffect(() => {
     let active = true;
@@ -212,6 +338,7 @@ export default function QuizScreen() {
         setShowPrimer(Boolean(stored.primer && !stored.primerSeen));
         if (stored.question) {
           setLoading(false);
+          void resume().catch(() => undefined);
           return;
         }
       }
@@ -305,15 +432,28 @@ export default function QuizScreen() {
       void poll();
     };
     void poll();
-    if (typeof window !== "undefined")
-      window.addEventListener("focus", onFocus);
+    if (Platform.OS === "web") window.addEventListener("focus", onFocus);
     return () => {
       active = false;
       if (timeout) clearTimeout(timeout);
-      if (typeof window !== "undefined")
-        window.removeEventListener("focus", onFocus);
+      if (Platform.OS === "web") window.removeEventListener("focus", onFocus);
     };
   }, [attemptId, t, updateGeneration]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      // Native generation is intentionally paused while the app is not
+      // foregrounded. Refresh the authoritative attempt and immediately
+      // restart the bounded AI recovery task when the learner returns, rather
+      // than leaving the quiz stranded on a stale retrying snapshot.
+      recoveryAttemptedRef.current = false;
+      void resume().catch(() => undefined);
+      void ensureProgressiveAttemptRecovery(attemptId).catch(() => undefined);
+    });
+    return () => subscription.remove();
+  }, [attemptId, resume]);
 
   useEffect(() => {
     if (generation?.state !== "action_required") return;
@@ -339,7 +479,10 @@ export default function QuizScreen() {
   }, [answer, orderingTouched, question?.type, questionInteractionReady]);
 
   const streamIndicator = generation ? (
-    <QuestionStreamIndicator generation={generation} />
+    <QuestionStreamIndicator
+      generation={generation}
+      onRetry={retryGeneration}
+    />
   ) : undefined;
 
   const submit = async () => {
@@ -356,6 +499,34 @@ export default function QuizScreen() {
           : answer;
       if (submittedAnswer === undefined) {
         throw new Error(t("answerRequired"));
+      }
+      if (question.type !== "ordering") {
+        const responseText =
+          question.type === "multiple_choice" &&
+          typeof submittedAnswer === "number"
+            ? (question.options?.[submittedAnswer] ?? String(submittedAnswer))
+            : question.type === "true_false"
+              ? submittedAnswer
+                ? "True"
+                : "False"
+              : String(submittedAnswer);
+        const localGradePromise = Promise.race([
+          requestLocalAnswerGrade({
+            question: presentQuizPrompt(question.prompt),
+            response: responseText,
+            questionType: question.type,
+            ...(question.options ? { options: question.options } : {}),
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Local grading timed out.")),
+              30_000,
+            ),
+          ),
+        ]);
+        void localGradePromise
+          .then((grade) => setLocalGrade(grade))
+          .catch(() => undefined);
       }
       const result = await apiRequest(
         `/api/attempts/${attemptId}/answer`,
@@ -414,6 +585,7 @@ export default function QuizScreen() {
     if (!feedback) return;
     if (feedback.completed) {
       setShowCompletion(true);
+      void syncCheatSheet();
       return;
     }
     if (feedback.nextQuestion) {
@@ -461,11 +633,17 @@ export default function QuizScreen() {
 
   if (showCompletion && score !== undefined) {
     const mastered = mastery === "mastered";
+    const showCompactCompletionStats =
+      compactCompletion && completedTotal !== undefined;
+    const localCheatSheetReady = Boolean(pendingCheatSheetRef.current);
     return (
       <Screen contentWidth="lesson" centered>
         <FeedbackMotion signal={score} kind="success" style={styles.complete}>
           <MotionView preset="pop" duration={520} style={styles.celebrationArt}>
-            <LearningPrism size={176} variant="hero" />
+            <LearningPrism
+              size={showCompactCompletionStats ? 132 : 176}
+              variant="hero"
+            />
           </MotionView>
           <MotionView preset="rise" delay={88} style={styles.completeCopy}>
             <Text
@@ -478,8 +656,19 @@ export default function QuizScreen() {
               {mastered ? t("masteryBuilt") : t("laterReview")}
             </Text>
           </MotionView>
-          <View style={styles.stats}>
-            <StaggerItem index={0} style={styles.statItem}>
+          <View
+            style={[
+              styles.stats,
+              showCompactCompletionStats && styles.statsCompact,
+            ]}
+          >
+            <StaggerItem
+              index={0}
+              style={[
+                styles.statItem,
+                showCompactCompletionStats && styles.statItemCompact,
+              ]}
+            >
               <StatTile
                 value={`${Math.round(score)}%`}
                 label={t("score")}
@@ -493,7 +682,13 @@ export default function QuizScreen() {
                 }
               />
             </StaggerItem>
-            <StaggerItem index={1} style={styles.statItem}>
+            <StaggerItem
+              index={1}
+              style={[
+                styles.statItem,
+                showCompactCompletionStats && styles.statItemCompact,
+              ]}
+            >
               <StatTile
                 value={t(mastery === "mastered" ? "mastered" : "learning")}
                 label={t("mastery")}
@@ -508,7 +703,13 @@ export default function QuizScreen() {
               />
             </StaggerItem>
             {completedTotal ? (
-              <StaggerItem index={2} style={styles.statItem}>
+              <StaggerItem
+                index={2}
+                style={[
+                  styles.statItem,
+                  compactCompletion && styles.statItemCompact,
+                ]}
+              >
                 <StatTile
                   value={String(completedTotal)}
                   label={t("questions")}
@@ -520,7 +721,40 @@ export default function QuizScreen() {
               </StaggerItem>
             ) : null}
           </View>
-          <MotionView preset="rise" delay={176} style={styles.completeButton}>
+          <MotionView preset="rise" delay={176} style={styles.completeActions}>
+            <PrimaryButton
+              variant="secondary"
+              disabled={
+                cheatSheetStatus === "preparing" ||
+                (!cheatSheetId &&
+                  !localCheatSheetReady &&
+                  cheatSheetStatus !== "failed")
+              }
+              onPress={() => {
+                if (cheatSheetId)
+                  void exportCheatSheet(cheatSheetId, cheatSheetTitle).catch(
+                    () => setCheatSheetStatus("failed"),
+                  );
+                else if (pendingCheatSheetRef.current)
+                  void exportCheatSheetPdf(
+                    pendingCheatSheetRef.current.pdf,
+                    cheatSheetTitle,
+                  ).catch(() => setCheatSheetStatus("failed"));
+                else if (cheatSheetContextRef.current) {
+                  setCheatSheetStatus("preparing");
+                  void prepareCheatSheet(
+                    cheatSheetContextRef.current.quizId,
+                    cheatSheetContextRef.current.videoId,
+                  );
+                }
+              }}
+            >
+              {cheatSheetStatus === "failed" && !localCheatSheetReady
+                ? t("retryNotes")
+                : cheatSheetId || localCheatSheetReady
+                  ? t("exportNotes")
+                  : t("preparingNotes")}
+            </PrimaryButton>
             <PrimaryButton
               trailingIcon={
                 <VoxelIcon name="next" size={20} color={theme.textOnAction} />
@@ -659,7 +893,9 @@ export default function QuizScreen() {
     <FeedbackPanel
       status={feedback.correct ? "correct" : "incorrect"}
       title={feedback.correct ? t("correct") : t("incorrect")}
-      detail={presentQuizText(feedback.explanation)}
+      detail={presentQuizText(
+        learnerFeedbackDetail(feedback, localGrade, (key) => t(key)),
+      )}
       action={
         <PrimaryButton onPress={next}>
           {feedback.completed ? t("finish") : t("next")}
@@ -1155,9 +1391,14 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing[3],
   },
+  statsCompact: {
+    flexDirection: "column",
+    flexWrap: "nowrap",
+  },
   statItem: { minWidth: 132, flex: 1 },
-  completeButton: {
+  statItemCompact: { width: "100%", flexGrow: 0 },
+  completeActions: {
     width: "100%",
-    maxWidth: 440,
+    gap: spacing[3],
   },
 });

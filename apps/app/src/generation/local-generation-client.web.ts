@@ -2,6 +2,8 @@ import {
   detectClipQuestExtension,
   openClipQuestExtensionSettings,
   requestExtensionLocalQuiz,
+  requestExtensionLocalCheatSheet,
+  requestExtensionLocalAnswerGrade,
   subscribeToClipQuestExtension,
 } from "../transcription/clipquest-extension";
 import type {
@@ -9,6 +11,7 @@ import type {
   LocalGenerationClientStatus,
   LocalGenerationRequest,
 } from "./local-generation-client.types";
+import type { CheatSheetContext } from "@clipquest/contracts";
 
 export {
   LocalGenerationRequestError,
@@ -17,6 +20,20 @@ export {
 
 export const requestLocalQuiz: LocalGenerationRequest =
   requestExtensionLocalQuiz;
+
+export async function requestLocalCheatSheet(
+  context: CheatSheetContext,
+  signal?: AbortSignal,
+): Promise<import("@clipquest/contracts").CheatSheetDocument> {
+  return requestExtensionLocalCheatSheet(context, signal);
+}
+
+export async function requestLocalAnswerGrade(
+  request: import("@clipquest/contracts").LocalAnswerGradeRequest,
+  signal?: AbortSignal,
+): Promise<import("@clipquest/contracts").LocalAnswerGrade> {
+  return requestExtensionLocalAnswerGrade(request, signal);
+}
 
 export const flushLocalGenerationOutbox: FlushLocalGenerationOutbox = async (
   _generationId,

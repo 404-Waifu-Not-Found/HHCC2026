@@ -59,9 +59,10 @@ describe("extension generation source guard", () => {
     expect(quizRoute).toContain("readProgressiveGenerationSnapshot");
     expect(quizRoute).not.toContain("attemptGenerationAvailability");
     expect(quizRoute).toContain("progressiveSummary.plannedCount");
-    expect(quizRoute).toContain("gradeProgressiveShortAnswerDecision");
-    expect(quizRoute).toContain("gradingPath: grade.gradingPath");
-    expect(quizRoute).not.toContain("learnerAnswer:");
+    expect(quizRoute).toContain("gradeShortAnswerWithAi");
+    expect(quizRoute).toContain("learnerAnswer: answer");
+    expect(quizRoute).not.toContain("requiredIdeas.join");
+    expect(quizRoute).toContain("not synthesize one from rubric fragments");
 
     const answerRoute = quizRoute.slice(
       quizRoute.indexOf('post("/attempts/:attemptId/answer"'),

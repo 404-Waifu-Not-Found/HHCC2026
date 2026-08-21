@@ -14,6 +14,9 @@ describe("math text presentation", () => {
     expect(isMathExpressionText("Which statement matches the lesson?")).toBe(
       false,
     );
+    expect(isMathExpressionText("yes/no, true/false, or input/output")).toBe(
+      false,
+    );
   });
 
   it("uses readable operators while preserving the accessible source", () => {

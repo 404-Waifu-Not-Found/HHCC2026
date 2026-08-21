@@ -3,12 +3,15 @@ import type {
   GenerationRecord,
 } from "@clipquest/contracts";
 
-export const GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES = 48;
-export const GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT = 24;
-export const GROUNDED_GENERATION_MAX_RECOVERY_CYCLES = 24;
-export const CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES = 48;
-export const CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT = 24;
-export const CONCEPT_ONLY_GENERATION_MAX_RECOVERY_CYCLES = 24;
+// A failed ordinal gets one primary call and at most two automatic repairs.
+// Keep the app-side policy aligned with the local engine and API so a stalled
+// browser cannot spend an unbounded amount of time retrying the same suffix.
+export const GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES = 3;
+export const GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT = 3;
+export const GROUNDED_GENERATION_MAX_RECOVERY_CYCLES = 3;
+export const CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES = 3;
+export const CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT = 3;
+export const CONCEPT_ONLY_GENERATION_MAX_RECOVERY_CYCLES = 3;
 
 export function authoritativeRecoveryFailureCode(input: {
   requestReasonCode?: GenerationFailureCode;
@@ -52,6 +55,6 @@ export function groundedRecoveryIsExhausted(input: {
 }
 
 export function groundedRecoveryCooldownMs(recoveryCycle: number): number {
-  const boundedCycle = Math.max(0, Math.min(8, Math.trunc(recoveryCycle)));
-  return Math.min(300_000, 5_000 * 2 ** boundedCycle);
+  const boundedCycle = Math.max(0, Math.min(2, Math.trunc(recoveryCycle)));
+  return Math.min(30_000, 2_000 * 2 ** boundedCycle);
 }

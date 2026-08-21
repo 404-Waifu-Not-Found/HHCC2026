@@ -24,15 +24,15 @@ import {
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
+import { gradeShortAnswerWithAi } from "../lib/ai-services";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
 import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
   ProgressiveQuizSummarySchema,
-  gradeProgressiveShortAnswerDecision,
+  ACTIVE_GENERATION_CALL_RECOVERY_GRACE_MS,
   readProgressiveGenerationSnapshot,
-  type ProgressiveShortAnswerGradingPath,
   type ProgressiveGenerationSnapshot,
 } from "../lib/progressive-quiz";
 import { enforceRateLimit } from "../lib/rate-limit";
@@ -45,9 +45,15 @@ const QuestionTypeSchema = z.enum([
   "ordering",
   "short_answer",
 ]);
-const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
+// A learner can reasonably spend more than thirty seconds reading, answering,
+// or reviewing feedback while the local DeepSeek stream continues in the
+// background.  The old lease let the next status poll steal that live claim
+// and mark its active call as abandoned. Heartbeats still renew this lease;
+// the longer window only protects a healthy stream from short UI pauses or a
+// delayed browser heartbeat.
+const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 5 * 60 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
-const AUTOMATIC_RECOVERY_RETRY_LIMIT = 12;
+const AUTOMATIC_RECOVERY_RETRY_LIMIT = 3;
 const AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
 const AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
 
@@ -149,6 +155,7 @@ const AttemptRowSchema = z.object({
   quiz_language: z.string(),
   quiz_session_length: z.enum(["short", "medium", "long"]),
   quiz_watched: z.number().int(),
+  video_title: z.string().optional(),
 });
 type AttemptRow = z.infer<typeof AttemptRowSchema>;
 
@@ -503,18 +510,6 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   let reservationCommitted = false;
   try {
     const grade = await gradeAnswer(c.env, attempt, question, input.answer);
-    if (grade.gradingPath) {
-      console.info(
-        JSON.stringify({
-          scope: "quiz_grading",
-          event: "short_answer.graded",
-          quizId: attempt.quiz_id,
-          attemptId: attempt.id,
-          questionId: question.id,
-          gradingPath: grade.gradingPath,
-        }),
-      );
-    }
     // Freeze one coherent generation snapshot before any answer write. A
     // concurrent append may become visible on the next poll, but can never turn
     // this committed answer into a generation-state error response.
@@ -703,6 +698,9 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
     return c.json(
       AttemptResumeResponseSchema.parse({
         attemptId: attempt.id,
+        quizId: attempt.quiz_id,
+        videoId: attempt.video_id,
+        title: attempt.video_title,
         question: null,
         completed: true,
         score: attempt.score,
@@ -744,6 +742,9 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
   return c.json(
     AttemptResumeResponseSchema.parse({
       attemptId: attempt.id,
+      quizId: attempt.quiz_id,
+      videoId: attempt.video_id,
+      title: attempt.video_title,
       question: toPublicQuestion(
         question,
         attempt.current_index,
@@ -862,6 +863,25 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       409,
       "generation_cooldown_active",
       "Automatic generation is cooling down before its next recovery cycle.",
+    );
+  }
+  if (
+    automatic &&
+    generationState.generation.state !== "generation_failed" &&
+    generationState.snapshot.activeCall &&
+    Date.now() -
+      Math.max(
+        generationState.snapshot.activeCallDispatchedAt ?? 0,
+        generationState.snapshot.activeCallLastStreamActivityAt ??
+          generationState.snapshot.activeCallDispatchedAt ??
+          0,
+      ) <
+      ACTIVE_GENERATION_CALL_RECOVERY_GRACE_MS
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_active",
+      "A local generation call is still active; recovery will wait for it to finish.",
     );
   }
   if (
@@ -1451,14 +1471,13 @@ async function getAttemptQuestion(
 }
 
 async function gradeAnswer(
-  _env: ApiBindings["Bindings"],
+  env: ApiBindings["Bindings"],
   attempt: AttemptRow,
   question: QuestionRow,
   answer: z.infer<typeof AnswerValueSchema>,
 ): Promise<{
   correct: boolean;
   feedback: string;
-  gradingPath?: ProgressiveShortAnswerGradingPath;
 }> {
   if (question.type === "short_answer") {
     if (typeof answer !== "string") {
@@ -1473,17 +1492,25 @@ async function gradeAnswer(
       RubricSchema,
       "short-answer rubric",
     );
-    const decision = gradeProgressiveShortAnswerDecision({
-      answer,
+    // Some older locally-generated banks have no canonical sample answer. Do
+    // not synthesize one from rubric fragments: the AI grader must reason from
+    // the question and validated rubric instead of receiving fallback prose.
+    const sampleAnswer = question.correct_answer_json
+      ? parseStoredJson(
+          question.correct_answer_json,
+          z.string().trim().min(1).max(1_000),
+          "short-answer sample answer",
+        )
+      : undefined;
+    const grade = await gradeShortAnswerWithAi(env, {
+      question: question.prompt,
+      sampleAnswer,
+      learnerAnswer: answer,
       requiredIdeas: rubric.requiredIdeas,
       acceptableAlternatives: rubric.acceptableAlternatives,
       rubricV2: rubric.v2,
     });
-    return {
-      correct: decision.correct,
-      feedback: question.explanation,
-      gradingPath: decision.path,
-    };
+    return { correct: grade.correct, feedback: grade.reason };
   }
 
   const expected = parseStoredJson(

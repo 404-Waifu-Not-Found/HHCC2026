@@ -38,6 +38,7 @@ import { Surface } from "../../src/components/Surface";
 import { VideoCard } from "../../src/components/VideoCard";
 import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest, jsonBody } from "../../src/lib/api";
+import { exportCheatSheet } from "../../src/lib/cheat-sheet";
 import { useAppSession } from "../../src/lib/auth-client";
 import {
   parseQuickOpenRequest,
@@ -110,10 +111,11 @@ export default function HomeScreen() {
       );
       setLibrary({ dueReviews: response.dueReviews, saved: response.saved });
       setLibraryError(undefined);
-    } catch (cause) {
-      setLibraryError(
-        cause instanceof Error ? cause.message : t("libraryLoadFailed"),
-      );
+    } catch {
+      // Keep transport and platform details out of the learner-facing UI.
+      // Android can surface verbose TLS/OkHttp messages that are neither
+      // actionable nor safe to treat as product copy.
+      setLibraryError(t("libraryLoadFailed"));
     } finally {
       setLoadingLibrary(false);
     }
@@ -464,6 +466,17 @@ export default function HomeScreen() {
                         fill
                         card={card}
                         onPress={() => void open(card)}
+                        onExport={
+                          card.cheatSheet.status === "failed"
+                            ? () => void open(card)
+                            : card.cheatSheet.sheetId
+                              ? () =>
+                                  void exportCheatSheet(
+                                    card.cheatSheet.sheetId!,
+                                    card.title,
+                                  )
+                              : undefined
+                        }
                       />
                     </StaggerItem>
                   ))}
@@ -480,6 +493,17 @@ export default function HomeScreen() {
                         compact
                         card={card}
                         onPress={() => void open(card)}
+                        onExport={
+                          card.cheatSheet.status === "failed"
+                            ? () => void open(card)
+                            : card.cheatSheet.sheetId
+                              ? () =>
+                                  void exportCheatSheet(
+                                    card.cheatSheet.sheetId!,
+                                    card.title,
+                                  )
+                              : undefined
+                        }
                       />
                     </StaggerItem>
                   ))}
@@ -555,7 +579,22 @@ function CardSection({
             index={index}
             style={openingId === card.videoId ? styles.opening : undefined}
           >
-            <VideoCard compact card={card} onPress={() => onOpen(card)} />
+            <VideoCard
+              compact
+              card={card}
+              onPress={() => onOpen(card)}
+              onExport={
+                card.cheatSheet.status === "failed"
+                  ? () => onOpen(card)
+                  : card.cheatSheet.sheetId
+                    ? () =>
+                        void exportCheatSheet(
+                          card.cheatSheet.sheetId!,
+                          card.title,
+                        )
+                    : undefined
+              }
+            />
             {openingId === card.videoId ? (
               <ActivityIndicator
                 style={styles.cardSpinner}
@@ -571,12 +610,12 @@ function CardSection({
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 92,
+    minHeight: 0,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing[4],
-    marginBottom: spacing[4],
+    marginBottom: spacing[3],
   },
   headerCopy: {
     minWidth: 0,
@@ -602,7 +641,7 @@ const styles = StyleSheet.create({
   },
   importSurfaceCompact: {
     padding: spacing[4],
-    gap: spacing[4],
+    gap: spacing[3],
   },
   platforms: {
     flexDirection: "row",
@@ -664,8 +703,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   sections: {
-    marginTop: spacing[8],
-    gap: spacing[8],
+    marginTop: spacing[6],
+    gap: spacing[6],
   },
   cardRow: {
     paddingVertical: spacing[2],

@@ -1,5 +1,11 @@
 import type { AppLanguage } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
+import { ProfileAvatar } from "../../src/components/ProfileAvatar";
+import { apiBinaryRequest, apiMultipartRequest } from "../../src/lib/api";
+import { ProfileAvatarResponseSchema } from "@clipquest/contracts";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import { File as ExpoFile } from "expo-file-system";
 import { router } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -57,6 +63,10 @@ export default function SettingsScreen() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [avatarRevision, setAvatarRevision] = useState<
+    string | null | undefined
+  >(undefined);
+  const [avatarBusy, setAvatarBusy] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === "web" || !session?.user.id) return;
@@ -68,6 +78,99 @@ export default function SettingsScreen() {
       active = false;
     };
   }, [session?.user.id]);
+
+  const effectiveAvatarRevision =
+    avatarRevision === undefined
+      ? (session?.user.image ?? null)
+      : avatarRevision;
+
+  const uploadAvatar = async () => {
+    if (avatarBusy) return;
+    setAvatarBusy(true);
+    setError(undefined);
+    try {
+      const body = new FormData();
+      if (Platform.OS === "web") {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/jpeg,image/png,image/webp";
+        const selected = await new Promise<globalThis.File | null>(
+          (resolve) => {
+            input.onchange = () => resolve(input.files?.[0] ?? null);
+            input.click();
+          },
+        );
+        if (!selected) return;
+        body.append("file", await normalizeWebAvatar(selected), "avatar.webp");
+      } else {
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted)
+          throw new Error("Allow photo access to choose a profile picture.");
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 1,
+        });
+        const asset = result.canceled ? undefined : result.assets[0];
+        if (!asset) return;
+        const edge = Math.min(asset.width || 512, asset.height || 512);
+        const output = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          [
+            {
+              crop: {
+                originX: Math.max(0, ((asset.width || edge) - edge) / 2),
+                originY: Math.max(0, ((asset.height || edge) - edge) / 2),
+                width: edge,
+                height: edge,
+              },
+            },
+            { resize: { width: 512, height: 512 } },
+          ],
+          { compress: 0.86, format: ImageManipulator.SaveFormat.WEBP },
+        );
+        // Expo's native fetch serializer accepts File/Blob parts, but not the
+        // legacy React Native `{ uri, name, type }` FormData shape.
+        body.append("file", new ExpoFile(output.uri), "avatar.webp");
+      }
+      const response = await apiMultipartRequest(
+        "/api/profile/avatar",
+        body,
+        ProfileAvatarResponseSchema,
+      );
+      setAvatarRevision(response.revision);
+      await authClient.getSession();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Profile picture upload failed.",
+      );
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    if (avatarBusy || !effectiveAvatarRevision) return;
+    setAvatarBusy(true);
+    setError(undefined);
+    try {
+      await apiBinaryRequest("/api/profile/avatar", { method: "DELETE" });
+      setAvatarRevision(null);
+      await authClient.getSession();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Profile picture removal failed.",
+      );
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   const signOut = async () => {
     if (busy) return;
@@ -166,13 +269,11 @@ export default function SettingsScreen() {
         >
           <SettingsSection title={t("account")} icon="people">
             <View style={styles.accountRow}>
-              <View
-                style={[styles.avatar, { backgroundColor: theme.actionSoft }]}
-              >
-                <Text style={[styles.avatarText, { color: theme.text }]}>
-                  {initials(session?.user.name ?? session?.user.email ?? "CQ")}
-                </Text>
-              </View>
+              <ProfileAvatar
+                name={session?.user.name ?? session?.user.email ?? "CQ"}
+                image={effectiveAvatarRevision}
+                size={64}
+              />
               <View style={styles.accountCopy}>
                 <Text style={[styles.accountName, { color: theme.text }]}>
                   {session?.user.name ?? t("appName")}
@@ -181,6 +282,26 @@ export default function SettingsScreen() {
                   {session?.user.email}
                 </Text>
               </View>
+            </View>
+            <View style={styles.avatarActions}>
+              <PrimaryButton
+                variant="secondary"
+                loading={avatarBusy}
+                onPress={() => void uploadAvatar()}
+              >
+                {effectiveAvatarRevision
+                  ? t("replacePicture")
+                  : t("uploadPicture")}
+              </PrimaryButton>
+              {effectiveAvatarRevision ? (
+                <PrimaryButton
+                  variant="ghost"
+                  disabled={avatarBusy}
+                  onPress={() => void removeAvatar()}
+                >
+                  {t("removePicture")}
+                </PrimaryButton>
+              ) : null}
             </View>
             {session?.user.role === "admin" ||
             session?.user.role === "owner" ? (
@@ -422,13 +543,35 @@ function Notice({
   );
 }
 
-function initials(value: string): string {
-  const parts = value.trim().split(/\s+/).filter(Boolean);
-  return (
-    parts.length > 1
-      ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`
-      : value.slice(0, 2)
-  ).toUpperCase();
+async function normalizeWebAvatar(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const edge = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Your browser cannot process this image.");
+  context.drawImage(
+    bitmap,
+    (bitmap.width - edge) / 2,
+    (bitmap.height - edge) / 2,
+    edge,
+    edge,
+    0,
+    0,
+    512,
+    512,
+  );
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (blob) =>
+        blob
+          ? resolve(blob)
+          : reject(new Error("Could not process this image.")),
+      "image/webp",
+      0.86,
+    ),
+  );
 }
 
 const styles = StyleSheet.create({
@@ -524,6 +667,11 @@ const styles = StyleSheet.create({
   accountRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing[3],
+  },
+  avatarActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing[3],
   },
   avatar: {

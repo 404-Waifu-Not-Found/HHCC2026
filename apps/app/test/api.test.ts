@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   API_REQUEST_TIMEOUT_MS,
   apiRequest,
+  apiMultipartRequest,
   readBoundedApiResponseText,
 } from "../src/lib/api";
 
@@ -86,5 +87,30 @@ describe("bounded ClipQuest API responses", () => {
     );
     await vi.advanceTimersByTimeAsync(API_REQUEST_TIMEOUT_MS);
     await rejection;
+  });
+
+  it("leaves FormData content headers to fetch so multipart boundaries survive", async () => {
+    let captured: RequestInit | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        captured = init;
+        return new Response(JSON.stringify({ image: null, revision: null }), {
+          headers: { "content-type": "application/json" },
+        });
+      }),
+    );
+
+    const body = new FormData();
+    body.append(
+      "file",
+      new Blob(["avatar"], { type: "image/png" }),
+      "avatar.png",
+    );
+    await apiMultipartRequest("/api/profile/avatar", body);
+
+    expect(captured?.method).toBe("PUT");
+    expect(captured?.body).toBe(body);
+    expect(new Headers(captured?.headers).has("content-type")).toBe(false);
   });
 });

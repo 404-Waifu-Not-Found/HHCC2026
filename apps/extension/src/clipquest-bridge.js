@@ -35,6 +35,8 @@
           "question-stream-v5",
           "question-stream-v6",
           "question-stream-v7",
+          "cheat-sheet-v1",
+          "answer-grading-v1",
           "ensure-source-ready-v1",
         ],
       });
@@ -100,13 +102,63 @@
       return;
     }
     if (
+      message.type === "grade-answer" &&
+      typeof message.requestId === "string" &&
+      message.request &&
+      typeof message.request === "object"
+    ) {
+      void chrome.runtime
+        .sendMessage({
+          type: "clipquest.answer.grade.v1",
+          requestId: message.requestId,
+          request: message.request,
+        })
+        .then((response) =>
+          post({
+            type: "answer-grade-result",
+            requestId: message.requestId,
+            response,
+          }),
+        )
+        .catch((error) =>
+          post({
+            type: "answer-grade-result",
+            requestId: message.requestId,
+            response: {
+              ok: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "The ClipQuest extension stopped responding.",
+            },
+          }),
+        );
+      return;
+    }
+    if (
       message.type === "generate" &&
       typeof message.requestId === "string" &&
       message.context &&
       typeof message.context === "object"
     ) {
       const requestId = message.requestId;
-      const port = chrome.runtime.connect({ name: LOCAL_AI_PORT });
+      let port;
+      try {
+        port = chrome.runtime.connect({ name: LOCAL_AI_PORT });
+      } catch (error) {
+        post({
+          type: "generation-result",
+          requestId,
+          response: {
+            ok: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "The ClipQuest extension could not start local generation.",
+          },
+        });
+        return;
+      }
       let settled = false;
       const finish = (response) => {
         if (settled) return;
@@ -171,11 +223,35 @@
             "The ClipQuest extension stopped responding.",
         });
       });
-      port.postMessage({
+      const outbound = {
         type: "generate",
         requestId,
         context: message.context,
-      });
+        kind: message.kind,
+      };
+      try {
+        port.postMessage(outbound);
+      } catch (error) {
+        // Chrome's extension boundary only accepts structured-cloneable
+        // values. Retry once with a plain JSON object so a client-side
+        // prototype/typed-value cannot become an opaque dispatch timeout.
+        try {
+          port.postMessage({
+            ...outbound,
+            context: JSON.parse(JSON.stringify(message.context)),
+          });
+        } catch (retryError) {
+          finish({
+            ok: false,
+            error:
+              retryError instanceof Error
+                ? retryError.message
+                : error instanceof Error
+                  ? error.message
+                  : "The ClipQuest extension could not dispatch local generation.",
+          });
+        }
+      }
       return;
     }
     if (

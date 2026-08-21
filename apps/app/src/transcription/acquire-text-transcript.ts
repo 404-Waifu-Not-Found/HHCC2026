@@ -182,7 +182,6 @@ export async function acquireTextTranscript(
   }
 
   if (imported.captions.browserLookupAvailable) {
-    if (imported.video.durationSeconds < 1) return null;
     try {
       onProgress?.(0.4);
       const startedAt = Date.now();
@@ -190,9 +189,30 @@ export async function acquireTextTranscript(
         imported.video.sourceVideoId,
         signal,
       );
+      if (
+        imported.video.durationSeconds > 0 &&
+        transcript.durationSeconds &&
+        Math.abs(imported.video.durationSeconds - transcript.durationSeconds) >
+          Math.max(5, imported.video.durationSeconds * 0.02)
+      ) {
+        throw new Error(
+          "The transcript duration did not match the imported YouTube video.",
+        );
+      }
+      const inferredDurationSeconds = Math.max(
+        1,
+        Math.ceil(
+          Math.max(...transcript.segments.map((segment) => segment.endMs)) /
+            1_000,
+        ),
+      );
+      const verifiedDurationSeconds =
+        imported.video.durationSeconds > 0
+          ? imported.video.durationSeconds
+          : (transcript.durationSeconds ?? inferredDurationSeconds);
       const completeness = createTranscriptCompleteness(
         transcript.segments,
-        imported.video.durationSeconds,
+        verifiedDurationSeconds,
         transcript.sourceSegmentCount,
       );
       console.info(
@@ -210,7 +230,7 @@ export async function acquireTextTranscript(
       return {
         segments: transcript.segments,
         language: transcript.language,
-        verifiedDurationSeconds: imported.video.durationSeconds,
+        verifiedDurationSeconds,
         captionSourceCategory: "unknown",
         acquisition: "youtube_text_provider",
         completeness,

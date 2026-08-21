@@ -11,9 +11,9 @@ import {
 
 describe("grounded automatic recovery policy", () => {
   it("uses increasing bounded cooldowns without becoming negative", () => {
-    expect(groundedRecoveryCooldownMs(-1)).toBe(5_000);
-    expect(groundedRecoveryCooldownMs(1)).toBe(10_000);
-    expect(groundedRecoveryCooldownMs(20)).toBe(300_000);
+    expect(groundedRecoveryCooldownMs(-1)).toBe(2_000);
+    expect(groundedRecoveryCooldownMs(1)).toBe(4_000);
+    expect(groundedRecoveryCooldownMs(20)).toBe(8_000);
   });
 
   it("stops only after a declared hard budget is genuinely exhausted", () => {
@@ -26,8 +26,8 @@ describe("grounded automatic recovery policy", () => {
     expect(
       groundedRecoveryIsExhausted({
         reasonCode: "recovery_budget_exhausted",
-        automaticRetryCount: 12,
-        ordinalAttempt: 8,
+        automaticRetryCount: 2,
+        ordinalAttempt: 2,
       }),
     ).toBe(false);
     expect(
@@ -45,20 +45,20 @@ describe("grounded automatic recovery policy", () => {
   });
 
   it("uses the high-stability automatic-only budget for concept-first banks", () => {
-    expect(CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES).toBe(48);
-    expect(CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT).toBe(24);
+    expect(CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES).toBe(3);
+    expect(CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT).toBe(3);
     expect(
       groundedRecoveryIsExhausted({
         reasonCode: "recovery_budget_exhausted",
-        automaticRetryCount: 12,
-        ordinalAttempt: 8,
+        automaticRetryCount: 2,
+        ordinalAttempt: 2,
         strictBudget: true,
       }),
     ).toBe(false);
     expect(
       groundedRecoveryIsExhausted({
         reasonCode: "recovery_budget_exhausted",
-        automaticRetryCount: 48,
+        automaticRetryCount: 3,
         strictBudget: true,
       }),
     ).toBe(true);

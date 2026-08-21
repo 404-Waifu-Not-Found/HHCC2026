@@ -935,6 +935,24 @@ describe("generated questions", () => {
         usageComplete: false,
       }).success,
     ).toBe(true);
+    expect(
+      LocalGenerationCallEventSchema.safeParse({
+        protocolVersion: 10,
+        purpose: "generation",
+        lifecycleState: "started",
+        generationSessionId: "22222222-2222-4222-8222-222222222222",
+        recoverySessionId: "33333333-3333-4333-8333-333333333333",
+        callIndex: 2,
+        startIndex: 1,
+        ordinalAttempt: 2,
+        requestedCount: 1,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "automatic_resume",
+        retryDelayMs: 0,
+        usageComplete: false,
+      }).success,
+    ).toBe(true);
   });
 });
 

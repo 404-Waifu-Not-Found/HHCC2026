@@ -33,19 +33,38 @@ const GENERATION_PROFILE = "prompt_first_auto_v5_12";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
-const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 4;
-const MAX_CONTENT_RETRIES_PER_ORDINAL = 4;
-const MAX_STRUCTURAL_RETRIES_PER_ORDINAL = 4;
-const MAX_V5_3_AUTOMATIC_RETRIES = 12;
-const MAX_V5_4_AUTOMATIC_RETRIES = 48;
-const MAX_V5_6_AUTOMATIC_RETRIES = 12;
-const MAX_V5_8_AUTOMATIC_RETRIES = 48;
-const MAX_V5_9_AUTOMATIC_RETRIES = 30;
-const MAX_V5_10_AUTOMATIC_RETRIES = 30;
-const MAX_V5_11_AUTOMATIC_RETRIES = 30;
-const MAX_V5_12_AUTOMATIC_RETRIES = 30;
-const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 12;
-const MAX_ACTIVE_RECOVERY_MS = 15 * 60 * 1_000;
+// Keep recovery useful without turning a transient/local model problem into
+// dozens of repeated DeepSeek calls. One primary call plus at most two
+// repairs per ordinal is enough to recover normal transport or quality noise;
+// after that we fail closed and let the learner retry intentionally.
+const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 2;
+const MAX_CONTENT_RETRIES_PER_ORDINAL = 2;
+const MAX_STRUCTURAL_RETRIES_PER_ORDINAL = 2;
+const MAX_V5_3_AUTOMATIC_RETRIES = 3;
+const MAX_V5_4_AUTOMATIC_RETRIES = 3;
+const MAX_V5_6_AUTOMATIC_RETRIES = 3;
+const MAX_V5_8_AUTOMATIC_RETRIES = 3;
+const MAX_V5_9_AUTOMATIC_RETRIES = 3;
+const MAX_V5_10_AUTOMATIC_RETRIES = 3;
+const MAX_V5_11_AUTOMATIC_RETRIES = 3;
+const MAX_V5_12_AUTOMATIC_RETRIES = 3;
+const MAX_HOT_RETRIES_PER_RECOVERY_CYCLE = 3;
+const MAX_ACTIVE_RECOVERY_MS = 5 * 60 * 1_000;
+// DeepSeek can spend over thirty seconds selecting grounded evidence before
+// the first streamed token, especially on native devices. Treat a quiet
+// window as interrupted only after a full minute; the bounded overall request
+// timeout and recovery budget still prevent an unbounded local call.
+const STREAM_IDLE_TIMEOUT_MS = 60 * 1_000;
+
+export const LOCAL_GENERATION_RETRY_POLICY = Object.freeze({
+  maxTransportRetriesPerOrdinal: MAX_TRANSPORT_RETRIES_PER_ORDINAL,
+  maxContentRetriesPerOrdinal: MAX_CONTENT_RETRIES_PER_ORDINAL,
+  maxStructuralRetriesPerOrdinal: MAX_STRUCTURAL_RETRIES_PER_ORDINAL,
+  maxAutomaticRetries: MAX_V5_12_AUTOMATIC_RETRIES,
+  maxHotRetriesPerRecoveryCycle: MAX_HOT_RETRIES_PER_RECOVERY_CYCLE,
+  maxActiveRecoveryMs: MAX_ACTIVE_RECOVERY_MS,
+  streamIdleTimeoutMs: STREAM_IDLE_TIMEOUT_MS,
+});
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
@@ -4016,6 +4035,7 @@ export function normalizeGeneratedQuestion(
     promptFirstV510Mode = false,
     promptFirstV511Mode = false,
     promptFirstV512Mode = false,
+    promptFirstPrimaryClaim,
     expectedTrueFalseAnswer,
   } = {},
 ) {
@@ -4074,6 +4094,26 @@ export function normalizeGeneratedQuestion(
             : rawQuestion.question,
         promptFirstV512Mode,
         promptFirstV511Mode,
+      );
+  // v5.11 did not yet require a separate supportedStatement field. When the
+  // model echoes the assigned (true) fact for a slot whose locally assigned
+  // polarity is false, trusting the slot polarity would persist the exact
+  // contradiction the learner sees. The primary claim is the authoritative
+  // fact selected by the local pipeline, so keep that fact true locally and
+  // let the validator accept the safe polarity fallback.
+  const promptFirstV511TrueFactFallback =
+    promptFirstV511Mode &&
+    !promptFirstV512Mode &&
+    expectedTrueFalseAnswer === false &&
+    nonEmptyString(promptFirstPrimaryClaim, 700) &&
+    type === "true_false" &&
+    normalizedAssertion(questionText) ===
+      normalizedAssertion(
+        promptFirstV512LearnerText(
+          promptFirstPrimaryClaim,
+          false,
+          promptFirstV511Mode,
+        ),
       );
   const objectiveCategory = cleanString(rawQuestion.objectiveCategory);
   const common = {
@@ -4223,7 +4263,7 @@ export function normalizeGeneratedQuestion(
           ? expectedTrueFalseAnswer === false && hasSafeFalseStatement
             ? false
             : true
-          : collapsedV511FalseItem
+          : collapsedV511FalseItem || promptFirstV511TrueFactFallback
             ? true
             : expectedTrueFalseAnswer;
         const localPolarityFallback =
@@ -4240,7 +4280,7 @@ export function normalizeGeneratedQuestion(
           answer,
           correction: promptFirstV512Mode
             ? promptFirstV512TrueStatement
-            : collapsedV511FalseItem
+            : collapsedV511FalseItem || promptFirstV511TrueFactFallback
               ? questionText
               : answer === true
                 ? questionText
@@ -5196,6 +5236,13 @@ function validateQuiz(quiz, input) {
       groundedMode: input.groundedMode,
       conceptMasteryMode: input.conceptMasteryMode && !input.strictConceptMode,
       conceptFirstV58Mode: input.conceptFirstV58Mode,
+      promptFirstV511Mode: input.promptFirstV511Mode === true,
+      promptFirstV512Mode: input.promptFirstV512Mode === true,
+      promptFirstPrimaryClaim:
+        input.promptFirstV512Mode || input.promptFirstV511Mode
+          ? input.promptFirstPrimaryClaims?.[index]
+          : undefined,
+      expectedTrueFalseAnswer: input.trueFalseAnswerPlan?.[index],
     });
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       validationFailure(`Question ${index + 1} is not a JSON object.`);
@@ -5283,7 +5330,22 @@ function validateQuiz(quiz, input) {
         repairContextForCandidate(question, normalizedConceptFailure),
       );
     }
+    if (input.promptFirstV511Mode || input.promptFirstV512Mode) {
+      const qualityFailure = promptFirstLearnerQualityFailure(
+        question,
+        input.focusExcerpt,
+        input.promptFirstPrimaryClaims?.[index],
+      );
+      if (qualityFailure) {
+        validationFailure(
+          `Question ${index + 1} is not a complete, softly worded learner-facing assessment.`,
+          qualityFailure,
+          repairContextForCandidate(question, qualityFailure),
+        );
+      }
+    }
     if (
+      !input.promptFirstV512Mode &&
       prompts.some(
         (prompt) => promptSimilarity(prompt, question.question) >= 0.9,
       )
@@ -5684,13 +5746,80 @@ function promptFirstV511DuplicatesAccepted(question, acceptedQuestions) {
 
 function promptFirstV512ExactlyDuplicatesAccepted(question, acceptedQuestions) {
   const prompt = normalize(question.question ?? "");
-  const target = normalize(promptFirstGradingTarget(question) ?? "");
-  if (!prompt || !target) return false;
+  if (!prompt) return false;
   return acceptedQuestions.some((accepted) => {
     const acceptedPrompt = normalize(accepted.question ?? "");
-    const acceptedTarget = normalize(promptFirstGradingTarget(accepted) ?? "");
-    return prompt === acceptedPrompt && target === acceptedTarget;
+    // Repeated concepts are fine, but an exactly repeated learner-facing stem
+    // is still the same question even when the model varies its answer text.
+    return prompt === acceptedPrompt;
   });
+}
+
+function promptFirstLearnerQualityFailure(
+  question,
+  focusExcerpt,
+  primaryClaim,
+) {
+  const prompt = normalize(question.question ?? "");
+  const rawTarget = String(promptFirstGradingTarget(question) ?? "");
+  const target = normalize(rawTarget);
+  const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
+  if (!prompt || !target) return null;
+
+  // Repeated concepts are acceptable, but a false item may not simply restate
+  // the supported true claim with a false polarity. Require a real contrast.
+  if (
+    question.type === "true_false" &&
+    question.answer === false &&
+    (prompt === normalize(primaryClaim ?? "") ||
+      (evidence.includes(prompt) && prompt.length > 35))
+  ) {
+    return "polarity_mismatch";
+  }
+
+  if (question.type === "short_answer") {
+    const formulaLike = /[=+*/^]/u.test(rawTarget);
+    if (
+      (!formulaLike &&
+        /(?:\b(?:and|or|because|which|that|such as|of|to|a|an|the))$/u.test(
+          target,
+        )) ||
+      (!formulaLike &&
+        /\b(?:something|certain things|another effect|a third consequence|the most severe)\b/u.test(
+          target,
+        ))
+    ) {
+      return "answer_fragment_invalid";
+    }
+    if (
+      /^(?:under what condition|when|why|how)\b/u.test(prompt) &&
+      target.split(/\s+/u).length < 3
+    ) {
+      return "question_answer_kind_mismatch";
+    }
+    if (
+      /^(?:under what condition|when)\b/u.test(prompt) &&
+      !/\b(?:when|if|unless|only when|provided that)\b/u.test(target)
+    ) {
+      return "question_answer_kind_mismatch";
+    }
+    if (
+      /^(?:why|how)\b/u.test(prompt) &&
+      (target.split(/\s+/u).length < 3 || target === prompt)
+    ) {
+      return "question_answer_kind_mismatch";
+    }
+  }
+
+  const absolute = /\b(?:always|never|only way|all|none|every|must)\b/gu;
+  const absoluteWords = `${prompt} ${target}`.match(absolute) ?? [];
+  if (absoluteWords.length > 0) {
+    const unsupported = absoluteWords.some(
+      (word) => !evidence.includes(word.toLocaleLowerCase("en-US")),
+    );
+    if (unsupported) return "unsupported_absolute_claim";
+  }
+  return null;
 }
 
 export function promptFirstV512RepeatsAcceptedFamily(
@@ -5751,6 +5880,7 @@ function validatePromptFirstQuiz(quiz, input) {
     promptFirstV510Mode: input.promptFirstV510Mode === true,
     promptFirstV511Mode: input.promptFirstV511Mode === true,
     promptFirstV512Mode: input.promptFirstV512Mode === true,
+    promptFirstPrimaryClaim: input.promptFirstPrimaryClaim,
     expectedTrueFalseAnswer: input.trueFalseAnswerPlan[0],
     conceptMasteryMode: input.promptFirstV510Mode === true,
   });
@@ -5794,6 +5924,18 @@ function validatePromptFirstQuiz(quiz, input) {
     validationFailure(
       "The grading target repeats an already accepted objective.",
       "schema_invalid",
+    );
+  }
+  const qualityFailure = promptFirstLearnerQualityFailure(
+    question,
+    input.focusExcerpt,
+    input.promptFirstPrimaryClaim,
+  );
+  if (qualityFailure) {
+    validationFailure(
+      "The learner-facing question and answer are not complete and well-supported.",
+      qualityFailure,
+      repairContextForCandidate(question, qualityFailure),
     );
   }
   if (question.type === "multiple_choice") {
@@ -6498,8 +6640,8 @@ async function callDeepSeekJson(
   const requestTimeoutMs = input.legacyMode
     ? REQUEST_TIMEOUT_MS
     : input.questionTypePlan?.[0] === "short_answer"
-      ? 120_000
-      : 90_000;
+      ? 240_000
+      : 180_000;
   let overallTimedOut = false;
   let streamIdleTimedOut = false;
   let idleTimeout;
@@ -6515,7 +6657,7 @@ async function callDeepSeekJson(
     idleTimeout = setTimeout(() => {
       streamIdleTimedOut = true;
       controller.abort();
-    }, 45_000);
+    }, STREAM_IDLE_TIMEOUT_MS);
   };
   try {
     const responsePromise = input.fetchImpl(
@@ -6631,7 +6773,7 @@ async function callDeepSeekJson(
       }
       if (streamIdleTimedOut) {
         throw new GenerationFailure(
-          "DeepSeek stopped sending stream activity for 45 seconds.",
+          `DeepSeek stopped sending stream activity for ${Math.round(STREAM_IDLE_TIMEOUT_MS / 1_000)} seconds.`,
           "stream_idle_timeout",
           { transient: true },
         );
@@ -7519,14 +7661,25 @@ async function generateAutomaticQuiz({
         )
       : [],
   );
+  // v10 prompt-first call envelopes intentionally narrow retryKind to the
+  // transport/structural classes. A continuation can still arrive without a
+  // previous failure reason (for example after a tab/app restart), so never
+  // leak the legacy automatic_resume label into a v10 lifecycle event.
   const historicalRetryKind =
     automaticRetryKindForFailure(previousOutcome, input.promptFirstMode) ??
-    "automatic_resume";
+    (input.promptFirstMode ? "structural" : "automatic_resume");
+  const profileRetryKind =
+    input.promptFirstMode &&
+    initialRetryKind !== undefined &&
+    initialRetryKind !== "transport" &&
+    initialRetryKind !== "structural"
+      ? historicalRetryKind
+      : initialRetryKind;
   let lastFailureReason = previousOutcome;
   let lastRepairContext;
   let retryKind =
     ordinalAttempt > 1
-      ? (initialRetryKind ?? historicalRetryKind)
+      ? (profileRetryKind ?? historicalRetryKind)
       : retryOrdinals.has(acceptedQuestions.length + 1)
         ? historicalRetryKind
         : undefined;
@@ -8038,6 +8191,8 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "short_enumeration_invalid",
       "short_formula_invalid",
       "question_answer_kind_mismatch",
+      "answer_fragment_invalid",
+      "unsupported_absolute_claim",
     ].includes(reasonCode)
   ) {
     return "answer_repair";
@@ -8134,6 +8289,10 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
       "Replace the candidate with a question that requires understanding; the answer must not merely repeat a phrase already supplied in the stem.",
     question_answer_kind_mismatch:
       "Rewrite the question and answer so the answer supplies the requested factor, cause, condition, mechanism, process, method, term, concept, or quantity. For a How-can question, return the actual cause, condition, or mechanism; a concessive phrase such as 'even without ...' merely repeats the stem and is not an answer. For How-does/How-do contribution, effect, relationship, dependency, or security questions, state the actual outcome or mechanism rather than only naming components or copying a descriptive fragment.",
+    answer_fragment_invalid:
+      "Return a complete learner-facing answer. Do not end with a dangling conjunction or use placeholders such as 'another effect' or 'something'. Keep the answer concise but grammatically complete.",
+    unsupported_absolute_claim:
+      "Remove absolute wording such as always, never, all, none, every, or must unless the assigned evidence explicitly supports that exact absolute claim. Keep the wording evidence-bounded and softer.",
     quiz_language_mismatch:
       "Keep the supported objective and private evidence fields, but rewrite every learner-visible field entirely in the selected quiz language. For multiple choice, translate answerText and all distractors; keep evidenceQuote and answerSpan as exact private source evidence.",
   };
@@ -8216,4 +8375,368 @@ export async function testDeepSeekKey(
     throw new Error(`DeepSeek rejected this key (${response.status}).`);
   }
   return true;
+}
+
+export async function generateLocalCheatSheet(
+  context,
+  apiKey,
+  signal,
+  adapters = {},
+) {
+  const fetchImpl = adapters.fetch ?? globalThis.fetch.bind(globalThis);
+  const response = await fetchImpl(
+    "https://api.deepseek.com/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        thinking: { type: "disabled" },
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        max_tokens: 8_192,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Create a concise, factual study cheat sheet. Return JSON only with title, source, summary, keyConcepts (array strings), definitions (array of {term,definition}), formulas (array strings), rememberThis (array strings). Ground every claim in the supplied quiz primer, prompts, and explanations. Do not invent facts.",
+          },
+          { role: "user", content: JSON.stringify(context) },
+        ],
+      }),
+      signal,
+    },
+  );
+  if (!response.ok)
+    throw new Error(
+      `DeepSeek cheat-sheet request failed (${response.status}).`,
+    );
+  const envelope = await response.json();
+  const content = envelope?.choices?.[0]?.message?.content;
+  const parsed = typeof content === "string" ? JSON.parse(content) : content;
+  if (!parsed || typeof parsed !== "object")
+    throw new Error("DeepSeek returned an invalid cheat sheet.");
+  const bounded = {
+    title: String(parsed.title ?? "")
+      .trim()
+      .slice(0, 240),
+    source: String(parsed.source ?? "")
+      .trim()
+      .slice(0, 500),
+    summary: String(parsed.summary ?? "")
+      .trim()
+      .slice(0, 4_000),
+    keyConcepts: boundedTextArray(parsed.keyConcepts, 20, 500),
+    definitions: Array.isArray(parsed.definitions)
+      ? parsed.definitions
+          .filter((item) => item && typeof item === "object")
+          .map((item) => ({
+            term: String(item.term ?? "")
+              .trim()
+              .slice(0, 200),
+            definition: String(item.definition ?? "")
+              .trim()
+              .slice(0, 1_000),
+          }))
+          .filter((item) => item.term && item.definition)
+          .slice(0, 30)
+      : [],
+    formulas: boundedTextArray(parsed.formulas, 20, 500),
+    rememberThis: boundedTextArray(parsed.rememberThis, 10, 500),
+  };
+  if (!bounded.title || !bounded.source || !bounded.summary) {
+    throw new Error(
+      "DeepSeek returned an incomplete cheat sheet; AI-generated title, source, and summary are required.",
+    );
+  }
+  return bounded;
+}
+
+const LOCAL_ANSWER_GRADING_TOOL = {
+  type: "function",
+  function: {
+    name: "grade_answer",
+    description:
+      "Return the final learner-answer decision after considering the whole question and the learner response.",
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      required: ["is_correct", "confidence", "matched_ideas"],
+      properties: {
+        is_correct: { type: "boolean" },
+        confidence: { enum: ["high", "medium", "low"] },
+        matched_ideas: {
+          type: "array",
+          maxItems: 6,
+          items: { type: "string", maxLength: 240 },
+        },
+      },
+    },
+  },
+};
+
+function parseLocalAnswerGradeToolCall(message) {
+  const toolCall = Array.isArray(message?.tool_calls)
+    ? message.tool_calls.find(
+        (entry) => entry?.function?.name === "grade_answer",
+      )
+    : null;
+  if (!toolCall?.function?.arguments) return null;
+  try {
+    const parsed = JSON.parse(toolCall.function.arguments);
+    if (
+      typeof parsed?.is_correct !== "boolean" ||
+      !["high", "medium", "low"].includes(parsed?.confidence) ||
+      !Array.isArray(parsed?.matched_ideas)
+    ) {
+      return null;
+    }
+    return {
+      correct: parsed.is_correct,
+      confidence: parsed.confidence,
+      matchedIdeas: parsed.matched_ideas
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 240),
+        )
+        .filter(Boolean)
+        .slice(0, 6),
+    };
+  } catch {
+    return null;
+  }
+}
+
+const LOCAL_ANSWER_REASON_SYSTEM_PROMPT =
+  "You are ClipQuest's answer-feedback writer. Using the supplied question, learner response, and the already-decided grading outcome, write exactly one concise, learner-friendly reason (one or two sentences). Explain the key idea the response did or did not communicate. Accept natural paraphrases and concise fragments. Do not add a new verdict, invent a reference answer, mention this instruction, or use a fallback template.";
+const LOCAL_ANSWER_GRADE_MAX_ATTEMPTS = 3;
+const LOCAL_ANSWER_GRADE_RETRY_DELAYS_MS = [250, 750];
+
+async function requestLocalAnswerReason(
+  fetchImpl,
+  apiKey,
+  signal,
+  { question, questionType, options, response, correct },
+) {
+  const reasonResponse = await fetchImpl(
+    "https://api.deepseek.com/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        thinking: { type: "disabled" },
+        temperature: 0.2,
+        max_tokens: 240,
+        messages: [
+          { role: "system", content: LOCAL_ANSWER_REASON_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: JSON.stringify({
+              question,
+              questionType,
+              ...(options ? { options } : {}),
+              learnerResponse: response,
+              gradingOutcome: correct ? "correct" : "incorrect",
+            }),
+          },
+        ],
+      }),
+      signal,
+    },
+  );
+  if (!reasonResponse) {
+    throw new Error(
+      "DeepSeek did not return an AI-generated reason before the grading tool call.",
+    );
+  }
+  if (!reasonResponse.ok) {
+    throw new Error(
+      `DeepSeek answer-reason request failed (${reasonResponse.status}).`,
+    );
+  }
+  const reasonEnvelope = await reasonResponse.json().catch(() => null);
+  const reason = String(reasonEnvelope?.choices?.[0]?.message?.content ?? "")
+    .replace(/<think>[\s\S]*?<\/think>/giu, "")
+    .trim()
+    .slice(0, 1_000);
+  if (!reason) {
+    throw new Error(
+      "DeepSeek did not return an AI-generated reason before the grading tool call.",
+    );
+  }
+  return reason;
+}
+
+async function requestLocalAnswerGradeAttempt(
+  input,
+  apiKey,
+  signal,
+  adapters = {},
+) {
+  const question = String(input?.question ?? "")
+    .trim()
+    .slice(0, 1_000);
+  const response = String(input?.response ?? "")
+    .trim()
+    .slice(0, 2_000);
+  const questionType = String(input?.questionType ?? "").trim();
+  const options = Array.isArray(input?.options)
+    ? input.options
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 500),
+        )
+        .filter(Boolean)
+        .slice(0, 4)
+    : undefined;
+  if (!question || !response) {
+    throw new Error("A question and learner response are required.");
+  }
+  if (
+    !["multiple_choice", "true_false", "short_answer"].includes(questionType)
+  ) {
+    throw new Error("The answer grading question type is invalid.");
+  }
+  const fetchImpl = adapters.fetch ?? globalThis.fetch.bind(globalThis);
+  const envelopeResponse = await fetchImpl(
+    "https://api.deepseek.com/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        thinking: { type: "disabled" },
+        temperature: 0.1,
+        max_tokens: 1_200,
+        tools: [LOCAL_ANSWER_GRADING_TOOL],
+        tool_choice: {
+          type: "function",
+          function: { name: "grade_answer" },
+        },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are ClipQuest's gentle answer grader. Grade the learner response against the question itself. Accept concise, grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, judge the statement's actual factual polarity rather than trusting a requested label. For multiple choice, judge the selected option against the question. For short answers, prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              question,
+              questionType,
+              ...(options ? { options } : {}),
+              learnerResponse: response,
+            }),
+          },
+        ],
+      }),
+      signal,
+    },
+  );
+  if (!envelopeResponse.ok) {
+    throw new Error(
+      `DeepSeek answer grading request failed (${envelopeResponse.status}).`,
+    );
+  }
+  const envelope = await envelopeResponse.json();
+  const message = envelope?.choices?.[0]?.message;
+  const decision = parseLocalAnswerGradeToolCall(message);
+  if (!decision) {
+    throw new Error(
+      "DeepSeek did not return a valid answer grading tool call.",
+    );
+  }
+  let reason = String(message?.content ?? "")
+    .replace(/<think>[\s\S]*?<\/think>/giu, "")
+    .trim()
+    .slice(0, 1_000);
+  if (!reason) {
+    reason = await requestLocalAnswerReason(fetchImpl, apiKey, signal, {
+      question,
+      questionType,
+      options,
+      response,
+      correct: decision.correct,
+    });
+  }
+  return {
+    ...decision,
+    reason,
+    source: "deepseek_local",
+  };
+}
+
+function isRetryableLocalAnswerGradeError(error) {
+  const message = String(error?.message ?? error ?? "");
+  return /valid answer grading tool call|answer-reason request failed \((?:408|429|5\d\d)\)/iu.test(
+    message,
+  );
+}
+
+function waitForLocalAnswerGradeRetry(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+export async function gradeLocalAnswerWithDeepSeek(
+  input,
+  apiKey,
+  signal,
+  adapters = {},
+) {
+  let lastError;
+  for (
+    let attempt = 0;
+    attempt < LOCAL_ANSWER_GRADE_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      // A malformed tool response is an AI contract failure, not permission
+      // to invent a deterministic verdict. Retry the same DeepSeek request in
+      // a bounded way, while retaining the reason-first/tool-call contract.
+      return await requestLocalAnswerGradeAttempt(
+        input,
+        apiKey,
+        signal,
+        adapters,
+      );
+    } catch (error) {
+      lastError = error;
+      if (
+        !isRetryableLocalAnswerGradeError(error) ||
+        attempt === LOCAL_ANSWER_GRADE_MAX_ATTEMPTS - 1
+      ) {
+        throw error;
+      }
+      await waitForLocalAnswerGradeRetry(
+        LOCAL_ANSWER_GRADE_RETRY_DELAYS_MS[attempt] ?? 750,
+      );
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("DeepSeek did not return a reasoned answer grading decision.");
+}
+
+function boundedTextArray(value, maxItems, maxLength) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) =>
+      String(item ?? "")
+        .trim()
+        .slice(0, maxLength),
+    )
+    .filter(Boolean)
+    .slice(0, maxItems);
 }

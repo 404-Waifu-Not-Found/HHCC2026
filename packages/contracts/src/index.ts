@@ -410,6 +410,27 @@ export const LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v1" as const;
 export const LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v7" as const;
+export const LOCAL_CHEAT_SHEET_CAPABILITY = "cheat-sheet-v1" as const;
+export const LOCAL_ANSWER_GRADING_CAPABILITY = "answer-grading-v1" as const;
+
+export const LocalAnswerGradeRequestSchema = z.object({
+  question: z.string().trim().min(1).max(1_000),
+  response: z.string().trim().min(1).max(2_000),
+  questionType: QuizQuestionTypeSchema,
+  options: z.array(z.string().trim().min(1).max(500)).max(4).optional(),
+});
+export type LocalAnswerGradeRequest = z.infer<
+  typeof LocalAnswerGradeRequestSchema
+>;
+
+export const LocalAnswerGradeSchema = z.object({
+  correct: z.boolean(),
+  confidence: z.enum(["high", "medium", "low"]),
+  reason: z.string().trim().min(1).max(1_000),
+  matchedIdeas: z.array(z.string().trim().min(1).max(240)).max(6),
+  source: z.literal("deepseek_local"),
+});
+export type LocalAnswerGrade = z.infer<typeof LocalAnswerGradeSchema>;
 export const CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v6" as const;
 export const GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
@@ -1127,7 +1148,12 @@ export const LocalGenerationCallEventV6Schema = z
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]).default(0),
     classification: z.enum(["primary", "automatic_retry"]),
-    retryKind: z.enum(["transport", "structural"]).optional(),
+    // Resumed v10 clients can carry the legacy automatic_resume label across
+    // a tab/app restart. Keep the live prompt-first contract narrow so older
+    // content/answer repair labels cannot masquerade as structural retries.
+    retryKind: z
+      .enum(["transport", "structural", "automatic_resume"])
+      .optional(),
     outcome: z
       .union([z.literal("complete"), MinimalGenerationFailureCodeSchema])
       .optional(),
@@ -2765,6 +2791,9 @@ export type AttemptAnswerResponse = z.infer<typeof AttemptAnswerResponseSchema>;
 
 export const AttemptResumeResponseSchema = z.object({
   attemptId: z.string().uuid(),
+  quizId: z.string().uuid().optional(),
+  videoId: z.string().uuid().optional(),
+  title: z.string().optional(),
   question: PublicQuestionSchema.nullable(),
   completed: z.boolean(),
   score: z.number().min(0).max(100).nullable(),
@@ -2792,6 +2821,13 @@ export const LibraryCardSchema = z.object({
     })
     .nullable()
     .optional(),
+  cheatSheet: z
+    .object({
+      status: z.enum(["ready", "failed", "none"]),
+      sheetId: z.string().uuid().nullable(),
+      updatedAt: z.number().int().nonnegative().nullable(),
+    })
+    .default({ status: "none", sheetId: null, updatedAt: null }),
 });
 export type LibraryCard = z.infer<typeof LibraryCardSchema>;
 
@@ -2801,6 +2837,99 @@ export const LibraryResponseSchema = z.object({
   youtubeSuggestions: z.array(LibraryCardSchema),
 });
 export type LibraryResponse = z.infer<typeof LibraryResponseSchema>;
+
+export const CheatSheetStatusSchema = z.enum(["ready", "failed", "none"]);
+export type CheatSheetStatus = z.infer<typeof CheatSheetStatusSchema>;
+
+export const CheatSheetContextSchema = z
+  .object({
+    videoId: z.string().uuid(),
+    quizId: z.string().uuid(),
+    sourceRevision: z.string().min(1).max(128),
+    title: z.string().min(1).max(500),
+    source: SourceSchema,
+    language: LanguageSchema,
+    primer: z.string().max(10_000),
+    questions: z
+      .array(
+        z.object({
+          prompt: z.string().min(1).max(2_000),
+          explanation: z.string().min(1).max(4_000),
+        }),
+      )
+      .min(1)
+      .max(100),
+  })
+  .strict();
+export type CheatSheetContext = z.infer<typeof CheatSheetContextSchema>;
+
+export const CheatSheetDocumentSchema = z
+  .object({
+    title: z.string().min(1).max(240),
+    source: z.string().min(1).max(500),
+    summary: z.string().min(1).max(4_000),
+    keyConcepts: z.array(z.string().min(1).max(500)).max(20),
+    definitions: z
+      .array(
+        z.object({
+          term: z.string().min(1).max(200),
+          definition: z.string().min(1).max(1_000),
+        }),
+      )
+      .max(30),
+    formulas: z.array(z.string().min(1).max(500)).max(20),
+    rememberThis: z.array(z.string().min(1).max(500)).max(10),
+    generatedAt: z.string().datetime(),
+    sourceRevision: z.string().min(1).max(128),
+  })
+  .strict();
+export type CheatSheetDocument = z.infer<typeof CheatSheetDocumentSchema>;
+
+export const CheatSheetResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    videoId: z.string().uuid(),
+    quizId: z.string().uuid(),
+    sourceRevision: z.string(),
+    status: CheatSheetStatusSchema,
+    document: CheatSheetDocumentSchema.nullable(),
+    updatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+export type CheatSheetResponse = z.infer<typeof CheatSheetResponseSchema>;
+
+export const CheatSheetUploadRequestSchema = z
+  .object({
+    videoId: z.string().uuid(),
+    quizId: z.string().uuid(),
+    sourceRevision: z.string().min(1).max(128),
+    document: CheatSheetDocumentSchema,
+    pdfBase64: z.string().min(1).max(2_000_000),
+    contentHash: z.string().min(1).max(128),
+    promptVersion: z.string().min(1).max(64),
+  })
+  .strict();
+export type CheatSheetUploadRequest = z.infer<
+  typeof CheatSheetUploadRequestSchema
+>;
+
+export const CheatSheetFailureRequestSchema = z
+  .object({
+    videoId: z.string().uuid(),
+    quizId: z.string().uuid(),
+    sourceRevision: z.string().min(1).max(128),
+    promptVersion: z.string().min(1).max(64),
+    lastError: z.string().min(1).max(500),
+  })
+  .strict();
+export type CheatSheetFailureRequest = z.infer<
+  typeof CheatSheetFailureRequestSchema
+>;
+
+export const ProfileAvatarResponseSchema = z
+  .object({ image: z.string().nullable(), revision: z.string().nullable() })
+  .strict();
+export type ProfileAvatarResponse = z.infer<typeof ProfileAvatarResponseSchema>;
 
 export const PushRegisterRequestSchema = z.object({
   token: z.string().min(8).max(1_000),

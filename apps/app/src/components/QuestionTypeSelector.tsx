@@ -39,14 +39,22 @@ export function QuestionTypeSelector({
       accessibilityLabel={t("questionTypes")}
       style={styles.row}
     >
-      {choices.map((choice) => {
+      {choices.map((choice, index) => {
         const active = selected.has(choice.type);
         return (
           <FeedbackMotion
             key={choice.type}
             signal={active ? choice.type : false}
             kind="attention"
-            style={compact ? styles.choiceWrapCompact : styles.choiceWrap}
+            style={
+              compact
+                ? [
+                    styles.choiceWrapCompact,
+                    index === choices.length - 1 &&
+                      styles.choiceWrapCompactLast,
+                  ]
+                : styles.choiceWrap
+            }
           >
             <MotionPressable
               accessibilityRole="checkbox"
@@ -77,10 +85,17 @@ export function QuestionTypeSelector({
             >
               <VoxelIcon
                 name={active ? "checkbox-checked" : "checkbox-unchecked"}
-                size={21}
+                size={compact ? 18 : 21}
                 color={active ? theme.primary : theme.textMuted}
               />
-              <Text style={[styles.label, { color: theme.text }]}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  compact && styles.labelCompact,
+                  { color: theme.text },
+                ]}
+              >
                 {t(choice.label)}
               </Text>
             </MotionPressable>
@@ -94,7 +109,8 @@ export function QuestionTypeSelector({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   choiceWrap: { flexShrink: 0 },
-  choiceWrapCompact: { width: "100%" },
+  choiceWrapCompact: { width: "48%" },
+  choiceWrapCompactLast: { width: "100%" },
   choice: {
     minHeight: 52,
     flexDirection: "row",
@@ -105,13 +121,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   choiceCompact: {
-    width: "100%",
+    minHeight: 46,
     justifyContent: "flex-start",
+    gap: spacing[2],
+    paddingHorizontal: spacing[2],
   },
   pressed: { opacity: 0.72 },
   label: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,
+  },
+  labelCompact: {
+    flexShrink: 1,
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
   },
 });

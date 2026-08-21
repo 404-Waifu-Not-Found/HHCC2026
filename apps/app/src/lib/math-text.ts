@@ -68,6 +68,19 @@ export function isMathExpressionText(value: string): boolean {
     /\([^()]+\)\s*\/\s*\([^()]+\)/u.test(compact) ||
     /(?:\p{L}|\d)\s*\^\s*[+\-]?\d+/u.test(compact) ||
     /(?:d\p{L}\s*\/\s*d\p{L}|\p{L}'\s*\(?\p{L}?\)?)/u.test(compact);
+  // A slash is common prose punctuation ("yes/no", "true/false",
+  // "input/output"). Do not send those labels through KaTeX merely because
+  // they contain two word operands and `/`.
+  const ordinaryWordSlash =
+    /\b[\p{L}\p{M}]{3,}\s*\/\s*[\p{L}\p{M}]{3,}\b/u.test(compact);
+  if (
+    ordinaryWordSlash &&
+    !hasExplicitMath &&
+    !hasFormulaShape &&
+    !/\d/u.test(compact)
+  ) {
+    return false;
+  }
   return hasExplicitMath || (hasOperand && (hasOperator || hasFormulaShape));
 }
 

@@ -80,6 +80,7 @@ export function parseYouTubeTimedText(
 
 type BrowserTranscript = {
   language: string;
+  durationSeconds: number | null;
   segments: TranscriptSegment[];
   sourceSegmentCount: number;
 };
@@ -171,6 +172,16 @@ export function parseBrowserTranscript(
   }
   const language =
     body.match(/^Language:\s*([A-Za-z0-9-]{2,35})(?:\s|$)/m)?.[1] ?? "und";
+  const durationMatch = body.match(
+    /(?:^|[·|])\s*Duration:\s*(\d{1,3}):([0-5]\d)(?::([0-5]\d))?/m,
+  );
+  const durationSeconds = durationMatch?.[1]
+    ? timestampMs(
+        durationMatch[1],
+        durationMatch[2] ?? "00",
+        durationMatch[3],
+      ) / 1_000
+    : null;
   const parsed = body.split(/\r?\n/).flatMap((line) => {
     const match = line.match(/^\[(\d{1,3}):([0-5]\d)(?::([0-5]\d))?\]\s+(.+)$/);
     if (!match?.[1] || !match[2] || !match[4]) return [];
@@ -203,7 +214,12 @@ export function parseBrowserTranscript(
   if (segments.length === 0 || characters < 20) {
     throw new Error("The transcript provider returned empty captions.");
   }
-  return { language, segments, sourceSegmentCount: rawSegments.length };
+  return {
+    language,
+    durationSeconds,
+    segments,
+    sourceSegmentCount: rawSegments.length,
+  };
 }
 
 async function fetchBoundedCaptionText(

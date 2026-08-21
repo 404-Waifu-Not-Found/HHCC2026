@@ -8,6 +8,7 @@ This index separates current operating guidance from dated design and QA evidenc
 - [Production release](./PRODUCTION-RELEASE.md): migration, version upload, override smoke, promotion, rollback, and post-release generation-profile checks.
 - [Android private beta](./ANDROID-BETA.md): native architecture, SecureStore, caption-only generation, Sharesheet/App Links, EAS packaging, and device acceptance.
 - [Android 0.2.0 implementation QA — 2026-08-16](./QA-ANDROID-BETA-2026-08-16.md): local automated, APK-inspection, and emulator evidence plus the still-open EAS and physical-device gates.
+- [iOS 0.2.0 native QA and physical-install follow-up — 2026-08-18](../qa-results/ios-native-full-feature-qa-2026-08-18.md): simulator feature findings, local remediation, signed arm64 device build, installation evidence, and the remaining trust/credentialed-device gates.
 - [Cumulative local production-readiness remediation — 2026-08-18](../qa-results/local-production-readiness-remediation-2026-08-18.md): current local test, security, native-build, release-integrity, and remaining external-gate evidence. It is not proof of a push or deployment.
 - [Operations console](./ADMIN-CONSOLE.md): roles, read-only Generation streams, safe telemetry, System metadata, and admin API surface.
 - [Production quiz-generation QA — extension 0.8.5](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md): latest official-site ten-video, 100-question learner run and current defects.
@@ -19,7 +20,9 @@ This index separates current operating guidance from dated design and QA evidenc
 
 The Android 0.2.0 source candidate now shares the local quiz engine with Chrome, builds a managed Android bundle for API 29–36, and passes local automated and emulator launch gates. It is **not yet a distributed private beta**: the EAS project, managed release signer, FCM credentials, App Links fingerprint, physical-device matrix, and ten-video Android acceptance remain unverified. See the dated Android report above.
 
-As observed on 2026-08-13, Worker `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2` from Git `297747e` serves the 0.8.8/v5.8 canary configuration. The exact extension artifact was installed and locally configured, and all automated gates passed. General enablement is **not** cleared: the live Chrome matrix was stopped when the local network route presented a certificate for `183.192.65.101` instead of `clipquest.ccwu.cc`. See the dated 0.8.8 report above.
+As observed on 2026-08-18, Worker `8350cd9a-e7ba-4b7e-883e-cd85796b8895` from Git `5d4a9e4146a4968c786439a92ad4b86c98a9332a` receives 100% of production traffic. `/health` reports prompt v5.12 as supported, v5.12 rollout disabled, v5.11 as the effective default, version affinity present, and native Android/iOS plus Chrome local-generation clients enabled. Remote D1 is migrated through `0020_generation_call_lifecycle.sql`. This verifies deployed capability and storage compatibility, not a completed v5.12 canary or real-client generation matrix.
+
+The 2026-08-13 Worker `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2` / Git `297747e` canary remains historical evidence. Its live Chrome matrix was stopped when the local network route presented a certificate for `183.192.65.101` instead of `clipquest.ccwu.cc`; it does not clear current general enablement.
 
 Historical 2026-08-11 baseline:
 

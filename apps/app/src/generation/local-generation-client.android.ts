@@ -5,9 +5,15 @@ import {
   LocalConceptQuizQuestionChunkSchema,
   LocalGenerationCallEventSchema,
   LocalQuizContextSchema,
+  CheatSheetContextSchema,
+  CheatSheetDocumentSchema,
+  LocalAnswerGradeRequestSchema,
+  LocalAnswerGradeSchema,
 } from "@clipquest/contracts";
 import {
   generateLocalQuiz,
+  generateLocalCheatSheet,
+  gradeLocalAnswerWithDeepSeek,
   testDeepSeekKey,
 } from "@clipquest/local-quiz-engine";
 import Constants from "expo-constants";
@@ -147,6 +153,58 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
     throw cause;
   }
 };
+
+export async function requestLocalCheatSheet(
+  rawContext: import("@clipquest/contracts").CheatSheetContext,
+  signal?: AbortSignal,
+) {
+  const context = CheatSheetContextSchema.parse(rawContext);
+  const userId = await signedInUserId();
+  if (!userId)
+    throw new LocalGenerationRequestError(
+      "Sign in before generating notes.",
+      "credential_required",
+    );
+  const apiKey = await readAndroidDeepSeekKey(userId);
+  if (!apiKey)
+    throw new LocalGenerationRequestError(
+      "Add your DeepSeek API key in Local AI settings.",
+      "credential_required",
+    );
+  const document = await generateLocalCheatSheet(context, apiKey, signal, {
+    fetch: expoFetch as unknown as typeof fetch,
+    crypto: nativeCrypto,
+  });
+  return CheatSheetDocumentSchema.parse({
+    ...document,
+    generatedAt: new Date().toISOString(),
+    sourceRevision: context.sourceRevision,
+  });
+}
+
+export async function requestLocalAnswerGrade(
+  rawRequest: import("@clipquest/contracts").LocalAnswerGradeRequest,
+  signal?: AbortSignal,
+) {
+  const request = LocalAnswerGradeRequestSchema.parse(rawRequest);
+  const userId = await signedInUserId();
+  if (!userId)
+    throw new LocalGenerationRequestError(
+      "Sign in before grading answers.",
+      "credential_required",
+    );
+  const apiKey = await readAndroidDeepSeekKey(userId);
+  if (!apiKey)
+    throw new LocalGenerationRequestError(
+      "Add your DeepSeek API key in Local AI settings.",
+      "credential_required",
+    );
+  const result = await gradeLocalAnswerWithDeepSeek(request, apiKey, signal, {
+    fetch: expoFetch as unknown as typeof fetch,
+    crypto: nativeCrypto,
+  });
+  return LocalAnswerGradeSchema.parse(result);
+}
 
 export const flushLocalGenerationOutbox: import("./local-generation-client.types").FlushLocalGenerationOutbox =
   async (generationId, onQuestion, onCall) => {

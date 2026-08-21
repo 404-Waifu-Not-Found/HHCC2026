@@ -120,6 +120,24 @@ async function deletePrivateUserObjects(
     keys.push(...page.objects.map((object) => object.key));
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor);
+  cursor = undefined;
+  do {
+    const page = await env.PRIVATE_BUCKET.list({
+      prefix: `avatars/${userId}/`,
+      cursor,
+    });
+    keys.push(...page.objects.map((object) => object.key));
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  cursor = undefined;
+  do {
+    const page = await env.PRIVATE_BUCKET.list({
+      prefix: `cheat-sheets/${userId}/`,
+      cursor,
+    });
+    keys.push(...page.objects.map((object) => object.key));
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
 
   for (let index = 0; index < keys.length; index += 1_000) {
     await env.PRIVATE_BUCKET.delete(keys.slice(index, index + 1_000));

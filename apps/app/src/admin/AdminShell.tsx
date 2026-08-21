@@ -50,7 +50,12 @@ const AdminContext = createContext<AdminMeResponse | null>(null);
 const navigation = [
   { href: "/admin", label: "overview", icon: "operations" },
   { href: "/admin/users", label: "users", icon: "people" },
-  { href: "/admin/jobs", label: "jobs", icon: "processing" },
+  {
+    href: "/admin/jobs",
+    label: "jobs",
+    compactLabel: "jobsCompact",
+    icon: "processing",
+  },
   {
     href: "/admin/lessons",
     label: "lessons",
@@ -59,6 +64,7 @@ const navigation = [
   {
     href: "/admin/audit",
     label: "audit",
+    compactLabel: "auditCompact",
     icon: "audit",
   },
   { href: "/admin/system", label: "system", icon: "system" },
@@ -279,11 +285,13 @@ function BrandBlock({ compact = false }: { compact?: boolean }) {
 function AdminNavItem({
   href,
   label,
+  compactLabel,
   icon,
   compact = false,
 }: {
   href: string;
   label: keyof ReturnType<typeof useAdminCopy>;
+  compactLabel?: keyof ReturnType<typeof useAdminCopy>;
   icon: ComponentProps<typeof VoxelIcon>["name"];
   compact?: boolean;
 }) {
@@ -295,6 +303,7 @@ function AdminNavItem({
   return (
     <MotionPressable
       accessibilityRole="tab"
+      accessibilityLabel={copy[label]}
       accessibilityState={{ selected }}
       onPress={() => router.push(href as never)}
       style={({ pressed, hovered }) => [
@@ -330,7 +339,7 @@ function AdminNavItem({
           { color: selected ? theme.primary : theme.textMuted },
         ]}
       >
-        {copy[label]}
+        {copy[compact && compactLabel ? compactLabel : label]}
       </Text>
     </MotionPressable>
   );
@@ -457,7 +466,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  mobileNav: { gap: spacing[2], paddingVertical: spacing[2] },
+  mobileNav: {
+    gap: spacing[2],
+    paddingVertical: spacing[2],
+    paddingRight: spacing[4],
+  },
   mobileRole: {
     fontFamily: typography.bodyMedium,
     fontSize: 12,

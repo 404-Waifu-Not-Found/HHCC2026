@@ -147,7 +147,7 @@ export function AnswerCard({
                   ? "correct"
                   : state === "incorrect"
                     ? "error"
-                    : "correct"
+                    : "selected"
               }
               size={24}
               color={

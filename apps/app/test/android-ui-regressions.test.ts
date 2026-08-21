@@ -55,8 +55,33 @@ describe("Android UI regressions", () => {
 
     expect(creation).toContain('nativeCaptionState === "running"');
     expect(creation).toContain('t("sourceCaptionsPreparing")');
-    expect(creation).toContain("loading={captionsPending}");
+    expect(creation).toContain("loading={captionsPending || localAiPending}");
     expect(generation).toContain('"privateTranscriptionAndroid"');
     expect(generation).toContain('label: t("checkingCaptions")');
+  });
+
+  it("never calls browser focus listeners from a native quiz", () => {
+    const quiz = source("app/quiz/[attemptId].tsx");
+
+    expect(quiz).toContain('if (Platform.OS === "web")');
+    expect(quiz).not.toContain('typeof window !== "undefined"');
+  });
+
+  it("stacks the three live completion stats on compact phones", () => {
+    const quiz = source("app/quiz/[attemptId].tsx");
+
+    expect(quiz).toContain("showCompactCompletionStats");
+    expect(quiz).toContain("styles.statsCompact");
+    expect(quiz).toContain("styles.statItemCompact");
+  });
+
+  it("keeps the compact tab bar quiet and defaults new installs to reduced motion", () => {
+    const tabs = source("app/(tabs)/_layout.tsx");
+    const settings = source("src/providers/SettingsProvider.tsx");
+
+    expect(tabs).toContain("borderTopWidth: 0");
+    expect(tabs).toContain("borderRadius: radii.medium");
+    expect(settings).toContain("useState(true)");
+    expect(settings).toContain('typeof parsed.reduceMotion === "boolean"');
   });
 });

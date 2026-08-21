@@ -1,6 +1,8 @@
 import { captionsToPlainText } from "./caption-text.js";
 import {
   generateLocalQuiz,
+  generateLocalCheatSheet,
+  gradeLocalAnswerWithDeepSeek,
   generateQuizFromPlainText,
   testDeepSeekKey,
 } from "./local-generator.js";
@@ -385,6 +387,29 @@ async function downloadPlainTextCaptions(request) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "clipquest.answer.grade.v1") {
+    if (!senderAllowed(sender)) return false;
+    void chrome.storage.local
+      .get(API_KEY_STORAGE_KEY)
+      .then(async (stored) => {
+        const apiKey = stored[API_KEY_STORAGE_KEY];
+        if (typeof apiKey !== "string") {
+          throw new Error(
+            "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+          );
+        }
+        return gradeLocalAnswerWithDeepSeek(message.request, apiKey);
+      })
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) =>
+        sendResponse({
+          ok: false,
+          error:
+            error instanceof Error ? error.message : "Answer grading failed.",
+        }),
+      );
+    return true;
+  }
   if (message?.type === "clipquest.captions.download-text.v1") {
     if (!extensionPageSender(sender)) {
       sendResponse({
@@ -584,6 +609,21 @@ chrome.runtime.onConnect.addListener((port) => {
           });
         };
         const generationContext = message.context;
+        // Older injected bridge scripts did not forward the request kind.
+        // Cheat-sheet context is structurally distinct from quiz context, so
+        // infer it here as a compatibility guard instead of routing it into
+        // the transcript-based quiz generator.
+        const isCheatSheetRequest =
+          message.kind === "cheat-sheet" ||
+          (Array.isArray(generationContext?.questions) &&
+            typeof generationContext?.sourceRevision === "string");
+        if (isCheatSheetRequest) {
+          return generateLocalCheatSheet(
+            generationContext,
+            apiKey,
+            controller.signal,
+          );
+        }
         const client = {
           kind: "chrome_extension",
           version: chrome.runtime.getManifest().version,
@@ -632,6 +672,10 @@ chrome.runtime.onConnect.addListener((port) => {
       })
       .then(async (result) => {
         if (result === undefined) return;
+        const isCheatSheetRequest =
+          message.kind === "cheat-sheet" ||
+          (Array.isArray(message.context?.questions) &&
+            typeof message.context?.sourceRevision === "string");
         const outgoing = {
           type: "result",
           requestId,
@@ -639,11 +683,15 @@ chrome.runtime.onConnect.addListener((port) => {
             ok: true,
             result: {
               ...result,
-              client: {
-                kind: "chrome_extension",
-                version: chrome.runtime.getManifest().version,
-                capability: "question-stream-v7",
-              },
+              ...(isCheatSheetRequest
+                ? {}
+                : {
+                    client: {
+                      kind: "chrome_extension",
+                      version: chrome.runtime.getManifest().version,
+                      capability: "question-stream-v7",
+                    },
+                  }),
             },
           },
         };

@@ -50,6 +50,11 @@ import {
 } from "./progressive-coordinator";
 import {
   authoritativeRecoveryFailureCode,
+  CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
+  CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT,
+  GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
+  GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
+  GROUNDED_GENERATION_MAX_RECOVERY_CYCLES,
   groundedRecoveryCooldownMs,
   groundedRecoveryIsExhausted,
 } from "./automatic-recovery-policy";
@@ -96,6 +101,9 @@ async function runAutomaticRecovery(
     continuation.generationProfile === "prompt_first_auto_v5_10" ||
     continuation.generationProfile === "prompt_first_auto_v5_11" ||
     continuation.generationProfile === "prompt_first_auto_v5_12";
+  const maxOrdinalAttempt = grounded
+    ? GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT
+    : CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT;
   if (
     status.generation.state === "cooldown" &&
     status.generation.nextRecoveryAt &&
@@ -309,7 +317,10 @@ async function runAutomaticRecovery(
               | "prompt_first_auto_v5_12",
             recoveryCycle:
               stored?.version === 4
-                ? Math.min(24, stored.recoveryCycle + 1)
+                ? Math.min(
+                    GROUNDED_GENERATION_MAX_RECOVERY_CYCLES,
+                    stored.recoveryCycle + 1,
+                  )
                 : 1,
           })
         : await saveGenerationRecord({
@@ -379,7 +390,10 @@ async function runAutomaticRecovery(
       claim: claim.claim,
       nextCallIndex: automatic ? continuation.nextCallIndex : 0,
       nextOrdinalAttempt: continuation.activeCall
-        ? Math.min(24, continuation.activeCall.ordinalAttempt + 1)
+        ? Math.min(
+            maxOrdinalAttempt,
+            continuation.activeCall.ordinalAttempt + 1,
+          )
         : continuation.nextOrdinalAttempt,
       retryKind: continuation.activeCall
         ? "automatic_resume"
@@ -454,21 +468,17 @@ async function runAutomaticRecovery(
         (!("lifecycleState" in event) || event.lifecycleState === "started")
       ) {
         automaticRetryCount = Math.min(
-          continuation.promptVersion === "quiz-local-json-stream-v5.12" ||
-            continuation.promptVersion === "quiz-local-json-stream-v5.11" ||
-            continuation.promptVersion === "quiz-local-json-stream-v5.10" ||
-            continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
-            continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
-            continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
-            continuation.promptVersion === "quiz-local-json-stream-v5.6" ||
-            legacyAutomaticRecovery
-            ? 12
-            : grounded
-              ? 48
-              : 12,
+          grounded
+            ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
+            : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
           automaticRetryCount + 1,
         );
-        retryBudgetUsedCount = Math.min(48, retryBudgetUsedCount + 1);
+        retryBudgetUsedCount = Math.min(
+          grounded
+            ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
+            : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
+          retryBudgetUsedCount + 1,
+        );
       }
       // The Worker event is authoritative. A stale or missing browser cache
       // record cannot be allowed to poison the ingestion chain and suppress
@@ -652,7 +662,7 @@ async function runAutomaticRecovery(
       });
     const compatibilityExhausted =
       legacyAutomaticRecovery &&
-      (retryBudgetUsedCount >= 12 ||
+      (retryBudgetUsedCount >= CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES ||
         (continuation.automaticRecoveryCount ?? 0) + 1 >= 3);
     const state =
       reasonCode === "credential_required" || reasonCode === "billing_required"
@@ -793,9 +803,9 @@ async function acquireContinuationTranscript(
     preferredLanguage,
   );
   if (textTranscript) return textTranscript;
-  if (Platform.OS !== "web") {
+  if (Platform.OS === "android") {
     throw new Error(
-      "This native beta requires a public YouTube video with usable captions.",
+      "This Android beta requires a public YouTube video with usable captions.",
     );
   }
   const media = await apiRequest(
@@ -817,14 +827,24 @@ async function acquireContinuationTranscript(
     onPhase: () => undefined,
     onProgress: () => undefined,
   });
+  const inferredDurationSeconds = Math.max(
+    1,
+    Math.ceil(
+      Math.max(...result.segments.map((segment) => segment.endMs)) / 1_000,
+    ),
+  );
+  const verifiedDurationSeconds =
+    imported.video.durationSeconds > 0
+      ? imported.video.durationSeconds
+      : inferredDurationSeconds;
   return {
     segments: result.segments,
     language: result.language,
-    verifiedDurationSeconds: imported.video.durationSeconds,
+    verifiedDurationSeconds,
     captionSourceCategory: "local_transcription",
     completeness: createTranscriptCompleteness(
       result.segments,
-      imported.video.durationSeconds,
+      verifiedDurationSeconds,
     ),
   };
 }
@@ -890,6 +910,7 @@ function isLeaseConflict(error: unknown): boolean {
     [
       "generation_claim_leased",
       "generation_claim_conflict",
+      "generation_call_active",
       "generation_recovery_lease_conflict",
       "generation_recovery_lease_lost",
     ].includes(error.code)
