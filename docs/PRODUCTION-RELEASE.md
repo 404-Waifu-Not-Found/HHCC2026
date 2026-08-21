@@ -168,17 +168,17 @@ Do not distribute a locally debug-signed Gradle artifact. See [Android private b
 
 ## Generation rollout gate
 
-Do not enable `QUIZ_V5_4_ROLLOUT` merely because extension 0.8.7 is installed or `/health` advertises prompt v5.7. Source-level regression tests are necessary but do not clear the canary or production gate. Before canary or general enablement:
+Do not enable `QUIZ_V5_12_ROLLOUT` merely because extension 0.8.18 is installed or `/health` advertises prompt v5.12. Source-level regression tests are necessary but do not clear the canary or production gate. Before canary or general enablement:
 
-1. Deploy one immutable pushed 0.8.7 Worker/app candidate with the grounded rollout still disabled and install the matching extension ZIP.
-2. Verify the authenticated `/api/local-ai/profile` assignment, capability handshake, and one newly persisted bank—not only the supported versions advertised by `/health`.
+1. Deploy one immutable pushed Worker/app candidate with v5.12 still disabled, install its matching extension-0.8.18 ZIP, and record the exact Worker version, Git SHA, and extension checksum.
+2. Verify that the authenticated `/api/local-ai/profile` still assigns the intended fallback profile before canary. Then set `QUIZ_V5_12_ROLLOUT=canary`, add only the `unoxyrich` user ID, and prove that one newly persisted bank uses `prompt_first_auto_v5_12`, prompt v5.12, validator v5.3, protocol 10, pipeline 9, and progressive import v8.
 3. Run at least 100 complete healthy banks across 5/10/15 lengths, all question-type combinations, English/CJK, short/long captions, formula-heavy lessons, and manual/automatic captions.
 4. Require at least 99% healthy first-pass completion, 100% eligible completion without learner recovery actions, zero new `manual_continuation` rows, exact HTTP-call/event reconciliation, no shortened completion, and no accepted-question replacement.
-5. Set the grounded rollout to canary for `unoxyrich`, then run one immutable enabled-profile artifact across ten different real YouTube videos and complete all 100 learner questions.
-6. Require question 1 before the remaining bank, 10/10 first-attempt completion, truthful retry totals, prompt v5.7/validator v4.6/protocol 8 on every new bank, no source framing, logistics trivia, low-value recall, rubric corruption, or compatibility-presentation corruption.
+5. Run the immutable canary artifact across ten different real YouTube videos and complete every planned learner question on the original bank; do not replace a failed attempt and count the replacement as success.
+6. Require question 1 before the remaining bank, 10/10 first-attempt completion, truthful structural/transport retry totals, current v5.12 metadata on every new bank, no source framing, logistics trivia, low-value recall, duplicate objectives, grading corruption, or stalled recovery.
 7. Revisit a recoverable legacy failed bank or reproduce Run 8's q12-q13 failure; require automatic completion of the same bank without replacing its accepted prefix.
-8. Confirm the page bridge and Worker requests contain no API key, captions, transcript, generation instructions, or raw DeepSeek response.
-9. Enable the grounded profile generally only after every benchmark and canary gate passes.
+8. Confirm the page bridge, native API traffic, and Worker requests contain no API key, captions, transcript, generation instructions, private evidence, or raw DeepSeek response.
+9. Set `QUIZ_V5_12_ROLLOUT=enabled` only after every benchmark and canary gate passes, then repeat a fresh generally enabled real-client matrix before declaring the profile public-ready.
 
 If a canary gate fails, restore the rollout variable to the prior profile without rolling back the additive D1 migrations. Retain safe call-event evidence for diagnosis.
 
