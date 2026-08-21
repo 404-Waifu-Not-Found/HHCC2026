@@ -12,12 +12,15 @@ import {
   type MasteryState,
   type PublicQuestion,
   type QuizQuestionType,
+  type QuizStartRequest,
+  type QuizStartResponse,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { gradeWrittenAnswer } from "../lib/ai-services";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
+import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { StoredTranscriptSchema } from "../lib/stored-transcript";
@@ -80,15 +83,44 @@ const RubricSchema = z.object({
   acceptableAlternatives: z.array(z.string()),
 });
 
+const QUIZ_STARTS_PER_MINUTE = 8;
+export const ANSWER_RESERVATION_TTL_MS = 90_000;
+export const ANSWER_RESERVATION_SQL = `
+  UPDATE attempts
+  SET grading_token = ?, grading_expires_at = ?, updated_at = ?
+  WHERE id = ?
+    AND user_id = ?
+    AND status = 'active'
+    AND current_index = ?
+    AND current_variant = ?
+    AND retry_pending = ?
+    AND (
+      grading_token IS NULL
+      OR grading_expires_at IS NULL
+      OR grading_expires_at <= ?
+    )
+  RETURNING id`;
+
 export const quizzesRouter = new Hono<ApiBindings>();
 
 quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
   const user = c.get("user");
+  const idempotencyKey = requireIdempotencyKey(c);
   const input = await parseJson(c, QuizStartRequestSchema);
+  const quizId = c.req.param("quizId");
+  const startRequestJson = JSON.stringify({ quizId, ...input });
+  const existingStart = await findAttemptStartByKey(
+    c.env.DB,
+    user.id,
+    idempotencyKey,
+  );
+  if (existingStart) {
+    return c.json(replayAttemptStart(existingStart, quizId, startRequestJson));
+  }
   const quiz = await c.env.DB.prepare(
     "SELECT id, video_id, primer, watched FROM quiz_banks WHERE id = ? AND user_id = ? AND pipeline_version = ? AND quality_status = 'passed'",
   )
-    .bind(c.req.param("quizId"), user.id, LOCAL_QUIZ_PIPELINE_VERSION)
+    .bind(quizId, user.id, LOCAL_QUIZ_PIPELINE_VERSION)
     .first<{ id: string; video_id: string; primer: string; watched: number }>();
   if (!quiz) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
 
@@ -106,6 +138,47 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
       );
     }
   }
+
+  const activeAttemptId = await findActiveAttemptId(
+    c.env.DB,
+    user.id,
+    quiz.id,
+    input.mode,
+  );
+  if (activeAttemptId) {
+    const activeAttempt = await getAttempt(c.env.DB, activeAttemptId, user.id);
+    const activeQuestion = await getAttemptQuestion(
+      c.env.DB,
+      activeAttempt.id,
+      activeAttempt.current_index,
+    );
+    if (!activeQuestion) {
+      throw new ApiError(
+        500,
+        "attempt_corrupt",
+        "The active quiz question is missing.",
+      );
+    }
+    return c.json(
+      QuizStartResponseSchema.parse({
+        attemptId: activeAttempt.id,
+        primer: null,
+        question: toPublicQuestion(
+          activeQuestion,
+          activeAttempt.current_index,
+          activeAttempt.item_count,
+          Boolean(activeAttempt.retry_pending),
+        ),
+      }),
+    );
+  }
+
+  await enforceRateLimit(c.env.DB, {
+    namespace: "quiz-start",
+    identifier: user.id,
+    maximum: QUIZ_STARTS_PER_MINUTE,
+    windowSeconds: 60,
+  });
 
   const questionResult = await c.env.DB.prepare(
     "SELECT id, quiz_id, ordinal, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty FROM questions WHERE quiz_id = ? ORDER BY ABS(difficulty - 2), ordinal",
@@ -133,36 +206,49 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     throw new ApiError(500, "quiz_empty", "This quiz has no valid questions.");
   const attemptId = createId();
   const timestamp = now();
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      "INSERT INTO attempts (id, user_id, quiz_id, mode, status, current_index, current_variant, retry_pending, target_difficulty, correct_count, total_answered, item_count, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', 0, 0, 0, 2, 0, 0, ?, ?, ?)",
-    ).bind(
-      attemptId,
-      user.id,
-      quiz.id,
-      input.mode,
-      selected.length,
-      timestamp,
-      timestamp,
-    ),
-    ...selected.map((question, index) =>
+  const startResponse = QuizStartResponseSchema.parse({
+    attemptId,
+    primer: (input.watched ?? Boolean(quiz.watched)) ? null : quiz.primer,
+    question: toPublicQuestion(firstQuestion, 0, selected.length, false),
+  });
+  try {
+    await c.env.DB.batch([
       c.env.DB.prepare(
-        "INSERT INTO attempt_items (attempt_id, ordinal, question_id) VALUES (?, ?, ?)",
-      ).bind(attemptId, index, question.id),
-    ),
-    c.env.DB.prepare(
-      "INSERT INTO mastery (user_id, video_id, state, updated_at) VALUES (?, ?, 'learning', ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = CASE WHEN mastery.state = 'not_started' THEN 'learning' ELSE mastery.state END, updated_at = excluded.updated_at",
-    ).bind(user.id, quiz.video_id, timestamp),
-  ]);
+        "INSERT INTO attempts (id, user_id, quiz_id, mode, status, current_index, current_variant, retry_pending, target_difficulty, correct_count, total_answered, item_count, start_key, start_request_json, start_response_json, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', 0, 0, 0, 2, 0, 0, ?, ?, ?, ?, ?, ?)",
+      ).bind(
+        attemptId,
+        user.id,
+        quiz.id,
+        input.mode,
+        selected.length,
+        idempotencyKey,
+        startRequestJson,
+        JSON.stringify(startResponse),
+        timestamp,
+        timestamp,
+      ),
+      ...selected.map((question, index) =>
+        c.env.DB.prepare(
+          "INSERT INTO attempt_items (attempt_id, ordinal, question_id) VALUES (?, ?, ?)",
+        ).bind(attemptId, index, question.id),
+      ),
+      c.env.DB.prepare(
+        "INSERT INTO mastery (user_id, video_id, state, updated_at) VALUES (?, ?, 'learning', ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = CASE WHEN mastery.state = 'not_started' THEN 'learning' ELSE mastery.state END, updated_at = excluded.updated_at",
+      ).bind(user.id, quiz.video_id, timestamp),
+    ]);
+  } catch (error) {
+    const raced = await findAttemptStartByKey(
+      c.env.DB,
+      user.id,
+      idempotencyKey,
+    );
+    if (raced) {
+      return c.json(replayAttemptStart(raced, quizId, startRequestJson));
+    }
+    throw error;
+  }
 
-  return c.json(
-    QuizStartResponseSchema.parse({
-      attemptId,
-      primer: (input.watched ?? Boolean(quiz.watched)) ? null : quiz.primer,
-      question: toPublicQuestion(firstQuestion, 0, selected.length, false),
-    }),
-    201,
-  );
+  return c.json(startResponse, 201);
 });
 
 quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
@@ -195,7 +281,26 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     );
   }
 
-  const grade = await gradeAnswer(c.env, attempt, question, input.answer);
+  const gradingToken = await reserveAttemptForAnswer(
+    c.env.DB,
+    attempt,
+    user.id,
+  );
+  if (!gradingToken) {
+    throw new ApiError(
+      409,
+      "answer_in_progress",
+      "This answer is already being checked. Wait a moment and resume the quiz.",
+    );
+  }
+
+  let grade: { correct: boolean; feedback: string };
+  try {
+    grade = await gradeAnswer(c.env, attempt, question, input.answer);
+  } catch (error) {
+    await releaseAnswerReservation(c.env.DB, attempt.id, user.id, gradingToken);
+    throw error;
+  }
   const timestamp = now();
   const answerInsert = c.env.DB.prepare(
     "INSERT INTO answers (id, attempt_id, question_id, answer_json, is_correct, feedback, variant_index, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -214,8 +319,8 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     await c.env.DB.batch([
       answerInsert,
       c.env.DB.prepare(
-        "UPDATE attempts SET retry_pending = 1, current_variant = 1, total_answered = total_answered + 1, target_difficulty = MAX(1, target_difficulty - 0.5), updated_at = ? WHERE id = ? AND user_id = ?",
-      ).bind(timestamp, attempt.id, user.id),
+        "UPDATE attempts SET retry_pending = 1, current_variant = 1, total_answered = total_answered + 1, target_difficulty = MAX(1, target_difficulty - 0.5), grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
+      ).bind(timestamp, attempt.id, user.id, gradingToken),
     ]);
     return c.json(
       AttemptAnswerResponseSchema.parse({
@@ -255,7 +360,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     await c.env.DB.batch([
       answerInsert,
       c.env.DB.prepare(
-        "UPDATE attempts SET status = 'complete', current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, score = ?, updated_at = ?, completed_at = ? WHERE id = ? AND user_id = ?",
+        "UPDATE attempts SET status = 'complete', current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, score = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ?, completed_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
       ).bind(
         nextIndex,
         nextCorrectCount,
@@ -265,6 +370,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
         timestamp,
         attempt.id,
         user.id,
+        gradingToken,
       ),
     ]);
     return c.json(
@@ -283,7 +389,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   await c.env.DB.batch([
     answerInsert,
     c.env.DB.prepare(
-      "UPDATE attempts SET current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+      "UPDATE attempts SET current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
     ).bind(
       nextIndex,
       nextCorrectCount,
@@ -291,6 +397,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       timestamp,
       attempt.id,
       user.id,
+      gradingToken,
     ),
   ]);
   await adaptNextQuestion(
@@ -431,6 +538,100 @@ function toPublicQuestion(
     total,
     isRetry,
   });
+}
+
+type StoredAttemptStartRow = {
+  quiz_id: string;
+  start_request_json: string | null;
+  start_response_json: string | null;
+};
+
+async function findAttemptStartByKey(
+  db: D1Database,
+  userId: string,
+  idempotencyKey: string,
+): Promise<StoredAttemptStartRow | null> {
+  return db
+    .prepare(
+      "SELECT quiz_id, start_request_json, start_response_json FROM attempts WHERE user_id = ? AND start_key = ? LIMIT 1",
+    )
+    .bind(userId, idempotencyKey)
+    .first<StoredAttemptStartRow>();
+}
+
+function replayAttemptStart(
+  stored: StoredAttemptStartRow,
+  quizId: string,
+  startRequestJson: string,
+): QuizStartResponse {
+  if (
+    stored.quiz_id !== quizId ||
+    stored.start_request_json !== startRequestJson
+  ) {
+    throw new ApiError(
+      409,
+      "idempotency_key_reused",
+      "This idempotency key was already used for a different quiz start.",
+    );
+  }
+  return parseStoredJson(
+    stored.start_response_json,
+    QuizStartResponseSchema,
+    "quiz start response",
+  );
+}
+
+async function findActiveAttemptId(
+  db: D1Database,
+  userId: string,
+  quizId: string,
+  mode: QuizStartRequest["mode"],
+): Promise<string | null> {
+  const row = await db
+    .prepare(
+      "SELECT id FROM attempts WHERE user_id = ? AND quiz_id = ? AND mode = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 1",
+    )
+    .bind(userId, quizId, mode)
+    .first<{ id: string }>();
+  return row?.id ?? null;
+}
+
+export async function reserveAttemptForAnswer(
+  db: D1Database,
+  attempt: AttemptRow,
+  userId: string,
+): Promise<string | null> {
+  const timestamp = now();
+  const gradingToken = createId();
+  const reserved = await db
+    .prepare(ANSWER_RESERVATION_SQL)
+    .bind(
+      gradingToken,
+      timestamp + ANSWER_RESERVATION_TTL_MS,
+      timestamp,
+      attempt.id,
+      userId,
+      attempt.current_index,
+      attempt.current_variant,
+      attempt.retry_pending,
+      timestamp,
+    )
+    .first<{ id: string }>();
+  return reserved ? gradingToken : null;
+}
+
+async function releaseAnswerReservation(
+  db: D1Database,
+  attemptId: string,
+  userId: string,
+  gradingToken: string,
+): Promise<void> {
+  await db
+    .prepare(
+      "UPDATE attempts SET grading_token = NULL, grading_expires_at = NULL WHERE id = ? AND user_id = ? AND grading_token = ?",
+    )
+    .bind(attemptId, userId, gradingToken)
+    .run();
 }
 
 async function getAttempt(

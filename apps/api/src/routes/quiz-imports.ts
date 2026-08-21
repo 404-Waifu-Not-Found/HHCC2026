@@ -9,36 +9,22 @@ import {
   type LocalConceptQuizQuestion,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
-import { z } from "zod";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
+import { requireIdempotencyKey } from "../lib/idempotency";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 
-const IdempotencyKeySchema = z.string().uuid();
 const QUIZ_IMPORT_VERSION = "extension-quiz-import-v3" as const;
 
 export const quizImportsRouter = new Hono<ApiBindings>();
 
 quizImportsRouter.post("/", async (c) => {
   const user = c.get("user");
-  const idempotencyKey = IdempotencyKeySchema.safeParse(
-    c.req.header("idempotency-key"),
-  );
-  if (!idempotencyKey.success) {
-    throw new ApiError(
-      400,
-      "idempotency_key_required",
-      "A valid idempotency key is required.",
-    );
-  }
+  const idempotencyKey = requireIdempotencyKey(c);
 
-  const existing = await findImportedQuiz(
-    c.env.DB,
-    user.id,
-    idempotencyKey.data,
-  );
+  const existing = await findImportedQuiz(c.env.DB, user.id, idempotencyKey);
   if (existing) {
     return c.json(
       ExtensionQuizImportResponseSchema.parse({ quizId: existing.id }),
@@ -65,15 +51,11 @@ quizImportsRouter.post("/", async (c) => {
       db: c.env.DB,
       quizId,
       userId: user.id,
-      importKey: idempotencyKey.data,
+      importKey: idempotencyKey,
       input,
     });
   } catch (error) {
-    const raced = await findImportedQuiz(
-      c.env.DB,
-      user.id,
-      idempotencyKey.data,
-    );
+    const raced = await findImportedQuiz(c.env.DB, user.id, idempotencyKey);
     if (raced) {
       return c.json(
         ExtensionQuizImportResponseSchema.parse({ quizId: raced.id }),

@@ -273,6 +273,7 @@ export default function GenerationScreen() {
         `/api/quizzes/${importedQuiz.quizId}/start`,
         {
           method: "POST",
+          headers: { "Idempotency-Key": idempotencyKey },
           body: jsonBody({
             mode: "learn",
             sessionLength: params.sessionLength,

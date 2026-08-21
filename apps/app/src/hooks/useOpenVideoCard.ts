@@ -3,6 +3,7 @@ import {
   VideoImportResponseSchema,
   type LibraryCard,
 } from "@clipquest/contracts";
+import * as Crypto from "expo-crypto";
 import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import { apiRequest, jsonBody } from "../lib/api";
@@ -28,6 +29,7 @@ export function useOpenVideoCard() {
           `/api/quizzes/${card.quizId}/start`,
           {
             method: "POST",
+            headers: { "Idempotency-Key": Crypto.randomUUID() },
             body: jsonBody({ mode: card.action === "review" ? "review" : "learn", sessionLength: "medium" }),
           },
           QuizStartResponseSchema,

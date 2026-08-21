@@ -14,6 +14,8 @@ import type { MediaToken } from "../types";
 
 const MEDIA_TTL_SECONDS = 10 * 60;
 const MAX_CAPTIONLESS_DURATION_SECONDS = 90 * 60;
+export const MEDIA_TOKEN_MAX_USES = 12;
+export const MEDIA_USER_REQUESTS_PER_MINUTE = 20;
 
 type MediaVideoRow = {
   id: string;
@@ -28,6 +30,25 @@ export function assertMediaSourceAllowed(
   source: unknown,
 ): asserts source is VideoSource {
   SourceSchema.parse(source);
+}
+
+export async function enforceMediaRequestBudget(
+  db: D1Database,
+  userId: string,
+  token: string,
+): Promise<void> {
+  await enforceRateLimit(db, {
+    namespace: "media-stream-user",
+    identifier: userId,
+    maximum: MEDIA_USER_REQUESTS_PER_MINUTE,
+    windowSeconds: 60,
+  });
+  await enforceRateLimit(db, {
+    namespace: "media-stream-token",
+    identifier: token,
+    maximum: MEDIA_TOKEN_MAX_USES,
+    windowSeconds: MEDIA_TTL_SECONDS,
+  });
 }
 
 mediaRouter.post("/resolve", async (c) => {
@@ -77,7 +98,8 @@ mediaRouter.post("/resolve", async (c) => {
 
 mediaRouter.get("/:token", async (c) => {
   const user = c.get("user");
-  const raw = await c.env.CACHE.get(`media:${c.req.param("token")}`);
+  const tokenId = c.req.param("token");
+  const raw = await c.env.CACHE.get(`media:${tokenId}`);
   if (!raw)
     throw new ApiError(
       404,
@@ -102,6 +124,7 @@ mediaRouter.get("/:token", async (c) => {
       "This media link belongs to another session or expired.",
     );
   }
+  await enforceMediaRequestBudget(c.env.DB, user.id, tokenId);
   const video = await c.env.DB.prepare(
     "SELECT id, source, source_video_id, duration_seconds FROM videos WHERE id = ? AND owner_id = ?",
   )
