@@ -37,13 +37,15 @@
 | 23  | Low security  | The native file-backed transcription path had no cumulative or final media-size ceiling, unlike the bounded web reader. A large authenticated media response could consume device storage before decoding.                                               | Native progress cancels above 180 MiB, the final file size is checked again, and oversized partial files are deleted. Android and iOS builds plus focused boundary tests cover the remediation.                                                                                        |
 | 24  | Maintenance   | Hono, Wrangler, and Cloudflare Worker types were behind safe patch releases, including Wrangler dependencies covered by advisories with a compatible update.                                                                                             | Updated Hono to `4.13.2`, Wrangler to `4.123.0`, and Workers types to `5.20260817.1`; regenerated Worker types and reran the complete Worker build/dry-run suite. No forced Expo/React Native downgrade was applied.                                                                   |
 | 25  | Documentation | The progressive short-answer grader comment claimed pipeline-7 attempts still used a historical grader, while the route now correctly uses the deterministic compatibility grader for every stored rubric shape.                                         | Corrected the comment to describe the actual privacy-preserving compatibility path; existing legacy, atomic, proposition, enumeration, Chinese, and formula grading regressions all remain green.                                                                                      |
+| 26  | Low security  | Rapid native account transitions could complete asynchronous cleanup out of order and restore a stale observed-user marker. A later account could then be treated as though the prior boundary had already been processed.                               | Native account-boundary work now runs through a rejection-isolated serial task queue. Delayed A→B→C transition coverage proves every departing account is cleaned in order and the final observed marker belongs to C.                                                                 |
+| 27  | Low security  | The create route loaded a generation record by a URL-provided UUID and could poll or mutate it without proving that its stored owner and video matched the authenticated route context.                                                                  | Generation records are now accepted only when both `ownerUserId` and `videoId` match the authenticated user and requested source. Mismatches are ignored and replaced with a fresh owner-bound generation; focused tests cover owner, video, and null cases.                           |
 
 ## Verification evidence
 
 ### Automated workspace gates
 
 - API tests: 163 passed.
-- App tests: 117 passed.
+- App tests: 120 passed.
 - Extension tests: 228 passed, including the recorded 100-bank generation benchmark.
 - Contracts tests: 25 passed.
 - Shared engine tests: 5 passed.
@@ -56,12 +58,14 @@
 
 ### Native build and runtime evidence
 
-- Android API 36 debug build: `BUILD SUCCESSFUL` with the explicit JDK 17 toolchain (522 Gradle tasks). Running the same build under the machine-default JDK 25 correctly reproduced the unsupported CMake/SDK XML failure documented above.
+- Android API 36 debug build: `BUILD SUCCESSFUL` with the explicit JDK 17 toolchain (397 Gradle tasks in the final incremental verification). Running the same target under the machine-default JDK 25 reproduced the unsupported React Native Worklets CMake/SDK XML failure documented above; the JDK 17 run is authoritative.
 - Android emulator: the app launched, loaded the JavaScript bundle through Metro, and rendered the authenticated learner home with question-type selection, YouTube import, Library cards, and bottom navigation.
-- iOS simulator build: unsigned compile and signed Debug simulator build both succeeded. The second pass rebuilt the unsigned Debug app for the booted iPhone 17 Pro simulator with `ONLY_ACTIVE_ARCH=YES` and exited successfully.
-- iPhone 17 Pro simulator: the signed app launched and rendered the responsive sign-in experience. The earlier unsigned build's Keychain entitlement error was an invalid test artifact, not a release behavior.
+- Android runtime harness: Metro initially bound only to IPv6 localhost, which made the headless emulator show `Unable to load script` despite a healthy APK. Restarting Metro in LAN mode bound it to all interfaces; the same installed APK then loaded and rendered without a fatal `AndroidRuntime` entry. This was a harness configuration issue, not an application defect.
+- iOS simulator build: the unsigned compile succeeded, but installing that unsigned artifact correctly exposed a missing Keychain entitlement and was rejected as invalid runtime evidence. A subsequent Debug simulator build used Xcode's local ad-hoc signing and declared entitlements; it built successfully.
+- iPhone 17 Pro simulator: the ad-hoc signed app launched and rendered the responsive sign-in experience with correct safe areas, fields, typography, and disabled-button state. Post-launch logs contained no required-entitlement, uncaught-exception, or fatal error.
 - Expo configuration reports the Android package, iOS associated domain, app-link intent filters, and disabled over-the-air updates expected by the private beta plan.
 - The reproducible extension ZIP generated during the passing build has SHA-256 `d29a37e0e8b9278ac35a0b0cb4fc314727f08bc3cffd8b2470a450fb1ed1c268`.
+- The verified Android debug APK has SHA-256 `70512ef28aa7fef2f4144564f445e2396d07749d292a5b0124a7bab05f87fadf`. This debug artifact is runtime evidence only and is not a release-signed distribution candidate.
 
 ### Dependency audit
 
@@ -92,6 +96,14 @@ A final fixed-range diff scan reviewed every file changed by the six local produ
 - Coverage: 34/34 changed files reviewed.
 - Reportable findings: 2 low, both fixed in the current candidate.
 - Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/78f35c1ce4f689c115e6f8e40b2ab788346e1878_20260817T185534Z_ppps9j8r/report.md`
+
+A second fresh fixed-range diff scan covered all 36 files changed between the production baseline and the then-current local candidate. It found the two additional low-severity native account/generation ownership paths recorded as problems 26 and 27. Both are fixed in commit `4965e00`, covered by executable regressions, and included in the final passing canonical gate; the sealed report intentionally remains pre-fix evidence.
+
+- Diff scan ID: `c1d0d408-6ab9-4fe6-b3a9-b7260e9e066e`
+- Reviewed committed range: `a4d85ac2da45cfa9b8e2b33081db2ecfc13a6497..8d999fefb33897666e2e332700f3fb24f017aff2`
+- Coverage: 36/36 changed files reviewed.
+- Reportable findings: 2 low, both fixed in `4965e00`.
+- Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/8d999fefb33897666e2e332700f3fb24f017aff2_20260817T192733Z_vmbjhcb6/report.md`
 
 ### Read-only live browser smoke
 
