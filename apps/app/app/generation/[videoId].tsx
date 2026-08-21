@@ -492,7 +492,6 @@ export default function GenerationScreen() {
       let lastProgressKey: string | undefined;
       const pendingCallEvents: LocalGenerationCallEvent[] = [];
       let callEventsReady = Boolean(progressiveQuizId);
-      let pendingStartedCall: LocalGenerationCallEvent | undefined;
 
       const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
         if (!progressiveQuizId || !callEventsReady) {
@@ -531,10 +530,6 @@ export default function GenerationScreen() {
       const schedulePendingCallFlush = () => {
         callIngestion = callIngestion.then(async () => {
           callEventsReady = true;
-          if (pendingStartedCall) {
-            await uploadCallEvent(pendingStartedCall);
-            pendingStartedCall = undefined;
-          }
           while (pendingCallEvents.length) {
             await uploadCallEvent(pendingCallEvents.shift()!);
           }
@@ -649,25 +644,7 @@ export default function GenerationScreen() {
       };
 
       const enqueueCall = (event: LocalGenerationCallEvent) => {
-        if (
-          "lifecycleState" in event &&
-          event.lifecycleState === "started" &&
-          !progressiveQuizId
-        ) {
-          pendingStartedCall = event;
-          return;
-        }
-        const bufferedStarted =
-          "lifecycleState" in event &&
-          event.lifecycleState !== "started" &&
-          pendingStartedCall?.generationSessionId ===
-            event.generationSessionId &&
-          pendingStartedCall.callIndex === event.callIndex
-            ? pendingStartedCall
-            : undefined;
-        if (bufferedStarted) pendingStartedCall = undefined;
         callIngestion = callIngestion.then(async () => {
-          if (bufferedStarted) await uploadCallEvent(bufferedStarted);
           await uploadCallEvent(event);
         });
         void callIngestion.catch(() => undefined);
