@@ -21,6 +21,17 @@ const JobSchema = z.object({
   transcript_key: z.string().min(1),
 });
 
+function logGeneration(
+  event: string,
+  jobId: string,
+  details: Record<string, unknown> = {},
+  level: "info" | "warn" = "info",
+) {
+  console[level](
+    JSON.stringify({ scope: "generation", event, jobId, ...details }),
+  );
+}
+
 async function setStatus(
   env: AppEnv,
   input: {
@@ -31,7 +42,12 @@ async function setStatus(
     error?: { code: string; message: string } | null;
   },
 ): Promise<boolean> {
-  const state = input.stage === "complete" ? "complete" : input.stage === "failed" ? "failed" : "running";
+  const state =
+    input.stage === "complete"
+      ? "complete"
+      : input.stage === "failed"
+        ? "failed"
+        : "running";
   const updated = await env.DB.prepare(
     "UPDATE generation_jobs SET state = ?, stage = ?, progress = ?, quiz_id = ?, error_code = ?, error_message = ?, updated_at = ? WHERE id = ? AND cancel_requested = 0 AND state != 'complete'",
   )
@@ -49,31 +65,97 @@ async function setStatus(
   return Boolean(updated.meta.changes);
 }
 
-export async function processGeneration(env: AppEnv, message: GenerationQueueMessage): Promise<void> {
+export async function processGeneration(
+  env: AppEnv,
+  message: GenerationQueueMessage,
+): Promise<void> {
+  const startedAt = Date.now();
+  logGeneration("job.received", message.jobId, { videoId: message.videoId });
   const claimed = await env.DB.prepare(
     "UPDATE generation_jobs SET state = 'running', stage = 'creating_questions', progress = 0.08, error_code = NULL, error_message = NULL, generation_attempts = generation_attempts + 1, updated_at = ? WHERE id = ? AND user_id = ? AND video_id = ? AND state = 'queued' AND cancel_requested = 0",
-  ).bind(now(), message.jobId, message.userId, message.videoId).run();
-  if (!claimed.meta.changes) return;
+  )
+    .bind(now(), message.jobId, message.userId, message.videoId)
+    .run();
+  if (!claimed.meta.changes) {
+    logGeneration("job.skipped", message.jobId, {
+      reason: "not_claimed",
+      elapsedMs: Date.now() - startedAt,
+    });
+    return;
+  }
+  logGeneration("job.claimed", message.jobId, {
+    elapsedMs: Date.now() - startedAt,
+  });
   const row = await env.DB.prepare(
     "SELECT j.id, j.user_id, j.video_id, j.quiz_language, j.session_length, j.watched, j.transcript_key, v.title FROM generation_jobs j JOIN videos v ON v.id = j.video_id WHERE j.id = ? AND j.user_id = ? AND j.video_id = ?",
   )
     .bind(message.jobId, message.userId, message.videoId)
     .first();
   const job = JobSchema.safeParse(row);
-  if (!job.success) throw new ApiError(404, "generation_not_found", "Generation job not found.");
+  if (!job.success)
+    throw new ApiError(
+      404,
+      "generation_not_found",
+      "Generation job not found.",
+    );
 
-  const transcriptObject = await env.PRIVATE_BUCKET.get(job.data.transcript_key);
-  if (!transcriptObject) throw new ApiError(500, "transcript_missing", "The private transcript could not be found.");
-  const transcript = StoredTranscriptSchema.safeParse(await transcriptObject.json());
+  const transcriptObject = await env.PRIVATE_BUCKET.get(
+    job.data.transcript_key,
+  );
+  if (!transcriptObject)
+    throw new ApiError(
+      500,
+      "transcript_missing",
+      "The private transcript could not be found.",
+    );
+  const transcript = StoredTranscriptSchema.safeParse(
+    await transcriptObject.json(),
+  );
   if (!transcript.success) {
-    throw new ApiError(500, "transcript_invalid", "The private transcript failed integrity checks.");
+    throw new ApiError(
+      500,
+      "transcript_invalid",
+      "The private transcript failed integrity checks.",
+    );
   }
+  logGeneration("transcript.loaded", message.jobId, {
+    elapsedMs: Date.now() - startedAt,
+    origin: transcript.data.origin,
+    segmentCount: transcript.data.segments.length,
+  });
 
-  if (!await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.2 })) return;
-  const classification = await classifyTranscript(env, job.data.title, transcript.data.segments);
-  if (!await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.42 })) return;
+  if (
+    !(await setStatus(env, {
+      jobId: message.jobId,
+      stage: "creating_questions",
+      progress: 0.2,
+    }))
+  )
+    return;
+  const modelStartedAt = Date.now();
+  logGeneration("model.started", message.jobId, {
+    language: job.data.quiz_language,
+    sessionLength: job.data.session_length,
+  });
+  const [classification, generation] = await Promise.all([
+    classifyTranscript(env, job.data.title, transcript.data.segments),
+    generateQuiz(env, {
+      title: job.data.title,
+      language: job.data.quiz_language,
+      sessionLength: job.data.session_length,
+      watched: Boolean(job.data.watched),
+      segments: transcript.data.segments,
+    }),
+  ]);
+  logGeneration("model.completed", message.jobId, {
+    educational: classification.educational,
+    elapsedMs: Date.now() - modelStartedAt,
+    questionCount: generation.questions.length,
+  });
   if (!classification.educational) {
-    await env.DB.prepare("UPDATE videos SET education_status = 'rejected', updated_at = ? WHERE id = ?")
+    await env.DB.prepare(
+      "UPDATE videos SET education_status = 'rejected', updated_at = ? WHERE id = ?",
+    )
       .bind(now(), job.data.video_id)
       .run();
     throw new ApiError(
@@ -82,18 +164,20 @@ export async function processGeneration(env: AppEnv, message: GenerationQueueMes
       `ClipQuest could not find enough teachable evidence in this video: ${classification.reason}`,
     );
   }
-  await env.DB.prepare("UPDATE videos SET education_status = 'educational', updated_at = ? WHERE id = ?")
+  await env.DB.prepare(
+    "UPDATE videos SET education_status = 'educational', updated_at = ? WHERE id = ?",
+  )
     .bind(now(), job.data.video_id)
     .run();
 
-  const generation = await generateQuiz(env, {
-    title: job.data.title,
-    language: job.data.quiz_language,
-    sessionLength: job.data.session_length,
-    watched: Boolean(job.data.watched),
-    segments: transcript.data.segments,
-  });
-  if (!await setStatus(env, { jobId: message.jobId, stage: "creating_questions", progress: 0.9 })) return;
+  if (
+    !(await setStatus(env, {
+      jobId: message.jobId,
+      stage: "creating_questions",
+      progress: 0.9,
+    }))
+  )
+    return;
   const quizId = createId();
   const timestamp = now();
   const statements = [
@@ -138,13 +222,39 @@ export async function processGeneration(env: AppEnv, message: GenerationQueueMes
   ];
   const results = await env.DB.batch(statements);
   if (!results.at(-1)?.meta.changes) {
-    await env.DB.prepare("DELETE FROM quiz_banks WHERE id = ?").bind(quizId).run();
+    await env.DB.prepare("DELETE FROM quiz_banks WHERE id = ?")
+      .bind(quizId)
+      .run();
+    logGeneration(
+      "job.cancelled_before_commit",
+      message.jobId,
+      { elapsedMs: Date.now() - startedAt },
+      "warn",
+    );
     return;
   }
+  logGeneration("job.completed", message.jobId, {
+    elapsedMs: Date.now() - startedAt,
+    quizId,
+    questionCount: generation.questions.length,
+  });
 }
 
-export async function failGeneration(env: AppEnv, jobId: string, error: unknown): Promise<void> {
+export async function failGeneration(
+  env: AppEnv,
+  jobId: string,
+  error: unknown,
+): Promise<void> {
   const apiError = error instanceof ApiError ? error : null;
+  logGeneration(
+    "job.failed",
+    jobId,
+    {
+      errorCode: apiError?.code ?? "generation_failed",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    },
+    "warn",
+  );
   await setStatus(env, {
     jobId,
     stage: "failed",
@@ -158,9 +268,20 @@ export async function failGeneration(env: AppEnv, jobId: string, error: unknown)
   });
 }
 
-export async function prepareGenerationRetry(env: AppEnv, jobId: string): Promise<boolean> {
+export async function prepareGenerationRetry(
+  env: AppEnv,
+  jobId: string,
+): Promise<boolean> {
   const updated = await env.DB.prepare(
     "UPDATE generation_jobs SET state = 'queued', stage = 'creating_questions', progress = 0, error_code = NULL, error_message = NULL, updated_at = ? WHERE id = ? AND state = 'running' AND cancel_requested = 0",
-  ).bind(now(), jobId).run();
+  )
+    .bind(now(), jobId)
+    .run();
+  logGeneration(
+    "job.retry_prepared",
+    jobId,
+    { prepared: Boolean(updated.meta.changes) },
+    "warn",
+  );
   return Boolean(updated.meta.changes);
 }

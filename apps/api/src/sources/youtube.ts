@@ -1,5 +1,9 @@
-import type { TranscriptSegment } from "@clipquest/contracts";
+import {
+  CaptionTrackSchema,
+  type TranscriptSegment,
+} from "@clipquest/contracts";
 import { Innertube } from "youtubei.js/cf-worker";
+import { z } from "zod";
 import { ApiError } from "../lib/errors";
 import type { AudioStream, SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
@@ -7,6 +11,7 @@ import { parseYouTubeId } from "./url";
 const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const YOUTUBE_AUDIO_CLIENT = "IOS" as const;
 const MAX_TIMED_TEXT_BYTES = 8 * 1024 * 1024;
+const YOUTUBE_SOURCE_CACHE_PREFIX = "source-cache/youtube";
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
 
@@ -390,6 +395,49 @@ export function parseYouTubeTimedText(value: unknown): TranscriptSegment[] {
       text: event.text,
     };
   });
+}
+
+const CachedYouTubeSourceSchema = z.object({
+  sourceVideoId: z.string().regex(/^[a-zA-Z0-9_-]{6,20}$/),
+  title: z.string().trim().min(1).max(500),
+  durationSeconds: z.number().int().nonnegative(),
+  captionTrack: CaptionTrackSchema,
+  timedText: z.unknown(),
+});
+
+export async function loadCachedYouTubeSource(
+  bucket: R2Bucket,
+  url: URL,
+): Promise<SourceVideo | null> {
+  const sourceVideoId = parseYouTubeId(url);
+  const object = await bucket.get(
+    `${YOUTUBE_SOURCE_CACHE_PREFIX}/${sourceVideoId}.json`,
+  );
+  if (!object || object.size > MAX_TIMED_TEXT_BYTES) return null;
+
+  try {
+    const cached = CachedYouTubeSourceSchema.safeParse(
+      await object.json<unknown>(),
+    );
+    if (!cached.success || cached.data.sourceVideoId !== sourceVideoId)
+      return null;
+    const segments = parseYouTubeTimedText(cached.data.timedText);
+    if (!segments.length) return null;
+
+    return {
+      source: "youtube",
+      sourceVideoId,
+      canonicalUrl: `https://www.youtube.com/watch?v=${sourceVideoId}`,
+      title: cached.data.title,
+      thumbnailUrl: `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
+      durationSeconds: cached.data.durationSeconds,
+      sourceLanguage: cached.data.captionTrack.language,
+      captionTracks: [cached.data.captionTrack],
+      preferredCaptionSegments: segments,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function selectPreferredYouTubeCaptionTrack<

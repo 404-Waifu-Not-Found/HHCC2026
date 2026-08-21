@@ -165,30 +165,66 @@ const worker = {
       const parsed = GenerationMessageSchema.safeParse(message.body);
       if (!parsed.success) {
         console.error(
-          "Discarding invalid generation queue message",
-          parsed.error,
+          JSON.stringify({
+            scope: "generation_queue",
+            event: "message.discarded",
+            reason: "invalid_payload",
+            issueCount: parsed.error.issues.length,
+          }),
         );
         message.ack();
         continue;
       }
+      console.info(
+        JSON.stringify({
+          scope: "generation_queue",
+          event: "message.received",
+          jobId: parsed.data.jobId,
+          attempt: message.attempts,
+        }),
+      );
       try {
         await processGeneration(env, parsed.data);
         message.ack();
-      } catch (error) {
-        console.error(
-          "Generation queue attempt failed",
-          message.attempts,
-          error,
+        console.info(
+          JSON.stringify({
+            scope: "generation_queue",
+            event: "message.acknowledged",
+            jobId: parsed.data.jobId,
+            attempt: message.attempts,
+          }),
         );
+      } catch (error) {
         const nonRetryable = error instanceof ApiError && error.status === 422;
+        console.error(
+          JSON.stringify({
+            scope: "generation_queue",
+            event: "message.failed",
+            jobId: parsed.data.jobId,
+            attempt: message.attempts,
+            errorCode:
+              error instanceof ApiError ? error.code : "generation_failed",
+            errorName: error instanceof Error ? error.name : "UnknownError",
+            nonRetryable,
+          }),
+        );
         if (nonRetryable || message.attempts >= 3) {
           await failGeneration(env, parsed.data.jobId, error);
           message.ack();
         } else {
           const prepared = await prepareGenerationRetry(env, parsed.data.jobId);
-          if (prepared)
+          if (prepared) {
+            console.warn(
+              JSON.stringify({
+                scope: "generation_queue",
+                event: "message.retry_scheduled",
+                jobId: parsed.data.jobId,
+                attempt: message.attempts,
+                delaySeconds: Math.min(60, 5 * message.attempts),
+              }),
+            );
             message.retry({ delaySeconds: Math.min(60, 5 * message.attempts) });
-          else message.ack();
+          } else message.ack();
         }
       }
     }

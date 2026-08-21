@@ -10,6 +10,7 @@ import { cacheThumbnail } from "../lib/thumbnail";
 import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 import { getSourceAdapter, normalizeSourceUrl } from "../sources";
+import { loadCachedYouTubeSource } from "../sources/youtube";
 import { ApiError } from "../lib/errors";
 
 type VideoRow = {
@@ -37,7 +38,11 @@ videosRouter.post("/import", async (c) => {
   });
   const input = await parseJson(c, VideoImportRequestSchema);
   const normalized = await normalizeSourceUrl(input.url);
-  const inspected = await getSourceAdapter(normalized.source).inspect(normalized.url);
+  const inspected =
+    (normalized.source === "youtube"
+      ? await loadCachedYouTubeSource(c.env.PRIVATE_BUCKET, normalized.url)
+      : null) ??
+    (await getSourceAdapter(normalized.source).inspect(normalized.url));
   const existing = await c.env.DB.prepare(
     "SELECT id, source, source_video_id, original_url, title, thumbnail_key, thumbnail_remote_url, duration_seconds, source_language FROM videos WHERE owner_id = ? AND source = ? AND source_video_id = ?",
   )
@@ -46,8 +51,10 @@ videosRouter.post("/import", async (c) => {
 
   const timestamp = now();
   const videoId = existing?.id ?? createId();
-  const durationSeconds = inspected.durationSeconds || existing?.duration_seconds || 0;
-  const sourceLanguage = inspected.sourceLanguage ?? existing?.source_language ?? null;
+  const durationSeconds =
+    inspected.durationSeconds || existing?.duration_seconds || 0;
+  const sourceLanguage =
+    inspected.sourceLanguage ?? existing?.source_language ?? null;
   if (existing) {
     await c.env.DB.prepare(
       "UPDATE videos SET original_url = ?, title = ?, thumbnail_remote_url = ?, duration_seconds = ?, source_language = ?, updated_at = ? WHERE id = ? AND owner_id = ?",
@@ -83,8 +90,12 @@ videosRouter.post("/import", async (c) => {
       .run();
   }
 
-  c.executionCtx.waitUntil(cacheThumbnail(c.env, videoId, inspected.thumbnailUrl));
-  const preferredSegments = inspected.preferredCaptionSegments?.filter((segment) => segment.text.trim().length > 0);
+  c.executionCtx.waitUntil(
+    cacheThumbnail(c.env, videoId, inspected.thumbnailUrl),
+  );
+  const preferredSegments = inspected.preferredCaptionSegments?.filter(
+    (segment) => segment.text.trim().length > 0,
+  );
   const response = VideoImportResponseSchema.parse({
     video: {
       id: videoId,
@@ -120,7 +131,10 @@ thumbnailRouter.get("/:videoId/thumbnail", async (c) => {
       const headers = new Headers();
       object.writeHttpMetadata(headers);
       headers.set("ETag", object.httpEtag);
-      headers.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      headers.set(
+        "Cache-Control",
+        "public, max-age=86400, stale-while-revalidate=604800",
+      );
       return new Response(object.body, { headers });
     }
   }

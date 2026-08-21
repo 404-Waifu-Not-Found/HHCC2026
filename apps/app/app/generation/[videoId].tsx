@@ -475,7 +475,7 @@ async function pollGeneration(
     if (status.stage === "complete" && status.quizId) return status.quizId;
     if (status.stage === "failed")
       throw new Error(status.error?.message ?? timeoutMessage);
-    await wait(1_500, signal);
+    await wait(500, signal);
   }
   throw new TranscriptionPausedError();
 }
