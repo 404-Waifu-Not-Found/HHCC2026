@@ -290,11 +290,13 @@ export function MotionProgressFill({
   color,
   children,
   duration = motion.route,
+  linear = false,
   style,
 }: PropsWithChildren<{
   progress: number;
   color: string;
   duration?: number;
+  linear?: boolean;
   style?: StyleProp<ViewStyle>;
 }>) {
   const { reduceMotion } = useSettings();
@@ -306,9 +308,9 @@ export function MotionProgressFill({
       ? next
       : withTiming(next, {
           duration,
-          easing: easing(motion.easing.emphasized),
+          easing: linear ? Easing.linear : easing(motion.easing.emphasized),
         });
-  }, [duration, progress, reduceMotion, value]);
+  }, [duration, linear, progress, reduceMotion, value]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: value.value }],

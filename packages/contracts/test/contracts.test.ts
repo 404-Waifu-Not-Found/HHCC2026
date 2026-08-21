@@ -109,7 +109,7 @@ describe("admin contracts", () => {
           supportedPromptVersion: "quiz-local-json-stream-v5.12",
           supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
           effectiveDefaultProfile: "legacy_reasoning_v5_1",
-          requiredExtensionVersion: "0.8.17",
+          requiredExtensionVersion: "0.8.31",
           requiredCapability: "question-stream-v7",
           states: {
             generating: 1,
@@ -259,11 +259,11 @@ describe("generated questions", () => {
     expect(
       QuizGenerationProfileResponseSchema.parse({
         generationProfile: "prompt_first_auto_v5_12",
-        minimumExtensionVersion: "0.8.17",
+        minimumExtensionVersion: "0.8.26",
         requiredCapability: "question-stream-v7",
         clientRequirements: {
           chromeExtension: {
-            minimumVersion: "0.8.17",
+            minimumVersion: "0.8.26",
             requiredCapability: "question-stream-v7",
           },
           androidApp: {
@@ -275,11 +275,18 @@ describe("generated questions", () => {
     ).toBe("0.2.0");
   });
 
-  it("binds rollout profiles to their exact extension contracts", () => {
+  it("accepts rolling patch requirements only when the wire contract matches", () => {
     expect(
       QuizGenerationProfileResponseSchema.safeParse({
         generationProfile: "stable_non_thinking_v5_2",
-        minimumExtensionVersion: "0.8.2",
+        minimumExtensionVersion: "0.8.30",
+        requiredCapability: "question-stream-v2",
+      }).success,
+    ).toBe(true);
+    expect(
+      QuizGenerationProfileResponseSchema.safeParse({
+        generationProfile: "stable_non_thinking_v5_2",
+        minimumExtensionVersion: "0.8.31",
         requiredCapability: "question-stream-v2",
       }).success,
     ).toBe(true);
@@ -433,6 +440,7 @@ describe("generated questions", () => {
         state: "generating",
         availableQuestions: 3,
         totalQuestions: 10,
+        retryAvailable: false,
       }).success,
     ).toBe(true);
     expect(
@@ -456,6 +464,23 @@ describe("generated questions", () => {
         availableQuestions: 3,
         totalQuestions: 10,
         reasonCode: "generation_stalled",
+      }).success,
+    ).toBe(false);
+    const lateRefill = {
+      state: "retrying",
+      availableQuestions: 8,
+      totalQuestions: 10,
+      retryOrdinal: 9,
+      ordinalAttempt: 24,
+      retryKind: "content_repair",
+    } as const;
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse(lateRefill).success,
+    ).toBe(true);
+    expect(
+      AttemptGenerationAvailabilitySchema.safeParse({
+        ...lateRefill,
+        ordinalAttempt: 25,
       }).success,
     ).toBe(false);
   });
@@ -619,6 +644,31 @@ describe("generated questions", () => {
         usageComplete: true,
       }).success,
     ).toBe(true);
+    for (const outcome of [
+      "source_grounding_invalid",
+      "retry_question_invalid",
+      "true_false_compound_claim",
+    ]) {
+      expect(
+        LocalGenerationCallEventSchema.safeParse({
+          protocolVersion: 10,
+          purpose: "generation",
+          lifecycleState: "completed",
+          generationSessionId: "22222222-2222-4222-8222-222222222222",
+          recoverySessionId: "33333333-3333-4333-8333-333333333333",
+          callIndex: 3,
+          startIndex: 1,
+          ordinalAttempt: 1,
+          requestedCount: 1,
+          acceptedCount: 0,
+          classification: "primary",
+          outcome,
+          retryDelayMs: 200,
+          elapsedMs: 900,
+          usageComplete: false,
+        }).success,
+      ).toBe(true);
+    }
     expect(
       LocalGenerationCallEventSchema.safeParse({
         protocolVersion: 5,

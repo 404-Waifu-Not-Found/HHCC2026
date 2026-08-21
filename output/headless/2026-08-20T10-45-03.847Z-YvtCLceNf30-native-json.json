@@ -1,0 +1,2220 @@
+{
+  "runId": "aa531c1b-a2ff-4cd2-8207-96770e6b7223",
+  "source": {
+    "videoId": "YvtCLceNf30",
+    "title": "Intro to History of Science: Crash Course History of Science #1",
+    "language": "en",
+    "durationSeconds": 734,
+    "segments": [
+      {
+        "id": "youtube-json3-0-5320",
+        "startMs": 5320,
+        "endMs": 9380,
+        "text": "Hello, and welcome to our new series—Crash Course: History of Science."
+      },
+      {
+        "id": "youtube-json3-1-9380",
+        "startMs": 9380,
+        "endMs": 13520,
+        "text": "My name is Hank Green, and I’ve wanted to produce this course for years."
+      },
+      {
+        "id": "youtube-json3-2-13520",
+        "startMs": 13520,
+        "endMs": 18279,
+        "text": "I’m obsessed with how people throughout the ages have uncovered truths about the universe"
+      },
+      {
+        "id": "youtube-json3-3-18279",
+        "startMs": 18279,
+        "endMs": 21999,
+        "text": "and converted these into a wealth of technological wonders."
+      },
+      {
+        "id": "youtube-json3-4-21999",
+        "startMs": 21999,
+        "endMs": 26569,
+        "text": "This process has decreased the suffering of millions of humans—even as it’s sparked"
+      },
+      {
+        "id": "youtube-json3-5-26569",
+        "startMs": 26569,
+        "endMs": 28140,
+        "text": "entirely new problems."
+      },
+      {
+        "id": "youtube-json3-6-28140",
+        "startMs": 28140,
+        "endMs": 32369,
+        "text": "Regardless of the outcomes of scientific inquiry, the process itself is fascinating."
+      },
+      {
+        "id": "youtube-json3-7-32369",
+        "startMs": 32369,
+        "endMs": 36940,
+        "text": "The world you inhabit today is full of gadgets that once belonged to science fiction."
+      },
+      {
+        "id": "youtube-json3-8-36940",
+        "startMs": 36940,
+        "endMs": 41609,
+        "text": "We can model what the earth looked like millions of years ago, or zoom in and observe the atoms"
+      },
+      {
+        "id": "youtube-json3-9-41609",
+        "startMs": 41609,
+        "endMs": 43190,
+        "text": "that make up our own bodies."
+      },
+      {
+        "id": "youtube-json3-10-43190",
+        "startMs": 43190,
+        "endMs": 47660,
+        "text": "We are going to tell that inspiring story: we’ll be thinking about thinking with Aristotle,"
+      },
+      {
+        "id": "youtube-json3-11-47660",
+        "startMs": 47660,
+        "endMs": 49379,
+        "text": "digging canals in Song Dynasty China,"
+      },
+      {
+        "id": "youtube-json3-12-49379",
+        "startMs": 49379,
+        "endMs": 51989,
+        "text": "listening to robot musicians in medieval Turkey,"
+      },
+      {
+        "id": "youtube-json3-13-51989",
+        "startMs": 51989,
+        "endMs": 53890,
+        "text": "fighting an electrical war in New York City,"
+      },
+      {
+        "id": "youtube-json3-14-53890",
+        "startMs": 53890,
+        "endMs": 57579,
+        "text": "and discovering the shape of DNA in Cold War England."
+      },
+      {
+        "id": "youtube-json3-15-57579",
+        "startMs": 57579,
+        "endMs": 62179,
+        "text": "But the history of science is not only a story of humanity’s collective movement from ignorance"
+      },
+      {
+        "id": "youtube-json3-16-62179",
+        "startMs": 62179,
+        "endMs": 64420,
+        "text": "to knowledge, for two different reasons."
+      },
+      {
+        "id": "youtube-json3-17-64420",
+        "startMs": 64420,
+        "endMs": 70390,
+        "text": "First, as much as scientists today may not like to admit it, we are still pretty ignorant…"
+      },
+      {
+        "id": "youtube-json3-18-70390",
+        "startMs": 70390,
+        "endMs": 75229,
+        "text": "And we don’t agree on what it would mean to reach the ultimate Truth, capital T."
+      },
+      {
+        "id": "youtube-json3-19-75229",
+        "startMs": 75229,
+        "endMs": 79880,
+        "text": "Take a big question that we've been asking for a long time like “what is stuff”:"
+      },
+      {
+        "id": "youtube-json3-20-79880",
+        "startMs": 79880,
+        "endMs": 81580,
+        "text": "While modern physicists will tell you that"
+      },
+      {
+        "id": "youtube-json3-21-81580",
+        "startMs": 81580,
+        "endMs": 85660,
+        "text": "stuff is made of atoms, and atoms are made of quarks and leptons, we still don’t know"
+      },
+      {
+        "id": "youtube-json3-22-85660",
+        "startMs": 85660,
+        "endMs": 87560,
+        "text": "why quarks exist."
+      },
+      {
+        "id": "youtube-json3-23-87560",
+        "startMs": 87560,
+        "endMs": 91869,
+        "text": "Or why there appears to be far more matter in the universe than we can account for."
+      },
+      {
+        "id": "youtube-json3-24-91869",
+        "startMs": 91869,
+        "endMs": 95840,
+        "text": "Even something as basic as “stuff” needs a lot more sciencing!"
+      },
+      {
+        "id": "youtube-json3-25-95840",
+        "startMs": 95840,
+        "endMs": 102079,
+        "text": "Second, and more importantly for historians, “science” isn’t a stable or single idea."
+      },
+      {
+        "id": "youtube-json3-26-102079",
+        "startMs": 102079,
+        "endMs": 105590,
+        "text": "That’s why, in this episode, we’re going to be thinking about some ways to answer a deceptively"
+      },
+      {
+        "id": "youtube-json3-27-105590",
+        "startMs": 105590,
+        "endMs": 107200,
+        "text": "simple question:"
+      },
+      {
+        "id": "youtube-json3-28-107200",
+        "startMs": 107200,
+        "endMs": 111600,
+        "text": "what is the history of science the history of?"
+      },
+      {
+        "id": "youtube-json3-30-119480",
+        "startMs": 119480,
+        "endMs": 123829,
+        "text": "Today, “science” can mean both our body of knowledge about the world as well as the"
+      },
+      {
+        "id": "youtube-json3-31-123829",
+        "startMs": 123829,
+        "endMs": 128230,
+        "text": "methods we use to create that knowledge, or how we know the stuff that we know."
+      },
+      {
+        "id": "youtube-json3-32-128230",
+        "startMs": 128230,
+        "endMs": 133140,
+        "text": "Within that “how,” there are two main practices—things that we do—that systematically"
+      },
+      {
+        "id": "youtube-json3-33-133140",
+        "startMs": 133140,
+        "endMs": 134660,
+        "text": "generate knowledge:"
+      },
+      {
+        "id": "youtube-json3-34-134660",
+        "startMs": 134660,
+        "endMs": 137580,
+        "text": "One: observe some specific aspect of the world."
+      },
+      {
+        "id": "youtube-json3-35-137580",
+        "startMs": 137580,
+        "endMs": 141670,
+        "text": "For example, Darwin spent decades obsessively observing the subtle variations in different"
+      },
+      {
+        "id": "youtube-json3-36-141670",
+        "startMs": 141670,
+        "endMs": 145200,
+        "text": "kinds of barnacles, orchids, turtles, birds, and other living things."
+      },
+      {
+        "id": "youtube-json3-37-145200",
+        "startMs": 145200,
+        "endMs": 148070,
+        "text": "This led him to theorize how they had changed over time."
+      },
+      {
+        "id": "youtube-json3-38-148070",
+        "startMs": 148070,
+        "endMs": 150170,
+        "text": "My dude loved barnacles!"
+      },
+      {
+        "id": "youtube-json3-39-150170",
+        "startMs": 150170,
+        "endMs": 154240,
+        "text": "Two: conduct an experiment to answer some question about the world."
+      },
+      {
+        "id": "youtube-json3-40-154240",
+        "startMs": 154240,
+        "endMs": 158130,
+        "text": "Did Galileo drop two metal balls of different masses from the Leaning Tower of Pisa, to"
+      },
+      {
+        "id": "youtube-json3-41-158130",
+        "startMs": 158130,
+        "endMs": 162430,
+        "text": "show that they fall at the same rate and disprove Aristotle’s theory of gravity?"
+      },
+      {
+        "id": "youtube-json3-42-162430",
+        "startMs": 162430,
+        "endMs": 163430,
+        "text": "Probably not."
+      },
+      {
+        "id": "youtube-json3-43-163430",
+        "startMs": 163430,
+        "endMs": 168000,
+        "text": "But Dutch thinkers Simon Stevin and Jan Cornets de Groot did conduct that experiment soon after."
+      },
+      {
+        "id": "youtube-json3-44-168060",
+        "startMs": 168060,
+        "endMs": 172640,
+        "text": "Today, we have much bigger “towers” for testing theories in physics: the Large Hadron"
+      },
+      {
+        "id": "youtube-json3-45-172640",
+        "startMs": 172640,
+        "endMs": 174630,
+        "text": "Collider is seventeen miles long!"
+      },
+      {
+        "id": "youtube-json3-46-174630",
+        "startMs": 174630,
+        "endMs": 180980,
+        "text": "Finally, when I said systematically, I meant that there are rules about observing or experimenting—rules"
+      },
+      {
+        "id": "youtube-json3-47-180980",
+        "startMs": 180980,
+        "endMs": 182250,
+        "text": "that anyone can follow."
+      },
+      {
+        "id": "youtube-json3-48-182250",
+        "startMs": 182250,
+        "endMs": 185690,
+        "text": "That notion of anyone being able to be a scientist is super important."
+      },
+      {
+        "id": "youtube-json3-49-185690",
+        "startMs": 185690,
+        "endMs": 190940,
+        "text": "In fact, a lot of contemporary scientists have three Latin words tattooed on their arms:"
+      },
+      {
+        "id": "youtube-json3-50-190940",
+        "startMs": 190940,
+        "endMs": 194540,
+        "text": "“NULLIUS IN VERBA”—“on no one’s word…”"
+      },
+      {
+        "id": "youtube-json3-51-194540",
+        "startMs": 194540,
+        "endMs": 197360,
+        "text": "Let’s explore this phrase because it's important."
+      },
+      {
+        "id": "youtube-json3-52-197360",
+        "startMs": 197360,
+        "endMs": 201380,
+        "text": "In this series, The Thoughtbubble is going to bring to life different wonders from the"
+      },
+      {
+        "id": "youtube-json3-53-201380",
+        "startMs": 201380,
+        "endMs": 202550,
+        "text": "history of science."
+      },
+      {
+        "id": "youtube-json3-54-202550",
+        "startMs": 202550,
+        "endMs": 207750,
+        "text": "Today, our wonder is pretty abstract: the wonder of the reproducible experiment."
+      },
+      {
+        "id": "youtube-json3-55-207750",
+        "startMs": 207750,
+        "endMs": 210850,
+        "text": "“NULLIUS IN VERBA” is the motto of the Royal Society."
+      },
+      {
+        "id": "youtube-json3-56-210850",
+        "startMs": 210850,
+        "endMs": 216290,
+        "text": "This group of knowledge-makers was founded in 1660 as a “College for the Promoting"
+      },
+      {
+        "id": "youtube-json3-57-216290",
+        "startMs": 216290,
+        "endMs": 222090,
+        "text": "of Physico-Mathematical Experimental Learning” and re-founded in 1663 as “the Royal Society"
+      },
+      {
+        "id": "youtube-json3-58-222090",
+        "startMs": 222090,
+        "endMs": 224810,
+        "text": "of London for the Improvement of Natural Knowledge.”"
+      },
+      {
+        "id": "youtube-json3-59-224810",
+        "startMs": 224810,
+        "endMs": 226430,
+        "text": "And it’s still around today!"
+      },
+      {
+        "id": "youtube-json3-60-226430",
+        "startMs": 226430,
+        "endMs": 230540,
+        "text": "The Society was started as a place to debate new ideas about nature."
+      },
+      {
+        "id": "youtube-json3-61-230540",
+        "startMs": 230540,
+        "endMs": 235150,
+        "text": "Its members demonstrated experiments in front of each other—“witnessing” the proofs"
+      },
+      {
+        "id": "youtube-json3-62-235150",
+        "startMs": 235150,
+        "endMs": 236870,
+        "text": "behind their theories."
+      },
+      {
+        "id": "youtube-json3-63-236870",
+        "startMs": 236870,
+        "endMs": 241400,
+        "text": "They wrote up these theories in the Society’s Philosophical Transactions, one of the world’s"
+      },
+      {
+        "id": "youtube-json3-64-241400",
+        "startMs": 241400,
+        "endMs": 243620,
+        "text": "oldest peer-reviewed scientific journals."
+      },
+      {
+        "id": "youtube-json3-65-243620",
+        "startMs": 243620,
+        "endMs": 247250,
+        "text": "Influenced by Francis Bacon’s ideas, which would eventually become associated with the"
+      },
+      {
+        "id": "youtube-json3-66-247250",
+        "startMs": 247250,
+        "endMs": 251670,
+        "text": "“scientific method,” the founding members of the Royal Society chose a motto with an"
+      },
+      {
+        "id": "youtube-json3-67-251670",
+        "startMs": 251670,
+        "endMs": 253130,
+        "text": "unambiguous meaning:"
+      },
+      {
+        "id": "youtube-json3-68-253130",
+        "startMs": 253130,
+        "endMs": 257180,
+        "text": "don’t believe something just because someone tells you it’s true."
+      },
+      {
+        "id": "youtube-json3-69-257180",
+        "startMs": 257180,
+        "endMs": 260459,
+        "text": "Test out each new hypothesis, or educated guess, yourself."
+      },
+      {
+        "id": "youtube-json3-70-260459",
+        "startMs": 260459,
+        "endMs": 265439,
+        "text": "In other words: your individual proof of how some natural phenomenon works should be something"
+      },
+      {
+        "id": "youtube-json3-71-265439",
+        "startMs": 265439,
+        "endMs": 267180,
+        "text": "that anyone can reproduce."
+      },
+      {
+        "id": "youtube-json3-72-267180",
+        "startMs": 267180,
+        "endMs": 270849,
+        "text": "This idea had an enormous impact on the history of science."
+      },
+      {
+        "id": "youtube-json3-73-270849",
+        "startMs": 270849,
+        "endMs": 275620,
+        "text": "Later members of the Royal Society included stars such as Ike Newton, Ben Franklin, Mike"
+      },
+      {
+        "id": "youtube-json3-74-275620",
+        "startMs": 275620,
+        "endMs": 280759,
+        "text": "Faraday, Chuck Darwin, and even Big Al Einstein, who was about as British as sauerkraut."
+      },
+      {
+        "id": "youtube-json3-75-280759",
+        "startMs": 280759,
+        "endMs": 285900,
+        "text": "In fact—plot twist!—the early scientists who adopted the creed “NULLIUS IN VERBA”"
+      },
+      {
+        "id": "youtube-json3-76-285900",
+        "startMs": 285900,
+        "endMs": 287960,
+        "text": "were not actually “scientists.”"
+      },
+      {
+        "id": "youtube-json3-77-287960",
+        "startMs": 287960,
+        "endMs": 291200,
+        "text": "They were well-off alchemists and medical doctors,"
+      },
+      {
+        "id": "youtube-json3-78-291200",
+        "startMs": 291200,
+        "endMs": 293800,
+        "text": "and they called themselves Natural Philosophers."
+      },
+      {
+        "id": "youtube-json3-79-293800",
+        "startMs": 293800,
+        "endMs": 297320,
+        "text": "Or, \"People who loved truths concerning the world around them.\""
+      },
+      {
+        "id": "youtube-json3-80-297360",
+        "startMs": 297360,
+        "endMs": 300920,
+        "text": "Natural philosophy in seventeenth-century England was sort of like the contemporary"
+      },
+      {
+        "id": "youtube-json3-81-300949",
+        "startMs": 300949,
+        "endMs": 306090,
+        "text": "natural sciences mashed up with medicine, mathematics, some philosophy–philosophy,"
+      },
+      {
+        "id": "youtube-json3-82-306090",
+        "startMs": 306090,
+        "endMs": 307370,
+        "text": "and a whiff of religion."
+      },
+      {
+        "id": "youtube-json3-83-307370",
+        "startMs": 307370,
+        "endMs": 312439,
+        "text": "The word “scientist” was only coined recently, in historical terms, in the 1830s, and caught"
+      },
+      {
+        "id": "youtube-json3-84-312439",
+        "startMs": 312439,
+        "endMs": 313780,
+        "text": "on around 1840."
+      },
+      {
+        "id": "youtube-json3-85-313780",
+        "startMs": 313780,
+        "endMs": 318379,
+        "text": "It was made up by an English scientist named William Whewell who was also a historian of"
+      },
+      {
+        "id": "youtube-json3-86-318379",
+        "startMs": 318379,
+        "endMs": 319379,
+        "text": "science and a priest."
+      },
+      {
+        "id": "youtube-json3-87-319379",
+        "startMs": 319379,
+        "endMs": 323900,
+        "text": "So if we only cared about the history of people called “scientists,” our job would be"
+      },
+      {
+        "id": "youtube-json3-88-323900",
+        "startMs": 323900,
+        "endMs": 326789,
+        "text": "easy: there aren’t any until around 1840!"
+      },
+      {
+        "id": "youtube-json3-89-326789",
+        "startMs": 326789,
+        "endMs": 331569,
+        "text": "And most people called scientists, or natural philosophers, looked suspiciously similar"
+      },
+      {
+        "id": "youtube-json3-90-331569",
+        "startMs": 331569,
+        "endMs": 332569,
+        "text": "to one another."
+      },
+      {
+        "id": "youtube-json3-91-332569",
+        "startMs": 332569,
+        "endMs": 337539,
+        "text": "Take the Royal Society: its members have been, until recently, almost exclusively rich English"
+      },
+      {
+        "id": "youtube-json3-92-337539",
+        "startMs": 337539,
+        "endMs": 338539,
+        "text": "men."
+      },
+      {
+        "id": "youtube-json3-93-338539",
+        "startMs": 338539,
+        "endMs": 341449,
+        "text": "Even though their ranks have included many incredibly clever scientists, they haven’t"
+      },
+      {
+        "id": "youtube-json3-94-341449",
+        "startMs": 341449,
+        "endMs": 344050,
+        "text": "represented anything like all knowledge makers."
+      },
+      {
+        "id": "youtube-json3-95-344050",
+        "startMs": 344050,
+        "endMs": 348699,
+        "text": "The sixty-second President of the Royal Society, biophysicist Venkatraman Ramakrishnan, is"
+      },
+      {
+        "id": "youtube-json3-96-348699",
+        "startMs": 348699,
+        "endMs": 350750,
+        "text": "the group’s first non-white leader."
+      },
+      {
+        "id": "youtube-json3-97-350750",
+        "startMs": 350750,
+        "endMs": 352919,
+        "text": "And there has never been a female President."
+      },
+      {
+        "id": "youtube-json3-98-352919",
+        "startMs": 352919,
+        "endMs": 357560,
+        "text": "But the history of systematically knowing stuff goes back much further than the Royal"
+      },
+      {
+        "id": "youtube-json3-99-357560",
+        "startMs": 357560,
+        "endMs": 361909,
+        "text": "Society and includes more types of people than English blokes."
+      },
+      {
+        "id": "youtube-json3-100-361909",
+        "startMs": 361909,
+        "endMs": 366879,
+        "text": "Thus “science” is a historical and social concept—not one that’s existed forever,"
+      },
+      {
+        "id": "youtube-json3-101-366879",
+        "startMs": 366879,
+        "endMs": 368889,
+        "text": "in the same way for all people."
+      },
+      {
+        "id": "youtube-json3-102-368889",
+        "startMs": 368889,
+        "endMs": 372939,
+        "text": "Because the history of science includes many systems of understanding the world, we have"
+      },
+      {
+        "id": "youtube-json3-103-372939",
+        "startMs": 372939,
+        "endMs": 376020,
+        "text": "to consider these systems on their own terms."
+      },
+      {
+        "id": "youtube-json3-104-376020",
+        "startMs": 376020,
+        "endMs": 379819,
+        "text": "It may seem simpler to focus on the “winners” of history."
+      },
+      {
+        "id": "youtube-json3-105-379819",
+        "startMs": 379819,
+        "endMs": 385159,
+        "text": "But hearing only the big Euroamerican names—Plato, Einstein—doesn’t teach us as much about"
+      },
+      {
+        "id": "youtube-json3-106-385159",
+        "startMs": 385159,
+        "endMs": 387319,
+        "text": "our global system of science today."
+      },
+      {
+        "id": "youtube-json3-107-387319",
+        "startMs": 387319,
+        "endMs": 392710,
+        "text": "Taking the time to highlight different knowledge worlds will help us see our own as relatively"
+      },
+      {
+        "id": "youtube-json3-108-392710",
+        "startMs": 392710,
+        "endMs": 395909,
+        "text": "recent, not entirely unified, and evolving."
+      },
+      {
+        "id": "youtube-json3-109-395909",
+        "startMs": 395909,
+        "endMs": 401340,
+        "text": "For example, we’ll learn about the Greco-Latin-Jewish-Arabic medicine of the medieval Mediterranean world,"
+      },
+      {
+        "id": "youtube-json3-110-401340",
+        "startMs": 401340,
+        "endMs": 404150,
+        "text": "millennia of ayurvedic knowledge across the"
+      },
+      {
+        "id": "youtube-json3-111-404150",
+        "startMs": 404150,
+        "endMs": 408370,
+        "text": "Subcontinent, traditional Chinese medicine, and Incan “talking knots” and engineering—just"
+      },
+      {
+        "id": "youtube-json3-112-408370",
+        "startMs": 408370,
+        "endMs": 409849,
+        "text": "to name a few."
+      },
+      {
+        "id": "youtube-json3-113-409849",
+        "startMs": 409849,
+        "endMs": 415430,
+        "text": "Each of these systems has its own social norms about what count as valid ways to make and"
+      },
+      {
+        "id": "youtube-json3-114-415430",
+        "startMs": 415430,
+        "endMs": 416500,
+        "text": "share knowledge."
+      },
+      {
+        "id": "youtube-json3-115-416500",
+        "startMs": 416500,
+        "endMs": 418860,
+        "text": "We’ll look at modern scientific norms in a later episode."
+      },
+      {
+        "id": "youtube-json3-116-418860",
+        "startMs": 418860,
+        "endMs": 424180,
+        "text": "And each of these can help us see the “otherness” of these past or different cultures as not"
+      },
+      {
+        "id": "youtube-json3-117-424180",
+        "startMs": 424180,
+        "endMs": 425759,
+        "text": "so other, after all."
+      },
+      {
+        "id": "youtube-json3-118-425759",
+        "startMs": 425759,
+        "endMs": 431779,
+        "text": "We can see natural philosophers and other proto-scientists as smart people making sense"
+      },
+      {
+        "id": "youtube-json3-119-431779",
+        "startMs": 431779,
+        "endMs": 434599,
+        "text": "of their world, not as “bad” scientists."
+      },
+      {
+        "id": "youtube-json3-120-434599",
+        "startMs": 434599,
+        "endMs": 437740,
+        "text": "They understood the world around them in the smartest way they could."
+      },
+      {
+        "id": "youtube-json3-121-437740",
+        "startMs": 437740,
+        "endMs": 442400,
+        "text": "For example, according to medieval Mediterranean medicine, the organ in my head was for venting"
+      },
+      {
+        "id": "youtube-json3-122-442400",
+        "startMs": 442400,
+        "endMs": 444449,
+        "text": "waste heat, not thinking."
+      },
+      {
+        "id": "youtube-json3-123-444449",
+        "startMs": 444449,
+        "endMs": 447620,
+        "text": "People in the past weren’t stupid: they knew that if your head was chopped off, that"
+      },
+      {
+        "id": "youtube-json3-124-447620",
+        "startMs": 447620,
+        "endMs": 448810,
+        "text": "was curtains for you."
+      },
+      {
+        "id": "youtube-json3-125-448810",
+        "startMs": 448810,
+        "endMs": 451570,
+        "text": "They just weren’t sure what all this weird gray stuff did."
+      },
+      {
+        "id": "youtube-json3-126-451570",
+        "startMs": 451570,
+        "endMs": 456240,
+        "text": "Even today—though we can see a neuron fire in high-resolution—we struggle to understand"
+      },
+      {
+        "id": "youtube-json3-127-456240",
+        "startMs": 456240,
+        "endMs": 461249,
+        "text": "what really goes on when it fires, that is, the role a single neuron plays in thinking…"
+      },
+      {
+        "id": "youtube-json3-128-461249",
+        "startMs": 461249,
+        "endMs": 464449,
+        "text": "much less answer the question, what is consciousness."
+      },
+      {
+        "id": "youtube-json3-129-464449",
+        "startMs": 464449,
+        "endMs": 469190,
+        "text": "The history of science really gets even juicier when incremental, nagging questions about"
+      },
+      {
+        "id": "youtube-json3-130-469190",
+        "startMs": 469190,
+        "endMs": 474569,
+        "text": "the natural world add up and cause a scientific discipline, or an entire society, to change"
+      },
+      {
+        "id": "youtube-json3-131-474569",
+        "startMs": 474569,
+        "endMs": 476479,
+        "text": "in a “revolutionary” way."
+      },
+      {
+        "id": "youtube-json3-132-476479",
+        "startMs": 476479,
+        "endMs": 480099,
+        "text": "Later in the series, we’ll look at moments of revolution within the sciences alongside"
+      },
+      {
+        "id": "youtube-json3-133-480099",
+        "startMs": 480099,
+        "endMs": 485629,
+        "text": "philosophers such as Thomas Kuhn and Michel Foucault, who... did not always agree."
+      },
+      {
+        "id": "youtube-json3-134-485629",
+        "startMs": 485629,
+        "endMs": 491099,
+        "text": "They show that science isn’t only historical and social, but constructs entire worlds of"
+      },
+      {
+        "id": "youtube-json3-135-491099",
+        "startMs": 491099,
+        "endMs": 494509,
+        "text": "knowledge in which we all find ourselves trapped."
+      },
+      {
+        "id": "youtube-json3-136-494509",
+        "startMs": 494509,
+        "endMs": 496580,
+        "text": "But don’t worry about that just yet."
+      },
+      {
+        "id": "youtube-json3-137-496580",
+        "startMs": 496580,
+        "endMs": 499629,
+        "text": "By learning the history of science, we will automatically start to think about our own"
+      },
+      {
+        "id": "youtube-json3-138-499629",
+        "startMs": 499629,
+        "endMs": 503940,
+        "text": "knowledge world as historical—not finished, not capital-E enlightened."
+      },
+      {
+        "id": "youtube-json3-139-503940",
+        "startMs": 503940,
+        "endMs": 508020,
+        "text": "Around the world, humans are still actively working to understand our universe… but"
+      },
+      {
+        "id": "youtube-json3-140-508020",
+        "startMs": 508020,
+        "endMs": 510129,
+        "text": "they don’t all agree on how to do it."
+      },
+      {
+        "id": "youtube-json3-141-510129",
+        "startMs": 510129,
+        "endMs": 514890,
+        "text": "We may be able to make more accurate models of natural phenomena… but we may never find"
+      },
+      {
+        "id": "youtube-json3-142-514890",
+        "startMs": 514890,
+        "endMs": 516680,
+        "text": "the ultimate answers we seek."
+      },
+      {
+        "id": "youtube-json3-143-516680",
+        "startMs": 516680,
+        "endMs": 522150,
+        "text": "At its limit, the history of science touches on the study of religion: the diverse and"
+      },
+      {
+        "id": "youtube-json3-144-522150",
+        "startMs": 522150,
+        "endMs": 526690,
+        "text": "changing nature of the never-ending human search for Truth, capital T."
+      },
+      {
+        "id": "youtube-json3-145-526690",
+        "startMs": 526690,
+        "endMs": 531220,
+        "text": "Our path through past knowledge worlds is going to be a beautiful and powerful one."
+      },
+      {
+        "id": "youtube-json3-146-531220",
+        "startMs": 531220,
+        "endMs": 534820,
+        "text": "There are many, many marvelous insights to celebrate."
+      },
+      {
+        "id": "youtube-json3-147-534820",
+        "startMs": 534820,
+        "endMs": 539010,
+        "text": "To help us keep our footing as we jump across centuries and continents, we’re going to"
+      },
+      {
+        "id": "youtube-json3-148-539010",
+        "startMs": 539010,
+        "endMs": 543100,
+        "text": "keep our eyes on five big questions."
+      },
+      {
+        "id": "youtube-json3-149-543100",
+        "startMs": 543100,
+        "endMs": 546970,
+        "text": "Questions that, to this day, we do not have complete answers to."
+      },
+      {
+        "id": "youtube-json3-150-546970",
+        "startMs": 546970,
+        "endMs": 549070,
+        "text": "First: what is stuff?"
+      },
+      {
+        "id": "youtube-json3-151-549070",
+        "startMs": 549070,
+        "endMs": 552760,
+        "text": "From atoms to dark matter to spacetime: what are things made of?"
+      },
+      {
+        "id": "youtube-json3-152-552760",
+        "startMs": 552760,
+        "endMs": 556450,
+        "text": "“Things,” by the way, includes air, fire, and outer space:"
+      },
+      {
+        "id": "youtube-json3-153-556450",
+        "startMs": 556450,
+        "endMs": 560120,
+        "text": "if you think I’m going to sit here and not celebrate the death of phlogiston with you,"
+      },
+      {
+        "id": "youtube-json3-154-560120",
+        "startMs": 560120,
+        "endMs": 561590,
+        "text": "you’re sorely mistaken!"
+      },
+      {
+        "id": "youtube-json3-155-561590",
+        "startMs": 561590,
+        "endMs": 563660,
+        "text": "Number two: what is Life?"
+      },
+      {
+        "id": "youtube-json3-156-563660",
+        "startMs": 563660,
+        "endMs": 566390,
+        "text": "What’s the simplest way to define living things?"
+      },
+      {
+        "id": "youtube-json3-157-566390",
+        "startMs": 566390,
+        "endMs": 567400,
+        "text": "Are viruses alive?"
+      },
+      {
+        "id": "youtube-json3-158-567400",
+        "startMs": 567400,
+        "endMs": 568780,
+        "text": "Is the earth alive?"
+      },
+      {
+        "id": "youtube-json3-159-568780",
+        "startMs": 568780,
+        "endMs": 570460,
+        "text": "Where did life come from?"
+      },
+      {
+        "id": "youtube-json3-160-570460",
+        "startMs": 570460,
+        "endMs": 572550,
+        "text": "Where did current organisms come from?"
+      },
+      {
+        "id": "youtube-json3-161-572550",
+        "startMs": 572550,
+        "endMs": 576580,
+        "text": "How do we understand their interactions with each other and their world?"
+      },
+      {
+        "id": "youtube-json3-162-576580",
+        "startMs": 576580,
+        "endMs": 578490,
+        "text": "Three: where are we?"
+      },
+      {
+        "id": "youtube-json3-163-578490",
+        "startMs": 578490,
+        "endMs": 580170,
+        "text": "What is this place, the earth?"
+      },
+      {
+        "id": "youtube-json3-164-580170",
+        "startMs": 580170,
+        "endMs": 581700,
+        "text": "What is its place in the cosmos?"
+      },
+      {
+        "id": "youtube-json3-165-581700",
+        "startMs": 581700,
+        "endMs": 583410,
+        "text": "Is this the only universe?"
+      },
+      {
+        "id": "youtube-json3-166-583410",
+        "startMs": 583410,
+        "endMs": 585890,
+        "text": "Four: when are we?"
+      },
+      {
+        "id": "youtube-json3-167-585890",
+        "startMs": 585890,
+        "endMs": 588960,
+        "text": "More questions of scale: how long have we been around?"
+      },
+      {
+        "id": "youtube-json3-168-588960",
+        "startMs": 588960,
+        "endMs": 589960,
+        "text": "What about living things?"
+      },
+      {
+        "id": "youtube-json3-169-589960",
+        "startMs": 589960,
+        "endMs": 591200,
+        "text": "What about the whole universe?"
+      },
+      {
+        "id": "youtube-json3-170-591200",
+        "startMs": 591200,
+        "endMs": 592890,
+        "text": "What came before that?"
+      },
+      {
+        "id": "youtube-json3-171-592890",
+        "startMs": 592890,
+        "endMs": 596680,
+        "text": "And five: how can we agree on what we know?"
+      },
+      {
+        "id": "youtube-json3-172-596680",
+        "startMs": 596680,
+        "endMs": 600210,
+        "text": "And how can I convince more people that the stuff I know is accurate?"
+      },
+      {
+        "id": "youtube-json3-173-600210",
+        "startMs": 600210,
+        "endMs": 605320,
+        "text": "For example, how can I show anti-vaccers that vaccines are necessary!?"
+      },
+      {
+        "id": "youtube-json3-174-605320",
+        "startMs": 605320,
+        "endMs": 610100,
+        "text": "Regarding technology, how should we talk about what to do what our knowledge?"
+      },
+      {
+        "id": "youtube-json3-175-610100",
+        "startMs": 610100,
+        "endMs": 614790,
+        "text": "All of these questions have been considered by people as far back as records exist."
+      },
+      {
+        "id": "youtube-json3-176-614790",
+        "startMs": 614790,
+        "endMs": 617300,
+        "text": "They also remain active areas of study today."
+      },
+      {
+        "id": "youtube-json3-177-617300",
+        "startMs": 617300,
+        "endMs": 622000,
+        "text": "But the last theme is so important that it gets its the final section."
+      },
+      {
+        "id": "youtube-json3-178-622000",
+        "startMs": 622000,
+        "endMs": 626040,
+        "text": "Humans have always tried to describe the world, for lots of reasons: in part because it’s"
+      },
+      {
+        "id": "youtube-json3-179-626040",
+        "startMs": 626040,
+        "endMs": 631310,
+        "text": "fascinating (“magnets—how do they work!?”), and in part to control it."
+      },
+      {
+        "id": "youtube-json3-180-631310",
+        "startMs": 631310,
+        "endMs": 634460,
+        "text": "Knowledge, as they told us in grade school, really is power!"
+      },
+      {
+        "id": "youtube-json3-181-634460",
+        "startMs": 634460,
+        "endMs": 638960,
+        "text": "The power that knowing stuff gives the knower is exactly why we should study the history"
+      },
+      {
+        "id": "youtube-json3-182-638960",
+        "startMs": 638960,
+        "endMs": 639960,
+        "text": "of science."
+      },
+      {
+        "id": "youtube-json3-183-639960",
+        "startMs": 639960,
+        "endMs": 646960,
+        "text": "Thus one goal of this course is to highlight how the values (beliefs about right and wrong) and ethics (acceptable behaviors)"
+      },
+      {
+        "id": "youtube-json3-184-646960",
+        "startMs": 646960,
+        "endMs": 650240,
+        "text": "of scientists and engineers shape our world."
+      },
+      {
+        "id": "youtube-json3-185-650240",
+        "startMs": 650240,
+        "endMs": 655680,
+        "text": "And how, conversely, sciences and technologies are shaped by the societies that produce them."
+      },
+      {
+        "id": "youtube-json3-186-655680",
+        "startMs": 655680,
+        "endMs": 658840,
+        "text": "We have a responsibility as citizens to understand"
+      },
+      {
+        "id": "youtube-json3-187-658840",
+        "startMs": 658840,
+        "endMs": 660120,
+        "text": "and to act accordingly."
+      },
+      {
+        "id": "youtube-json3-188-660120",
+        "startMs": 660120,
+        "endMs": 664110,
+        "text": "Our world today looks radically dissimilar to that of three hundred years ago."
+      },
+      {
+        "id": "youtube-json3-189-664110",
+        "startMs": 664110,
+        "endMs": 668040,
+        "text": "To quote Andy Weir, we’ve “scienced” the heck out of it."
+      },
+      {
+        "id": "youtube-json3-190-668040",
+        "startMs": 668040,
+        "endMs": 672270,
+        "text": "We learned about stuff, made new technologies, and are currently scrambling to learn new"
+      },
+      {
+        "id": "youtube-json3-191-672270",
+        "startMs": 672270,
+        "endMs": 675440,
+        "text": "stuff to solve the problems that our old technologies created."
+      },
+      {
+        "id": "youtube-json3-192-675440",
+        "startMs": 675440,
+        "endMs": 680390,
+        "text": "Facing an utterly unprecedented total ecological catastrophe, we may need to “science”"
+      },
+      {
+        "id": "youtube-json3-193-680390",
+        "startMs": 680390,
+        "endMs": 682630,
+        "text": "it even more, in one way or another."
+      },
+      {
+        "id": "youtube-json3-194-682630",
+        "startMs": 682630,
+        "endMs": 685220,
+        "text": "We’ll talk more about this in future episodes."
+      },
+      {
+        "id": "youtube-json3-195-685220",
+        "startMs": 685220,
+        "endMs": 689580,
+        "text": "Learning the history of science can help shine a light on this dark future."
+      },
+      {
+        "id": "youtube-json3-196-689580",
+        "startMs": 689580,
+        "endMs": 693990,
+        "text": "Next time—pack your spanakopita: we’re heading to ancient Greece to invent natural"
+      },
+      {
+        "id": "youtube-json3-197-693990",
+        "startMs": 693990,
+        "endMs": 696150,
+        "text": "philosophy with the Presocratics."
+      },
+      {
+        "id": "youtube-json3-198-696150",
+        "startMs": 696150,
+        "endMs": 701070,
+        "text": "Until then, this has been—“on no one’s word”—Crash Course: History of Science!"
+      },
+      {
+        "id": "youtube-json3-199-701070",
+        "startMs": 701070,
+        "endMs": 705040,
+        "text": "Crash Course History of Science is filmed in the Dr. Cheryl C. Kinney Studio in Missoula,"
+      },
+      {
+        "id": "youtube-json3-200-705040",
+        "startMs": 705040,
+        "endMs": 707800,
+        "text": "MT and It’s made with the help of all of these nice people."
+      },
+      {
+        "id": "youtube-json3-201-707800",
+        "startMs": 707800,
+        "endMs": 709890,
+        "text": "And our animation team is Thought Cafe."
+      },
+      {
+        "id": "youtube-json3-202-709890",
+        "startMs": 709890,
+        "endMs": 711810,
+        "text": "Crash Course is a Complexly production."
+      },
+      {
+        "id": "youtube-json3-203-711810",
+        "startMs": 711810,
+        "endMs": 715800,
+        "text": "If you want to keep imagining the world complexly with us, check out some of our other channels"
+      },
+      {
+        "id": "youtube-json3-204-715800",
+        "startMs": 715800,
+        "endMs": 719010,
+        "text": "like Sexplanations, How To Adult, and Healthcare Triage."
+      },
+      {
+        "id": "youtube-json3-205-719010",
+        "startMs": 719010,
+        "endMs": 724120,
+        "text": "If you'd like to keep Crash Course free for everyone, forever, you can support the series"
+      },
+      {
+        "id": "youtube-json3-206-724120",
+        "startMs": 724120,
+        "endMs": 728220,
+        "text": "at Patreon, a crowdfunding platform that allows you to support the content you love."
+      },
+      {
+        "id": "youtube-json3-207-728220",
+        "startMs": 728220,
+        "endMs": 733120,
+        "text": "Thank you to all of our patrons for making Crash Course possible with their continued support."
+      }
+    ],
+    "sourceSegmentCount": 207,
+    "characterCount": 12619,
+    "transcriptFingerprint": "2ea7e59c",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "eb46f611-9593-46bd-98e7-2c2068d19bd8",
+    "generationSessionId": "165e580d-1015-48da-bf83-e6022f8e2b29",
+    "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d",
+    "questionPlan": {
+      "seed": "d71f0718b079b925eaca3d0ff56c5006ed8fdb79050025d58db68bf51e9308db",
+      "types": [
+        "multiple_choice",
+        "short_answer",
+        "true_false",
+        "short_answer",
+        "multiple_choice"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Intro to History of Science: Crash Course History of Science #1",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "scientific revolution",
+          "question": "How does a scientific revolution occur?",
+          "retryQuestion": "Which option describes the process by which a scientific revolution occurs?",
+          "explanation": "A scientific revolution occurs when incremental, nagging questions about the natural world accumulate and cause a scientific discipline or an entire society to change.",
+          "type": "multiple_choice",
+          "choices": [
+            "A scientific revolution is caused by a single individual's insight.",
+            "A scientific revolution occurs when a discipline remains unchanged.",
+            "Incremental, nagging questions accumulate and cause a discipline or society to change.",
+            "A single sudden discovery immediately transforms a discipline."
+          ],
+          "answerIndex": 2,
+          "answer": "Incremental, nagging questions accumulate and cause a discipline or society to change."
+        },
+        {
+          "id": "q2",
+          "concept": "systematic observation",
+          "question": "What does it mean for scientific observation or experimentation to be systematic?",
+          "retryQuestion": "What is required for observation or experimentation to be considered systematic?",
+          "explanation": "Systematic observation or experimentation follows rules that anyone can follow, ensuring the process is reproducible and not dependent on a particular individual.",
+          "type": "short_answer",
+          "answer": "It follows rules that anyone can follow.",
+          "rubricIdeas": [
+            "It follows rules that anyone can follow."
+          ],
+          "acceptableAnswers": [
+            "There are rules about observing or experimenting that anyone can follow."
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "It follows rules that anyone can follow."
+            ],
+            "acceptableAnswers": [
+              "It follows rules that anyone can follow.",
+              "There are rules about observing or experimenting that anyone can follow."
+            ]
+          }
+        },
+        {
+          "id": "q3",
+          "concept": "reproducibility of individual proof",
+          "question": "An individual proof of how a natural phenomenon works should be reproducible only by the person who devised it.",
+          "retryQuestion": "An individual proof of how a natural phenomenon works should be reproducible only by its originator.",
+          "explanation": "The false statement restricts reproducibility to the originator, but the correct principle is that the proof must be reproducible by anyone.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "An individual proof of how a natural phenomenon works should be reproducible by anyone."
+        },
+        {
+          "id": "q4",
+          "concept": "knowledge as power",
+          "question": "What is the stated reason for studying the history of science?",
+          "retryQuestion": "Why should we study the history of science?",
+          "explanation": "The course states that knowledge gives power to the knower, and this power is the reason for studying the history of science.",
+          "type": "short_answer",
+          "answer": "The power that knowing stuff gives the knower.",
+          "rubricIdeas": [
+            "The power that knowing stuff gives the knower."
+          ],
+          "acceptableAnswers": [
+            "Knowledge is power"
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The power that knowing stuff gives the knower."
+            ],
+            "acceptableAnswers": [
+              "The power that knowing stuff gives the knower.",
+              "Knowledge is power"
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "science as world-constructing",
+          "question": "What relationship do Thomas Kuhn and Michel Foucault illustrate about science?",
+          "retryQuestion": "Which statement best captures the relationship between science and the worlds of knowledge described by Kuhn and Foucault?",
+          "explanation": "Kuhn and Foucault, despite their disagreements, show that science is not only historical and social but also constructs entire worlds of knowledge that shape how we understand reality.",
+          "type": "multiple_choice",
+          "choices": [
+            "Science constructs entire worlds of knowledge in which we are all situated.",
+            "Science is purely objective and independent of social context.",
+            "Science only describes pre-existing facts without shaping them.",
+            "Science is solely a personal endeavor with no collective impact."
+          ],
+          "answerIndex": 0,
+          "answer": "Science constructs entire worlds of knowledge in which we are all situated."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 7,
+      "retryCount": 2,
+      "inputTokens": 50572,
+      "outputTokens": 840,
+      "reasoningTokens": 0,
+      "elapsedMs": 17646,
+      "sourceSelection": {
+        "sentenceCount": 125,
+        "excludedSentenceCount": 8,
+        "candidateWindowCount": 92,
+        "selectedWindowCount": 30,
+        "focusWordCount": 166
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "scientific revolution",
+      "question": "How does a scientific revolution occur?",
+      "retryQuestion": "Which option describes the process by which a scientific revolution occurs?",
+      "explanation": "A scientific revolution occurs when incremental, nagging questions about the natural world accumulate and cause a scientific discipline or an entire society to change.",
+      "type": "multiple_choice",
+      "choices": [
+        "A scientific revolution is caused by a single individual's insight.",
+        "A scientific revolution occurs when a discipline remains unchanged.",
+        "Incremental, nagging questions accumulate and cause a discipline or society to change.",
+        "A single sudden discovery immediately transforms a discipline."
+      ],
+      "answerIndex": 2,
+      "answer": "Incremental, nagging questions accumulate and cause a discipline or society to change."
+    },
+    {
+      "id": "q2",
+      "concept": "systematic observation",
+      "question": "What does it mean for scientific observation or experimentation to be systematic?",
+      "retryQuestion": "What is required for observation or experimentation to be considered systematic?",
+      "explanation": "Systematic observation or experimentation follows rules that anyone can follow, ensuring the process is reproducible and not dependent on a particular individual.",
+      "type": "short_answer",
+      "answer": "It follows rules that anyone can follow.",
+      "rubricIdeas": [
+        "It follows rules that anyone can follow."
+      ],
+      "acceptableAnswers": [
+        "There are rules about observing or experimenting that anyone can follow."
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "It follows rules that anyone can follow."
+        ],
+        "acceptableAnswers": [
+          "It follows rules that anyone can follow.",
+          "There are rules about observing or experimenting that anyone can follow."
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "concept": "reproducibility of individual proof",
+      "question": "An individual proof of how a natural phenomenon works should be reproducible only by the person who devised it.",
+      "retryQuestion": "An individual proof of how a natural phenomenon works should be reproducible only by its originator.",
+      "explanation": "The false statement restricts reproducibility to the originator, but the correct principle is that the proof must be reproducible by anyone.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "An individual proof of how a natural phenomenon works should be reproducible by anyone."
+    },
+    {
+      "id": "q4",
+      "concept": "knowledge as power",
+      "question": "What is the stated reason for studying the history of science?",
+      "retryQuestion": "Why should we study the history of science?",
+      "explanation": "The course states that knowledge gives power to the knower, and this power is the reason for studying the history of science.",
+      "type": "short_answer",
+      "answer": "The power that knowing stuff gives the knower.",
+      "rubricIdeas": [
+        "The power that knowing stuff gives the knower."
+      ],
+      "acceptableAnswers": [
+        "Knowledge is power"
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The power that knowing stuff gives the knower."
+        ],
+        "acceptableAnswers": [
+          "The power that knowing stuff gives the knower.",
+          "Knowledge is power"
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "science as world-constructing",
+      "question": "What relationship do Thomas Kuhn and Michel Foucault illustrate about science?",
+      "retryQuestion": "Which statement best captures the relationship between science and the worlds of knowledge described by Kuhn and Foucault?",
+      "explanation": "Kuhn and Foucault, despite their disagreements, show that science is not only historical and social but also constructs entire worlds of knowledge that shape how we understand reality.",
+      "type": "multiple_choice",
+      "choices": [
+        "Science constructs entire worlds of knowledge in which we are all situated.",
+        "Science is purely objective and independent of social context.",
+        "Science only describes pre-existing facts without shaping them.",
+        "Science is solely a personal endeavor with no collective impact."
+      ],
+      "answerIndex": 0,
+      "answer": "Science constructs entire worlds of knowledge in which we are all situated."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "af1fd96dc7b16a0092dc9526ca60e82a17404f33a211ad677703528fdff3a425"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "bbc4052627ab62a73f9eef065d999fb99d40ed3de8d3349ecab1f7bc98fe294e"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "questionFingerprint": "d1699e13ee8b6cee719f44a8326219d9d36287c8a50bf3eac5d2c7fb245bba31"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "7c62edc87fd91fae83c045eacff428977f4309eb24860abba3895e0e0af383eb"
+    },
+    {
+      "callIndex": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "7f059ad466a5caf0023803e7ae8623bfd25ab544c64fb0b01107258cdc2a9d1d"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "NOTICE"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "Incremental, nagging questions accumulate and cause a discipline or society to change.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that scientific revolutions build from accumulated, unresolved questions rather than from a single sudden insight or individual breakthrough.",
+        "matchedIdeas": [
+          "Incremental, nagging questions accumulate and cause a discipline or society to change."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "It follows rules that anyone can follow.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly captures the core idea that systematic observation or experimentation follows rules that anyone can follow.",
+        "matchedIdeas": [
+          "It follows rules that anyone can follow."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that scientific proofs must be reproducible by anyone, not just the original researcher.",
+        "matchedIdeas": [
+          "False label matches referenceAnswer"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "The power that knowing stuff gives the knower.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly captures the key idea: the reason for studying the history of science is the power that knowledge gives to the knower.",
+        "matchedIdeas": [
+          "The power that knowing stuff gives the knower."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "Science constructs entire worlds of knowledge in which we are all situated.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that Kuhn and Foucault illustrate how science actively constructs frameworks of knowledge that shape our understanding of the world.",
+        "matchedIdeas": [
+          "Science constructs entire worlds of knowledge in which we are all situated."
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "YvtCLceNf30"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 2587,
+      "videoId": "YvtCLceNf30",
+      "title": "Intro to History of Science: Crash Course History of Science #1",
+      "language": "en",
+      "durationSeconds": 734,
+      "segmentCount": 207,
+      "sourceSegmentCount": 207,
+      "characterCount": 12619,
+      "transcriptFingerprint": "2ea7e59c",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 2589,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 6099,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 6147,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 8824,
+      "ordinal": 1,
+      "concept": "scientific revolution",
+      "prompt": "How does a scientific revolution occur?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 8824,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2725,
+      "inputTokens": 9778,
+      "outputTokens": 172,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8824,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8833,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 8867,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 11320,
+      "ordinal": 2,
+      "concept": "systematic observation",
+      "prompt": "What does it mean for scientific observation or experimentation to be systematic?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 11320,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2487,
+      "inputTokens": 10077,
+      "outputTokens": 172,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 11320,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 11330,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 11374,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 13831,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "polarity_mismatch",
+      "acceptedCount": 0,
+      "retryDelayMs": 244,
+      "callElapsedMs": 2501
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 13831,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 244,
+      "reasonCode": "polarity_mismatch",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14095,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14129,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 16115,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "unsupported_absolute_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 558,
+      "callElapsedMs": 2020
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16115,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "retryDelayMs": 558,
+      "reasonCode": "unsupported_absolute_claim",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16689,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 16704,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 18650,
+      "ordinal": 3,
+      "concept": "reproducibility of individual proof",
+      "prompt": "An individual proof of how a natural phenomenon works should be reproducible only by the person who devised it."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 18650,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1961,
+      "inputTokens": 10428,
+      "outputTokens": 138,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18650,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18663,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 18686,
+      "callIndex": 5,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 21282,
+      "ordinal": 4,
+      "concept": "knowledge as power",
+      "prompt": "What is the stated reason for studying the history of science?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 21283,
+      "callIndex": 5,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2620,
+      "inputTokens": 10244,
+      "outputTokens": 174,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 21284,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 21312,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 21372,
+      "callIndex": 6,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 23691,
+      "ordinal": 5,
+      "concept": "science as world-constructing",
+      "prompt": "What relationship do Thomas Kuhn and Michel Foucault illustrate about science?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 23693,
+      "callIndex": 6,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2379,
+      "inputTokens": 10045,
+      "outputTokens": 184,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 23693,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "5effa512-cf53-42e0-9288-e715f70b6c6d"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 23696,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 7,
+      "retryCount": 2,
+      "generationElapsedMs": 17646,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 23697,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "Incremental, nagging questions accumulate and cause a discipline or society to change."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 25853,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that scientific revolutions build from accumulated, unresolved questions rather than from a single sudden insight or individual breakthrough.",
+      "matchedIdeas": [
+        "Incremental, nagging questions accumulate and cause a discipline or society to change."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 25853,
+      "ordinal": 2,
+      "questionType": "short_answer",
+      "response": "It follows rules that anyone can follow."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 28474,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly captures the core idea that systematic observation or experimentation follows rules that anyone can follow.",
+      "matchedIdeas": [
+        "It follows rules that anyone can follow."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 28475,
+      "ordinal": 3,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 30627,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that scientific proofs must be reproducible by anyone, not just the original researcher.",
+      "matchedIdeas": [
+        "False label matches referenceAnswer"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 30627,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "The power that knowing stuff gives the knower."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 32748,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly captures the key idea: the reason for studying the history of science is the power that knowledge gives to the knower.",
+      "matchedIdeas": [
+        "The power that knowing stuff gives the knower."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 32748,
+      "ordinal": 5,
+      "questionType": "multiple_choice",
+      "response": "Science constructs entire worlds of knowledge in which we are all situated."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 34747,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that Kuhn and Foucault illustrate how science actively constructs frameworks of knowledge that shape our understanding of the world.",
+      "matchedIdeas": [
+        "Science constructs entire worlds of knowledge in which we are all situated."
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

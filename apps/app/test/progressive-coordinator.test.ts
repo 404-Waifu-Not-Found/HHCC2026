@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cancelProgressiveRecoveryTask,
   getOrStartProgressiveGenerationTask,
   getOrStartProgressiveRecoveryTask,
   hasActiveProgressiveGenerationForAttempt,
@@ -66,6 +67,40 @@ describe("progressive generation coordinator", () => {
     expect(hasActiveProgressiveGenerationForAttempt(attemptId)).toBe(true);
     background.resolve();
     await first.completion;
+    expect(hasActiveProgressiveGenerationForAttempt(attemptId)).toBe(false);
+  });
+
+  it("replaces a stale recovery task when the learner retries", async () => {
+    const firstAbort = deferred();
+    const attemptId = "66666666-6666-4666-8666-666666666666";
+    const first = getOrStartProgressiveRecoveryTask(
+      attemptId,
+      async (signal) => {
+        if (signal.aborted) {
+          firstAbort.resolve();
+          return;
+        }
+        await new Promise<void>((resolve) =>
+          signal.addEventListener(
+            "abort",
+            () => {
+              firstAbort.resolve();
+              resolve();
+            },
+            { once: true },
+          ),
+        );
+      },
+    );
+    cancelProgressiveRecoveryTask(attemptId);
+    const second = getOrStartProgressiveRecoveryTask(
+      attemptId,
+      async () => undefined,
+    );
+
+    expect(second).not.toBe(first);
+    await firstAbort.promise;
+    await Promise.all([first.completion, second.completion]);
     expect(hasActiveProgressiveGenerationForAttempt(attemptId)).toBe(false);
   });
 

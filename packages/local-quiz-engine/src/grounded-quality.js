@@ -43,6 +43,12 @@ const LOGISTICS_PATTERNS = [
   /\b(?:course (?:aims?|goals?|objectives?|numbers?|codes?)|class (?:aims?|goals?|objectives?)|cross[- ]listed|attendance policy|due dates?|deadlines?|late (?:work|homework|assignments?|problem sets?)|problem set policy|submission policy|office location|contact information|how many (?:times|years?) .{0,60}(?:taught|teach|requested)|university admission|applied to (?:a |the )?(?:university|college)|popularity|request count|presentation order|first topic|last topic)\b/iu,
   /\b(?:(?:presenter|speaker|lecturer|narrator|instructor).{0,40}(?:jokes?|introduction|outro)|(?:jokes?|introduction|outro).{0,40}(?:presenter|speaker|lecturer|narrator|instructor)|recording metadata)\b/iu,
   /\b(?:(?:this|the) (?:episode|video|recording) (?:was |is )?(?:filmed|recorded|produced|shot|made)|(?:filmed|recorded|produced|shot) (?:in|at|by)|(?:crash course|production|recording|film) studio|(?:episode|video) (?:number|title|series|channel))\b/iu,
+  // Course-navigation claims describe how recordings relate to one another,
+  // not the transferable subject matter taught by those recordings. Require
+  // both a media noun and an ordering/dependency relationship so legitimate
+  // mathematical or historical uses of "series" remain assessable.
+  /\b(?=[^.!?]{0,180}\b(?:episodes?|videos?|lessons?)\b)(?=[^.!?]{0,180}\b(?:previous|prior|earlier|last)\b)[^.!?]{0,180}\b(?:build(?:s|ing)?\s+(?:on|upon)|depend(?:s|ing)?\s+(?:on|upon)|stand(?:s|ing)?\s+alone|self[- ]contained)\b/iu,
+  /\b(?:series\b[^.!?]{0,120}\bepisodes?|episodes?\b[^.!?]{0,120}\bseries)\b/iu,
   /\b(?:where did|when did|what (?:year|date|institution|university|college|city|country)|how many times)\b.{0,100}\b(?:apply|attend|graduate|study|teach|present|record|upload|request|live|born)\b/iu,
   /(?:课程安排|课程大纲|助教|办公时间|作业|评分|教材|投诉|订阅|赞助|推广|欢迎来到|讲师介绍|考试占比|考试权重|考试分值|单元占比|课程进度|考试时间|教师姓名|讲师姓名|教师简介|讲师简介|视频时长|上传日期)/u,
   /(?:课程目标|课程编号|交叉课程|出勤|截止日期|迟交|授课次数|大学申请|受欢迎程度|请求次数|讲解顺序)/u,
@@ -916,6 +922,16 @@ function sentenceExcludedFromPromptFirstV511(value) {
 function sentenceExcludedFromPromptFirstV512(value) {
   return (
     sentenceExcludedFromPromptFirstV511(value) ||
+    // A history-themed source still needs durable learning objectives. Remove
+    // biography, publicity, public-fame, classroom-demonstration, and broad
+    // timeline sentences before ranking so automatic recovery does not burn
+    // multiple DeepSeek calls discovering that these slots are unusable.
+    /\b(?:goes?\s+(?:all\s+the\s+way\s+)?back\s+to\s+antiquity|has\s+its\s+roots\s+in\s+pre-industrial\s+questions|born\s+to\s+(?:a\s+)?(?:poor|wealthy|rich)\s+family|became\s+obsessed\s+with|started\s+(?:his|her|their)\s+career\b|at\s+the\s+age\s+of\s+\w+|(?:average|ordinary|typical)\s+(?:person|people|public)\b.{0,100}\b(?:know|knew|recognize|recognized|familiar)|people\s+remember\b.{0,100}\bfor\s+(?:his|her|their)\s+work|promoted\s+capital\s+punishment|electric\s+chair\s+powered\s+by|while\s+demonstrating\s+to\s+(?:his|her|their)\s+students|watched\s+as\s+(?:a\s+)?friend\s+reproduced|academy\s+of\s+science\s+in\s+paris|ethical\s+scientific\s+demonstrations?|weird\s+parlour\s+tricks?|weird\s+parlor\s+tricks?|excuse\s+to\s+conduct\b.{0,100}\bdemonstrations?|pushing\s+off\s+bedtime|no\s+one\s+could\s+really\s+explain\s+how\s+it\s+worked|amazed\b.{0,80}\bwent\s+to\s+work\s+figuring\s+out|got\s+to\s+work\s+inventing|clouds?\s+are\s+in\s+love|baby\s+cloud|hop\s+across\s+the\s+atlantic|menlo\s+park\s*,?\s+new\s+jersey|as\s+the\s+story\s+goes|flew\s+(?:his|her|their)\s+kite\s+in\s+a\s+storm|edison\s+and\s+other\s+inventors\b.{0,120}\btransform\s+the\s+world|the\s+stage\s+was\s+set\b.{0,120}\benter\s+motors)\b/iu.test(
+      value,
+    ) ||
+    /^(?:time\s+to\s+get\b|\[?intro\s+music|mostly\s*,?\s*people\s+remember\b|most\s+importantly\s*,?\s*to\b|his\s+(?:motors?|work)\b|the\s+first\s+iterations?\b|somehow\s*,?\s*(?:he|she|they)\b)/iu.test(
+      String(value ?? "").trim(),
+    ) ||
     // A complete sentence can still be unusable as a standalone assessment
     // fact when its subject exists only in the presenter's story, a hidden
     // diagram, or a stage pointer. Do not leave DeepSeek to guess the missing
@@ -4059,6 +4075,8 @@ export function buildConceptFirstInstructionalSelection(
           (neighbor) =>
             neighbor.text.length >= 24 &&
             neighbor.score > 0 &&
+            (!coherentPromptFirst ||
+              !sentenceExcludedFromPromptFirstV512(neighbor.text)) &&
             !promptFirstPrimaryClaimIsFragment(
               punctuationSparse
                 ? neighbor.text.replace(/^\p{Ll}/u, (letter) =>
@@ -4090,6 +4108,8 @@ export function buildConceptFirstInstructionalSelection(
       const centerNeedsReplacement =
         !selfContainedBatteryLimit &&
         (promptFirstPrimaryClaimIsFragment(centerCandidate) ||
+          (coherentPromptFirst &&
+            sentenceExcludedFromPromptFirstV512(centerCandidate)) ||
           promptFirstWindowPenalty(entry.text, topicTokens) >= 18 ||
           /^(?:then|because\b|where\s+this\b|or\s+maybe|for example|for instance|maybe|well\b|as\s+(?:we|i)\b|let['’]?s\b|we\s+(?:want|wanna)\b|i\s+(?:think|remember|don['’]?t\s+know)\b|probably\b|you\s+(?:have|can|might|would)\b|he\s+(?:just\s+)?knew\b|moment\s+of\s+time\b|remember\b|of\s+|what\s+(?:do|does|is|are|can|should|would)\b|this|that|these|those|it|they|here|includes?|contains?|causes?|results?|allows?|enables?|depends?|increases?|decreases?|reduces?|prevents?|makes?|becomes?|uses?|changes?|there\s+(?:is|are)\s+[\d,.\s]+$|there\s+(?:is|are)\b[^.!?]{0,100}\b(?:this|that|these|those)\b|[\d,.\s]+(?:kilometers?|meters?|seconds?|hours?)?\s*(?:per\s+hour)?\s*,?\s*something\s+like\s+that)/iu.test(
             centerCandidate.trim(),
@@ -4133,6 +4153,7 @@ export function buildConceptFirstInstructionalSelection(
     const centerIsUsable =
       center.length >= 24 &&
       !/\?/u.test(center) &&
+      (!coherentPromptFirst || !sentenceExcludedFromPromptFirstV512(center)) &&
       !promptFirstPrimaryClaimIsFragment(center) &&
       promptFirstWindowPenalty(center, topicTokens) < 18 &&
       !/\b(?:and|or|because|which|that|to|was|were|is|are)\s*$/iu.test(

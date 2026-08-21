@@ -709,6 +709,30 @@ export const AUTOMATIC_GENERATION_STALE_AFTER_MS = 45 * 1_000;
 /** Keep recovery from stealing a freshly dispatched local model call. */
 export const ACTIVE_GENERATION_CALL_RECOVERY_GRACE_MS = 2 * 60 * 1_000;
 
+const PROMPT_FIRST_STRUCTURAL_RETRY_OUTCOMES = [
+  "empty_content",
+  "truncated_json",
+  "schema_invalid",
+  "type_or_order_mismatch",
+  "choice_structure_invalid",
+  "polarity_mismatch",
+  "formula_structure_invalid",
+  "append_conflict",
+  "duplicate_question",
+  "source_framing_invalid",
+  "course_logistics_invalid",
+  "low_pedagogical_value",
+  "rubric_invalid",
+  "question_tautology_invalid",
+  "quiz_language_mismatch",
+  "source_grounding_invalid",
+  "retry_question_invalid",
+  "true_false_compound_claim",
+  "question_answer_kind_mismatch",
+  "answer_fragment_invalid",
+  "unsupported_absolute_claim",
+] as const satisfies readonly LocalGenerationCallOutcome[];
+
 const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
   transport: [
     "transient_http",
@@ -728,6 +752,9 @@ const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
     "rubric_invalid",
     "question_tautology_invalid",
     "quiz_language_mismatch",
+    "source_grounding_invalid",
+    "retry_question_invalid",
+    "true_false_compound_claim",
   ],
   duplicate_repair: ["duplicate_question"],
   answer_repair: [
@@ -748,16 +775,7 @@ const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
     "unsupported_absolute_claim",
   ],
   automatic_resume: ["local_state_conflict", "append_conflict"],
-  structural: [
-    "empty_content",
-    "truncated_json",
-    "schema_invalid",
-    "type_or_order_mismatch",
-    "choice_structure_invalid",
-    "polarity_mismatch",
-    "formula_structure_invalid",
-    "append_conflict",
-  ],
+  structural: PROMPT_FIRST_STRUCTURAL_RETRY_OUTCOMES,
 } as const satisfies Record<
   AutomaticRetryKind,
   readonly LocalGenerationCallOutcome[]
@@ -788,7 +806,9 @@ export function retryKindMatchesGenerationOutcome(
 }
 
 const AUTOMATIC_RETRY_KIND_SQL_CASE = [
-  `WHEN event.protocol_version = 10 AND event.outcome_code IN ('empty_content', 'truncated_json', 'schema_invalid', 'type_or_order_mismatch', 'choice_structure_invalid', 'polarity_mismatch', 'formula_structure_invalid', 'append_conflict') THEN 'structural'`,
+  `WHEN event.protocol_version = 10 AND event.outcome_code IN (${PROMPT_FIRST_STRUCTURAL_RETRY_OUTCOMES.map(
+    (outcome) => `'${outcome}'`,
+  ).join(", ")}) THEN 'structural'`,
   ...Object.entries(AUTOMATIC_RETRY_OUTCOMES_BY_KIND).map(
     ([kind, outcomes]) =>
       `WHEN event.outcome_code IN (${outcomes

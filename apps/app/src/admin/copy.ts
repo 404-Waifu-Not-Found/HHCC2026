@@ -75,7 +75,7 @@ const copy = {
     required: "Required",
     model: "Question model",
     generationArchitecture: "Generation architecture",
-    localAiGeneration: "ClipQuest Local AI generation",
+    localAiGeneration: "ClipQuest local generation",
     workerGeneration: "Worker generation",
     extensionRequirement: "Local AI extension",
     pipeline: "Quiz pipeline",
@@ -100,7 +100,7 @@ const copy = {
       "Only bounded local-stream status is shown. Captions and model responses stay private.",
     noFailures: "No recent failures",
     generationStreamsSubtitle:
-      "Read-only progress from learner-owned ClipQuest Local AI streams.",
+      "Read-only progress from learner-owned ClipQuest streams.",
     generationState: "Generation state",
     generating: "Generating",
     retrying: "Retrying",
@@ -132,7 +132,7 @@ const copy = {
     configurationActionRequired:
       "The learner must repair their private DeepSeek configuration; ClipQuest resumes automatically afterward.",
     automaticRecoveryFailed:
-      "Automatic recovery ended safely. The incomplete bank cannot be scored; the learner can start a new quiz.",
+      "Automatic refill is unavailable for this caption source. The incomplete bank cannot be scored.",
     protectedData: "Protected data boundary",
     protectedDataBody:
       "Secrets, auth tokens, raw transcripts, correct-answer payloads, and password controls are never exposed here.",
@@ -268,8 +268,7 @@ const copy = {
     lastCall: "最后调用尝试",
     configurationActionRequired:
       "学习者需要修复私有 DeepSeek 配置；验证后 ClipQuest 会自动恢复。",
-    automaticRecoveryFailed:
-      "自动恢复已安全结束。不完整题库不会计分，学习者可开始新的测验。",
+    automaticRecoveryFailed: "当前字幕来源无法自动补全。不完整题库不会计分。",
     protectedData: "受保护数据边界",
     protectedDataBody:
       "密钥、认证令牌、原始转写、正确答案和密码控制永远不会在此显示。",

@@ -1,0 +1,2028 @@
+{
+  "runId": "cc1d87a7-3015-4ab7-9fcb-d8b23a956796",
+  "source": {
+    "videoId": "K4CKmYSMT_0",
+    "title": "Biology Before Darwin: Crash Course History of Science #19",
+    "language": "en",
+    "durationSeconds": 761,
+    "segments": [
+      {
+        "id": "youtube-json3-0-5299",
+        "startMs": 5299,
+        "endMs": 9610,
+        "text": "In physics, questions about astronomy led to revolutionaries such as Kepler and Newton,"
+      },
+      {
+        "id": "youtube-json3-1-9610",
+        "startMs": 9610,
+        "endMs": 13900,
+        "text": "who provided a new theoretical framework that replaced the old Aristotelian one."
+      },
+      {
+        "id": "youtube-json3-2-13900",
+        "startMs": 13900,
+        "endMs": 18039,
+        "text": "But when it came to the study of living things, this shift didn’t happen until a little"
+      },
+      {
+        "id": "youtube-json3-3-18040",
+        "startMs": 18040,
+        "endMs": 19540,
+        "text": "later, in the 1800s."
+      },
+      {
+        "id": "youtube-json3-4-19540",
+        "startMs": 19540,
+        "endMs": 24040,
+        "text": "You’ve probably heard of Charles Darwin, but before we get to him, and I'm ecited to get to him,"
+      },
+      {
+        "id": "youtube-json3-5-24040",
+        "startMs": 24040,
+        "endMs": 29040,
+        "text": "you really need to understand how different people, throughout the seventeenth and eighteenth centuries,"
+      },
+      {
+        "id": "youtube-json3-6-29040",
+        "startMs": 29040,
+        "endMs": 32840,
+        "text": "tried to answer the same question: “what is life?”"
+      },
+      {
+        "id": "youtube-json3-7-32840",
+        "startMs": 32840,
+        "endMs": 41280,
+        "text": "[INTRO MUSIC PLAYS}"
+      },
+      {
+        "id": "youtube-json3-8-41280",
+        "startMs": 41280,
+        "endMs": 46690,
+        "text": "During the Scientific Revolution and Enlightenment, there was no biology—that term was first"
+      },
+      {
+        "id": "youtube-json3-9-46690",
+        "startMs": 46690,
+        "endMs": 48579,
+        "text": "used in 1799."
+      },
+      {
+        "id": "youtube-json3-10-48579",
+        "startMs": 48579,
+        "endMs": 54630,
+        "text": "Instead, there was natural history, the observation-based study of living things, based on the work"
+      },
+      {
+        "id": "youtube-json3-11-54630",
+        "startMs": 54630,
+        "endMs": 55630,
+        "text": "of Aristotle."
+      },
+      {
+        "id": "youtube-json3-12-55630",
+        "startMs": 55630,
+        "endMs": 60870,
+        "text": "For Aristotle, living things were all of one kind, but animated by different types of soul."
+      },
+      {
+        "id": "youtube-json3-13-60870",
+        "startMs": 60870,
+        "endMs": 64500,
+        "text": "So, plants have a vegetative soul and can grow."
+      },
+      {
+        "id": "youtube-json3-14-64500",
+        "startMs": 64500,
+        "endMs": 66909,
+        "text": "Animals have a sensitive soul and can move."
+      },
+      {
+        "id": "youtube-json3-15-66909",
+        "startMs": 66909,
+        "endMs": 71280,
+        "text": "And humans alone have a rational soul, capable of reason."
+      },
+      {
+        "id": "youtube-json3-16-71280",
+        "startMs": 71280,
+        "endMs": 75910,
+        "text": "Organisms could be compared by imagining their position on a great chain, leading upward"
+      },
+      {
+        "id": "youtube-json3-17-75910",
+        "startMs": 75910,
+        "endMs": 79900,
+        "text": "in complexity and worth from grass to starfish to humans."
+      },
+      {
+        "id": "youtube-json3-18-79900",
+        "startMs": 79900,
+        "endMs": 84520,
+        "text": "This Great Chain of Being gave people throughout Europe and parts of Asia and Africa a way"
+      },
+      {
+        "id": "youtube-json3-19-84520",
+        "startMs": 84520,
+        "endMs": 88200,
+        "text": "to understand differences in form between things."
+      },
+      {
+        "id": "youtube-json3-20-88200",
+        "startMs": 88200,
+        "endMs": 90800,
+        "text": "But it didn’t include an element of time."
+      },
+      {
+        "id": "youtube-json3-21-90800",
+        "startMs": 90800,
+        "endMs": 92920,
+        "text": "Did living things change over time?"
+      },
+      {
+        "id": "youtube-json3-22-92920",
+        "startMs": 92920,
+        "endMs": 94450,
+        "text": "That is, did they evolve?"
+      },
+      {
+        "id": "youtube-json3-23-94450",
+        "startMs": 94450,
+        "endMs": 98840,
+        "text": "What sorts of evidence would prove this, and would this proof contradict the bible?"
+      },
+      {
+        "id": "youtube-json3-24-98840",
+        "startMs": 98840,
+        "endMs": 101570,
+        "text": "Would God let extinctions happen!?"
+      },
+      {
+        "id": "youtube-json3-25-101570",
+        "startMs": 101570,
+        "endMs": 106510,
+        "text": "Let’s set the stage for these questions, which would rock the world of natural history."
+      },
+      {
+        "id": "youtube-json3-26-106510",
+        "startMs": 106510,
+        "endMs": 111510,
+        "text": "Alongside the first microscopists, other brilliant people were creating knowledge about living"
+      },
+      {
+        "id": "youtube-json3-27-111510",
+        "startMs": 111510,
+        "endMs": 113210,
+        "text": "things in the 1600s."
+      },
+      {
+        "id": "youtube-json3-28-113210",
+        "startMs": 113210,
+        "endMs": 118150,
+        "text": "Two notable natural historians jump out—a great experimentalist and a great observer."
+      },
+      {
+        "id": "youtube-json3-29-118150",
+        "startMs": 118150,
+        "endMs": 123820,
+        "text": "In 1634, the Spanish Inquisition arrested Flemish alchemist Joannes Baptista van Helmont"
+      },
+      {
+        "id": "youtube-json3-30-123820",
+        "startMs": 123820,
+        "endMs": 126760,
+        "text": "for the crime of… studying plants!"
+      },
+      {
+        "id": "youtube-json3-31-126760",
+        "startMs": 126760,
+        "endMs": 131670,
+        "text": "He was put under house arrest, but this experience didn’t deter him: like Galileo, it made"
+      },
+      {
+        "id": "youtube-json3-32-131670",
+        "startMs": 131670,
+        "endMs": 133620,
+        "text": "him want to science even harder."
+      },
+      {
+        "id": "youtube-json3-33-133620",
+        "startMs": 133620,
+        "endMs": 138200,
+        "text": "Van Helmont really wanted to understand how plants grow, so he devised his famous willow"
+      },
+      {
+        "id": "youtube-json3-34-138200",
+        "startMs": 138200,
+        "endMs": 140810,
+        "text": "tree experiment to provide some answers."
+      },
+      {
+        "id": "youtube-json3-35-140810",
+        "startMs": 140810,
+        "endMs": 145920,
+        "text": "Van Helmont wanted to test the theory that plants grow by eating soil, so he weighed"
+      },
+      {
+        "id": "youtube-json3-36-145920",
+        "startMs": 145920,
+        "endMs": 150230,
+        "text": "a willow tree—it was five pounds—as well as some soil—two hundred pounds of it."
+      },
+      {
+        "id": "youtube-json3-37-150230",
+        "startMs": 150230,
+        "endMs": 154970,
+        "text": "He planted the willow in the soil, in a pot, and then tended to the plant’s needs, observing"
+      },
+      {
+        "id": "youtube-json3-38-154970",
+        "startMs": 154970,
+        "endMs": 156700,
+        "text": "its growth over five years."
+      },
+      {
+        "id": "youtube-json3-39-156700",
+        "startMs": 156700,
+        "endMs": 161920,
+        "text": "After that time, he weighed the tree again, then dried the soil and weighed it, too."
+      },
+      {
+        "id": "youtube-json3-40-161920",
+        "startMs": 161920,
+        "endMs": 166430,
+        "text": "The mass of the soil had remained the same over five years, but the tree’s mass had"
+      },
+      {
+        "id": "youtube-json3-41-166430",
+        "startMs": 166430,
+        "endMs": 168340,
+        "text": "significantly increased."
+      },
+      {
+        "id": "youtube-json3-42-168340",
+        "startMs": 168340,
+        "endMs": 173430,
+        "text": "Van Helmont concluded that the tree grew not by eating soil but by drinking water."
+      },
+      {
+        "id": "youtube-json3-43-173430",
+        "startMs": 173430,
+        "endMs": 179460,
+        "text": "Published in 1648, after Van Helmont had died, this willow-weighing became the first quantitative"
+      },
+      {
+        "id": "youtube-json3-44-179460",
+        "startMs": 179460,
+        "endMs": 180920,
+        "text": "experiment in biology!"
+      },
+      {
+        "id": "youtube-json3-45-180920",
+        "startMs": 180920,
+        "endMs": 185260,
+        "text": "Another major seventeenth-century natural historian was Maria Sibylla Merian."
+      },
+      {
+        "id": "youtube-json3-46-185260",
+        "startMs": 185260,
+        "endMs": 190850,
+        "text": "Born in Frankfurt in 1647, Merian was the leading entomologist, or insect expert, of"
+      },
+      {
+        "id": "youtube-json3-47-190850",
+        "startMs": 190850,
+        "endMs": 194190,
+        "text": "her day, as well as a highly skilled scientific illustrator."
+      },
+      {
+        "id": "youtube-json3-48-194190",
+        "startMs": 194190,
+        "endMs": 199069,
+        "text": "Merian became well known for her work on how some insects metamorphose, or change shape."
+      },
+      {
+        "id": "youtube-json3-49-199069",
+        "startMs": 199069,
+        "endMs": 203260,
+        "text": "Her careful observations of the life cycle of the butterfly became a benchmark for other"
+      },
+      {
+        "id": "youtube-json3-50-203260",
+        "startMs": 203260,
+        "endMs": 204260,
+        "text": "natural historians."
+      },
+      {
+        "id": "youtube-json3-51-204260",
+        "startMs": 204260,
+        "endMs": 210209,
+        "text": "In 1699, Merian traveled to the Dutch colony of Suriname in South America to study tropical"
+      },
+      {
+        "id": "youtube-json3-52-210209",
+        "startMs": 210209,
+        "endMs": 211209,
+        "text": "insects."
+      },
+      {
+        "id": "youtube-json3-53-211209",
+        "startMs": 211209,
+        "endMs": 215790,
+        "text": "She was horrified by the slavery she encountered there, but was also aided by an enslaved person,"
+      },
+      {
+        "id": "youtube-json3-54-215790",
+        "startMs": 215790,
+        "endMs": 218430,
+        "text": "which was typical of many European natural historians."
+      },
+      {
+        "id": "youtube-json3-55-218430",
+        "startMs": 218430,
+        "endMs": 225120,
+        "text": "In 1705, Merian published the heavily illustrated Metamorphosis Insectorum Surinamensium, cementing"
+      },
+      {
+        "id": "youtube-json3-56-225120",
+        "startMs": 225120,
+        "endMs": 227810,
+        "text": "her reputation in both art and science."
+      },
+      {
+        "id": "youtube-json3-57-227810",
+        "startMs": 227810,
+        "endMs": 231460,
+        "text": "The next major shift in natural history came thanks to Carl Linnaeus."
+      },
+      {
+        "id": "youtube-json3-58-231460",
+        "startMs": 231460,
+        "endMs": 235290,
+        "text": "Born in 1707, Linnaeus sought to discover the order of nature."
+      },
+      {
+        "id": "youtube-json3-59-235290",
+        "startMs": 235290,
+        "endMs": 241180,
+        "text": "He reasoned that, if you could just compare every species along the same axis—say, sexual"
+      },
+      {
+        "id": "youtube-json3-60-241180",
+        "startMs": 241180,
+        "endMs": 245360,
+        "text": "organs, or limbs—then you could create a gigantic table, showing every living thing"
+      },
+      {
+        "id": "youtube-json3-61-245360",
+        "startMs": 245360,
+        "endMs": 246820,
+        "text": "on earth, side by side."
+      },
+      {
+        "id": "youtube-json3-62-246820",
+        "startMs": 246820,
+        "endMs": 252790,
+        "text": "Think about that supremely Enlightenment-style visual metaphor: life was a static table full"
+      },
+      {
+        "id": "youtube-json3-63-252790",
+        "startMs": 252790,
+        "endMs": 254239,
+        "text": "of information."
+      },
+      {
+        "id": "youtube-json3-64-254239",
+        "startMs": 254239,
+        "endMs": 257450,
+        "text": "Lots of other people were trying to figure out how to classify living things."
+      },
+      {
+        "id": "youtube-json3-65-257450",
+        "startMs": 257450,
+        "endMs": 259199,
+        "text": "But Linnaeus’s system won out."
+      },
+      {
+        "id": "youtube-json3-66-259199",
+        "startMs": 259199,
+        "endMs": 263409,
+        "text": "Linnaeus invented the binomial system that biologists still use."
+      },
+      {
+        "id": "youtube-json3-67-263409",
+        "startMs": 263409,
+        "endMs": 266969,
+        "text": "The first name or genus represents a more general category."
+      },
+      {
+        "id": "youtube-json3-68-266969",
+        "startMs": 266969,
+        "endMs": 270729,
+        "text": "The second name or species is based on a specific characteristic."
+      },
+      {
+        "id": "youtube-json3-69-270729",
+        "startMs": 270729,
+        "endMs": 275169,
+        "text": "Humans, for example, are Homo sapiens, or the “intelligent men,” as opposed to our"
+      },
+      {
+        "id": "youtube-json3-70-275169",
+        "startMs": 275169,
+        "endMs": 280550,
+        "text": "extinct relatives, Homo erectus, the “standing men,” or our closest living relatives, the"
+      },
+      {
+        "id": "youtube-json3-71-280550",
+        "startMs": 280550,
+        "endMs": 285539,
+        "text": "bonobos, who some scientists classify as Homo sylvestris—the “forest men.”"
+      },
+      {
+        "id": "youtube-json3-72-285539",
+        "startMs": 285539,
+        "endMs": 290370,
+        "text": "Linnaeus introduced the binomial system in Systema Naturæ in 1735."
+      },
+      {
+        "id": "youtube-json3-73-290370",
+        "startMs": 290370,
+        "endMs": 295009,
+        "text": "We can compare this text to Galileo’s Two Sciences or Newton’s Principia, in that"
+      },
+      {
+        "id": "youtube-json3-74-295009",
+        "startMs": 295009,
+        "endMs": 299000,
+        "text": "it provided natural historians with a new paradigm for how to do their jobs."
+      },
+      {
+        "id": "youtube-json3-75-299000",
+        "startMs": 299000,
+        "endMs": 303139,
+        "text": "Beyond the binomial, Systema also addressed higher-level classification."
+      },
+      {
+        "id": "youtube-json3-76-303139",
+        "startMs": 303139,
+        "endMs": 304930,
+        "text": "Say you encounter a thing."
+      },
+      {
+        "id": "youtube-json3-77-304930",
+        "startMs": 304930,
+        "endMs": 309150,
+        "text": "First, you decide on its kingdom—meaning whether it’s an animal, vegetable, or mineral,"
+      },
+      {
+        "id": "youtube-json3-78-309150",
+        "startMs": 309150,
+        "endMs": 310559,
+        "text": "as per tradition."
+      },
+      {
+        "id": "youtube-json3-79-310559",
+        "startMs": 310559,
+        "endMs": 315759,
+        "text": "Then you assign it to a class, such as mammal or bird, and an order based on some"
+      },
+      {
+        "id": "youtube-json3-80-315759",
+        "startMs": 315759,
+        "endMs": 319710,
+        "text": "characteristic, such as, say, eels or spiny-finned fishes."
+      },
+      {
+        "id": "youtube-json3-81-319710",
+        "startMs": 319710,
+        "endMs": 324530,
+        "text": "FYI, Linnaeus was the first to assign bats to Team Mammal instead of Team Bird."
+      },
+      {
+        "id": "youtube-json3-82-324530",
+        "startMs": 324530,
+        "endMs": 326219,
+        "text": "Then you assign genus and species."
+      },
+      {
+        "id": "youtube-json3-83-326219",
+        "startMs": 326219,
+        "endMs": 331690,
+        "text": "And all of these decisions you make rationally, based on some observable and comparable feature:"
+      },
+      {
+        "id": "youtube-json3-84-331690",
+        "startMs": 331690,
+        "endMs": 333749,
+        "text": "does the thing have wings or arms?"
+      },
+      {
+        "id": "youtube-json3-85-333749",
+        "startMs": 333749,
+        "endMs": 334919,
+        "text": "Spines or no spines?"
+      },
+      {
+        "id": "youtube-json3-86-334919",
+        "startMs": 334919,
+        "endMs": 337130,
+        "text": "How many ventricles in its heart?"
+      },
+      {
+        "id": "youtube-json3-87-337130",
+        "startMs": 337130,
+        "endMs": 338719,
+        "text": "Internal or external gills?"
+      },
+      {
+        "id": "youtube-json3-88-338719",
+        "startMs": 338719,
+        "endMs": 343509,
+        "text": "Although it’s evolved a lot over three centuries, we still use Linnaeus’s system today!"
+      },
+      {
+        "id": "youtube-json3-89-343509",
+        "startMs": 343509,
+        "endMs": 348960,
+        "text": "Linnaeus was called the “Second Adam” because he named so many organisms, mostly"
+      },
+      {
+        "id": "youtube-json3-90-348960",
+        "startMs": 348960,
+        "endMs": 349960,
+        "text": "plants."
+      },
+      {
+        "id": "youtube-json3-91-349960",
+        "startMs": 349960,
+        "endMs": 353900,
+        "text": "He didn’t go out collecting plants, but he inspired a generation of European natural"
+      },
+      {
+        "id": "youtube-json3-92-353900",
+        "startMs": 353900,
+        "endMs": 354900,
+        "text": "historians who did."
+      },
+      {
+        "id": "youtube-json3-93-354900",
+        "startMs": 354900,
+        "endMs": 358620,
+        "text": "They had a new tool at their disposal that allowed them to rapidly concentrate thousands"
+      },
+      {
+        "id": "youtube-json3-94-358620",
+        "startMs": 358620,
+        "endMs": 363779,
+        "text": "of botanical samples in a small number of botanical gardens: empire."
+      },
+      {
+        "id": "youtube-json3-95-363779",
+        "startMs": 363779,
+        "endMs": 368710,
+        "text": "With tall-ships constantly sailing from London, Antwerp, Stockholm, and Calais for distant"
+      },
+      {
+        "id": "youtube-json3-96-368710",
+        "startMs": 368710,
+        "endMs": 374159,
+        "text": "continents, the naturalists of the 1700s used military might to make knowledge about ecosystems"
+      },
+      {
+        "id": "youtube-json3-97-374159",
+        "startMs": 374159,
+        "endMs": 375569,
+        "text": "that Europe didn’t have."
+      },
+      {
+        "id": "youtube-json3-98-375569",
+        "startMs": 375569,
+        "endMs": 379659,
+        "text": "A perfect example of a statesman–scientist who took advantage of colonial empire in order"
+      },
+      {
+        "id": "youtube-json3-99-379659",
+        "startMs": 379659,
+        "endMs": 383069,
+        "text": "to fill in the table of nature was Sir Joseph Banks."
+      },
+      {
+        "id": "youtube-json3-100-383069",
+        "startMs": 383069,
+        "endMs": 387699,
+        "text": "Born in 1743, Banks became the preeminent British naturalist of his day."
+      },
+      {
+        "id": "youtube-json3-101-387699",
+        "startMs": 387699,
+        "endMs": 392509,
+        "text": "Appointed by the Royal Navy and the Royal Society, Banks sailed with James Cook aboard"
+      },
+      {
+        "id": "youtube-json3-102-392509",
+        "startMs": 392509,
+        "endMs": 399719,
+        "text": "the HMS Endeavour from 1768 to 1771, traveling to Brazil, Tahiti, New Zealand, and Australia."
+      },
+      {
+        "id": "youtube-json3-103-399719",
+        "startMs": 399719,
+        "endMs": 404879,
+        "text": "When he returned home, famous and full of ideas about the great variety of living things,"
+      },
+      {
+        "id": "youtube-json3-104-404879",
+        "startMs": 404879,
+        "endMs": 409449,
+        "text": "Banks became advisor to the king on the Royal Botanic Gardens at Kew."
+      },
+      {
+        "id": "youtube-json3-105-409449",
+        "startMs": 409449,
+        "endMs": 415150,
+        "text": "He also rose to become president of the Royal Society, holding the position for over forty"
+      },
+      {
+        "id": "youtube-json3-106-415150",
+        "startMs": 415150,
+        "endMs": 416150,
+        "text": "years."
+      },
+      {
+        "id": "youtube-json3-107-416150",
+        "startMs": 416150,
+        "endMs": 420050,
+        "text": "In order to build Kew into one of the greatest botanical gardens in the world, Banks directed"
+      },
+      {
+        "id": "youtube-json3-108-420050",
+        "startMs": 420050,
+        "endMs": 425039,
+        "text": "other botanists to travel the world, collecting plants, and bringing them back to the center"
+      },
+      {
+        "id": "youtube-json3-109-425039",
+        "startMs": 425039,
+        "endMs": 426180,
+        "text": "of the British Empire."
+      },
+      {
+        "id": "youtube-json3-110-426180",
+        "startMs": 426180,
+        "endMs": 430550,
+        "text": "There, they were classified using the Linnaean system and shown off to the public."
+      },
+      {
+        "id": "youtube-json3-111-430550",
+        "startMs": 430550,
+        "endMs": 435699,
+        "text": "So, Linnaeus was hugely influential in thinking about how to classify organisms, and Banks"
+      },
+      {
+        "id": "youtube-json3-112-435699",
+        "startMs": 435699,
+        "endMs": 439830,
+        "text": "pushed the powerful British Empire to make tabulating nature a project of prestige."
+      },
+      {
+        "id": "youtube-json3-113-439830",
+        "startMs": 439830,
+        "endMs": 445850,
+        "text": "But they didn’t raise deep epistemic questions about what living things are, like if species"
+      },
+      {
+        "id": "youtube-json3-114-445850",
+        "startMs": 445850,
+        "endMs": 447400,
+        "text": "change over time or not."
+      },
+      {
+        "id": "youtube-json3-115-447400",
+        "startMs": 447400,
+        "endMs": 450949,
+        "text": "Those questions would come into the mainstream of science thanks to a trio of French thinkers"
+      },
+      {
+        "id": "youtube-json3-116-450949",
+        "startMs": 450949,
+        "endMs": 455569,
+        "text": "who we can think of as the “Transformists”: Buffon, Lamarck, and Cuvier."
+      },
+      {
+        "id": "youtube-json3-117-455569",
+        "startMs": 455569,
+        "endMs": 460389,
+        "text": "Georges-Louis Leclerc, AKA the Comte de Buffon, was born in 1707."
+      },
+      {
+        "id": "youtube-json3-118-460389",
+        "startMs": 460389,
+        "endMs": 464999,
+        "text": "He became superintendent of the Royal Garden in Paris and argued with Thomas Jefferson"
+      },
+      {
+        "id": "youtube-json3-119-464999",
+        "startMs": 464999,
+        "endMs": 469110,
+        "text": "about whether animals and plants in the Americas were inferior to those in Eurasia."
+      },
+      {
+        "id": "youtube-json3-120-469110",
+        "startMs": 469110,
+        "endMs": 470689,
+        "text": "(We’ll come back to the Americas.)"
+      },
+      {
+        "id": "youtube-json3-121-470689",
+        "startMs": 470689,
+        "endMs": 475319,
+        "text": "But, importantly for natural history, Buffon thought that living things are degenerating,"
+      },
+      {
+        "id": "youtube-json3-122-475319",
+        "startMs": 475319,
+        "endMs": 478569,
+        "text": "or slowly becoming worse than God originally designed."
+      },
+      {
+        "id": "youtube-json3-123-478569",
+        "startMs": 478569,
+        "endMs": 482479,
+        "text": "He didn’t provide a mechanism for how this devolution worked, and he later recanted his"
+      },
+      {
+        "id": "youtube-json3-124-482479",
+        "startMs": 482479,
+        "endMs": 484180,
+        "text": "controversial views."
+      },
+      {
+        "id": "youtube-json3-125-484180",
+        "startMs": 484180,
+        "endMs": 489589,
+        "text": "But Buffon did at least open the door among well-connected, university-trained philosophers"
+      },
+      {
+        "id": "youtube-json3-126-489589",
+        "startMs": 489589,
+        "endMs": 491639,
+        "text": "to the idea that species changed."
+      },
+      {
+        "id": "youtube-json3-127-491639",
+        "startMs": 491639,
+        "endMs": 495129,
+        "text": "This idea was pushed further by a more humble botanist."
+      },
+      {
+        "id": "youtube-json3-128-495129",
+        "startMs": 495129,
+        "endMs": 501400,
+        "text": "Jean-Baptiste Lamarck, born in 1744, he was a peasant, but he became a professor of invertebrates:"
+      },
+      {
+        "id": "youtube-json3-129-501400",
+        "startMs": 501400,
+        "endMs": 503960,
+        "text": "actually, he coined the term “invertebrate!”"
+      },
+      {
+        "id": "youtube-json3-130-503960",
+        "startMs": 503960,
+        "endMs": 508120,
+        "text": "Lamarck was an expert on marine worms and marine snails, mostly focused on shells."
+      },
+      {
+        "id": "youtube-json3-131-508180",
+        "startMs": 508180,
+        "endMs": 511879,
+        "text": "Although he also published Flowers of France, in 1778."
+      },
+      {
+        "id": "youtube-json3-132-511879",
+        "startMs": 511879,
+        "endMs": 518310,
+        "text": "And, influenced by Buffon, Lamarck criticized the fixity of Linnaeus, moving toward an evolutionary"
+      },
+      {
+        "id": "youtube-json3-133-518310",
+        "startMs": 518310,
+        "endMs": 518860,
+        "text": "theory."
+      },
+      {
+        "id": "youtube-json3-134-518860",
+        "startMs": 518860,
+        "endMs": 520880,
+        "text": "ThoughtBubble, What did that theory look like?"
+      },
+      {
+        "id": "youtube-json3-135-520889",
+        "startMs": 520889,
+        "endMs": 523709,
+        "text": "The reason we remember Lamarck as the almost-Darwin"
+      },
+      {
+        "id": "youtube-json3-136-523709",
+        "startMs": 523709,
+        "endMs": 529350,
+        "text": "is that he developed a specific theory of “transformisme” to describe how species"
+      },
+      {
+        "id": "youtube-json3-137-529350",
+        "startMs": 529350,
+        "endMs": 532959,
+        "text": "changed—providing a how and, perhaps more importantly, a why."
+      },
+      {
+        "id": "youtube-json3-138-532959",
+        "startMs": 532959,
+        "endMs": 537610,
+        "text": "Lamarck believed that individuals inherited the traits that their parents had acquired"
+      },
+      {
+        "id": "youtube-json3-139-537610",
+        "startMs": 537610,
+        "endMs": 538850,
+        "text": "during life."
+      },
+      {
+        "id": "youtube-json3-140-538850",
+        "startMs": 538850,
+        "endMs": 544940,
+        "text": "In life, individuals use certain body parts more than others, changing them ever so slightly,"
+      },
+      {
+        "id": "youtube-json3-141-544940",
+        "startMs": 544940,
+        "endMs": 548250,
+        "text": "and then pass those changed parts down to their kids."
+      },
+      {
+        "id": "youtube-json3-142-548250",
+        "startMs": 548250,
+        "endMs": 552010,
+        "text": "Although this idea has been proven wrong since Lamarck’s time, some historians still credit"
+      },
+      {
+        "id": "youtube-json3-143-552010",
+        "startMs": 552010,
+        "endMs": 556430,
+        "text": "him with essentially predicting epigenetics, or changes in living things made by changes"
+      },
+      {
+        "id": "youtube-json3-144-556430",
+        "startMs": 556430,
+        "endMs": 560490,
+        "text": "to which gene are expressed rather than by changing the genetic code itself."
+      },
+      {
+        "id": "youtube-json3-145-560490",
+        "startMs": 560490,
+        "endMs": 564220,
+        "text": "Gradually, Lamarck thought, creatures would become more complex."
+      },
+      {
+        "id": "youtube-json3-146-564220",
+        "startMs": 564220,
+        "endMs": 567540,
+        "text": "This progressive evolution was the opposite of Buffon’s devolution."
+      },
+      {
+        "id": "youtube-json3-147-567540",
+        "startMs": 567540,
+        "endMs": 572490,
+        "text": "Lamarck’s famous example was the giraffe: according to Lamarck, its neck elongated as"
+      },
+      {
+        "id": "youtube-json3-148-572490",
+        "startMs": 572490,
+        "endMs": 576259,
+        "text": "the animal stretched up to reach leaves that were higher on trees."
+      },
+      {
+        "id": "youtube-json3-149-576259",
+        "startMs": 576259,
+        "endMs": 580930,
+        "text": "Over time, short giraffes grew slightly longer and slightly longer necks until—voila—they"
+      },
+      {
+        "id": "youtube-json3-150-580930",
+        "startMs": 580930,
+        "endMs": 582540,
+        "text": "could reach those high leaves."
+      },
+      {
+        "id": "youtube-json3-151-582540",
+        "startMs": 582540,
+        "endMs": 586980,
+        "text": "Of course, Lamarck never actually studied or even saw a giraffe—although he almost"
+      },
+      {
+        "id": "youtube-json3-152-586980",
+        "startMs": 586980,
+        "endMs": 588130,
+        "text": "got the chance."
+      },
+      {
+        "id": "youtube-json3-153-588130",
+        "startMs": 588130,
+        "endMs": 594000,
+        "text": "The Pasha of Egypt had given France a giraffe in 1827, shortly before Lamarck died… but"
+      },
+      {
+        "id": "youtube-json3-154-594000",
+        "startMs": 594000,
+        "endMs": 596029,
+        "text": "after Lamarck had gone blind."
+      },
+      {
+        "id": "youtube-json3-155-596029",
+        "startMs": 596029,
+        "endMs": 600790,
+        "text": "Lamarck’s transformisme was not exactly a full framework for doing natural history."
+      },
+      {
+        "id": "youtube-json3-156-600790",
+        "startMs": 600790,
+        "endMs": 605970,
+        "text": "But he did argue that, essentially, the environment is what pulls an organism along into a new"
+      },
+      {
+        "id": "youtube-json3-157-605970",
+        "startMs": 605970,
+        "endMs": 608370,
+        "text": "form… which makes historiographical sense."
+      },
+      {
+        "id": "youtube-json3-158-608370",
+        "startMs": 608370,
+        "endMs": 613829,
+        "text": "After all, Lamarck lived in a setting of rapid, radical change for humans like himself:"
+      },
+      {
+        "id": "youtube-json3-159-613829",
+        "startMs": 613829,
+        "endMs": 615180,
+        "text": "the French Revolution."
+      },
+      {
+        "id": "youtube-json3-160-615180",
+        "startMs": 615180,
+        "endMs": 620389,
+        "text": "He saw the transition from a post-Revolution republic into the empire of Napoleon Bonaparte."
+      },
+      {
+        "id": "youtube-json3-161-620389",
+        "startMs": 620389,
+        "endMs": 623899,
+        "text": "And he saw how different individuals responded to environmental shifts."
+      },
+      {
+        "id": "youtube-json3-162-623899",
+        "startMs": 623899,
+        "endMs": 628209,
+        "text": "Thanks, ThoughtBubble. Finally, there was Georges Cuvier, born in"
+      },
+      {
+        "id": "youtube-json3-163-628209",
+        "startMs": 628209,
+        "endMs": 634370,
+        "text": "1773, and he added a different wrinkle to the theory of biological transformation: extinction."
+      },
+      {
+        "id": "youtube-json3-164-634370",
+        "startMs": 634370,
+        "endMs": 639720,
+        "text": "Cuvier was an immensely famous professor, known as the “Napoleon of natural history.”"
+      },
+      {
+        "id": "youtube-json3-165-639720",
+        "startMs": 639720,
+        "endMs": 645350,
+        "text": "Cuvier met Ben Franklin, corresponded with Thomas Jefferson, and advised the real Napoleon."
+      },
+      {
+        "id": "youtube-json3-166-645350",
+        "startMs": 645350,
+        "endMs": 650490,
+        "text": "Scientifically, Cuvier established modern comparative anatomy as a discipline, specializing"
+      },
+      {
+        "id": "youtube-json3-167-650490",
+        "startMs": 650490,
+        "endMs": 651790,
+        "text": "in the study of elephants."
+      },
+      {
+        "id": "youtube-json3-168-651790",
+        "startMs": 651790,
+        "endMs": 656829,
+        "text": "Cuvier believed each species was perfectly adapted to its environment, and that you can"
+      },
+      {
+        "id": "youtube-json3-169-656829",
+        "startMs": 656829,
+        "endMs": 662639,
+        "text": "reconstruct an organism from only one or two bones, if you understand how anatomical systems"
+      },
+      {
+        "id": "youtube-json3-170-662639",
+        "startMs": 662639,
+        "endMs": 663639,
+        "text": "function."
+      },
+      {
+        "id": "youtube-json3-171-663639",
+        "startMs": 663639,
+        "endMs": 669820,
+        "text": "Cuvier opposed any theory of evolution, vigorously arguing against Lamarck’s progressive one."
+      },
+      {
+        "id": "youtube-json3-172-669820",
+        "startMs": 669820,
+        "endMs": 675209,
+        "text": "But Cuvier also built his entire personal scientific empire on the careful study of"
+      },
+      {
+        "id": "youtube-json3-173-675209",
+        "startMs": 675209,
+        "endMs": 680819,
+        "text": "fossilized animal remains, comparing living and dead animals and classifying them by their"
+      },
+      {
+        "id": "youtube-json3-174-680819",
+        "startMs": 680819,
+        "endMs": 682100,
+        "text": "bone structure."
+      },
+      {
+        "id": "youtube-json3-175-682100",
+        "startMs": 682100,
+        "endMs": 686279,
+        "text": "He could see that some types of animals simply no longer existed!"
+      },
+      {
+        "id": "youtube-json3-176-686279",
+        "startMs": 686279,
+        "endMs": 692079,
+        "text": "How did Cuvier square the fossil record with a belief in a divinely ordered, mostly unchanging"
+      },
+      {
+        "id": "youtube-json3-177-692079",
+        "startMs": 692079,
+        "endMs": 693079,
+        "text": "creation?"
+      },
+      {
+        "id": "youtube-json3-178-693079",
+        "startMs": 693079,
+        "endMs": 697710,
+        "text": "He argued for catastrophism, the idea that major changes in species come about due to"
+      },
+      {
+        "id": "youtube-json3-179-697710",
+        "startMs": 697710,
+        "endMs": 700620,
+        "text": "catastrophic events—such as the Flood of Noah."
+      },
+      {
+        "id": "youtube-json3-180-700620",
+        "startMs": 700620,
+        "endMs": 705889,
+        "text": "At the end of the 1700s, natural historians had a system for comparing and naming everything"
+      },
+      {
+        "id": "youtube-json3-181-705889",
+        "startMs": 705889,
+        "endMs": 706899,
+        "text": "alive."
+      },
+      {
+        "id": "youtube-json3-182-706899",
+        "startMs": 706899,
+        "endMs": 708310,
+        "text": "They had state support."
+      },
+      {
+        "id": "youtube-json3-183-708310",
+        "startMs": 708310,
+        "endMs": 711310,
+        "text": "And they had some ideas about how life changed over time."
+      },
+      {
+        "id": "youtube-json3-184-711310",
+        "startMs": 711310,
+        "endMs": 715800,
+        "text": "But they didn’t have a new paradigm for researching this change."
+      },
+      {
+        "id": "youtube-json3-185-715800",
+        "startMs": 715800,
+        "endMs": 718300,
+        "text": "They didn’t have a biology."
+      },
+      {
+        "id": "youtube-json3-186-718300",
+        "startMs": 718300,
+        "endMs": 722671,
+        "text": "Next time—let’s follow the fossil trail, hunt for mines, learn the true age of the"
+      },
+      {
+        "id": "youtube-json3-187-722680",
+        "startMs": 722680,
+        "endMs": 729320,
+        "text": "earth, and further clear the way for Darwin’s biology: first, we need the birth of geology!"
+      },
+      {
+        "id": "youtube-json3-188-729320",
+        "startMs": 729320,
+        "endMs": 733320,
+        "text": "Crash Course History of Science is filmed in the Dr. Cheryl C. Kinney studio"
+      },
+      {
+        "id": "youtube-json3-189-733320",
+        "startMs": 733320,
+        "endMs": 737600,
+        "text": "and is made with the help of these nice people and our animation team is Thought Cafe."
+      },
+      {
+        "id": "youtube-json3-190-737600",
+        "startMs": 737600,
+        "endMs": 739350,
+        "text": "Crash Course is a Complexly production."
+      },
+      {
+        "id": "youtube-json3-191-739350",
+        "startMs": 739350,
+        "endMs": 743680,
+        "text": "If you wanna keep imagining the world complexly with us, you can check out some of our other"
+      },
+      {
+        "id": "youtube-json3-192-743680",
+        "startMs": 743680,
+        "endMs": 747720,
+        "text": "channels like The Financial Diet, The Art Assignment, and Healthcare Triage."
+      },
+      {
+        "id": "youtube-json3-193-747720",
+        "startMs": 747720,
+        "endMs": 751670,
+        "text": "And, if you’d like to keep Crash Course free for everybody, forever, you can support"
+      },
+      {
+        "id": "youtube-json3-194-751680",
+        "startMs": 751680,
+        "endMs": 756640,
+        "text": "the series at Patreon; a crowdfunding platform that allows you to support the content you love."
+      },
+      {
+        "id": "youtube-json3-195-756720",
+        "startMs": 756720,
+        "endMs": 759600,
+        "text": "Thank you to all of our patrons for making Crash Course possible"
+      },
+      {
+        "id": "youtube-json3-196-759600",
+        "startMs": 759600,
+        "endMs": 761000,
+        "text": "with their continued support."
+      }
+    ],
+    "sourceSegmentCount": 197,
+    "characterCount": 12754,
+    "transcriptFingerprint": "9d1fe0d6",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "539983f8-9029-4f58-97ae-5cebfa3bf8a6",
+    "generationSessionId": "e4cf5279-ffc9-4b12-9a62-de52eb7c96bb",
+    "recoverySessionId": "18b99e84-4017-42f2-8e6e-1bfe2085da9f",
+    "questionPlan": {
+      "seed": "d8560dfe3c3836f19ed12817d0be8649d2c2d2053f1a8f3b3170277a1c21a2e0",
+      "types": [
+        "multiple_choice",
+        "short_answer",
+        "true_false",
+        "short_answer",
+        "true_false"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Biology Before Darwin: Crash Course History of Science #19",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "binomial nomenclature",
+          "question": "In the binomial naming system, what does the second name (the species name) indicate?",
+          "retryQuestion": "What is the basis for the second part of a binomial name?",
+          "explanation": "In the binomial system, the first name (genus) is a general category, while the second name (species) is based on a specific characteristic of the organism.",
+          "type": "multiple_choice",
+          "choices": [
+            "The name of the scientist who discovered the organism",
+            "The geographic location where the organism was first found",
+            "The general category to which the organism belongs",
+            "A specific characteristic of the organism"
+          ],
+          "answerIndex": 3,
+          "answer": "A specific characteristic of the organism"
+        },
+        {
+          "id": "q2",
+          "concept": "historical naming relationship",
+          "question": "What was the reason Linnaeus was called the 'Second Adam'?",
+          "retryQuestion": "Why did Linnaeus receive the title 'Second Adam'?",
+          "explanation": "Linnaeus earned the nickname because he assigned names to a very large number of organisms, with the majority being plants.",
+          "type": "short_answer",
+          "answer": "He named many organisms, mostly plants.",
+          "rubricIdeas": [
+            "He named many organisms, mostly plants."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "atomic_term",
+          "rubricV2": {
+            "version": 2,
+            "mode": "atomic_term",
+            "canonicalAnswer": "He named many organisms, mostly plants.",
+            "aliases": []
+          }
+        },
+        {
+          "id": "q3",
+          "concept": "Cuvier's anatomical reconstruction principle",
+          "question": "Cuvier held that a skilled anatomist could reconstruct an entire organism from only one or two bones by understanding how anatomical systems function.",
+          "retryQuestion": "Cuvier's method allowed reconstructing an organism from a few bones even if the anatomist lacked knowledge of how anatomical systems work.",
+          "explanation": "This statement is true: Cuvier held that a skilled anatomist could reconstruct an entire organism from only one or two bones by understanding how anatomical systems function.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "Cuvier held that a skilled anatomist could reconstruct an entire organism from only one or two bones by understanding how anatomical systems function."
+        },
+        {
+          "id": "q4",
+          "concept": "Buffon's devolution viewpoint",
+          "question": "What did Buffon believe was happening to living things over time?",
+          "retryQuestion": "What was the trend for living things over time?",
+          "explanation": "Buffon argued that living things were degenerating, or slowly becoming worse than God originally designed them.",
+          "type": "short_answer",
+          "answer": "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them.",
+          "rubricIdeas": [
+            "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+            ],
+            "acceptableAnswers": [
+              "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "natural history relationship",
+          "question": "Natural history was the observation-based study of living things, based on the work of Aristotle.",
+          "retryQuestion": "The observation-based study of living things, grounded in Aristotle's work, was called natural history.",
+          "explanation": "Before the term biology came into use, the study of living things through observation was known as natural history, and it drew on Aristotle's foundational approach.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "Natural history was the observation-based study of living things, based on the work of Aristotle."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 5,
+      "retryCount": 0,
+      "inputTokens": 50721,
+      "outputTokens": 757,
+      "reasoningTokens": 0,
+      "elapsedMs": 10693,
+      "sourceSelection": {
+        "sentenceCount": 117,
+        "excludedSentenceCount": 7,
+        "candidateWindowCount": 96,
+        "selectedWindowCount": 30,
+        "focusWordCount": 145
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "binomial nomenclature",
+      "question": "In the binomial naming system, what does the second name (the species name) indicate?",
+      "retryQuestion": "What is the basis for the second part of a binomial name?",
+      "explanation": "In the binomial system, the first name (genus) is a general category, while the second name (species) is based on a specific characteristic of the organism.",
+      "type": "multiple_choice",
+      "choices": [
+        "The name of the scientist who discovered the organism",
+        "The geographic location where the organism was first found",
+        "The general category to which the organism belongs",
+        "A specific characteristic of the organism"
+      ],
+      "answerIndex": 3,
+      "answer": "A specific characteristic of the organism"
+    },
+    {
+      "id": "q2",
+      "concept": "historical naming relationship",
+      "question": "What was the reason Linnaeus was called the 'Second Adam'?",
+      "retryQuestion": "Why did Linnaeus receive the title 'Second Adam'?",
+      "explanation": "Linnaeus earned the nickname because he assigned names to a very large number of organisms, with the majority being plants.",
+      "type": "short_answer",
+      "answer": "He named many organisms, mostly plants.",
+      "rubricIdeas": [
+        "He named many organisms, mostly plants."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "atomic_term",
+      "rubricV2": {
+        "version": 2,
+        "mode": "atomic_term",
+        "canonicalAnswer": "He named many organisms, mostly plants.",
+        "aliases": []
+      }
+    },
+    {
+      "id": "q3",
+      "concept": "Cuvier's anatomical reconstruction principle",
+      "question": "Cuvier held that a skilled anatomist could reconstruct an entire organism from only one or two bones by understanding how anatomical systems function.",
+      "retryQuestion": "Cuvier's method allowed reconstructing an organism from a few bones even if the anatomist lacked knowledge of how anatomical systems work.",
+      "explanation": "This statement is true: Cuvier held that a skilled anatomist could reconstruct an entire organism from only one or two bones by understanding how anatomical systems function.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "Cuvier held that a skilled anatomist could reconstruct an entire organism from only one or two bones by understanding how anatomical systems function."
+    },
+    {
+      "id": "q4",
+      "concept": "Buffon's devolution viewpoint",
+      "question": "What did Buffon believe was happening to living things over time?",
+      "retryQuestion": "What was the trend for living things over time?",
+      "explanation": "Buffon argued that living things were degenerating, or slowly becoming worse than God originally designed them.",
+      "type": "short_answer",
+      "answer": "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them.",
+      "rubricIdeas": [
+        "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+        ],
+        "acceptableAnswers": [
+          "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "natural history relationship",
+      "question": "Natural history was the observation-based study of living things, based on the work of Aristotle.",
+      "retryQuestion": "The observation-based study of living things, grounded in Aristotle's work, was called natural history.",
+      "explanation": "Before the term biology came into use, the study of living things through observation was known as natural history, and it drew on Aristotle's foundational approach.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "Natural history was the observation-based study of living things, based on the work of Aristotle."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "1ef967e4685be76545826c83b144ca9540f3927c921edc047176c589729e5932"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "725251de68400a3ae41c7021583191641dceb81d055d9494dfbec143e12b5645"
+    },
+    {
+      "callIndex": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "20d5f151a84906b8225f5f449e3cf215169306d3bd78c419a42903e1f0ff22e6"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "7101b17a43df4548ad5255e550c0f70671561e96faaee88f13d6dab6403e564e"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "5dee83288a17539db54fa2394dfee0f2ee9a4520c79f5d34d7b9779f9bab61d9"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "NOTICE"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "A specific characteristic of the organism",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that the second name in binomial nomenclature indicates a specific characteristic of the organism.",
+        "matchedIdeas": [
+          "A specific characteristic of the organism"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "He named many organisms, mostly plants.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that Linnaeus was called the \"Second Adam\" because he named many organisms, mostly plants.",
+        "matchedIdeas": [
+          "He named many organisms, mostly plants."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that Cuvier believed a skilled anatomist could reconstruct an entire organism from just one or two bones by understanding how anatomical systems function.",
+        "matchedIdeas": [
+          "Cuvier could reconstruct an entire organism from one or two bones"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly captures Buffon's belief that living things were degenerating, or slowly becoming worse than their original design.",
+        "matchedIdeas": [
+          "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that natural history is indeed the observation-based study of living things, rooted in Aristotle's work.",
+        "matchedIdeas": [
+          "Natural history was observation-based study of living things based on Aristotle"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "K4CKmYSMT_0"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 2188,
+      "videoId": "K4CKmYSMT_0",
+      "title": "Biology Before Darwin: Crash Course History of Science #19",
+      "language": "en",
+      "durationSeconds": 761,
+      "segmentCount": 197,
+      "sourceSegmentCount": 197,
+      "characterCount": 12754,
+      "transcriptFingerprint": "9d1fe0d6",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 2188,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 5593,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 5618,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 8175,
+      "ordinal": 1,
+      "concept": "binomial nomenclature",
+      "prompt": "In the binomial naming system, what does the second name (the species name) indicate?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 8176,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2582,
+      "inputTokens": 9697,
+      "outputTokens": 174,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8176,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "18b99e84-4017-42f2-8e6e-1bfe2085da9f"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8187,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 8205,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 9932,
+      "ordinal": 2,
+      "concept": "historical naming relationship",
+      "prompt": "What was the reason Linnaeus was called the 'Second Adam'?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 9933,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1746,
+      "inputTokens": 10064,
+      "outputTokens": 135,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9933,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "18b99e84-4017-42f2-8e6e-1bfe2085da9f"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9940,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10000,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 12217,
+      "ordinal": 3,
+      "concept": "Cuvier's anatomical reconstruction principle",
+      "prompt": "Cuvier held that a skilled anatomist could reconstruct an entire organism from only one or two bones by understanding how anatomical systems function."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12217,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2277,
+      "inputTokens": 10422,
+      "outputTokens": 171,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12217,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "18b99e84-4017-42f2-8e6e-1bfe2085da9f"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12226,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12285,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 14302,
+      "ordinal": 4,
+      "concept": "Buffon's devolution viewpoint",
+      "prompt": "What did Buffon believe was happening to living things over time?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14302,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2076,
+      "inputTokens": 10308,
+      "outputTokens": 159,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14302,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "18b99e84-4017-42f2-8e6e-1bfe2085da9f"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14315,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14403,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 16283,
+      "ordinal": 5,
+      "concept": "natural history relationship",
+      "prompt": "Natural history was the observation-based study of living things, based on the work of Aristotle."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 16283,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1968,
+      "inputTokens": 10230,
+      "outputTokens": 118,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16283,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "18b99e84-4017-42f2-8e6e-1bfe2085da9f"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 16283,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 5,
+      "retryCount": 0,
+      "generationElapsedMs": 10693,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 16283,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "A specific characteristic of the organism"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 18464,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that the second name in binomial nomenclature indicates a specific characteristic of the organism.",
+      "matchedIdeas": [
+        "A specific characteristic of the organism"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 18465,
+      "ordinal": 2,
+      "questionType": "short_answer",
+      "response": "He named many organisms, mostly plants."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 20341,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that Linnaeus was called the \"Second Adam\" because he named many organisms, mostly plants.",
+      "matchedIdeas": [
+        "He named many organisms, mostly plants."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 20341,
+      "ordinal": 3,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 22219,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that Cuvier believed a skilled anatomist could reconstruct an entire organism from just one or two bones by understanding how anatomical systems function.",
+      "matchedIdeas": [
+        "Cuvier could reconstruct an entire organism from one or two bones"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 22219,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 24265,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly captures Buffon's belief that living things were degenerating, or slowly becoming worse than their original design.",
+      "matchedIdeas": [
+        "Buffon believed living things were degenerating, or slowly becoming worse than God originally designed them."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 24265,
+      "ordinal": 5,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 26115,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that natural history is indeed the observation-based study of living things, rooted in Aristotle's work.",
+      "matchedIdeas": [
+        "Natural history was observation-based study of living things based on Aristotle"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

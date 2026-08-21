@@ -117,6 +117,17 @@ export function estimatedFirstQuestionDurationMs(
   return firstQuestionEtaBreakdown(input).estimatedDurationMs;
 }
 
+/** Maps one elapsed-time clock to a constant-speed visual fill. */
+export function linearJourneyProgress(
+  elapsedMs: number,
+  durationMs: number,
+  limit = 0.99,
+): number {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return 0;
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return limit;
+  return Math.min(limit, (elapsedMs / durationMs) * limit);
+}
+
 /**
  * Returns the privacy-safe factors behind the q1 estimate so browser QA can
  * compare predictions with observed readiness without retaining captions.

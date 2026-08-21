@@ -114,6 +114,15 @@ test("long local generation uses a heartbeat port", () => {
   assert.match(background, /chrome\.runtime\.onConnect\.addListener/);
   assert.match(bridge, /chrome\.runtime\.connect\(\{ name: LOCAL_AI_PORT \}\)/);
   assert.match(bridge, /setInterval\([\s\S]*type: "heartbeat"/);
+  assert.match(bridge, /let acceptedByWorker = false/);
+  assert.match(
+    bridge,
+    /if \(!acceptedByWorker\) return;[\s\S]*type: "generation-progress"/,
+  );
+  assert.match(
+    bridge,
+    /if \(response\?\.requestId !== requestId\) return;[\s\S]*acceptedByWorker = true/,
+  );
   assert.match(
     bridge,
     /type: "generation-progress"[\s\S]*stage: "creating_questions"[\s\S]*status: "generating"/,
@@ -224,7 +233,10 @@ test("release ZIPs normalize metadata for reproducible matching artifacts", () =
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.22");
+  assert.equal(manifest.name, "ClipQuest");
+  assert.equal(manifest.action.default_title, "ClipQuest");
+  assert.equal(manifest.version, "0.8.31");
+  assert.match(popupHtml, /<title>ClipQuest<\/title>/);
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);

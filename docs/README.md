@@ -28,20 +28,20 @@ Historical 2026-08-11 baseline:
 
 - Production Worker `a8d8cda5-ea66-4e87-afae-388b2cf237dd` was tagged from Git SHA `9c1bc3b75929819cc18f1a7bb4a50b7cd954dc03`.
 - Remote D1 was migrated through `0019_grounded_generation_telemetry.sql`.
-- Chrome ran ClipQuest Local AI 0.8.5.
+- Chrome ran ClipQuest 0.8.5.
 - The deployed source advertised pipeline 9, prompt v5.5, validator v4.4, and extension-local generation, but every rollout variable was disabled. Newly tested banks therefore used the legacy v5.1 compatibility profile.
 - Ten final banks and all 100 planned questions completed, but only 9/10 first attempts completed. The excluded attempt failed schema validation at 11/15, automatic recovery also failed, and a new quiz was required.
 - The defects recorded at that baseline were recovery reliability, incorrect legacy call classification, widespread source-referential prompt wording, and a corrupting display-time prefix transformation. Later source remediations and local regressions must not be mistaken for a completed new official-site matrix.
 
 This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 migration ledger, the installed extension, and one newly persisted bank before treating it as current.
 
-## Current web-generation source candidate
+## Current web and native generation candidate
 
-The current supported source contract is extension `0.8.19`, result protocol `10`, capability `question-stream-v7`, prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, pipeline `9`, progressive import `v8`, and profile `prompt_first_auto_v5_12` when assigned. Android 0.2.0 consumes the same shared engine. The checked-in rollout keeps v5.12 disabled and v5.11 enabled, so the authenticated profile—not this supported-version list—is authoritative for a new bank.
+Extension `0.8.31` and native app `0.2.0` share the caption-only local engine. The checked-in rollout assigns `stable_non_thinking_v5_2`: result protocol `6`, capability `question-stream-v2`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, pipeline `9`, and progressive import `v4`. The first non-thinking DeepSeek call requests only question 1; the client validates and imports it before opening the attempt, then generates the remaining questions in small background batches. A rejected later object preserves the accepted prefix and triggers bounded AI repair of the first missing ordinal. There is no learner retry control or fallback generation.
 
-Automated regression coverage retains legacy recovery and grading behavior while adding exact prompt-fingerprint/request-body checks, one-character streaming, local MC mapping, model-authored polarity, all four short-answer modes, structural-only retry classification, immutable accepted prefixes, and protocol-10 call lifecycle reconciliation.
+Automated coverage proves question-1-first admission, exact requested/accepted call accounting, fixed-speed first-question progress, accepted-prefix preservation, later-ordinal repair, mixed question types, option mapping, True/False answers, short-answer rubrics, and an explicit completion-screen PDF download action.
 
-The newest v5.12 profile is intentionally disabled by default. A commit, push, Worker deployment, matching extension installation, profile assignment, direct benchmark, and real-client matrices must each be verified independently before public rollout. Android additionally requires EAS signing, FCM/App Links configuration, and physical-device acceptance.
+A commit, push, Worker deployment, matching extension installation, authenticated profile check, direct benchmark, and real-client matrices remain distinct evidence. Android additionally requires EAS signing, FCM/App Links configuration, and physical-device acceptance.
 
 ## QA and calibration
 

@@ -91,8 +91,13 @@ type Answer = number | boolean | number[] | string;
 function learnerFeedbackDetail(
   feedback: AttemptAnswerResponse,
   localGrade: import("@clipquest/contracts").LocalAnswerGrade | undefined,
+  correctAnswer: string | undefined,
   translate: (
-    key: "answerReason" | "answerMarkedCorrect" | "answerMarkedIncorrect",
+    key:
+      | "answerReason"
+      | "answerMarkedCorrect"
+      | "answerMarkedIncorrect"
+      | "correctAnswer",
   ) => string,
 ): string {
   const localDecisionMatches =
@@ -103,7 +108,30 @@ function learnerFeedbackDetail(
   const verdict = feedback.correct
     ? translate("answerMarkedCorrect")
     : translate("answerMarkedIncorrect");
-  return `${translate("answerReason")}: ${reason}\n\n${verdict}`;
+  const answerDetail =
+    !feedback.correct && correctAnswer
+      ? `\n\n${translate("correctAnswer")}: ${correctAnswer}`
+      : "";
+  return `${translate("answerReason")}: ${reason}${answerDetail}\n\n${verdict}`;
+}
+
+function presentCorrectAnswer(
+  question: PublicQuestion,
+  answer: Answer | null,
+  translate: (key: "true" | "false") => string,
+): string | undefined {
+  if (answer === null) return undefined;
+  if (question.type === "multiple_choice" && typeof answer === "number")
+    return question.options?.[answer];
+  if (question.type === "true_false" && typeof answer === "boolean")
+    return translate(answer ? "true" : "false");
+  if (question.type === "ordering" && Array.isArray(answer))
+    return answer
+      .map((itemIndex, index) => `${index + 1}. ${question.items?.[itemIndex] ?? ""}`)
+      .join("\n");
+  if (question.type === "short_answer" && typeof answer === "string")
+    return answer;
+  return undefined;
 }
 
 export default function QuizScreen() {
@@ -164,7 +192,8 @@ export default function QuizScreen() {
         current?.state === next.state &&
         current.availableQuestions === next.availableQuestions &&
         current.totalQuestions === next.totalQuestions &&
-        current.reasonCode === next.reasonCode
+        current.reasonCode === next.reasonCode &&
+        current.retryAvailable === next.retryAvailable
           ? current
           : next,
       ),
@@ -211,6 +240,41 @@ export default function QuizScreen() {
     return () => clearTimeout(timeout);
   }, [question, questionActivation]);
 
+  const syncCheatSheet = useCallback(async () => {
+    if (cheatSheetId) return;
+    if (cheatSheetSyncRef.current) {
+      await cheatSheetSyncRef.current;
+      return;
+    }
+    const pending = pendingCheatSheetRef.current;
+    if (!pending) return;
+    const task = (async () => {
+      let failed = false;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const uploaded = await uploadCheatSheet(pending);
+          setCheatSheetId(uploaded.id);
+          return;
+        } catch {
+          failed = true;
+          if (attempt < 2)
+            await new Promise((resolve) =>
+              setTimeout(resolve, [500, 1_500][attempt]),
+            );
+        }
+      }
+      if (failed) setCheatSheetStatus("failed");
+    })();
+    cheatSheetSyncRef.current = task;
+    try {
+      await task;
+    } finally {
+      if (cheatSheetSyncRef.current === task) {
+        cheatSheetSyncRef.current = undefined;
+      }
+    }
+  }, [cheatSheetId]);
+
   const applyResume = useCallback(
     async (resumed: AttemptResumeResponse) => {
       setFeedback(undefined);
@@ -256,7 +320,7 @@ export default function QuizScreen() {
       if (userId)
         await saveAttemptQuestion(userId, attemptId, resumed.question);
     },
-    [activateQuestion, attemptId, t, updateGeneration, userId],
+    [activateQuestion, attemptId, syncCheatSheet, t, updateGeneration, userId],
   );
 
   async function prepareCheatSheet(quizId: string, videoId: string) {
@@ -289,41 +353,6 @@ export default function QuizScreen() {
       });
   }
 
-  async function syncCheatSheet() {
-    if (cheatSheetId) return;
-    if (cheatSheetSyncRef.current) {
-      await cheatSheetSyncRef.current;
-      return;
-    }
-    const pending = pendingCheatSheetRef.current;
-    if (!pending) return;
-    const task = (async () => {
-      let failed = false;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          const uploaded = await uploadCheatSheet(pending);
-          setCheatSheetId(uploaded.id);
-          return;
-        } catch {
-          failed = true;
-          if (attempt < 2)
-            await new Promise((resolve) =>
-              setTimeout(resolve, [500, 1_500][attempt]),
-            );
-        }
-      }
-      if (failed) setCheatSheetStatus("failed");
-    })();
-    cheatSheetSyncRef.current = task;
-    try {
-      await task;
-    } finally {
-      if (cheatSheetSyncRef.current === task) {
-        cheatSheetSyncRef.current = undefined;
-      }
-    }
-  }
-
   useEffect(() => {
     if (
       showCompletion &&
@@ -333,7 +362,7 @@ export default function QuizScreen() {
     ) {
       void syncCheatSheet();
     }
-  }, [cheatSheetId, cheatSheetStatus, showCompletion]);
+  }, [cheatSheetId, cheatSheetStatus, showCompletion, syncCheatSheet]);
 
   const resume = useCallback(async () => {
     const resumed = await apiRequest(
@@ -343,18 +372,6 @@ export default function QuizScreen() {
     );
     await applyResume(resumed);
   }, [applyResume, attemptId]);
-
-  const retryGeneration = useCallback(() => {
-    recoveryAttemptedRef.current = false;
-    setError(undefined);
-    void ensureProgressiveAttemptRecovery(attemptId, { force: true }).catch(
-      (cause) => {
-        setError(
-          cause instanceof Error ? cause.message : t("quizResumeFailed"),
-        );
-      },
-    );
-  }, [attemptId, t]);
 
   useEffect(() => {
     let active = true;
@@ -400,27 +417,25 @@ export default function QuizScreen() {
     let failures = 0;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
+      let delayMs = 900;
       try {
         await resume();
         failures = 0;
-      } catch (cause) {
+      } catch {
         failures += 1;
-        if (failures >= 3 && active) {
-          setWaitingForQuestions(false);
-          setError(
-            cause instanceof Error ? cause.message : t("quizResumeFailed"),
-          );
-          return;
-        }
+        // A temporary resume failure must not turn progressive generation into
+        // a learner-facing retry task. Keep polling with bounded backoff while
+        // the generation-status loop separately owns AI suffix recovery.
+        delayMs = Math.min(5_000, 900 * 2 ** Math.min(failures, 3));
       }
-      if (active) timeout = setTimeout(() => void poll(), 900);
+      if (active) timeout = setTimeout(() => void poll(), delayMs);
     };
     timeout = setTimeout(() => void poll(), 500);
     return () => {
       active = false;
       if (timeout) clearTimeout(timeout);
     };
-  }, [resume, t, waitingForQuestions]);
+  }, [resume, waitingForQuestions]);
 
   useEffect(
     () =>
@@ -517,10 +532,7 @@ export default function QuizScreen() {
   }, [answer, orderingTouched, question?.type, questionInteractionReady]);
 
   const streamIndicator = generation ? (
-    <QuestionStreamIndicator
-      generation={generation}
-      onRetry={retryGeneration}
-    />
+    <QuestionStreamIndicator generation={generation} />
   ) : undefined;
 
   const submit = async () => {
@@ -760,6 +772,14 @@ export default function QuizScreen() {
           </View>
           <MotionView preset="rise" delay={176} style={styles.completeActions}>
             <PrimaryButton
+              testID="download-cheat-sheet-pdf"
+              accessibilityLabel={
+                cheatSheetStatus === "failed" && !localCheatSheetReady
+                  ? t("retryPdf")
+                  : cheatSheetId || localCheatSheetReady
+                    ? t("downloadPdf")
+                    : t("preparingPdf")
+              }
               variant="secondary"
               disabled={
                 cheatSheetStatus === "preparing" ||
@@ -801,10 +821,10 @@ export default function QuizScreen() {
               }}
             >
               {cheatSheetStatus === "failed" && !localCheatSheetReady
-                ? t("retryNotes")
+                ? t("retryPdf")
                 : cheatSheetId || localCheatSheetReady
-                  ? t("exportNotes")
-                  : t("preparingNotes")}
+                  ? t("downloadPdf")
+                  : t("preparingPdf")}
             </PrimaryButton>
             <PrimaryButton
               trailingIcon={
@@ -953,7 +973,14 @@ export default function QuizScreen() {
       status={feedback.correct ? "correct" : "incorrect"}
       title={feedback.correct ? t("correct") : t("incorrect")}
       detail={presentQuizText(
-        learnerFeedbackDetail(feedback, localGrade, (key) => t(key)),
+        learnerFeedbackDetail(
+          feedback,
+          localGrade,
+          presentCorrectAnswer(question, feedback.correctAnswer, (key) =>
+            t(key),
+          ),
+          (key) => t(key),
+        ),
       )}
       action={
         <PrimaryButton onPress={next}>

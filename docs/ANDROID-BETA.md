@@ -16,7 +16,7 @@ This guide covers the native Android 0.2.0 beta. It is an Expo/React Native appl
 | Generation                 | Foreground-only, resumable, app-local DeepSeek streaming |
 | Source support             | Public YouTube videos with usable text captions          |
 
-Captionless videos are deliberately unsupported in this beta. Android never invokes Whisper, downloads YouTube audio/video, or calls `/api/media/resolve`. If no verified caption source is available, generation stops before the first DeepSeek request.
+Verified YouTube captions are required on Android, iOS, and web. ClipQuest uses subtitle text only; it does not download, decode, or process video audio. If no complete caption source is available, generation stops before the first DeepSeek request.
 
 ## Local AI and privacy
 
@@ -48,7 +48,7 @@ iOS uses the same HTTPS reset and verification routes through Associated Domains
 
 Caption, generation recovery, and per-video quiz preferences are account-scoped. Ambiguous pre-upgrade caches, preferences, and outboxes are deleted rather than migrated. Sign-out, account deletion, or an authenticated-user change first cancels in-flight caption preparation, then clears only that account's current private state plus unowned legacy records so late work cannot restore a departing account's transcript cache.
 
-The caption-only Android beta never downloads video audio. The dormant native transcription implementation retained for iOS/future work nevertheless enforces the same 180 MiB hard media ceiling as the web path, cancels an oversized transfer, verifies the completed file size, and deletes partial files before decoding.
+Every client follows the same caption-only boundary. There is no audio-download or speech-to-text route, package, model cache, or future fallback in the shipped application.
 
 ## Mathematics and notifications
 

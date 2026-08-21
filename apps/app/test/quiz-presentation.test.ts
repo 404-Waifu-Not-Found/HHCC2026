@@ -32,6 +32,16 @@ describe("quiz answer presentation", () => {
     expect(source).toContain('accessibilityLiveRegion="assertive"');
   });
 
+  it("shows the correct answer only after an incorrect grade", async () => {
+    const source = await quizSource();
+
+    expect(source).toContain("!feedback.correct && correctAnswer");
+    expect(source).toContain('translate("correctAnswer")');
+    expect(source).toContain(
+      "presentCorrectAnswer(question, feedback.correctAnswer",
+    );
+  });
+
   it("sends the completion action to the Library route named by its label", async () => {
     const source = await quizSource();
     const completionBranch = source.slice(

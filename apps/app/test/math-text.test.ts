@@ -17,6 +17,11 @@ describe("math text presentation", () => {
     expect(isMathExpressionText("yes/no, true/false, or input/output")).toBe(
       false,
     );
+    expect(
+      isMathExpressionText(
+        "The response correctly identifies that eighteenth-century French thinkers estimated Earth's age.",
+      ),
+    ).toBe(false);
   });
 
   it("uses readable operators while preserving the accessible source", () => {
@@ -53,6 +58,22 @@ describe("math text presentation", () => {
       { text: "(f(b)-f(a))/(b-a)", mathematical: true },
     ]);
     expect(segments[0]?.mathematical).toBe(false);
+  });
+
+  it("never typesets possessives or ordinary hyphenated prose as formulas", () => {
+    const feedback =
+      "Reason: The response correctly identifies that eighteenth-century French thinkers estimated Earth's age. Marked correct.";
+    expect(segmentMathText(feedback)).toEqual([
+      { text: feedback, mathematical: false },
+    ]);
+
+    const mixed =
+      "An eighteenth-century model compares x-y = 0 with Earth's age.";
+    expect(
+      segmentMathText(mixed)
+        .filter((segment) => segment.mathematical)
+        .map((segment) => segment.text),
+    ).toEqual(["x-y = 0"]);
   });
 
   it("isolates every expression in a limit question and its choices", () => {

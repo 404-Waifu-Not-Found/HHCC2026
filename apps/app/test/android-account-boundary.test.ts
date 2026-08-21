@@ -7,12 +7,11 @@ const root = resolve(import.meta.dirname, "..");
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("native account storage boundary", () => {
-  it("scopes transcript caches and upload outboxes to the signed-in user", () => {
+  it("scopes caption caches and upload outboxes to the signed-in user", () => {
     const creation = source("src/state/creation.ts");
     const outbox = source(
       "src/generation/android-generation-outbox.android.ts",
     );
-    const transcription = source("src/transcription/local-transcriber.web.ts");
 
     expect(creation).toContain("clipquest:creation:v3:");
     expect(creation).toContain("ownerUserId");
@@ -27,8 +26,6 @@ describe("native account storage boundary", () => {
     );
     expect(outbox).toContain("clipquest:native-generation-outbox:v2:");
     expect(outbox).toContain("accountPrefix(userId)");
-    expect(transcription).toContain("options.ownerUserId");
-    expect(transcription).toContain("MAX_MEDIA_BYTES");
   });
 
   it("clears private local state on sign-out, deletion, and account change", () => {

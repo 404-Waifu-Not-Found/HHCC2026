@@ -1,0 +1,39 @@
+{"type":"SOURCE_STARTED","elapsedMs":0,"videoId":"O5nskjZ_GoI"}
+{"type":"CAPTIONS_COMPLETE","elapsedMs":2499,"videoId":"O5nskjZ_GoI","title":"Early Computing: Crash Course Computer Science #1","language":"en","durationSeconds":681,"segmentCount":183,"sourceSegmentCount":183,"characterCount":13127,"transcriptFingerprint":"35ab6ade","acquisition":"youtube_local_ytdlp"}
+{"type":"PLAN_REQUESTED","elapsedMs":2499,"questionCount":5,"questionTypes":["multiple_choice","true_false","short_answer"],"transport":"native-json","noFallback":true}
+{"type":"GENERATION_PROGRESS","elapsedMs":5912,"stage":"creating_questions","progress":0.2,"attempt":1,"maxAttempts":3,"status":"generating"}
+{"type":"AI_CALL_STARTED","elapsedMs":5955,"callIndex":0,"ordinal":1,"ordinalAttempt":1,"classification":"primary","acceptedCount":0,"retryDelayMs":0}
+{"type":"multiple_choice","elapsedMs":8630,"ordinal":1,"concept":"computing device function","prompt":"What operation does the slide rule assist with?"}
+{"type":"AI_CALL_COMPLETED","elapsedMs":8630,"callIndex":0,"ordinal":1,"ordinalAttempt":1,"classification":"primary","outcome":"complete","acceptedCount":1,"retryDelayMs":0,"callElapsedMs":2718,"inputTokens":9755,"outputTokens":136,"reasoningTokens":0}
+{"type":"GENERATION_PROGRESS","elapsedMs":8630,"stage":"creating_questions","progress":0.344,"attempt":1,"maxAttempts":1,"status":"generating","recoverySessionId":"f11c92d9-10ca-41a6-8bc8-d107d688120c"}
+{"type":"GENERATION_PROGRESS","elapsedMs":8643,"stage":"creating_questions","progress":0.344,"attempt":1,"maxAttempts":3,"status":"generating"}
+{"type":"AI_CALL_STARTED","elapsedMs":8678,"callIndex":1,"ordinal":2,"ordinalAttempt":1,"classification":"primary","acceptedCount":0,"retryDelayMs":0}
+{"type":"short_answer","elapsedMs":10477,"ordinal":2,"concept":"computing device relationship","prompt":"What relationship does the abacus have to the state of a computation?"}
+{"type":"AI_CALL_COMPLETED","elapsedMs":10478,"callIndex":1,"ordinal":2,"ordinalAttempt":1,"classification":"primary","outcome":"complete","acceptedCount":1,"retryDelayMs":0,"callElapsedMs":1834,"inputTokens":10066,"outputTokens":147,"reasoningTokens":0}
+{"type":"GENERATION_PROGRESS","elapsedMs":10478,"stage":"creating_questions","progress":0.488,"attempt":1,"maxAttempts":1,"status":"generating","recoverySessionId":"f11c92d9-10ca-41a6-8bc8-d107d688120c"}
+{"type":"GENERATION_PROGRESS","elapsedMs":10490,"stage":"creating_questions","progress":0.488,"attempt":1,"maxAttempts":3,"status":"generating"}
+{"type":"AI_CALL_STARTED","elapsedMs":10512,"callIndex":2,"ordinal":3,"ordinalAttempt":1,"classification":"primary","acceptedCount":0,"retryDelayMs":0}
+{"type":"true_false","elapsedMs":12580,"ordinal":3,"concept":"Step Reckoner arithmetic operations","prompt":"The Step Reckoner could multiply and divide numbers through mechanical tricks."}
+{"type":"AI_CALL_COMPLETED","elapsedMs":12580,"callIndex":2,"ordinal":3,"ordinalAttempt":1,"classification":"primary","outcome":"complete","acceptedCount":1,"retryDelayMs":0,"callElapsedMs":2090,"inputTokens":10357,"outputTokens":137,"reasoningTokens":0}
+{"type":"GENERATION_PROGRESS","elapsedMs":12580,"stage":"creating_questions","progress":0.632,"attempt":1,"maxAttempts":1,"status":"generating","recoverySessionId":"f11c92d9-10ca-41a6-8bc8-d107d688120c"}
+{"type":"GENERATION_PROGRESS","elapsedMs":12595,"stage":"creating_questions","progress":0.632,"attempt":1,"maxAttempts":3,"status":"generating"}
+{"type":"AI_CALL_STARTED","elapsedMs":12613,"callIndex":3,"ordinal":4,"ordinalAttempt":1,"classification":"primary","acceptedCount":0,"retryDelayMs":0}
+{"type":"short_answer","elapsedMs":14841,"ordinal":4,"concept":"astrolabe navigation relationship","prompt":"What did the astrolabe enable ships to calculate at sea?"}
+{"type":"AI_CALL_COMPLETED","elapsedMs":14842,"callIndex":3,"ordinal":4,"ordinalAttempt":1,"classification":"primary","outcome":"complete","acceptedCount":1,"retryDelayMs":0,"callElapsedMs":2246,"inputTokens":10310,"outputTokens":152,"reasoningTokens":0}
+{"type":"GENERATION_PROGRESS","elapsedMs":14842,"stage":"creating_questions","progress":0.776,"attempt":1,"maxAttempts":1,"status":"generating","recoverySessionId":"f11c92d9-10ca-41a6-8bc8-d107d688120c"}
+{"type":"GENERATION_PROGRESS","elapsedMs":14854,"stage":"creating_questions","progress":0.776,"attempt":1,"maxAttempts":3,"status":"generating"}
+{"type":"AI_CALL_STARTED","elapsedMs":14873,"callIndex":4,"ordinal":5,"ordinalAttempt":1,"classification":"primary","acceptedCount":0,"retryDelayMs":0}
+{"type":"multiple_choice","elapsedMs":17130,"ordinal":5,"concept":"abacus origin","prompt":"Why was the abacus created?"}
+{"type":"AI_CALL_COMPLETED","elapsedMs":17131,"callIndex":4,"ordinal":5,"ordinalAttempt":1,"classification":"primary","outcome":"complete","acceptedCount":1,"retryDelayMs":0,"callElapsedMs":2276,"inputTokens":10019,"outputTokens":158,"reasoningTokens":0}
+{"type":"GENERATION_PROGRESS","elapsedMs":17131,"stage":"finalizing_questions","progress":1,"attempt":1,"maxAttempts":1,"status":"complete","recoverySessionId":"f11c92d9-10ca-41a6-8bc8-d107d688120c"}
+{"type":"BANK_COMPLETE","elapsedMs":17131,"accepted":5,"requested":5,"aiCalls":5,"retryCount":0,"generationElapsedMs":11223,"promptVersion":"quiz-local-json-stream-v5.12","validatorVersion":"validator-minimal-gradeability-v5.3","userActionsRequired":0}
+{"type":"GRADE_STARTED","elapsedMs":17131,"ordinal":1,"questionType":"multiple_choice","response":"Multiplication and division"}
+{"type":"GRADE_COMPLETED","elapsedMs":19172,"ordinal":1,"correct":true,"confidence":"high","reason":"Your response correctly identifies that the slide rule assists with multiplication and division.","matchedIdeas":["Multiplication and division"],"source":"deepseek_local"}
+{"type":"GRADE_STARTED","elapsedMs":19172,"ordinal":2,"questionType":"short_answer","response":"The abacus stores the current state of the computation."}
+{"type":"GRADE_COMPLETED","elapsedMs":21192,"ordinal":2,"correct":true,"confidence":"high","reason":"Your response correctly identifies that the abacus stores the current state of the computation.","matchedIdeas":["The abacus stores the current state of the computation."],"source":"deepseek_local"}
+{"type":"GRADE_STARTED","elapsedMs":21193,"ordinal":3,"questionType":"true_false","response":"True"}
+{"type":"GRADE_COMPLETED","elapsedMs":23610,"ordinal":3,"correct":true,"confidence":"high","reason":"Correct! The Step Reckoner was indeed capable of performing multiplication and division through mechanical tricks.","matchedIdeas":["Step Reckoner could multiply and divide through mechanical tricks"],"source":"deepseek_local"}
+{"type":"GRADE_STARTED","elapsedMs":23610,"ordinal":4,"questionType":"short_answer","response":"The astrolabe enabled ships to calculate their latitude at sea."}
+{"type":"GRADE_COMPLETED","elapsedMs":25769,"ordinal":4,"correct":true,"confidence":"high","reason":"Your response correctly identifies that the astrolabe enabled ships to calculate their latitude at sea.","matchedIdeas":["The astrolabe enabled ships to calculate their latitude at sea."],"source":"deepseek_local"}
+{"type":"GRADE_STARTED","elapsedMs":25769,"ordinal":5,"questionType":"multiple_choice","response":"Because the scale of society had become greater than what a single person could keep and manipulate in their mind."}
+{"type":"GRADE_COMPLETED","elapsedMs":28362,"ordinal":5,"correct":true,"confidence":"high","reason":"You correctly identified that the abacus was created because society's growing scale exceeded what one person could manage mentally.","matchedIdeas":["The scale of society had become greater than what a single person could keep and manipulate in their mind."],"source":"deepseek_local"}

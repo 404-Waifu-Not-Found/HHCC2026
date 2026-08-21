@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-export * from "./admin";
+// Keep the emitted ESM directly executable in Node-based QA tools. TypeScript
+// resolves this .js specifier to admin.ts while the compiled package retains
+// the extension Node requires at runtime.
+export * from "./admin.js";
 
 export const SourceSchema = z.literal("youtube");
 export type VideoSource = z.infer<typeof SourceSchema>;
@@ -39,9 +42,6 @@ export type MasteryState = z.infer<typeof MasteryStateSchema>;
 
 export const GenerationStageSchema = z.enum([
   "getting_video",
-  "preparing_audio",
-  "downloading_model",
-  "transcribing_device",
   "planning_questions",
   "creating_questions",
   "reviewing_questions",
@@ -203,13 +203,6 @@ export const CaptionTrackSchema = z.object({
 });
 export type CaptionTrack = z.infer<typeof CaptionTrackSchema>;
 
-export const TranscriptionModeSchema = z.enum([
-  "captions",
-  "browser_tab_capture",
-  "device_media",
-]);
-export type TranscriptionMode = z.infer<typeof TranscriptionModeSchema>;
-
 const httpUrl = z
   .string()
   .url()
@@ -229,7 +222,6 @@ export type VideoImportRequest = z.infer<typeof VideoImportRequestSchema>;
 export const CaptionSourceCategorySchema = z.enum([
   "manual",
   "automatic",
-  "local_transcription",
   "unknown",
 ]);
 export type CaptionSourceCategory = z.infer<typeof CaptionSourceCategorySchema>;
@@ -281,12 +273,10 @@ export const VideoImportResponseSchema = z
       browserSourceAvailable: z.boolean().optional(),
       browserLookupAvailable: z.boolean().optional(),
     }),
-    transcriptionMode: TranscriptionModeSchema,
     capture: z.object({
       expectedDurationSeconds: z.number().int().nonnegative(),
       requiresUserGesture: z.boolean(),
     }),
-    requiresLocalTranscription: z.boolean(),
   })
   .superRefine((value, context) => {
     const segments = value.captions.preferredSegments;
@@ -327,18 +317,6 @@ export const CaptionResolveResponseSchema = z.object({
 export type CaptionResolveResponse = z.infer<
   typeof CaptionResolveResponseSchema
 >;
-
-export const MediaResolveRequestSchema = z.object({
-  videoId: z.string().uuid(),
-});
-export type MediaResolveRequest = z.infer<typeof MediaResolveRequestSchema>;
-
-export const MediaResolveResponseSchema = z.object({
-  mediaUrl: z.string().url(),
-  expiresAt: z.string().datetime(),
-  maximumDurationSeconds: z.literal(5_400),
-});
-export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 
 export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
 export const LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 5 as const;
@@ -418,6 +396,13 @@ export const LocalAnswerGradeRequestSchema = z.object({
   response: z.string().trim().min(1).max(2_000),
   questionType: QuizQuestionTypeSchema,
   options: z.array(z.string().trim().min(1).max(500)).max(4).optional(),
+  referenceAnswer: z.string().trim().min(1).max(1_000).optional(),
+  requiredIdeas: z.array(z.string().trim().min(1).max(500)).max(6).optional(),
+  acceptableAlternatives: z
+    .array(z.string().trim().min(1).max(1_000))
+    .max(12)
+    .optional(),
+  correction: z.string().trim().min(1).max(1_000).optional(),
 });
 export type LocalAnswerGradeRequest = z.infer<
   typeof LocalAnswerGradeRequestSchema
@@ -495,6 +480,9 @@ export const GenerationFailureCodeSchema = z.enum([
   "answer_fragment_invalid",
   "unsupported_absolute_claim",
   "quiz_language_mismatch",
+  "source_grounding_invalid",
+  "retry_question_invalid",
+  "true_false_compound_claim",
   "call_dispatch_timeout",
   "stream_idle_timeout",
 ]);
@@ -635,6 +623,9 @@ export const QuizGenerationProfileResponseSchema = z
       "0.8.15",
       "0.8.16",
       "0.8.17",
+      "0.8.26",
+      "0.8.30",
+      "0.8.31",
     ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -667,29 +658,46 @@ export const QuizGenerationProfileResponseSchema = z
   })
   .strict()
   .superRefine((value, context) => {
-    const expected =
+    const expected: [readonly string[], string] =
       value.generationProfile === "prompt_first_auto_v5_12"
-        ? ["0.8.17", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        ? [["0.8.26"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
         : value.generationProfile === "prompt_first_auto_v5_11"
-          ? ["0.8.16", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+          ? [["0.8.16"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
           : value.generationProfile === "prompt_first_auto_v5_10"
-            ? ["0.8.15", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+            ? [["0.8.15"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
             : value.generationProfile === "prompt_first_auto_v5_9"
-              ? ["0.8.14", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+              ? [["0.8.14"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
               : value.generationProfile === "concept_first_auto_v5_8"
                 ? [
-                    "0.8.13",
+                    ["0.8.13"],
                     CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
                   ]
                 : value.generationProfile === "evidence_grounded_auto_v5_4"
-                  ? ["0.8.7", GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                  ? [
+                      ["0.8.7"],
+                      GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                    ]
                   : value.generationProfile === "stable_auto_recovery_v5_3"
-                    ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                    ? [
+                        ["0.8.3"],
+                        AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                      ]
                     : value.generationProfile === "stable_non_thinking_v5_2"
-                      ? ["0.8.2", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-                      : ["0.8.0", LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY];
+                      ? [
+                          // 0.8.31 restored progressive delivery without
+                          // changing the v2 wire capability. Accept the last
+                          // compatible server requirement during a rolling
+                          // deployment so native clients are never blocked by
+                          // harmless extension patch-version skew.
+                          ["0.8.30", "0.8.31"],
+                          STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                        ]
+                      : [
+                          ["0.8.0"],
+                          LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                        ];
     if (
-      value.minimumExtensionVersion !== expected[0] ||
+      !expected[0].includes(value.minimumExtensionVersion) ||
       value.requiredCapability !== expected[1]
     ) {
       context.addIssue({
@@ -1346,7 +1354,7 @@ export const GenerationRecordV3Schema = z
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
     retryOrdinal: z.number().int().min(1).max(15).optional(),
-    ordinalAttempt: z.number().int().min(1).max(12).optional(),
+    ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
     nextCallIndex: z.number().int().min(0).max(128),
@@ -1753,6 +1761,7 @@ const LocalQuestionBaseSchema = z
     id: z.string().regex(/^q(?:[1-9]|1[0-5])$/),
     concept: z.string().trim().min(1).max(200),
     question: z.string().trim().min(1).max(700),
+    retryQuestion: z.string().trim().min(1).max(700).optional(),
     explanation: z.string().trim().min(1).max(1_500),
     claimKey: z.string().trim().min(1).max(300).optional(),
     conceptCluster: z.string().trim().min(1).max(200).optional(),
@@ -2398,13 +2407,17 @@ export const AttemptGenerationAvailabilitySchema = z
     totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
     retryOrdinal: z.number().int().min(1).max(15).optional(),
-    ordinalAttempt: z.number().int().min(1).max(12).optional(),
+    ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
     recoverySessionId: z.string().uuid().optional(),
     nextRecoveryAt: z.string().datetime().optional(),
     recoveryPhase: GenerationRecoveryPhaseSchema.optional(),
     activeCallIndex: z.number().int().min(0).max(255).optional(),
+    // The API sets this only when a stopped generation can actually be
+    // reclaimed.  Keeping it optional preserves compatibility with import
+    // progress events produced by older local clients.
+    retryAvailable: z.boolean().optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -2785,6 +2798,7 @@ export type AttemptAnswerRequest = z.infer<typeof AttemptAnswerRequestSchema>;
 
 export const AttemptAnswerResponseSchema = z.object({
   correct: z.boolean(),
+  correctAnswer: AnswerValueSchema.nullable(),
   explanation: z.string().min(1),
   evidenceSegmentIds: z.array(z.string()),
   nextQuestion: PublicQuestionSchema.nullable(),

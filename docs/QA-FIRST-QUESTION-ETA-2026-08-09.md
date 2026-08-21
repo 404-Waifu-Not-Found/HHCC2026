@@ -8,7 +8,7 @@ This study measures the learner-visible interval from pressing **Create my
 quiz** until question 1 is interactive. It does not treat completion of the
 remaining progressive question stream as time the learner must wait.
 
-The production web app and ClipQuest Local AI extension 0.8.0 were exercised
+The production web app and ClipQuest extension 0.8.0 were exercised
 in authenticated Chrome. Each run used locally acquired YouTube captions and
 extension-local DeepSeek generation. The next run did not begin until the
 previous quiz reached its authoritative requested count, so model streams did

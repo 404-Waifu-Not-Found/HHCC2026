@@ -69,6 +69,9 @@ export const LOCAL_GENERATION_RETRY_POLICY = Object.freeze({
   maxActiveRecoveryMs: MAX_ACTIVE_RECOVERY_MS,
   streamIdleTimeoutMs: STREAM_IDLE_TIMEOUT_MS,
 });
+const STABLE_V52_MAX_AUTOMATIC_RETRIES_PER_ORDINAL = 2;
+const STABLE_V52_MAX_GENERATION_ATTEMPTS =
+  STABLE_V52_MAX_AUTOMATIC_RETRIES_PER_ORDINAL + 1;
 const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
@@ -772,7 +775,7 @@ Treat assertions, recommendations, political positions, and interpretations as v
 
 SELECTION GATE: prefer the candidate only when it is complete, literal, independently meaningful, and not represented in the blocked list. Discard it when it is presentation text, credits, a classroom story detail, a joke, a source-status comment, an incidental count, a tautology, an incomplete fragment, an unresolved reference, or a fact already represented in the blocked list. Never turn a blocked answer into a False statement, distractor, paraphrase, application, or definition. Blocked material is unavailable evidence. When the candidate fails this gate, choose a stronger complete fact from the additional private context.
 
-1. Choose one complete, literal, transferable fact. Prefer a definition, necessary condition, causal relationship, mechanism, method, formula, or application. This priority is mandatory: a supplied preferred candidate is only a search hint and MUST be discarded when it is an analogy, anecdote, presentation example, isolated statistic, list of incidental examples, logistics, biography, joke, promotion, sponsor, brand, publicity, secrecy, or media commentary. Also discard classroom advice about connecting concepts to everyday life; a colored graph line; a table row, answer-choice label, diagram letter, or hidden visual; a speaker's numerical scenario bookkeeping; and a ceremonial mishap. Extract a standalone scientific, mathematical, historical, or civic relationship from the private content instead. Unless the topic itself is history, never test who first discovered, invented, believed, presented, named, coined, published, or revealed something, nor when or where that happened; assess the mechanism or concept instead. Even in a historical topic, assess a cause, consequence, institution, decision, or relationship—not a date or name by itself. Never mention a lesson, video, transcript, material, source, evidence, excerpt, passage, speaker, presenter, narrator, lecturer, or recording.
+1. Choose one complete, literal, transferable fact. Prefer a definition, necessary condition, causal relationship, mechanism, method, formula, or application. This priority is mandatory: a supplied preferred candidate is only a search hint and MUST be discarded when it is an analogy, anecdote, presentation example, isolated statistic, list of incidental examples, logistics, biography, joke, promotion, sponsor, brand, publicity, secrecy, or media commentary. Also discard classroom advice about connecting concepts to everyday life; a colored graph line; a table row, answer-choice label, diagram letter, or hidden visual; a speaker's numerical scenario bookkeeping; and a ceremonial mishap. Extract a standalone scientific, mathematical, historical, or civic relationship from the private content instead. Unless the topic itself is history, never test who first discovered, invented, believed, presented, named, coined, published, or revealed something, nor when or where that happened; assess the mechanism or concept instead. Even in a historical topic, assess a cause, consequence, institution, decision, or relationship—not a date or name by itself. Never ask for the historical scope of a field, whether it dates back to antiquity, what a named person showed or demonstrated, or whether a named person promoted or publicized something. Convert that framing into the direct relationship, mechanism, cause, consequence, or institutional decision; if the evidence does not support one, choose a different fact. Never mention a lesson, video, transcript, material, source, evidence, excerpt, passage, speaker, presenter, narrator, lecturer, or recording.
 
 Never ask what is important, central, useful, necessary, or helpful for understanding a subject. That tests presentation advice rather than the subject itself. Ask the supported definition, relationship, mechanism, method, formula, or application directly. For historical chronology, never claim that one event finalized, completed, triggered, or immediately caused another dated event unless the supplied content explicitly dates both events and states their order. If that complete chronology is absent, choose a different causal or institutional fact.
 
@@ -911,12 +914,16 @@ function promptFirstQuestionSchemaForType(
     explicitPolarityFields = false,
     polarity = true,
     requiredShortAnswerMode,
+    requireRetryQuestion = false,
   } = {},
 ) {
   const common = {
     type: { const: type },
     concept: { type: "string", minLength: 1 },
     question: { type: "string", minLength: 1 },
+    ...(requireRetryQuestion
+      ? { retryQuestion: { type: "string", minLength: 1 } }
+      : {}),
     explanation: { type: "string", minLength: 1 },
   };
   if (type === "multiple_choice") {
@@ -927,6 +934,7 @@ function promptFirstQuestionSchemaForType(
         "type",
         "concept",
         "question",
+        ...(requireRetryQuestion ? ["retryQuestion"] : []),
         "explanation",
         "correctAnswer",
         "distractors",
@@ -953,6 +961,7 @@ function promptFirstQuestionSchemaForType(
             "type",
             "concept",
             "supportedStatement",
+            ...(requireRetryQuestion ? ["retryQuestion"] : []),
             "explanation",
             ...(polarity ? [] : []),
           ],
@@ -960,6 +969,9 @@ function promptFirstQuestionSchemaForType(
             type: { const: type },
             concept: { type: "string", minLength: 1 },
             supportedStatement: { type: "string", minLength: 1 },
+            ...(requireRetryQuestion
+              ? { retryQuestion: { type: "string", minLength: 1 } }
+              : {}),
             explanation: { type: "string", minLength: 1 },
             ...(polarity
               ? {}
@@ -974,6 +986,7 @@ function promptFirstQuestionSchemaForType(
           "type",
           "concept",
           "question",
+          ...(requireRetryQuestion ? ["retryQuestion"] : []),
           "explanation",
           ...(polarity ? [] : []),
         ],
@@ -1012,6 +1025,7 @@ function promptFirstQuestionSchemaForType(
       "type",
       "concept",
       "question",
+      ...(requireRetryQuestion ? ["retryQuestion"] : []),
       "explanation",
       "answer",
       "gradingMode",
@@ -2540,6 +2554,15 @@ export function promptFirstV512EvidenceIndex(
   const usedWindows = [...usedIndices]
     .map((index) => windows[index])
     .filter(Boolean);
+  // A new automatic refill round should not reopen on the exact same evidence
+  // that exhausted the previous round. The authoritative ordinal attempt is
+  // preserved across rounds, so use it to rotate the preferred candidate
+  // while retaining all of the quality and duplicate-family checks below.
+  const refillRotation = Math.max(
+    0,
+    Number(input.continuation?.nextOrdinalAttempt ?? 1) - 1,
+  );
+  const preferredIndex = (questionOffset + refillRotation) % count;
   return Array.from({ length: candidateCount }, (_, index) => index)
     .map((index) => {
       const candidateFamilies = promptFirstV512TopicFamilies(
@@ -2574,7 +2597,7 @@ export function promptFirstV512EvidenceIndex(
             )
           : 0,
         used: usedIndices.has(index),
-        rotationDistance: (index - (questionOffset % count) + count) % count,
+        rotationDistance: (index - preferredIndex + count) % count,
       };
     })
     .sort(
@@ -2716,12 +2739,24 @@ function promptFirstV512ExampleQuestion(
   requiredShortAnswerMode,
 ) {
   if (type !== "true_false") {
-    return promptFirstV511ExampleQuestion(
+    const example = promptFirstV511ExampleQuestion(
       type,
       polarity,
       objective,
       requiredShortAnswerMode,
     );
+    const retryQuestion =
+      type === "multiple_choice"
+        ? "Which option states the same supported relationship?"
+        : objective === "formula"
+          ? "Which equation expresses the relationship among distance, rate, and time?"
+          : objective === "method"
+            ? "How can the two outcomes be checked for agreement?"
+            : objective === "condition" ||
+                requiredShortAnswerMode === "proposition"
+              ? "When does the process begin?"
+              : "What relationship connects the input and output?";
+    return { ...example, retryQuestion };
   }
   if (polarity) {
     return {
@@ -2729,6 +2764,8 @@ function promptFirstV512ExampleQuestion(
       concept: "state relationship",
       supportedStatement:
         "Increasing the input increases the output under the stated condition.",
+      retryQuestion:
+        "Under the stated condition, a larger input produces a larger output.",
       explanation:
         "The input controls the output because the stated condition couples their changes.",
     };
@@ -2740,6 +2777,8 @@ function promptFirstV512ExampleQuestion(
       "Increasing the input increases the output under the stated condition.",
     falseStatement:
       "Increasing the input decreases the output under the stated condition.",
+    retryQuestion:
+      "Under the stated condition, a larger input produces a smaller output.",
     explanation:
       "The false statement reverses the direction: the output increases rather than decreases when the input rises.",
   };
@@ -2751,6 +2790,12 @@ function promptFirstV512StructuralRetryInstruction(reasonCode) {
   }
   if (reasonCode === "schema_invalid") {
     return "Structural retry correction: return every required field in the exact schema. Keep the assigned fact and type unchanged. The explanation must add a reason or mechanism rather than copy the question, answer, supportedStatement, or falseStatement.";
+  }
+  if (reasonCode === "retry_question_invalid") {
+    return "Structural retry correction: the previous retryQuestion was missing, copied the original prompt, or used the wrong response format. Return a nonempty retryQuestion with genuinely different wording but exactly the same grading target. For True/False, write one declarative assertion with the assigned truth value, no question mark, and no interrogative opening. For multiple choice or short answer, write a direct question that has the identical correct answer. Do not change the main question, answer, polarity, or assessed fact merely to create the retryQuestion.";
+  }
+  if (reasonCode === "low_pedagogical_value") {
+    return "Structural retry correction: abandon the biography, publicity, broad timeline, or presentation-trivia objective. Use the newly assigned evidence to test a direct definition, cause, consequence, relationship, mechanism, method, formula, or application. Do not ask what a named person showed, demonstrated, promoted, publicized, or whether the public recognized named people.";
   }
   return promptFirstV511StructuralRetryInstruction(reasonCode);
 }
@@ -3047,6 +3092,8 @@ function generationMessagesV512(input) {
     ' Never assess a claim that the internal context labels as an oversimplification, simplification, generalization, analogy, argument, myth, misconception, disputed interpretation, confusing convention, or casual fundamental-category claim; choose another direct literal fact from the current context. Never assess worked-example narration, an incidental unit conversion, a broad prevalence claim, or a historical aside. Avoid broad only, unique, most, and least claims unless they are the exact defining relationship. A calculation item must include every input and ask the learner to calculate; never ask whether a source-specific result is true. Never refer to unseen inputs as "the eight numbers," "the values above," "the given data," or "this example." Never ask merely for a starting or example value; use that value as an explicit calculation input or choose another concept. If every input cannot fit in the learner-visible question, select a nonnumeric relationship. A definition target must use What, Which, or Define rather than How. A mechanism answer must state the actual process instead of restating the outcome. A False correction must directly restore the single changed relationship. Never manufacture a False item by replacing, duplicating, or omitting one member of a list; choose a single relationship instead. Preserve grouped conditions role by role: shortages apply to resources or habitat, while predators are present or absent. Never reuse a blocked assessment family, even with another type or example. In force questions, never say an action-reaction pair acts on or balances one object; the paired forces act on different objects. Never attribute a fact to a speaker, narrator, source, lesson, or context; state the educational reason directly. The phrases "as described in the context," "as described in the material," "private content," "internal content," "provided information," and "given material" are forbidden in every learner-visible field. Return clean complete sentences with valid punctuation.';
   typeInstruction +=
     " FINAL OUTPUT DECISION: If the assigned fact is a named anecdote, personal routine, quotation, graph axis, matrix cell, table row, diagram label, example-specific count, or a claim that depends on an unseen visual, do not quiz that detail. Extract the general definition, relationship, mechanism, method, or institutional rule that the example teaches, or select another complete fact from the additional context. A matrix item must state a general row, column, entry, or direction rule unless every required matrix value appears in the learner-visible stem. A history or civics item must test a durable cause, consequence, institution, power, constraint, or viewpoint—not who said a quote, which administration faced a condition, or a date by itself. Do not repeat any blocked grading target. No learner-visible field may contain 'the context specifies,' 'as described in the context,' 'the material says,' or any source attribution.";
+  typeInstruction +=
+    " REQUIRED ADAPTIVE RETRY: return retryQuestion as a second learner-visible prompt for exactly the same grading target. It must be genuinely different wording, not an exact copy or punctuation-only edit. It may not add a new fact, change the answer, reverse True/False polarity, or depend on unseen context. For True/False, retryQuestion must be a standalone declarative assertion with the same assigned truth value as the first learner-visible statement. End it as a statement, never with a question mark; do not ask what, which, how, whether, or an absolute-or-relative choice because the learner will still answer only True or False. A True/False item must contain one independently judgeable claim; do not join a historical fact to a second claim or consequence with comma-and, replacing, causing, leading, resulting, or similar wording.";
   const schema = {
     type: "object",
     additionalProperties: false,
@@ -3062,6 +3109,7 @@ function generationMessagesV512(input) {
             explicitPolarityFields: true,
             polarity,
             requiredShortAnswerMode,
+            requireRetryQuestion: true,
           }),
         ],
         items: false,
@@ -4125,6 +4173,15 @@ export function normalizeGeneratedQuestion(
     type,
     concept,
     question: questionText,
+    ...(promptFirstV512Mode
+      ? {
+          retryQuestion: promptFirstV512LearnerText(
+            rawQuestion.retryQuestion,
+            true,
+            false,
+          ),
+        }
+      : {}),
     explanation: conceptMasteryMode
       ? stripQuestionSourceFraming(cleanString(rawQuestion.explanation))
       : promptFirstV512ExplanationText(
@@ -4340,10 +4397,23 @@ export function normalizeGeneratedQuestion(
     if (typeof answer === "string" && /^(true|false)$/i.test(answer)) {
       answer = answer.toLocaleLowerCase("en-US") === "true";
     }
+    let correction = cleanString(rawQuestion.correction);
+    // Stable v5.2 intentionally keeps the model's complete streamed question,
+    // but older responses can occasionally label a supported statement False
+    // while returning that exact same statement as the correction. Reconcile
+    // that high-confidence polarity contradiction locally instead of spending
+    // an automatic generation retry or presenting an impossible grade.
+    if (
+      answer === false &&
+      trueFalseCorrectionRestatesQuestion(questionText, correction)
+    ) {
+      answer = true;
+      correction = questionText;
+    }
     return {
       ...common,
       answer,
-      correction: cleanString(rawQuestion.correction),
+      correction,
     };
   }
   if (type === "short_answer") {
@@ -4932,6 +5002,9 @@ function promptFirstShortAnswerCandidate(question, gradeabilityMode = false) {
     type: question.type,
     concept: question.concept,
     question: question.question,
+    ...(nonEmptyString(question.retryQuestion, 700)
+      ? { retryQuestion: question.retryQuestion }
+      : {}),
     explanation: question.explanation,
     answer,
     shortAnswerMode: mode,
@@ -5348,6 +5421,21 @@ function validateQuiz(quiz, input) {
           repairContextForCandidate(question, qualityFailure),
         );
       }
+      const retryQuestionFailure = input.promptFirstV512Mode
+        ? promptFirstRetryQuestionFailure(
+            question,
+            input.focusExcerpt,
+            input.promptFirstPrimaryClaims?.[index],
+            true,
+          )
+        : null;
+      if (retryQuestionFailure) {
+        validationFailure(
+          `Question ${index + 1} must include a distinct AI-generated adaptive retry prompt.`,
+          retryQuestionFailure,
+          repairContextForCandidate(question, retryQuestionFailure),
+        );
+      }
     }
     if (
       !input.promptFirstV512Mode &&
@@ -5664,6 +5752,28 @@ function normalizedAssertion(value) {
     .trim();
 }
 
+function normalizedTrueFalseCorrection(value) {
+  const unwrapped = String(value ?? "")
+    .normalize("NFKC")
+    .trim()
+    .replace(
+      /^(?:the\s+)?correct\s+(?:statement|claim)\s+is\s*[:：\-–—]?\s*/iu,
+      "",
+    )
+    .replace(/^正确(?:的)?(?:说法|陈述|表述)(?:是|为)\s*[:：\-–—]?\s*/u, "");
+  return normalizedAssertion(unwrapped);
+}
+
+function trueFalseCorrectionRestatesQuestion(question, correction) {
+  const normalizedQuestion = normalizedAssertion(question);
+  const normalizedCorrection = normalizedTrueFalseCorrection(correction);
+  return Boolean(
+    normalizedQuestion &&
+    normalizedCorrection &&
+    normalizedQuestion === normalizedCorrection,
+  );
+}
+
 function assertionWithoutBareNegation(value) {
   return normalizedAssertion(value)
     .replace(/\b(?:not|never|without|no)\b/giu, " ")
@@ -5783,11 +5893,51 @@ export function promptFirstLearnerQualityFailure(
   primaryClaim,
   enforceSourceGrounding = false,
 ) {
-  const prompt = normalize(question.question ?? "");
+  const rawPrompt = String(question.question ?? "").trim();
+  const prompt = normalize(rawPrompt);
   const rawTarget = String(promptFirstGradingTarget(question) ?? "");
   const target = normalize(rawTarget);
   const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
   if (!prompt || !target) return null;
+
+  // Keep history and biography scaffolding out of the learner-facing bank.
+  // Models occasionally turn a useful relationship into name recall ("What
+  // did Ampere show?") or select a broad timeline aside ("dates back to
+  // antiquity"). Those items are source-grounded but still have little study
+  // value, so repair them into the direct relationship or choose another fact.
+  const namedAttributionPrompt =
+    /^(?:What|Which)(?:\s+[\p{L}-]+){0,4}\s+did\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}(?:['’]s)?(?:\s+(?:experiments?|research|work|observations?|studies)(?:\s+[^?]{0,80}?)?)?\s+(?:show|demonstrate|discover|find|establish|prove|observe|reveal)\b/u;
+  const namedPublicityRecall =
+    /^(?:[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}\s+(?:promoted|advocated|publicized|campaigned|advertised|endorsed)|(?:How|Why)\s+did\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}\s+(?:promote|advocate|publicize|campaign|advertise|endorse)|What\s+(?:method|approach|strategy)\s+did\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*(?:\s+[A-ZÀ-ÖØ-Þ][\p{L}'’.-]*){0,2}\s+use\s+to\s+(?:promote|advocate|publicize|campaign|advertise|endorse))\b/u;
+  const historicalFameRecall =
+    /\b(?:average|ordinary|typical)\s+(?:person|people|public)\b.{0,90}\b(?:know|knew|known|recognize|recognized|familiar)\b|\b(?:know|knew|known|recognize|recognized|familiar)\b.{0,90}\b(?:average|ordinary|typical)\s+(?:person|people|public)\b/iu.test(
+      `${rawPrompt} ${rawTarget}`,
+    );
+  const historicalScopeRecall =
+    /^(?:what|which|when)\s+(?:is|was|does|did)\s+(?:the\s+)?historical\s+(?:scope|origin|beginning|start)\b/u.test(
+      prompt,
+    ) ||
+    /\b(?:dates?|dated|goes?|went|stretches?|stretched)\s+(?:all\s+the\s+way\s+)?back\s+to\s+(?:antiquity|ancient\s+times?|the\s+\d{1,2}(?:st|nd|rd|th)?\s+century)\b/u.test(
+      `${prompt} ${target}`,
+    );
+  if (
+    namedAttributionPrompt.test(rawPrompt) ||
+    namedPublicityRecall.test(rawPrompt) ||
+    historicalFameRecall ||
+    historicalScopeRecall
+  ) {
+    return "low_pedagogical_value";
+  }
+
+  if (
+    enforceSourceGrounding &&
+    question.type === "true_false" &&
+    /,\s*(?:and|replacing|causing|leading|resulting)\b/iu.test(
+      String(question.question ?? ""),
+    )
+  ) {
+    return "true_false_compound_claim";
+  }
 
   const explanationPolarityFailure =
     promptFirstTrueFalseExplanationPolarityFailure(question);
@@ -5877,6 +6027,50 @@ export function promptFirstLearnerQualityFailure(
     );
     if (unsupported) return "unsupported_absolute_claim";
   }
+  return null;
+}
+
+export function promptFirstRetryQuestionFailure(
+  question,
+  focusExcerpt,
+  primaryClaim,
+  enforceSourceGrounding = false,
+) {
+  const questionText = normalize(question?.question ?? "");
+  const retryQuestion = normalize(question?.retryQuestion ?? "");
+  if (!questionText || !retryQuestion || questionText === retryQuestion) {
+    return "retry_question_invalid";
+  }
+  const rawRetryQuestion = String(question?.retryQuestion ?? "").trim();
+  if (
+    question?.type === "true_false" &&
+    (/[?？]\s*$/u.test(rawRetryQuestion) ||
+      /^\s*(?:what|which|how|why|when|where|who|whether|is|are|was|were|do|does|did|can|could|would|should|under\s+what)\b/iu.test(
+        rawRetryQuestion,
+      ))
+  ) {
+    return "retry_question_invalid";
+  }
+  if (
+    question?.type === "true_false" &&
+    (promptFirstV512FalseContrastAddsBareNegation(
+      rawRetryQuestion,
+      question.question,
+    ) ||
+      promptFirstV512FalseContrastAddsBareNegation(
+        question.question,
+        rawRetryQuestion,
+      ))
+  ) {
+    return "polarity_mismatch";
+  }
+  const retryQualityFailure = promptFirstLearnerQualityFailure(
+    { ...question, question: rawRetryQuestion },
+    focusExcerpt,
+    primaryClaim,
+    enforceSourceGrounding,
+  );
+  if (retryQualityFailure) return retryQualityFailure;
   return null;
 }
 
@@ -5997,6 +6191,21 @@ function validatePromptFirstQuiz(quiz, input) {
       repairContextForCandidate(question, qualityFailure),
     );
   }
+  const retryQuestionFailure = input.promptFirstV512Mode
+    ? promptFirstRetryQuestionFailure(
+        question,
+        input.focusExcerpt,
+        input.promptFirstPrimaryClaim,
+        true,
+      )
+    : null;
+  if (retryQuestionFailure) {
+    validationFailure(
+      "The learner-facing adaptive retry prompt is missing or duplicates the original question.",
+      retryQuestionFailure,
+      repairContextForCandidate(question, retryQuestionFailure),
+    );
+  }
   if (question.type === "multiple_choice") {
     const correctAnswer = question.correctAnswer;
     const distractors = question.distractors;
@@ -6031,6 +6240,9 @@ function validatePromptFirstQuiz(quiz, input) {
         type: question.type,
         concept: question.concept,
         question: question.question,
+        ...(input.promptFirstV512Mode
+          ? { retryQuestion: question.retryQuestion }
+          : {}),
         explanation: question.explanation,
         choices,
         answerIndex: 0,
@@ -6098,6 +6310,9 @@ function validatePromptFirstQuiz(quiz, input) {
         type: question.type,
         concept: question.concept,
         question: question.question,
+        ...(input.promptFirstV512Mode
+          ? { retryQuestion: question.retryQuestion }
+          : {}),
         explanation: question.explanation,
         answer: question.answer,
         correction: question.correction,
@@ -6657,29 +6872,30 @@ async function readBoundedDeepSeekResponse(response) {
       "local_state_conflict",
     );
   }
-  if (!response.body) return "";
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  // Native Expo responses can expose a body object whose Web Streams reader
+  // is not compatible with the browser reader contract. Non-streaming calls
+  // already return one bounded JSON envelope, so use the universally
+  // supported text reader and verify its actual UTF-8 size afterwards.
+  const text = await response.text();
   let received = 0;
-  let text = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      received += value.byteLength;
-      if (received > MAX_RESPONSE_BYTES) {
-        await reader.cancel();
-        throw new GenerationFailure(
-          "DeepSeek returned more data than ClipQuest can process safely.",
-          "local_state_conflict",
-        );
-      }
-      text += decoder.decode(value, { stream: true });
+  for (const character of text) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    received +=
+      codePoint <= 0x7f
+        ? 1
+        : codePoint <= 0x7ff
+          ? 2
+          : codePoint <= 0xffff
+            ? 3
+            : 4;
+    if (received > MAX_RESPONSE_BYTES) {
+      throw new GenerationFailure(
+        "DeepSeek returned more data than ClipQuest can process safely.",
+        "local_state_conflict",
+      );
     }
-    return text + decoder.decode();
-  } finally {
-    reader.releaseLock();
   }
+  return text;
 }
 
 async function callDeepSeekJson(
@@ -6753,7 +6969,19 @@ async function callDeepSeekJson(
       },
     );
     await onDispatched();
-    const response = await responsePromise;
+    let response;
+    try {
+      response = await responsePromise;
+    } catch (error) {
+      if (error instanceof TypeError || error instanceof DOMException) {
+        throw new GenerationFailure(
+          "The DeepSeek connection was interrupted.",
+          "network_interrupted",
+          { transient: true },
+        );
+      }
+      throw error;
+    }
     if (!response.ok) {
       if (response.status === 408) {
         throw new GenerationFailure(
@@ -6851,13 +7079,11 @@ async function callDeepSeekJson(
       );
     }
     if (error instanceof GenerationFailure) throw error;
-    if (error instanceof TypeError || error instanceof DOMException) {
-      throw new GenerationFailure(
-        "The DeepSeek connection was interrupted.",
-        "network_interrupted",
-        { transient: true },
-      );
-    }
+    // A TypeError after fetch resolves is not evidence of a network failure.
+    // It can come from response decoding, validation, or the persistence
+    // callback. Preserve the real diagnostic and let the automatic repair
+    // policy classify it instead of repeating an identical HTTP request as a
+    // fake transport retry.
     throw new GenerationFailure(
       error instanceof Error ? error.message : "DeepSeek could not be reached.",
       "schema_invalid",
@@ -7088,12 +7314,6 @@ export async function generateQuizFromPlainText(
     );
   }
   const legacyAutomaticRecoveryMode = legacyMode && continuationStartIndex > 0;
-  if (stableV52Mode && continuationStartIndex > 0) {
-    throw new GenerationFailure(
-      "This incomplete stable-v5.2 bank requires a compatibility upgrade before it can recover.",
-      "local_state_conflict",
-    );
-  }
   const automaticMode =
     legacyAutomaticRecoveryMode || (!legacyMode && !stableV52Mode);
   const groundedMode = !legacyMode && automaticMode && !automaticV53Mode;
@@ -7246,8 +7466,12 @@ export async function generateQuizFromPlainText(
     );
     multipleChoiceIndex += 1;
   });
-  let automaticRetryUsed = false;
   let retryNextMissing = false;
+  let nextMissingRetryKind;
+  let nextMissingFailureReason;
+  let nextMissingFailureMessage;
+  let nextMissingRepairContext;
+  const stableRetriesByOrdinal = new Map();
   let callIndex = Number.isInteger(rawInput?.callIndexStart)
     ? rawInput.callIndexStart
     : Number.isInteger(input.continuation?.nextCallIndex)
@@ -7454,18 +7678,43 @@ export async function generateQuizFromPlainText(
   while (acceptedQuestions.length < input.questionCount) {
     const questionOffset = acceptedQuestions.length;
     const acceptedBeforeCall = acceptedQuestions.length;
-    const chunkQuestionCount = retryNextMissing
+    const automaticRetry = retryNextMissing;
+    const retryKindForCall = automaticRetry ? nextMissingRetryKind : undefined;
+    const retryReasonForCall = automaticRetry
+      ? nextMissingFailureReason
+      : undefined;
+    const retryMessageForCall = automaticRetry
+      ? nextMissingFailureMessage
+      : undefined;
+    const retryContextForCall = automaticRetry
+      ? nextMissingRepairContext
+      : undefined;
+    const chunkQuestionCount = automaticRetry
       ? 1
       : adaptiveChunkQuestionCount(
           input.questionTypePlan,
           questionOffset,
           input.questionCount,
         );
-    const classification = retryNextMissing ? "automatic_retry" : "primary";
+    const classification = automaticRetry ? "automatic_retry" : "primary";
     if (classification === "automatic_retry") {
       totals.retryCount += 1;
       retryNextMissing = false;
+      nextMissingRetryKind = undefined;
+      nextMissingFailureReason = undefined;
+      nextMissingFailureMessage = undefined;
+      nextMissingRepairContext = undefined;
     }
+    const baseRepairGuidance = retryKindForCall
+      ? retryGuidanceFor(
+          retryKindForCall,
+          acceptedQuestions,
+          retryReasonForCall,
+        )
+      : undefined;
+    const exactRepairGuidance = retryMessageForCall
+      ? `${baseRepairGuidance ?? "Return a corrected replacement."} The previous candidate was rejected because: ${String(retryMessageForCall).slice(0, 360)}`
+      : baseRepairGuidance;
     const chunkInput = {
       ...input,
       legacyMode,
@@ -7481,12 +7730,20 @@ export async function generateQuizFromPlainText(
         questionOffset + chunkQuestionCount,
       ),
       acceptedQuestions: [...acceptedQuestions],
+      repairGuidance: exactRepairGuidance,
+      repairContext: retryContextForCall,
     };
-    const callAttempt = classification === "automatic_retry" ? 2 : 1;
+    const callAttempt =
+      classification === "automatic_retry"
+        ? (stableRetriesByOrdinal.get(questionOffset) ?? 0) + 1
+        : 1;
     const chunkProgress = questionOffset / input.questionCount;
+    const maxAttempts = stableV52Mode
+      ? STABLE_V52_MAX_GENERATION_ATTEMPTS
+      : LEGACY_MAX_GENERATION_ATTEMPTS;
     onProgress("creating_questions", 0.2 + chunkProgress * 0.72, {
       attempt: callAttempt,
-      maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
+      maxAttempts,
       status: classification === "automatic_retry" ? "retrying" : "generating",
     });
     const callStartedAt = Date.now();
@@ -7526,32 +7783,49 @@ export async function generateQuizFromPlainText(
         acceptedQuestions: [...acceptedQuestions],
       };
       const validated = validateQuiz({ questions: [rawQuestion] }, singleInput);
-      const question = randomizeQuestionAtPosition(
-        validated.questions[0],
-        answerPositionByQuestion.get(globalIndex),
-      );
+      let question;
+      try {
+        question = randomizeQuestionAtPosition(
+          validated.questions[0],
+          answerPositionByQuestion.get(globalIndex),
+          input.secureRandom,
+        );
+      } catch (error) {
+        throw new GenerationFailure(
+          `Question randomization failed: ${error instanceof Error ? error.message : "unknown native error"}`,
+          "local_state_conflict",
+        );
+      }
       acceptedQuestions.push(question);
       const chunkTime = Date.now();
-      await onChunk({
-        ...metadata,
-        title: quizTitle,
-        startIndex: globalIndex,
-        totalQuestions: input.questionCount,
-        question,
-        metrics: {
-          aiCalls: legacyMode && firstQuestionInCall ? 1 : 0,
-          retryCount:
-            legacyMode &&
-            firstQuestionInCall &&
-            classification === "automatic_retry"
-              ? 1
-              : 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          reasoningTokens: 0,
-          elapsedMs: Math.max(1, chunkTime - lastChunkAt),
-        },
-      });
+      try {
+        await onChunk({
+          ...metadata,
+          title: quizTitle,
+          startIndex: globalIndex,
+          totalQuestions: input.questionCount,
+          question,
+          metrics: {
+            aiCalls: legacyMode && firstQuestionInCall ? 1 : 0,
+            retryCount:
+              legacyMode &&
+              firstQuestionInCall &&
+              classification === "automatic_retry"
+                ? 1
+                : 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            reasoningTokens: 0,
+            elapsedMs: Math.max(1, chunkTime - lastChunkAt),
+          },
+        });
+      } catch (error) {
+        acceptedQuestions.pop();
+        throw new GenerationFailure(
+          `Accepted question could not be stored: ${error instanceof Error ? error.message : "unknown persistence error"}`,
+          "local_state_conflict",
+        );
+      }
       firstQuestionInCall = false;
       lastChunkAt = chunkTime;
       const complete = acceptedQuestions.length === input.questionCount;
@@ -7562,7 +7836,7 @@ export async function generateQuizFromPlainText(
           : 0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
         {
           attempt: callAttempt,
-          maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
+          maxAttempts,
           status: complete ? "complete" : "generating",
         },
       );
@@ -7581,7 +7855,7 @@ export async function generateQuizFromPlainText(
               "type_or_order_mismatch",
             );
           }
-          publishQuestion(question, relativeIndex, title);
+          return publishQuestion(question, relativeIndex, title);
         },
       );
       validateQuiz(result.quiz, chunkInput);
@@ -7616,12 +7890,41 @@ export async function generateQuizFromPlainText(
         // missing suffix, so continuing with the next primary chunk is safer
         // and cheaper than spending the transport retry budget.
         callFailure = undefined;
-      } else if (callFailure.transient && !automaticRetryUsed) {
-        automaticRetryUsed = true;
-        retryDelayMs = boundedRetryDelayMilliseconds(
-          1,
-          callFailure.retryAfterMs,
+      } else {
+        const missingOrdinal = acceptedQuestions.length;
+        const retryKind = automaticRetryKindForFailure(
+          callFailure.reasonCode,
+          false,
         );
+        const retriesUsed = stableRetriesByOrdinal.get(missingOrdinal) ?? 0;
+        if (
+          retryKind &&
+          retriesUsed < STABLE_V52_MAX_AUTOMATIC_RETRIES_PER_ORDINAL
+        ) {
+          stableRetriesByOrdinal.set(missingOrdinal, retriesUsed + 1);
+          retryNextMissing = true;
+          nextMissingRetryKind = retryKind;
+          nextMissingFailureReason = callFailure.reasonCode;
+          nextMissingFailureMessage = callFailure.message;
+          nextMissingRepairContext = callFailure.repairContext;
+          retryDelayMs =
+            retryKind === "transport"
+              ? boundedRetryDelayMilliseconds(
+                  retriesUsed + 1,
+                  callFailure.retryAfterMs,
+                  () => input.secureRandom() / 0x1_0000_0000,
+                )
+              : Math.max(
+                  150,
+                  Math.round(
+                    boundedRetryDelayMilliseconds(
+                      retriesUsed + 1,
+                      0,
+                      () => input.secureRandom() / 0x1_0000_0000,
+                    ) / 3,
+                  ),
+                );
+        }
       }
     }
 
@@ -7647,14 +7950,15 @@ export async function generateQuizFromPlainText(
     callIndex += 1;
 
     if (!callFailure) continue;
-    if (callFailure.transient && retryDelayMs > 0) {
-      retryNextMissing = true;
+    if (retryNextMissing && retryDelayMs > 0) {
+      const retryAttempt =
+        (stableRetriesByOrdinal.get(acceptedQuestions.length) ?? 0) + 1;
       onProgress(
         "creating_questions",
         0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
         {
-          attempt: 2,
-          maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
+          attempt: retryAttempt,
+          maxAttempts,
           status: "retrying",
           retryDelayMs,
           reasonCode: callFailure.reasonCode,
@@ -7940,31 +8244,47 @@ async function generateAutomaticQuiz({
           }
         : validateQuiz({ questions: [rawQuestion] }, chunkInput);
       publishedQuestionFingerprint = JSON.stringify(rawQuestion);
-      const question = randomizeQuestionAtPosition(
-        validated.questions[0],
-        answerPositionByQuestion.get(questionOffset),
-        input.secureRandom,
-      );
+      let question;
+      try {
+        question = randomizeQuestionAtPosition(
+          validated.questions[0],
+          answerPositionByQuestion.get(questionOffset),
+          input.secureRandom,
+        );
+      } catch (error) {
+        throw new GenerationFailure(
+          `Question randomization failed: ${error instanceof Error ? error.message : "unknown native error"}`,
+          "local_state_conflict",
+        );
+      }
       acceptedQuestions.push(question);
       const chunkTime = Date.now();
-      await onChunk({
-        ...metadata,
-        title: input.title,
-        startIndex: questionOffset,
-        totalQuestions: input.questionCount,
-        question,
-        metrics: {
-          aiCalls: 0,
-          retryCount: 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          reasoningTokens: 0,
-          elapsedMs: Math.max(1, chunkTime - lastChunkAt),
-          ...(input.sourceSelectionMetrics
-            ? { sourceSelection: input.sourceSelectionMetrics }
-            : {}),
-        },
-      });
+      try {
+        await onChunk({
+          ...metadata,
+          title: input.title,
+          startIndex: questionOffset,
+          totalQuestions: input.questionCount,
+          question,
+          metrics: {
+            aiCalls: 0,
+            retryCount: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            reasoningTokens: 0,
+            elapsedMs: Math.max(1, chunkTime - lastChunkAt),
+            ...(input.sourceSelectionMetrics
+              ? { sourceSelection: input.sourceSelectionMetrics }
+              : {}),
+          },
+        });
+      } catch (error) {
+        acceptedQuestions.pop();
+        throw new GenerationFailure(
+          `Accepted question could not be stored: ${error instanceof Error ? error.message : "unknown persistence error"}`,
+          "local_state_conflict",
+        );
+      }
       lastChunkAt = chunkTime;
     };
 
@@ -8165,10 +8485,29 @@ async function generateAutomaticQuiz({
       continue;
     }
     if (!nextRetryKind || retryDelayMs <= 0) throw callFailure;
+    if (
+      input.promptFirstV512Mode &&
+      [
+        "low_pedagogical_value",
+        "polarity_mismatch",
+        "true_false_compound_claim",
+        "retry_question_invalid",
+        "unsupported_absolute_claim",
+      ].includes(callFailure.reasonCode)
+    ) {
+      // A structural rewrite cannot rescue a slot whose assigned evidence is
+      // itself biography, publicity, timeline trivia, an unstable true/false
+      // contrast, or an unsupported absolute. A model that copied the adaptive
+      // prompt also tends to repeat that shape for the same fact.
+      // Release either window before the automatic retry so allocation moves
+      // to the next unused fact instead of spending the whole budget on one
+      // stuck objective.
+      promptFirstEvidenceIndexByOrdinal.delete(questionOffset);
+    }
     lastFailureReason = callFailure.reasonCode;
     lastRepairContext = callFailure.repairContext;
     retryKind = nextRetryKind;
-    ordinalAttempt += 1;
+    ordinalAttempt = Math.min(24, ordinalAttempt + 1);
     onProgress(
       "creating_questions",
       0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
@@ -8232,6 +8571,19 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "polarity_mismatch",
       "formula_structure_invalid",
       "append_conflict",
+      "duplicate_question",
+      "source_framing_invalid",
+      "course_logistics_invalid",
+      "low_pedagogical_value",
+      "rubric_invalid",
+      "question_tautology_invalid",
+      "quiz_language_mismatch",
+      "source_grounding_invalid",
+      "retry_question_invalid",
+      "true_false_compound_claim",
+      "question_answer_kind_mismatch",
+      "answer_fragment_invalid",
+      "unsupported_absolute_claim",
     ].includes(reasonCode)
       ? "structural"
       : null;
@@ -8273,6 +8625,8 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "question_tautology_invalid",
       "quiz_language_mismatch",
       "source_grounding_invalid",
+      "retry_question_invalid",
+      "true_false_compound_claim",
     ].includes(reasonCode)
   ) {
     return "content_repair";
@@ -8330,7 +8684,7 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
     course_logistics_invalid:
       "Discard the administrative candidate. Choose a different supported definition, relationship, mechanism, method, formula, causal explanation, or application from the eligible instructional evidence.",
     low_pedagogical_value:
-      "Discard the recall-only or presentation-scaffold candidate. Test why, how, a literal relationship, a mechanism, a method, a formula, or an application instead of a name, date, institution, destination, count, biography detail, weave, tapestry, strand, link, unraveling, or jacket metaphor.",
+      "Discard the recall-only or presentation-scaffold candidate. Test why, how, a literal relationship, a mechanism, a method, a formula, or an application instead of historical scope, whether a field dates back to antiquity, what a named person showed or demonstrated, whether a named person promoted or publicized something, a name, date, institution, destination, count, biography detail, weave, tapestry, strand, link, unraveling, or jacket metaphor.",
     rubric_invalid:
       "Keep the repair-context question, answer, evidence, and claim unchanged. Replace only the rubric with 1 to 3 independent indispensable ideas and 3 to 6 complete paraphrases. Put the shortest full-credit answer first and make every alternative satisfy every rubric idea.",
     mc_evidence_span_invalid:
@@ -8361,6 +8715,10 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
       "Return a complete learner-facing answer. Do not end with a dangling conjunction or use placeholders such as 'another effect' or 'something'. Keep the answer concise but grammatically complete.",
     unsupported_absolute_claim:
       "Remove absolute wording such as always, never, all, none, every, or must unless the assigned evidence explicitly supports that exact absolute claim. Keep the wording evidence-bounded and softer.",
+    retry_question_invalid:
+      "Return a genuinely different retryQuestion that tests exactly the same answer or True/False polarity. Do not make a punctuation-only edit, add a new fact, or copy the original prompt. For True/False, return one declarative statement with the same truth value; never return an interrogative question, a question mark, or a choice such as absolute versus relative.",
+    true_false_compound_claim:
+      "Rewrite the True/False item as one independently judgeable factual claim. Remove any second historical claim, appended consequence, or causal clause introduced with comma-and, replacing, causing, leading, resulting, or similar wording.",
     quiz_language_mismatch:
       "Keep the supported objective and private evidence fields, but rewrite every learner-visible field entirely in the selected quiz language. For multiple choice, translate answerText and all distractors; keep evidenceQuote and answerSpan as exact private source evidence.",
   };
@@ -8607,7 +8965,17 @@ async function requestLocalAnswerReason(
   fetchImpl,
   apiKey,
   signal,
-  { question, questionType, options, response, correct },
+  {
+    question,
+    questionType,
+    options,
+    response,
+    referenceAnswer,
+    requiredIdeas,
+    acceptableAlternatives,
+    correction,
+    correct,
+  },
 ) {
   const reasonResponse = await fetchImpl(
     "https://api.deepseek.com/chat/completions",
@@ -8631,6 +8999,18 @@ async function requestLocalAnswerReason(
               questionType,
               ...(options ? { options } : {}),
               learnerResponse: response,
+              ...(referenceAnswer || requiredIdeas?.length || correction
+                ? {
+                    gradingReference: {
+                      ...(referenceAnswer ? { referenceAnswer } : {}),
+                      ...(requiredIdeas?.length ? { requiredIdeas } : {}),
+                      ...(acceptableAlternatives?.length
+                        ? { acceptableAlternatives }
+                        : {}),
+                      ...(correction ? { correction } : {}),
+                    },
+                  }
+                : {}),
               gradingOutcome: correct ? "correct" : "incorrect",
             }),
           },
@@ -8685,6 +9065,32 @@ async function requestLocalAnswerGradeAttempt(
         .filter(Boolean)
         .slice(0, 4)
     : undefined;
+  const referenceAnswer = String(input?.referenceAnswer ?? "")
+    .trim()
+    .slice(0, 1_000);
+  const requiredIdeas = Array.isArray(input?.requiredIdeas)
+    ? input.requiredIdeas
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 500),
+        )
+        .filter(Boolean)
+        .slice(0, 6)
+    : undefined;
+  const acceptableAlternatives = Array.isArray(input?.acceptableAlternatives)
+    ? input.acceptableAlternatives
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 1_000),
+        )
+        .filter(Boolean)
+        .slice(0, 12)
+    : undefined;
+  const correction = String(input?.correction ?? "")
+    .trim()
+    .slice(0, 1_000);
   if (!question || !response) {
     throw new Error("A question and learner response are required.");
   }
@@ -8716,7 +9122,7 @@ async function requestLocalAnswerGradeAttempt(
           {
             role: "system",
             content:
-              "You are ClipQuest's gentle answer grader. Grade the learner response against the question itself. Accept concise, grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, judge the statement's actual factual polarity rather than trusting a requested label. For multiple choice, judge the selected option against the question. For short-answer propositions, be generous: if the learner states the central relationship correctly and gives at least one relevant supporting fact, mark it correct even when a secondary detail is omitted. Require every item only when the prompt explicitly asks for a list/count/formula. Prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
+              "You are ClipQuest's gentle answer grader. Grade the learner response against the question and the supplied AI-generated gradingReference. The gradingReference is the schema-validated answer key for this quiz item; do not replace it with an answer recalled from outside knowledge. An exact match to referenceAnswer is correct. Also accept concise grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, compare the learner's label with referenceAnswer and use correction to explain a false statement. For multiple choice, compare the selected option with referenceAnswer. For short-answer propositions, be generous: if the learner states the central relationship correctly or covers the indispensable requiredIdeas, mark it correct even when a secondary detail is omitted. acceptableAlternatives are examples, not an exhaustive phrase list. Require every item only when the prompt explicitly asks for a list/count/formula. Prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
           },
           {
             role: "user",
@@ -8725,6 +9131,18 @@ async function requestLocalAnswerGradeAttempt(
               questionType,
               ...(options ? { options } : {}),
               learnerResponse: response,
+              ...(referenceAnswer || requiredIdeas?.length || correction
+                ? {
+                    gradingReference: {
+                      ...(referenceAnswer ? { referenceAnswer } : {}),
+                      ...(requiredIdeas?.length ? { requiredIdeas } : {}),
+                      ...(acceptableAlternatives?.length
+                        ? { acceptableAlternatives }
+                        : {}),
+                      ...(correction ? { correction } : {}),
+                    },
+                  }
+                : {}),
             }),
           },
         ],
@@ -8755,6 +9173,10 @@ async function requestLocalAnswerGradeAttempt(
       questionType,
       options,
       response,
+      referenceAnswer,
+      requiredIdeas,
+      acceptableAlternatives,
+      correction,
       correct: decision.correct,
     });
   }

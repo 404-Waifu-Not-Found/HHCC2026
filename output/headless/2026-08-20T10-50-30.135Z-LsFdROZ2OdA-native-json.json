@@ -1,0 +1,2012 @@
+{
+  "runId": "4852c0ef-92ed-49bf-ae00-8ae9b1a4fc93",
+  "source": {
+    "videoId": "LsFdROZ2OdA",
+    "title": "Climate Science: Crash Course History of Science #45",
+    "language": "en",
+    "durationSeconds": 717,
+    "segments": [
+      {
+        "id": "youtube-json3-0-5319",
+        "startMs": 5319,
+        "endMs": 10950,
+        "text": "This image is called the Blue Marble, and it was taken in 1972 during the Apollo 17"
+      },
+      {
+        "id": "youtube-json3-1-10950",
+        "startMs": 10950,
+        "endMs": 11950,
+        "text": "mission."
+      },
+      {
+        "id": "youtube-json3-2-11950",
+        "startMs": 11950,
+        "endMs": 16090,
+        "text": "It has become a symbol not only of cool space travel, but the environmental movement back"
+      },
+      {
+        "id": "youtube-json3-3-16090",
+        "startMs": 16090,
+        "endMs": 17539,
+        "text": "here on the ground."
+      },
+      {
+        "id": "youtube-json3-4-17539",
+        "startMs": 17539,
+        "endMs": 21230,
+        "text": "Think about it: when you’re on the earth, it seems pretty dang big and solid."
+      },
+      {
+        "id": "youtube-json3-5-21230",
+        "startMs": 21230,
+        "endMs": 27060,
+        "text": "But seen from far above, it’s just a blue marble flecked with beautiful green."
+      },
+      {
+        "id": "youtube-json3-6-27060",
+        "startMs": 27060,
+        "endMs": 30480,
+        "text": "Inspiring, isolated, and not really all that big."
+      },
+      {
+        "id": "youtube-json3-7-30480",
+        "startMs": 30480,
+        "endMs": 35300,
+        "text": "And thanks to technologies like air travel and the Internet, and to a booming human population,"
+      },
+      {
+        "id": "youtube-json3-8-35300",
+        "startMs": 35300,
+        "endMs": 37080,
+        "text": "it keeps feeling smaller."
+      },
+      {
+        "id": "youtube-json3-9-37080",
+        "startMs": 37080,
+        "endMs": 41710,
+        "text": "And thanks to technologies… and a booming human population… it keeps losing those"
+      },
+      {
+        "id": "youtube-json3-10-41710",
+        "startMs": 41710,
+        "endMs": 43780,
+        "text": "all-important green flecks."
+      },
+      {
+        "id": "youtube-json3-11-43780",
+        "startMs": 43780,
+        "endMs": 49149,
+        "text": "Today is the history of climate science, which leads to some dark questions about the future"
+      },
+      {
+        "id": "youtube-json3-12-49149",
+        "startMs": 49149,
+        "endMs": 50600,
+        "text": "of life on earth."
+      },
+      {
+        "id": "youtube-json3-14-58320",
+        "startMs": 58320,
+        "endMs": 61120,
+        "text": "Scientists tend to be conservative—not politically"
+      },
+      {
+        "id": "youtube-json3-15-61160",
+        "startMs": 61160,
+        "endMs": 64800,
+        "text": "conservative, but careful, resistant to big claims."
+      },
+      {
+        "id": "youtube-json3-16-64809",
+        "startMs": 64809,
+        "endMs": 70070,
+        "text": "So evidence for the possible end of the living world took a while to be seen as such."
+      },
+      {
+        "id": "youtube-json3-17-70070",
+        "startMs": 70070,
+        "endMs": 72420,
+        "text": "One problem was the structure of modern science."
+      },
+      {
+        "id": "youtube-json3-18-72420",
+        "startMs": 72420,
+        "endMs": 76080,
+        "text": "Remember how those ancient Greek, Indian, and Chinese natural philosophers tended to"
+      },
+      {
+        "id": "youtube-json3-19-76080",
+        "startMs": 76080,
+        "endMs": 80690,
+        "text": "study astronomy, math, the living world, and human society, all at once?"
+      },
+      {
+        "id": "youtube-json3-20-80690",
+        "startMs": 80690,
+        "endMs": 85979,
+        "text": "By the 1900s, professional scientists had gone in the other direction, specialization."
+      },
+      {
+        "id": "youtube-json3-21-85979",
+        "startMs": 85979,
+        "endMs": 90890,
+        "text": "Scientists tended to focus on learning about one specific thing, often practically oriented"
+      },
+      {
+        "id": "youtube-json3-22-90890",
+        "startMs": 90890,
+        "endMs": 91890,
+        "text": "things."
+      },
+      {
+        "id": "youtube-json3-23-91890",
+        "startMs": 91890,
+        "endMs": 96980,
+        "text": "Another problem was actually epistemic: studying weather patterns in one region is useful,"
+      },
+      {
+        "id": "youtube-json3-24-96980",
+        "startMs": 96980,
+        "endMs": 99659,
+        "text": "but how do you study global climate?"
+      },
+      {
+        "id": "youtube-json3-25-99659",
+        "startMs": 99659,
+        "endMs": 102909,
+        "text": "How many local patterns add up to a global one?"
+      },
+      {
+        "id": "youtube-json3-26-102909",
+        "startMs": 102909,
+        "endMs": 107990,
+        "text": "And there are so many elements involved in the earth’s systems—solar radiation, human"
+      },
+      {
+        "id": "youtube-json3-27-107990",
+        "startMs": 107990,
+        "endMs": 113710,
+        "text": "activity, carbon, nitrogen, water, nonhumans: how do you know which variables matter in"
+      },
+      {
+        "id": "youtube-json3-28-113710",
+        "startMs": 113710,
+        "endMs": 116079,
+        "text": "answering any given question?"
+      },
+      {
+        "id": "youtube-json3-29-116079",
+        "startMs": 116079,
+        "endMs": 121060,
+        "text": "Big Data suddenly becomes not a source of potential answers, but a serious problem."
+      },
+      {
+        "id": "youtube-json3-30-121060",
+        "startMs": 121060,
+        "endMs": 122289,
+        "text": "So how did we get here?"
+      },
+      {
+        "id": "youtube-json3-31-122289",
+        "startMs": 122289,
+        "endMs": 128489,
+        "text": "English inventor Guy Callendar correctly predicted rising atmospheric carbon dioxide concentration"
+      },
+      {
+        "id": "youtube-json3-32-128489",
+        "startMs": 128489,
+        "endMs": 129489,
+        "text": "in 1938."
+      },
+      {
+        "id": "youtube-json3-33-129489",
+        "startMs": 129489,
+        "endMs": 133549,
+        "text": "He analyzed measurements of temperatures from the nineteenth century on, correlating them"
+      },
+      {
+        "id": "youtube-json3-34-133549",
+        "startMs": 133549,
+        "endMs": 135790,
+        "text": "with measurements of carbon dioxide."
+      },
+      {
+        "id": "youtube-json3-35-135790",
+        "startMs": 135790,
+        "endMs": 140960,
+        "text": "He saw that temperature had increased and proposed that this was an effect of increasing"
+      },
+      {
+        "id": "youtube-json3-36-140960",
+        "startMs": 140960,
+        "endMs": 141960,
+        "text": "CO2."
+      },
+      {
+        "id": "youtube-json3-37-141960",
+        "startMs": 141960,
+        "endMs": 146269,
+        "text": "Most scientists were skeptical, but Callendar died convinced he was onto something."
+      },
+      {
+        "id": "youtube-json3-38-146269",
+        "startMs": 146269,
+        "endMs": 149260,
+        "text": "And his work influenced a small number of scientists."
+      },
+      {
+        "id": "youtube-json3-39-149260",
+        "startMs": 149260,
+        "endMs": 155460,
+        "text": "In 1957, Revelle published a paper with Hans Suess suggesting that human emissions of greenhouse"
+      },
+      {
+        "id": "youtube-json3-40-155470",
+        "startMs": 155470,
+        "endMs": 159320,
+        "text": "gases like CO2 might create a “greenhouse effect”—these"
+      },
+      {
+        "id": "youtube-json3-41-159320",
+        "startMs": 159320,
+        "endMs": 163519,
+        "text": "heat-trapping gases would be trapped in the atmosphere, not absorbed quickly enough by"
+      },
+      {
+        "id": "youtube-json3-42-163519",
+        "startMs": 163519,
+        "endMs": 166260,
+        "text": "the oceans—which would cause global warming."
+      },
+      {
+        "id": "youtube-json3-43-166260",
+        "startMs": 166260,
+        "endMs": 171630,
+        "text": "Revelle also convinced geochemist Charles Keeling to keep measuring atmospheric CO2"
+      },
+      {
+        "id": "youtube-json3-44-171630",
+        "startMs": 171630,
+        "endMs": 174799,
+        "text": "concentrations at Mauna Loa Observatory, starting in 1958."
+      },
+      {
+        "id": "youtube-json3-45-174799",
+        "startMs": 174799,
+        "endMs": 180010,
+        "text": "These measurements showed seasonal variation as well as a clear arc over time: the planet"
+      },
+      {
+        "id": "youtube-json3-46-180010",
+        "startMs": 180010,
+        "endMs": 182170,
+        "text": "is warming, and CO2 is rising."
+      },
+      {
+        "id": "youtube-json3-47-182170",
+        "startMs": 182170,
+        "endMs": 184610,
+        "text": "This trend is called the Keeling Curve."
+      },
+      {
+        "id": "youtube-json3-48-184610",
+        "startMs": 184610,
+        "endMs": 189510,
+        "text": "In 1988, the World Meteorological Organisation established the Intergovernmental Panel on"
+      },
+      {
+        "id": "youtube-json3-49-189510",
+        "startMs": 189510,
+        "endMs": 195210,
+        "text": "Climate Change, or IPCC, which has become the premiere body for establishing just what"
+      },
+      {
+        "id": "youtube-json3-50-195210",
+        "startMs": 195210,
+        "endMs": 197229,
+        "text": "is going on with the earth’s climate."
+      },
+      {
+        "id": "youtube-json3-51-197229",
+        "startMs": 197229,
+        "endMs": 202519,
+        "text": "And in 1996, the governments of the world came together to ban chlorofluorocarbons or"
+      },
+      {
+        "id": "youtube-json3-52-202519",
+        "startMs": 202519,
+        "endMs": 207500,
+        "text": "CFCs, a group of odorless chemicals that were used in hair sprays, refrigerators, and lots"
+      },
+      {
+        "id": "youtube-json3-53-207500",
+        "startMs": 207500,
+        "endMs": 211810,
+        "text": "of other places… and that were causing a hole in the earth’s protective ozone layer."
+      },
+      {
+        "id": "youtube-json3-54-211810",
+        "startMs": 211810,
+        "endMs": 216550,
+        "text": "By the 2000s, many scientists had overcome their conservatism to speak out about global"
+      },
+      {
+        "id": "youtube-json3-55-216550",
+        "startMs": 216550,
+        "endMs": 222010,
+        "text": "shifts in climate which were affecting living systems of all sorts, agriculture, cities,"
+      },
+      {
+        "id": "youtube-json3-56-222010",
+        "startMs": 222010,
+        "endMs": 224269,
+        "text": "and, well, everything."
+      },
+      {
+        "id": "youtube-json3-57-224269",
+        "startMs": 224269,
+        "endMs": 227989,
+        "text": "In 2000, atmospheric chemist Paul Crutzen coined a term for these global shifts, and—however"
+      },
+      {
+        "id": "youtube-json3-58-227989",
+        "startMs": 227989,
+        "endMs": 232620,
+        "text": "imperfect—it has stuck: the Anthropocene, or the “Age of Man.”"
+      },
+      {
+        "id": "youtube-json3-59-232620",
+        "startMs": 232620,
+        "endMs": 237580,
+        "text": "Some scholars have called into question naming this era after “the” human, as if all"
+      },
+      {
+        "id": "youtube-json3-60-237590",
+        "startMs": 237590,
+        "endMs": 240010,
+        "text": "humans are equally to blame."
+      },
+      {
+        "id": "youtube-json3-61-240010",
+        "startMs": 240010,
+        "endMs": 246299,
+        "text": "Other contenders include Donna Haraway’s the Chthulhucene, or Age of Science Fictional"
+      },
+      {
+        "id": "youtube-json3-62-246299",
+        "startMs": 246299,
+        "endMs": 251820,
+        "text": "Badness; the Manthropocene, or Age of Dudes, which not so subtly hints at the gender bias"
+      },
+      {
+        "id": "youtube-json3-63-251820",
+        "startMs": 251820,
+        "endMs": 257660,
+        "text": "in science; and, catching on with some historians, the Capitalocene, or Age of Political–Economics."
+      },
+      {
+        "id": "youtube-json3-64-257660",
+        "startMs": 257660,
+        "endMs": 263390,
+        "text": "This is a fight among historians over how to discuss longue durée history, or history"
+      },
+      {
+        "id": "youtube-json3-65-263390",
+        "startMs": 263390,
+        "endMs": 264810,
+        "text": "across many millennia."
+      },
+      {
+        "id": "youtube-json3-66-264810",
+        "startMs": 264810,
+        "endMs": 270590,
+        "text": "It’s also a fight among geologists about where to place so-called “golden spikes”—moments"
+      },
+      {
+        "id": "youtube-json3-67-270590",
+        "startMs": 270590,
+        "endMs": 275420,
+        "text": "that represent shifts in the very makeup of the earth, usually visible shifts in the fossil"
+      },
+      {
+        "id": "youtube-json3-68-275420",
+        "startMs": 275420,
+        "endMs": 276420,
+        "text": "record."
+      },
+      {
+        "id": "youtube-json3-69-276420",
+        "startMs": 276420,
+        "endMs": 281140,
+        "text": "In fact, the Anthropocene is a political fight about the intersection of geological epochs"
+      },
+      {
+        "id": "youtube-json3-70-281140",
+        "startMs": 281140,
+        "endMs": 282140,
+        "text": "and human history."
+      },
+      {
+        "id": "youtube-json3-71-282140",
+        "startMs": 282140,
+        "endMs": 286270,
+        "text": "The problem with the Anthropocene is there are so many good candidates for the golden"
+      },
+      {
+        "id": "youtube-json3-72-286270",
+        "startMs": 286270,
+        "endMs": 288050,
+        "text": "spike of a human epoch."
+      },
+      {
+        "id": "youtube-json3-73-288050",
+        "startMs": 288050,
+        "endMs": 293180,
+        "text": "Show us, ThoughtBubble: First, there’s the original fossil fuel—coal—which"
+      },
+      {
+        "id": "youtube-json3-74-293180",
+        "startMs": 293180,
+        "endMs": 298500,
+        "text": "was mined extensively in certain regions starting in the late 1700s and ramping up seriously"
+      },
+      {
+        "id": "youtube-json3-75-298500",
+        "startMs": 298500,
+        "endMs": 300820,
+        "text": "in the late 1800s—the Industrial Revolution."
+      },
+      {
+        "id": "youtube-json3-76-300820",
+        "startMs": 300820,
+        "endMs": 305780,
+        "text": "Second, there’s radioactive material in the form of strontium-90, which could be traced"
+      },
+      {
+        "id": "youtube-json3-77-305780",
+        "startMs": 305780,
+        "endMs": 309430,
+        "text": "all over the world soon after the Trinity atomic bomb test—the"
+      },
+      {
+        "id": "youtube-json3-78-309430",
+        "startMs": 309430,
+        "endMs": 311250,
+        "text": "first of many such tests."
+      },
+      {
+        "id": "youtube-json3-79-311250",
+        "startMs": 311250,
+        "endMs": 317180,
+        "text": "So this date for the beginning of the Anthropocene would be the specific date of July 16, 1945—the"
+      },
+      {
+        "id": "youtube-json3-80-317180",
+        "startMs": 317180,
+        "endMs": 320380,
+        "text": "day of the Trinity Test and the birth of the Cold War."
+      },
+      {
+        "id": "youtube-json3-81-320380",
+        "startMs": 320380,
+        "endMs": 324800,
+        "text": "Third, there’s plastic, steel, and concrete—but especially plastic."
+      },
+      {
+        "id": "youtube-json3-82-324800",
+        "startMs": 324800,
+        "endMs": 329240,
+        "text": "Humans built stuff and even had plastic before World War Two, but development took off at"
+      },
+      {
+        "id": "youtube-json3-83-329240",
+        "startMs": 329240,
+        "endMs": 332020,
+        "text": "an unprecedented pace around 1960."
+      },
+      {
+        "id": "youtube-json3-84-332020",
+        "startMs": 332020,
+        "endMs": 337330,
+        "text": "This “Great Acceleration” saw rapid, often exponential growth in human population, use"
+      },
+      {
+        "id": "youtube-json3-85-337330",
+        "startMs": 337330,
+        "endMs": 342351,
+        "text": "of freshwater, ability to produce and move food, greenhouse gas emissions, temperature"
+      },
+      {
+        "id": "youtube-json3-86-342351",
+        "startMs": 342351,
+        "endMs": 346520,
+        "text": "of the earth’s surface, and consumption of natural resources of all kinds."
+      },
+      {
+        "id": "youtube-json3-87-346520",
+        "startMs": 346520,
+        "endMs": 351050,
+        "text": "The period of the Great Acceleration also gave rise to the first megacities, or urban"
+      },
+      {
+        "id": "youtube-json3-88-351050",
+        "startMs": 351050,
+        "endMs": 353390,
+        "text": "areas with over ten million people."
+      },
+      {
+        "id": "youtube-json3-89-353390",
+        "startMs": 353390,
+        "endMs": 358920,
+        "text": "In reaction to massive urbanization, humans have also set aside more land as national"
+      },
+      {
+        "id": "youtube-json3-90-358920",
+        "startMs": 358920,
+        "endMs": 364570,
+        "text": "parks or greenways, creating a landscape dominated by industrial agriculture and cities but also"
+      },
+      {
+        "id": "youtube-json3-91-364570",
+        "startMs": 364570,
+        "endMs": 367750,
+        "text": "sporting well-defined breaks of deep green."
+      },
+      {
+        "id": "youtube-json3-92-367750",
+        "startMs": 367750,
+        "endMs": 372990,
+        "text": "All of these changes can be seen in the earth’s geological record, and they all symbolize"
+      },
+      {
+        "id": "youtube-json3-93-372990",
+        "startMs": 372990,
+        "endMs": 376370,
+        "text": "how some humans have changed the physical world."
+      },
+      {
+        "id": "youtube-json3-94-376370",
+        "startMs": 376370,
+        "endMs": 380070,
+        "text": "But perhaps the best candidate is number four: chicken bones!"
+      },
+      {
+        "id": "youtube-json3-95-380070",
+        "startMs": 380070,
+        "endMs": 384389,
+        "text": "With more than twenty-three billion alive at any time, chickens—whose bodies have"
+      },
+      {
+        "id": "youtube-json3-96-384389",
+        "startMs": 384389,
+        "endMs": 389330,
+        "text": "been heavily designed by humans—are the most common terrestrial vertebrate species"
+      },
+      {
+        "id": "youtube-json3-97-389330",
+        "startMs": 389330,
+        "endMs": 390390,
+        "text": "on the planet."
+      },
+      {
+        "id": "youtube-json3-98-390390",
+        "startMs": 390390,
+        "endMs": 395310,
+        "text": "Aliens visiting the ruins of earth could reasonably conclude from our fossil record that the only"
+      },
+      {
+        "id": "youtube-json3-99-395310",
+        "startMs": 395310,
+        "endMs": 399310,
+        "text": "life-form that ever mattered on this planet was the chicken."
+      },
+      {
+        "id": "youtube-json3-100-399310",
+        "startMs": 399310,
+        "endMs": 400490,
+        "text": "Thanks, ThoughtBubble."
+      },
+      {
+        "id": "youtube-json3-101-400490",
+        "startMs": 400490,
+        "endMs": 405160,
+        "text": "But the Anthropocene is only one way of viewing geological change and human disruption of"
+      },
+      {
+        "id": "youtube-json3-102-405160",
+        "startMs": 405160,
+        "endMs": 406610,
+        "text": "natural cycles."
+      },
+      {
+        "id": "youtube-json3-103-406610",
+        "startMs": 406610,
+        "endMs": 412540,
+        "text": "Also influential are the Planetary Boundaries—a set of nine specific ranges for natural processes"
+      },
+      {
+        "id": "youtube-json3-104-412540",
+        "startMs": 412540,
+        "endMs": 415540,
+        "text": "within which humans can definitely live."
+      },
+      {
+        "id": "youtube-json3-105-415540",
+        "startMs": 415540,
+        "endMs": 419980,
+        "text": "These include measures such as climate change, ocean acidification, and ozone depletion,"
+      },
+      {
+        "id": "youtube-json3-106-419980",
+        "startMs": 419980,
+        "endMs": 425510,
+        "text": "but also the genetic diversity of life on earth and how much land is converted to cropland."
+      },
+      {
+        "id": "youtube-json3-107-425510",
+        "startMs": 425510,
+        "endMs": 429280,
+        "text": "But we can’t talk about climate disruption without mentioning the pushback."
+      },
+      {
+        "id": "youtube-json3-108-429280",
+        "startMs": 429280,
+        "endMs": 433490,
+        "text": "Even though the vast majority of scientists realized that humans have had a tremendous"
+      },
+      {
+        "id": "youtube-json3-109-433490",
+        "startMs": 433490,
+        "endMs": 437980,
+        "text": "impact on the earth, politically conservative talk shows run stories about how there’’s"
+      },
+      {
+        "id": "youtube-json3-110-437980",
+        "startMs": 437980,
+        "endMs": 439130,
+        "text": "no consensus."
+      },
+      {
+        "id": "youtube-json3-111-439130",
+        "startMs": 439130,
+        "endMs": 441120,
+        "text": "So where did this idea come from?"
+      },
+      {
+        "id": "youtube-json3-112-441120",
+        "startMs": 441120,
+        "endMs": 446650,
+        "text": "In 2010, geologist and historian of science Naomi Oreskes and NASA historian Erik Conway"
+      },
+      {
+        "id": "youtube-json3-113-446650",
+        "startMs": 446650,
+        "endMs": 451320,
+        "text": "showed that fossil fuel companies had hired some of the same PR agents and strategists"
+      },
+      {
+        "id": "youtube-json3-114-451320",
+        "startMs": 451320,
+        "endMs": 455880,
+        "text": "who had worked for the tobacco companies, decades earlier, to invent climate denial:"
+      },
+      {
+        "id": "youtube-json3-115-455880",
+        "startMs": 455880,
+        "endMs": 461340,
+        "text": "that is, to create doubt about science that was not doubted by scientists."
+      },
+      {
+        "id": "youtube-json3-116-461340",
+        "startMs": 461340,
+        "endMs": 465290,
+        "text": "Ultimately, climate science isn’t just about long-term shifts in the movement of carbon,"
+      },
+      {
+        "id": "youtube-json3-117-465290",
+        "startMs": 465290,
+        "endMs": 467480,
+        "text": "water, heat, and other natural phenomena."
+      },
+      {
+        "id": "youtube-json3-118-467480",
+        "startMs": 467480,
+        "endMs": 474290,
+        "text": "The big questions for scientists in the Capitalocene include epistemic, technical, and moral ones."
+      },
+      {
+        "id": "youtube-json3-119-474290",
+        "startMs": 474290,
+        "endMs": 480050,
+        "text": "Epistemic questions include how fast are humans, and especially humans working within capitalism"
+      },
+      {
+        "id": "youtube-json3-120-480050",
+        "startMs": 480050,
+        "endMs": 482520,
+        "text": "changing which ecosystems, in what ways?"
+      },
+      {
+        "id": "youtube-json3-121-482520",
+        "startMs": 482520,
+        "endMs": 486919,
+        "text": "For example, we know that many important pollinators such as honeybees, bumblebees, and butterflies"
+      },
+      {
+        "id": "youtube-json3-122-486919",
+        "startMs": 486919,
+        "endMs": 487919,
+        "text": "are dying out."
+      },
+      {
+        "id": "youtube-json3-123-487920",
+        "startMs": 487920,
+        "endMs": 490940,
+        "text": "Which is real sad, but also potentially an enormous problem."
+      },
+      {
+        "id": "youtube-json3-124-490940",
+        "startMs": 490940,
+        "endMs": 492700,
+        "text": "And we have some ideas as to why."
+      },
+      {
+        "id": "youtube-json3-125-492710",
+        "startMs": 492710,
+        "endMs": 498639,
+        "text": "A major cause is off-target damage from pesticides—which, no surprise, they literally are made to kill"
+      },
+      {
+        "id": "youtube-json3-126-498639",
+        "startMs": 498639,
+        "endMs": 499639,
+        "text": "bugs."
+      },
+      {
+        "id": "youtube-json3-127-499639",
+        "startMs": 499639,
+        "endMs": 501949,
+        "text": "But which pesticides affect which bugs in which ways?"
+      },
+      {
+        "id": "youtube-json3-128-501949",
+        "startMs": 501949,
+        "endMs": 503389,
+        "text": "Are there are safe options?"
+      },
+      {
+        "id": "youtube-json3-129-503389",
+        "startMs": 503389,
+        "endMs": 507669,
+        "text": "Can we test lots of ways of doing agriculture and see which is most bug-friendly?"
+      },
+      {
+        "id": "youtube-json3-130-507669",
+        "startMs": 507669,
+        "endMs": 513459,
+        "text": "And which forms of agriculture are most likely to erode soil from the land, and which help"
+      },
+      {
+        "id": "youtube-json3-131-513459",
+        "startMs": 513459,
+        "endMs": 514690,
+        "text": "build soil back up?"
+      },
+      {
+        "id": "youtube-json3-132-514690",
+        "startMs": 514690,
+        "endMs": 519919,
+        "text": "Basically: what kinds of knowledge do we need to make today, in a connected, fragile, increasingly"
+      },
+      {
+        "id": "youtube-json3-133-519919",
+        "startMs": 519919,
+        "endMs": 521680,
+        "text": "“disrupted” world?"
+      },
+      {
+        "id": "youtube-json3-134-521680",
+        "startMs": 521680,
+        "endMs": 525770,
+        "text": "In terms of technical questions, earth scientists are increasingly being pushed from the role"
+      },
+      {
+        "id": "youtube-json3-135-525770",
+        "startMs": 525770,
+        "endMs": 528610,
+        "text": "of description to recommending action."
+      },
+      {
+        "id": "youtube-json3-136-528610",
+        "startMs": 528610,
+        "endMs": 533610,
+        "text": "Some prominent scientists are calling for governments to seriously consider geoengineering,"
+      },
+      {
+        "id": "youtube-json3-137-533610",
+        "startMs": 533610,
+        "endMs": 538800,
+        "text": "also known as climate engineering: the intentional, global-scale transformation of the environment"
+      },
+      {
+        "id": "youtube-json3-138-538800",
+        "startMs": 538800,
+        "endMs": 541550,
+        "text": "to combat global warming and other disruptions."
+      },
+      {
+        "id": "youtube-json3-139-541550",
+        "startMs": 541550,
+        "endMs": 545990,
+        "text": "Some geoengineering would be relatively uncontroversial, likelike creating more forests."
+      },
+      {
+        "id": "youtube-json3-140-545990",
+        "startMs": 545990,
+        "endMs": 550740,
+        "text": "But other ideas have been hotly debated, likelike fertilizing the ocean with iron to"
+      },
+      {
+        "id": "youtube-json3-141-550740",
+        "startMs": 550740,
+        "endMs": 555120,
+        "text": "accelerate the growth of algae, thus capturing more CO2 from the atmosphere."
+      },
+      {
+        "id": "youtube-json3-142-555120",
+        "startMs": 555120,
+        "endMs": 559620,
+        "text": "But perhaps the biggest shift in professional sciencing today is moral."
+      },
+      {
+        "id": "youtube-json3-143-559620",
+        "startMs": 559620,
+        "endMs": 564370,
+        "text": "Who should pay for solutions to global-scale problems such as sea-level rise and global"
+      },
+      {
+        "id": "youtube-json3-144-564370",
+        "startMs": 564370,
+        "endMs": 565370,
+        "text": "warming?"
+      },
+      {
+        "id": "youtube-json3-145-565370",
+        "startMs": 565370,
+        "endMs": 566370,
+        "text": "Everyone?"
+      },
+      {
+        "id": "youtube-json3-146-566370",
+        "startMs": 566370,
+        "endMs": 568600,
+        "text": "Or only the people who most contributed to the problem?"
+      },
+      {
+        "id": "youtube-json3-147-568600",
+        "startMs": 568600,
+        "endMs": 572830,
+        "text": "The Yellow Vest movement in France is a recent example of this conflict: people across the"
+      },
+      {
+        "id": "youtube-json3-148-572830",
+        "startMs": 572830,
+        "endMs": 577520,
+        "text": "country were subject to a new tax on fuel, in order to help lower carbon emissions."
+      },
+      {
+        "id": "youtube-json3-149-577520",
+        "startMs": 577520,
+        "endMs": 581850,
+        "text": "But many of the working poor, especially in more rural areas, simply couldn’t afford"
+      },
+      {
+        "id": "youtube-json3-150-581850",
+        "startMs": 581850,
+        "endMs": 584750,
+        "text": "to pay more to get around, and riots broke out."
+      },
+      {
+        "id": "youtube-json3-151-584750",
+        "startMs": 584750,
+        "endMs": 589120,
+        "text": "And think about all of the scientists working on topics related to the environment but…"
+      },
+      {
+        "id": "youtube-json3-152-589120",
+        "startMs": 589120,
+        "endMs": 591310,
+        "text": "maybe on the wrong side of history."
+      },
+      {
+        "id": "youtube-json3-153-591310",
+        "startMs": 591310,
+        "endMs": 595770,
+        "text": "What if you are a professional geologist, and Exxon, BP, or Shell hired you to find"
+      },
+      {
+        "id": "youtube-json3-154-595770",
+        "startMs": 595770,
+        "endMs": 597940,
+        "text": "more fossil fuels to extract?"
+      },
+      {
+        "id": "youtube-json3-155-597940",
+        "startMs": 597940,
+        "endMs": 601480,
+        "text": "Should you not do the science you’ve spent a decade getting really good at?"
+      },
+      {
+        "id": "youtube-json3-156-601480",
+        "startMs": 601480,
+        "endMs": 604970,
+        "text": "What if you work for a chemical company to study the unintended effects of a pesticides"
+      },
+      {
+        "id": "youtube-json3-157-604970",
+        "startMs": 604970,
+        "endMs": 609399,
+        "text": "on animals, and when you report your findings, the company tries to bury them?"
+      },
+      {
+        "id": "youtube-json3-158-609399",
+        "startMs": 609399,
+        "endMs": 615010,
+        "text": "And that's not a hypothetical, it's exactly what happened to leading amphibian endocrinologist Tyrone Hayes in the 2000s."
+      },
+      {
+        "id": "youtube-json3-159-615010",
+        "startMs": 615010,
+        "endMs": 620029,
+        "text": "He reported to Syngenta that one of their key products, the herbicide atrazine, disrupts"
+      },
+      {
+        "id": "youtube-json3-160-620029",
+        "startMs": 620029,
+        "endMs": 624240,
+        "text": "the hormones of frogs and may have other serious unintended consequences."
+      },
+      {
+        "id": "youtube-json3-161-624240",
+        "startMs": 624240,
+        "endMs": 629410,
+        "text": "And for that, Syngenta spent years trying to discredit their former collaborator."
+      },
+      {
+        "id": "youtube-json3-162-629410",
+        "startMs": 629410,
+        "endMs": 634050,
+        "text": "As it approaches the present, the history of science and technology becomes less about"
+      },
+      {
+        "id": "youtube-json3-163-634050",
+        "startMs": 634050,
+        "endMs": 639370,
+        "text": "discoveries and inventions and more about how the choice to make specific knowledge—or"
+      },
+      {
+        "id": "youtube-json3-164-639370",
+        "startMs": 639370,
+        "endMs": 642080,
+        "text": "bury that knowledge—is highly political."
+      },
+      {
+        "id": "youtube-json3-165-642080",
+        "startMs": 642080,
+        "endMs": 646960,
+        "text": "This isn’t a portrait of doomsday, but a call to reflect on science’s strengths…"
+      },
+      {
+        "id": "youtube-json3-166-646960",
+        "startMs": 646960,
+        "endMs": 648310,
+        "text": "and its limits."
+      },
+      {
+        "id": "youtube-json3-167-648310",
+        "startMs": 648310,
+        "endMs": 652500,
+        "text": "Science alone can’t answer tough questions about how humanity should address climate"
+      },
+      {
+        "id": "youtube-json3-168-652500",
+        "startMs": 652500,
+        "endMs": 656110,
+        "text": "disruption, and who should pay for potential solutions."
+      },
+      {
+        "id": "youtube-json3-169-656110",
+        "startMs": 656110,
+        "endMs": 661260,
+        "text": "One thing is certain: whether we call it the Anthropocene, Capitalocene, or something else,"
+      },
+      {
+        "id": "youtube-json3-170-661260",
+        "startMs": 661260,
+        "endMs": 666730,
+        "text": "the new era in which some humans have dragged the Blue Marble will forever change how we"
+      },
+      {
+        "id": "youtube-json3-171-666730",
+        "startMs": 666730,
+        "endMs": 669140,
+        "text": "make and share knowledge and tools."
+      },
+      {
+        "id": "youtube-json3-172-669140",
+        "startMs": 669140,
+        "endMs": 673820,
+        "text": "Next time—we’ll finish the series with a look at how science is gendered: not only"
+      },
+      {
+        "id": "youtube-json3-173-673820",
+        "startMs": 673820,
+        "endMs": 678180,
+        "text": "how important women have been to the history of science, and how difficult it sometimes"
+      },
+      {
+        "id": "youtube-json3-174-678180",
+        "startMs": 678180,
+        "endMs": 679420,
+        "text": "is to tell their stories."
+      },
+      {
+        "id": "youtube-json3-175-679420",
+        "startMs": 679420,
+        "endMs": 685440,
+        "text": "But also how our understandings of the natural world reflect our ideas about humanity."
+      },
+      {
+        "id": "youtube-json3-176-685440",
+        "startMs": 685440,
+        "endMs": 689300,
+        "text": "Crash Course History of Science is filmed in the Dr. Cheryll C. Kinney studio in Missoula, MT"
+      },
+      {
+        "id": "youtube-json3-177-689300",
+        "startMs": 689300,
+        "endMs": 693460,
+        "text": "and it's made with the help of all these nice people and our animation team is Thought Cafe."
+      },
+      {
+        "id": "youtube-json3-178-693460",
+        "startMs": 693460,
+        "endMs": 697580,
+        "text": "Crash Course is a Complexly production. If you want to keep imagining the world more complexly with us"
+      },
+      {
+        "id": "youtube-json3-179-697580",
+        "startMs": 697580,
+        "endMs": 702300,
+        "text": "you can check out some of our other shows like Animal Wonders, the Art Assignment, and Scishow Psych."
+      },
+      {
+        "id": "youtube-json3-180-702300",
+        "startMs": 702300,
+        "endMs": 707700,
+        "text": "And, if you would like to keep Crash Course free, for everyone, forever, you can support the series on Patreon"
+      },
+      {
+        "id": "youtube-json3-181-707700",
+        "startMs": 707700,
+        "endMs": 711460,
+        "text": "A crowd funding platform that allows you to support the content you love."
+      },
+      {
+        "id": "youtube-json3-182-711460",
+        "startMs": 711460,
+        "endMs": 716520,
+        "text": "Thank you to all of our Patrons for their continued support."
+      }
+    ],
+    "sourceSegmentCount": 182,
+    "characterCount": 12086,
+    "transcriptFingerprint": "6cf530a2",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "31c054c2-7a54-4691-857a-5e922cbfa565",
+    "generationSessionId": "f6b3e5f8-b218-43f4-8dda-6dfd24c8f363",
+    "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba",
+    "questionPlan": {
+      "seed": "3f4ba1f12cf967ce2e060905c3cbe8f4b39ab5de180ef617d140602cb620eec0",
+      "types": [
+        "multiple_choice",
+        "short_answer",
+        "true_false",
+        "short_answer",
+        "true_false"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Climate Science: Crash Course History of Science #45",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "Anthropocene naming alternatives",
+          "question": "Which proposed name for the current geological era emphasizes the role of economic and political systems in shaping global change?",
+          "retryQuestion": "Which alternative term for the current geological era highlights the influence of economic and political systems?",
+          "explanation": "The Capitalocene, or Age of Political–Economics, is a proposed name that emphasizes economic and political systems as drivers of global change.",
+          "type": "multiple_choice",
+          "choices": [
+            "Manthropocene",
+            "Capitalocene",
+            "Anthropocene",
+            "Chthulhucene"
+          ],
+          "answerIndex": 1,
+          "answer": "Capitalocene"
+        },
+        {
+          "id": "q2",
+          "concept": "geoengineering definition",
+          "question": "What is the term for the intentional, global-scale transformation of the environment to combat global warming and other disruptions?",
+          "retryQuestion": "Which term refers to deliberate, planet-wide environmental modification aimed at countering global warming and related disruptions?",
+          "explanation": "Geoengineering, also called climate engineering, is defined as the intentional, global-scale transformation of the environment to address global warming and other disruptions.",
+          "type": "short_answer",
+          "answer": "Geoengineering",
+          "rubricIdeas": [
+            "Geoengineering"
+          ],
+          "acceptableAnswers": [
+            "Climate engineering"
+          ],
+          "shortAnswerMode": "atomic_term",
+          "rubricV2": {
+            "version": 2,
+            "mode": "atomic_term",
+            "canonicalAnswer": "Geoengineering",
+            "aliases": [
+              "Climate engineering"
+            ]
+          }
+        },
+        {
+          "id": "q3",
+          "concept": "Capitalocene scientific questions",
+          "question": "The big questions for scientists in the Capitalocene include only epistemic and technical ones.",
+          "retryQuestion": "In the Capitalocene, scientists' big questions are limited to epistemic and technical concerns.",
+          "explanation": "The false statement omits the moral dimension, which is part of the full set of big questions alongside epistemic and technical ones.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "The big questions for scientists in the Capitalocene include epistemic, technical, and moral ones."
+        },
+        {
+          "id": "q4",
+          "concept": "Anthropocene golden spike candidates",
+          "question": "Why is selecting a single golden spike for the Anthropocene difficult?",
+          "retryQuestion": "What makes it hard to choose one golden spike for the Anthropocene?",
+          "explanation": "The difficulty arises because many distinct events qualify as markers of human-induced geological change, such as the Industrial Revolution's coal use and the global spread of radioactive strontium-90 from nuclear tests.",
+          "type": "short_answer",
+          "answer": "Because there are many good candidate markers for the start of a human epoch.",
+          "rubricIdeas": [
+            "Because there are many good candidate markers for the start of a human epoch."
+          ],
+          "acceptableAnswers": [
+            "There are so many good candidates for the golden spike",
+            "Many good candidate markers exist",
+            "Numerous events could mark the start"
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "Because there are many good candidate markers for the start of a human epoch."
+            ],
+            "acceptableAnswers": [
+              "Because there are many good candidate markers for the start of a human epoch.",
+              "There are so many good candidates for the golden spike",
+              "Many good candidate markers exist",
+              "Numerous events could mark the start"
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "recognition delay of existential climate evidence",
+          "question": "Evidence for the possible end of the living world took a while to be seen as such.",
+          "retryQuestion": "The possibility that the living world could end was supported by evidence that was slow to be recognized as such.",
+          "explanation": "Scientists are generally cautious about accepting dramatic claims, so evidence pointing to a potential end of life on Earth was not immediately interpreted that way.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "Evidence for the possible end of the living world took a while to be seen as such."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 6,
+      "retryCount": 1,
+      "inputTokens": 50815,
+      "outputTokens": 774,
+      "reasoningTokens": 0,
+      "elapsedMs": 13985,
+      "sourceSelection": {
+        "sentenceCount": 99,
+        "excludedSentenceCount": 3,
+        "candidateWindowCount": 86,
+        "selectedWindowCount": 30,
+        "focusWordCount": 198
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "Anthropocene naming alternatives",
+      "question": "Which proposed name for the current geological era emphasizes the role of economic and political systems in shaping global change?",
+      "retryQuestion": "Which alternative term for the current geological era highlights the influence of economic and political systems?",
+      "explanation": "The Capitalocene, or Age of Political–Economics, is a proposed name that emphasizes economic and political systems as drivers of global change.",
+      "type": "multiple_choice",
+      "choices": [
+        "Manthropocene",
+        "Capitalocene",
+        "Anthropocene",
+        "Chthulhucene"
+      ],
+      "answerIndex": 1,
+      "answer": "Capitalocene"
+    },
+    {
+      "id": "q2",
+      "concept": "geoengineering definition",
+      "question": "What is the term for the intentional, global-scale transformation of the environment to combat global warming and other disruptions?",
+      "retryQuestion": "Which term refers to deliberate, planet-wide environmental modification aimed at countering global warming and related disruptions?",
+      "explanation": "Geoengineering, also called climate engineering, is defined as the intentional, global-scale transformation of the environment to address global warming and other disruptions.",
+      "type": "short_answer",
+      "answer": "Geoengineering",
+      "rubricIdeas": [
+        "Geoengineering"
+      ],
+      "acceptableAnswers": [
+        "Climate engineering"
+      ],
+      "shortAnswerMode": "atomic_term",
+      "rubricV2": {
+        "version": 2,
+        "mode": "atomic_term",
+        "canonicalAnswer": "Geoengineering",
+        "aliases": [
+          "Climate engineering"
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "concept": "Capitalocene scientific questions",
+      "question": "The big questions for scientists in the Capitalocene include only epistemic and technical ones.",
+      "retryQuestion": "In the Capitalocene, scientists' big questions are limited to epistemic and technical concerns.",
+      "explanation": "The false statement omits the moral dimension, which is part of the full set of big questions alongside epistemic and technical ones.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "The big questions for scientists in the Capitalocene include epistemic, technical, and moral ones."
+    },
+    {
+      "id": "q4",
+      "concept": "Anthropocene golden spike candidates",
+      "question": "Why is selecting a single golden spike for the Anthropocene difficult?",
+      "retryQuestion": "What makes it hard to choose one golden spike for the Anthropocene?",
+      "explanation": "The difficulty arises because many distinct events qualify as markers of human-induced geological change, such as the Industrial Revolution's coal use and the global spread of radioactive strontium-90 from nuclear tests.",
+      "type": "short_answer",
+      "answer": "Because there are many good candidate markers for the start of a human epoch.",
+      "rubricIdeas": [
+        "Because there are many good candidate markers for the start of a human epoch."
+      ],
+      "acceptableAnswers": [
+        "There are so many good candidates for the golden spike",
+        "Many good candidate markers exist",
+        "Numerous events could mark the start"
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "Because there are many good candidate markers for the start of a human epoch."
+        ],
+        "acceptableAnswers": [
+          "Because there are many good candidate markers for the start of a human epoch.",
+          "There are so many good candidates for the golden spike",
+          "Many good candidate markers exist",
+          "Numerous events could mark the start"
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "recognition delay of existential climate evidence",
+      "question": "Evidence for the possible end of the living world took a while to be seen as such.",
+      "retryQuestion": "The possibility that the living world could end was supported by evidence that was slow to be recognized as such.",
+      "explanation": "Scientists are generally cautious about accepting dramatic claims, so evidence pointing to a potential end of life on Earth was not immediately interpreted that way.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "Evidence for the possible end of the living world took a while to be seen as such."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "2db67d4f8542184023cd608dabb7794dd9bf9a3b6f6c74b1544f901cb7b97efb"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "564f7eeec4020a653c63f35b96b4909b5523d187e705dbf47a1e00a1146ca93f"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "questionFingerprint": "265c605860ac4e71f9ad3b8da762f2d91a5f52497ce8d058baf56a2d782ff7ea"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "31e15a6139496d72406dd919661e9b9cc5b9af2abcacf16d8726513de49fd6cb"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "ba70780ada6f03bb1aa5149a7963151da4dda66b9effeaefe2435130ee9fdba6"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "NOTICE"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "Capitalocene",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the Capitalocene, which highlights how economic and political systems drive global change.",
+        "matchedIdeas": [
+          "Capitalocene"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "Geoengineering",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the term for intentional, large-scale environmental modification to address climate change.",
+        "matchedIdeas": [
+          "Geoengineering"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the statement is false, as the big questions for scientists in the Capitalocene also include moral ones, not just epistemic and technical ones.",
+        "matchedIdeas": [
+          "Correctly identifies the statement as false"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "Because there are many good candidate markers for the start of a human epoch.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the difficulty lies in the abundance of viable candidate markers for the start of the human epoch.",
+        "matchedIdeas": [
+          "Because there are many good candidate markers for the start of a human epoch."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "True — the response correctly recognizes that evidence for the possible end of the living world was not immediately recognized as such.",
+        "matchedIdeas": [
+          "Learner answered True, matching referenceAnswer"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 1,
+      "videoId": "LsFdROZ2OdA"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 2160,
+      "videoId": "LsFdROZ2OdA",
+      "title": "Climate Science: Crash Course History of Science #45",
+      "language": "en",
+      "durationSeconds": 717,
+      "segmentCount": 182,
+      "sourceSegmentCount": 182,
+      "characterCount": 12086,
+      "transcriptFingerprint": "6cf530a2",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 2160,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 5450,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 5522,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 7955,
+      "ordinal": 1,
+      "concept": "Anthropocene naming alternatives",
+      "prompt": "Which proposed name for the current geological era emphasizes the role of economic and political systems in shaping global change?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 7955,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2505,
+      "inputTokens": 9840,
+      "outputTokens": 158,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7955,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7972,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 8016,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 10404,
+      "ordinal": 2,
+      "concept": "geoengineering definition",
+      "prompt": "What is the term for the intentional, global-scale transformation of the environment to combat global warming and other disruptions?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 10404,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2432,
+      "inputTokens": 10081,
+      "outputTokens": 158,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10404,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10420,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10484,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12442,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "true_false_compound_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 198,
+      "callElapsedMs": 2022
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12442,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 198,
+      "reasonCode": "true_false_compound_claim",
+      "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12664,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12711,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 14596,
+      "ordinal": 3,
+      "concept": "Capitalocene scientific questions",
+      "prompt": "The big questions for scientists in the Capitalocene include only epistemic and technical ones."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14596,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1932,
+      "inputTokens": 10463,
+      "outputTokens": 134,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14596,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14619,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14727,
+      "callIndex": 4,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 17160,
+      "ordinal": 4,
+      "concept": "Anthropocene golden spike candidates",
+      "prompt": "Why is selecting a single golden spike for the Anthropocene difficult?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 17160,
+      "callIndex": 4,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2541,
+      "inputTokens": 10304,
+      "outputTokens": 203,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 17160,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 17184,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 17300,
+      "callIndex": 5,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 19424,
+      "ordinal": 5,
+      "concept": "recognition delay of existential climate evidence",
+      "prompt": "Evidence for the possible end of the living world took a while to be seen as such."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 19425,
+      "callIndex": 5,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2241,
+      "inputTokens": 10127,
+      "outputTokens": 121,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 19425,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "993730b9-fe05-4811-9843-20aedcd4d7ba"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 19427,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 6,
+      "retryCount": 1,
+      "generationElapsedMs": 13985,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 19428,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "Capitalocene"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 21724,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the Capitalocene, which highlights how economic and political systems drive global change.",
+      "matchedIdeas": [
+        "Capitalocene"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 21724,
+      "ordinal": 2,
+      "questionType": "short_answer",
+      "response": "Geoengineering"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 24321,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the term for intentional, large-scale environmental modification to address climate change.",
+      "matchedIdeas": [
+        "Geoengineering"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 24321,
+      "ordinal": 3,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 26673,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the statement is false, as the big questions for scientists in the Capitalocene also include moral ones, not just epistemic and technical ones.",
+      "matchedIdeas": [
+        "Correctly identifies the statement as false"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 26673,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "Because there are many good candidate markers for the start of a human epoch."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 28867,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the difficulty lies in the abundance of viable candidate markers for the start of the human epoch.",
+      "matchedIdeas": [
+        "Because there are many good candidate markers for the start of a human epoch."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 28867,
+      "ordinal": 5,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 31023,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "True — the response correctly recognizes that evidence for the possible end of the living world was not immediately recognized as such.",
+      "matchedIdeas": [
+        "Learner answered True, matching referenceAnswer"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

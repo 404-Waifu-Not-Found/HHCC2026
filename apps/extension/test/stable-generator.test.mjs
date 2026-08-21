@@ -58,6 +58,27 @@ test("rejects a true true/false item whose explanation labels the statement fals
   );
 });
 
+test("stable v5.2 reconciles a false label whose correction repeats the prompt", () => {
+  const prompt =
+    "Increased dehydration can cause drops in energy, mood, and blood pressure.";
+  const normalized = normalizeGeneratedQuestion(
+    {
+      id: "q1",
+      type: "true_false",
+      concept: "dehydration effects",
+      question: prompt,
+      answer: false,
+      correction: `The correct statement is: ${prompt}`,
+      explanation: "Dehydration can cause all of these effects.",
+    },
+    { expectedId: "q1" },
+  );
+
+  assert.equal(normalized.answer, true);
+  assert.equal(normalized.correction, prompt);
+  assert.equal(normalized.question, prompt);
+});
+
 test("v5.12 evidence allocation avoids an already used narrative window", () => {
   const input = {
     promptFirstPrimaryClaims: [
@@ -83,6 +104,37 @@ test("v5.12 evidence allocation avoids an already used narrative window", () => 
   assert.equal(
     promptFirstV512EvidenceIndex(input, 1, accepted, new Set([0])),
     1,
+  );
+});
+
+test("v5.12 automatic refill rotates away from the previous round's opening evidence", () => {
+  const base = {
+    totalQuestionCount: 5,
+    promptFirstPrimaryClaims: [
+      "Claim zero explains alpha.",
+      "Claim one explains beta.",
+      "Claim two explains gamma.",
+      "Claim three explains delta.",
+    ],
+    promptFirstEvidenceWindows: [
+      "Claim zero explains alpha.",
+      "Claim one explains beta.",
+      "Claim two explains gamma.",
+      "Claim three explains delta.",
+    ],
+  };
+  assert.equal(promptFirstV512EvidenceIndex(base, 1, [], new Set()), 1);
+  assert.equal(
+    promptFirstV512EvidenceIndex(
+      {
+        ...base,
+        continuation: { nextOrdinalAttempt: 4 },
+      },
+      1,
+      [],
+      new Set(),
+    ),
+    0,
   );
 });
 
@@ -2614,6 +2666,10 @@ function promptFirstTaskFromRequest(request) {
 
 function promptFirstResponse(request, mutate = (value) => value) {
   const task = promptFirstTaskFromRequest(request);
+  const supportedTrueStatement = (
+    task.primaryClaim ??
+    `Pathway ${task.ordinal} transfers energy between the states.`
+  ).replace(/,\s*(?:and|replacing|causing|leading|resulting)\b[\s\S]*$/iu, ".");
   const common = {
     type: task.type,
     concept: `energy pathway ${task.ordinal}`,
@@ -2638,21 +2694,14 @@ function promptFirstResponse(request, mutate = (value) => value) {
               ? {
                   type: common.type,
                   concept: common.concept,
-                  supportedStatement:
-                    task.primaryClaim ??
-                    `Pathway ${task.ordinal} transfers energy between the states.`,
+                  supportedStatement: supportedTrueStatement,
                   explanation: `Pathway ${task.ordinal} transfers energy because the route couples the defined states.`,
                 }
               : {
                   type: common.type,
                   concept: common.concept,
-                  supportedStatement:
-                    task.primaryClaim ??
-                    `Pathway ${task.ordinal} transfers energy between the states.`,
-                  falseStatement: (
-                    task.primaryClaim ??
-                    `Pathway ${task.ordinal} transfers energy between the states.`
-                  ).replace(
+                  supportedStatement: supportedTrueStatement,
+                  falseStatement: supportedTrueStatement.replace(
                     /\b(?:transfers?|enters?|connects?|carries|relays|routes?|occurs?|increases?)\b/iu,
                     (value) =>
                       /^enter/iu.test(value)
@@ -2720,6 +2769,16 @@ function promptFirstResponse(request, mutate = (value) => value) {
                 acceptableAnswers: [],
                 requiredItems: [],
               };
+  if (task.task.includes('"retryQuestion"')) {
+    question.retryQuestion =
+      task.type === "multiple_choice"
+        ? `Which mechanism carries energy through pathway ${task.ordinal}?`
+        : task.type === "true_false"
+          ? task.polarity
+            ? `Energy moves between the defined states through pathway ${task.ordinal}.`
+            : `Pathway ${task.ordinal} prevents energy movement between the defined states.`
+          : `Which response describes energy transfer through pathway ${task.ordinal}?`;
+  }
   return completionResponse(mutate({ questions: [question] }, task));
 }
 
@@ -3678,6 +3737,22 @@ test("v5.12 sends the grading-consistent local-polarity contract", async (contex
   assert.equal(result.validatorVersion, "validator-minimal-gradeability-v5.3");
   assert.equal(result.importVersion, "extension-progressive-import-v8");
   assert.equal(result.generationProfile, "prompt_first_auto_v5_12");
+  const invalidRetryQuestions = result.quiz.questions.filter(
+    (question) =>
+      typeof question.retryQuestion !== "string" ||
+      question.retryQuestion.trim().length === 0 ||
+      question.retryQuestion
+        .normalize("NFKC")
+        .toLocaleLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim() ===
+        question.question
+          .normalize("NFKC")
+          .toLocaleLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, " ")
+          .trim(),
+  );
+  assert.deepEqual(invalidRetryQuestions, []);
   assert.equal(requests.length, 5);
   assert.equal(
     calls.filter((event) => event.lifecycleState === "started").length,
@@ -4009,6 +4084,204 @@ test("v5.12 retries an exact repeated question and grading target", async (conte
   );
 });
 
+test("v5.12 abandons a low-value evidence slot before automatic retry", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        value.questions[0].concept = "historical scope";
+        value.questions[0].question =
+          "What is the historical scope of this field?";
+        value.questions[0].answer = "It dates back to antiquity.";
+        value.questions[0].requiredItems = ["dates back to antiquity"];
+        value.questions[0].acceptableAnswers = [
+          "The field dates back to antiquity.",
+        ];
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+  assert.doesNotMatch(result.quiz.questions[0].question, /historical scope/iu);
+});
+
+test("v5.12 abandons evidence that repeatedly invites an unsupported absolute", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        // Keep the otherwise-valid answer, rubric, and source overlap intact so
+        // this attempt fails for exactly one reason: the model introduced an
+        // absolute that the assigned evidence does not support.
+        value.questions[0].question = value.questions[0].question.replace(
+          /\?$/u,
+          " in every case?",
+        );
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+  assert.doesNotMatch(
+    `${result.quiz.questions[0].question} ${result.quiz.questions[0].answer}`,
+    /\b(?:always|every|must)\b/iu,
+  );
+});
+
+test("v5.12 changes evidence after one true-false polarity mismatch", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        value.questions[0].explanation = task.polarity
+          ? "The statement is false, so the proposed relationship does not hold."
+          : "The statement is true, so the proposed relationship does hold.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.equal(
+    calls.some((event) => event.outcome === "polarity_mismatch"),
+    true,
+  );
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+});
+
+test("v5.12 changes evidence after one compound true-false claim", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task);
+    return promptFirstResponse(init.body, (value) => {
+      if (requests.length === 1) {
+        const field = task.polarity ? "supportedStatement" : "falseStatement";
+        value.questions[0][field] =
+          `${value.questions[0][field].replace(/\.$/u, "")}, and the reaction changes by 11 units.`;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.equal(requests.length, 6);
+  assert.equal(
+    calls.some((event) => event.outcome === "true_false_compound_claim"),
+    true,
+  );
+  assert.notEqual(requests[0].primaryClaim, requests[1].primaryClaim);
+});
+
+test("v5.12 repairs an interrogative true-false retry before storage", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const requests = [];
+  const primaryClaims = [];
+  let firstQuestionAttempts = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = promptFirstTaskFromRequest(init.body);
+    requests.push(task.body.messages.at(-1).content);
+    primaryClaims.push(task.primaryClaim);
+    return promptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && firstQuestionAttempts++ === 0) {
+        value.questions[0].retryQuestion =
+          "Under this relationship, does pathway 1 transfer or block energy?";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    promptFirstInput(5, ["true_false"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(firstQuestionAttempts, 2);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.doesNotMatch(result.quiz.questions[0].retryQuestion, /[?？]\s*$/u);
+  assert.equal(
+    calls.some((event) => event.outcome === "retry_question_invalid"),
+    true,
+  );
+  assert.match(
+    requests[1],
+    /previous retryQuestion was missing, copied the original prompt, or used the wrong response format/u,
+  );
+  assert.notEqual(primaryClaims[0], primaryClaims[1]);
+});
+
 test("v5.12 locally normalizes a collapsed false item without another model request", async (context) => {
   const originalFetch = globalThis.fetch;
   let injected = false;
@@ -4248,6 +4521,7 @@ test("v5.12 preserves a role-reversal false contrast instead of relabeling it tr
       if (task.type === "true_false" && !task.polarity) {
         value.questions[0].supportedStatement = `In market ${task.ordinal}, a price change moves along the demand curve and changes quantity demanded, not demand.`;
         value.questions[0].falseStatement = `In market ${task.ordinal}, a price change moves along the demand curve and changes demand, not quantity demanded.`;
+        value.questions[0].retryQuestion = `A price change in market ${task.ordinal} moves along the existing demand curve and changes demand, not quantity demanded.`;
         value.questions[0].explanation =
           "The false statement swaps demand with quantity demanded; a price change moves along the existing curve.";
       }
@@ -4788,6 +5062,7 @@ test("v5.11 recovers a complete singleton emitted after a leaked non-thinking tr
       type: "multiple_choice",
       concept: "energy pathway",
       question: "How does the pathway transfer energy?",
+      retryQuestion: "Which mechanism carries energy through the pathway?",
       explanation: "The pathway transfers energy between defined states.",
       correctAnswer: "Through the defined route",
       distractors: [
@@ -4886,6 +5161,7 @@ test("v5.11 accepts a proposition answering one explicit condition", async (cont
     return promptFirstResponse(init.body, (value, task) => {
       const question = value.questions[0];
       question.question = `Under what condition does process ${task.ordinal} begin?`;
+      question.retryQuestion = `What activation-threshold condition starts process ${task.ordinal}?`;
       question.answer = `Process ${task.ordinal} begins when input ${task.ordinal} exceeds its activation threshold.`;
       question.gradingMode = "proposition";
       question.acceptableAnswers = [];

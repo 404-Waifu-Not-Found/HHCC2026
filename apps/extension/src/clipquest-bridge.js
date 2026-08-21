@@ -152,6 +152,7 @@
       let reconnectTimer;
       let reconnectAttempts = 0;
       let settled = false;
+      let acceptedByWorker = false;
       let lastProgress = 0.2;
       const outbound = {
         type: "generate",
@@ -201,6 +202,12 @@
         heartbeat = setInterval(() => {
           try {
             port.postMessage({ type: "heartbeat", requestId });
+            // A connected port only proves that Chrome created a transport.
+            // Do not tell the page that generation is alive until the service
+            // worker has answered at least once. Otherwise a lost first
+            // dispatch can refresh the page watchdog forever and strand an
+            // incomplete quiz behind a synthetic progress heartbeat.
+            if (!acceptedByWorker) return;
             post({
               type: "generation-progress",
               requestId,
@@ -217,6 +224,7 @@
       };
       const handleResponse = (response) => {
         if (response?.requestId !== requestId) return;
+        acceptedByWorker = true;
         if (response.type === "progress") {
           if (typeof response.progress === "number") {
             lastProgress = Math.max(lastProgress, response.progress);

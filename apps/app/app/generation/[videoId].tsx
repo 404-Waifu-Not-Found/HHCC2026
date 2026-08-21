@@ -3,12 +3,10 @@ import {
   ExtensionQuizGenerationCallEventResponseSchema,
   ExtensionQuizProgressiveImportResponseSchema,
   GenerationClaimResponseSchema,
-  MediaResolveResponseSchema,
   QuizStartResponseSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
   VerifiedVideoMetadataResponseSchema,
-  createTranscriptCompleteness,
   questionLimitForSession,
   type AppLanguage,
   type AttemptGenerationAvailability,
@@ -43,6 +41,7 @@ import {
   countCaptionWords,
   estimatedFirstQuestionDurationMs,
   firstQuestionRetryRemainingMs,
+  linearJourneyProgress,
   updateFirstQuestionRetryEtaPhase,
   type FirstQuestionRetryEtaPhase,
 } from "../../src/generation/eta";
@@ -52,8 +51,8 @@ import {
   type ProgressiveGenerationTaskContext,
 } from "../../src/generation/progressive-coordinator";
 import {
+  automaticRecoveryDisposition,
   groundedRecoveryCooldownMs,
-  groundedRecoveryIsExhausted,
 } from "../../src/generation/automatic-recovery-policy";
 import { retryAuthoritativeTelemetryWrite } from "../../src/generation/telemetry-write";
 import { apiRequest, jsonBody } from "../../src/lib/api";
@@ -74,9 +73,10 @@ import {
   updateGenerationRecord,
 } from "../../src/state/creation";
 import { saveAttemptStart } from "../../src/state/attempt";
-import { transcribeLocally } from "../../src/transcription/local-transcriber";
-import { TranscriptionPausedError } from "../../src/transcription/types";
-import { acquireTextTranscript } from "../../src/transcription/acquire-text-transcript";
+import {
+  acquireTextTranscript,
+  CAPTIONS_REQUIRED_MESSAGE,
+} from "../../src/transcription/acquire-text-transcript";
 import {
   detectLocalGenerationClient,
   flushLocalGenerationOutbox,
@@ -129,7 +129,6 @@ export default function GenerationScreen() {
   const params = useLocalSearchParams<{
     videoId: string;
     generationId: string;
-    watched: string;
     quizLanguage: AppLanguage;
     sessionLength: SessionLength;
     questionTypes?: string;
@@ -137,7 +136,7 @@ export default function GenerationScreen() {
   const { locale, t, theme } = useSettings();
   const { data: session, isPending: sessionPending } = useAppSession();
   const { width } = useWindowDimensions();
-  const [stage, setStage] = useState<GenerationStage>("getting_video");
+  const [, setStage] = useState<GenerationStage>("getting_video");
   const [error, setError] = useState<string>();
   const [configurationRequired, setConfigurationRequired] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -145,9 +144,6 @@ export default function GenerationScreen() {
   const [cancelling, setCancelling] = useState(false);
   const taskKeyRef = useRef<string | undefined>(undefined);
   const resumeInFlightRef = useRef(false);
-  const [localTranscription, setLocalTranscription] = useState(false);
-  const [captionWordCount, setCaptionWordCount] = useState<number>();
-  const [videoDurationSeconds, setVideoDurationSeconds] = useState<number>();
   const [retryEtaPhase, setRetryEtaPhase] =
     useState<FirstQuestionRetryEtaPhase>();
   const questionTypes = useMemo<QuizQuestionType[]>(() => {
@@ -166,38 +162,21 @@ export default function GenerationScreen() {
   const journeyDurationMs = useMemo(
     () =>
       estimatedFirstQuestionDurationMs({
-        captionWordCount,
-        videoDurationSeconds,
-        focusWindowWordCount:
-          captionWordCount === undefined
-            ? undefined
-            : Math.min(520, Math.max(220, Math.round(captionWordCount * 0.08))),
         questionCount,
         firstQuestionType,
         prefixCacheState: "unknown",
         recentLatencyBucket: "unknown",
       }),
-    [captionWordCount, firstQuestionType, questionCount, videoDurationSeconds],
+    [firstQuestionType, questionCount],
   );
   const journeySteps = useMemo<JourneyStep[]>(
-    () =>
-      Platform.OS !== "web"
-        ? [
-            { id: "video", label: t("gettingVideo") },
-            { id: "captions", label: t("checkingCaptions") },
-            { id: "planning", label: t("planningQuestions") },
-            { id: "questions", label: t("creatingQuestions") },
-            { id: "opening", label: t("finalizingQuestions") },
-          ]
-        : [
-            { id: "video", label: t("gettingVideo") },
-            { id: "captions", label: t("preparingAudio") },
-            { id: "model", label: t("downloadingModel") },
-            { id: "transcribing", label: t("transcribing") },
-            { id: "planning", label: t("planningQuestions") },
-            { id: "questions", label: t("creatingQuestions") },
-            { id: "opening", label: t("finalizingQuestions") },
-          ],
+    () => [
+      { id: "video", label: t("gettingVideo") },
+      { id: "captions", label: t("checkingCaptions") },
+      { id: "planning", label: t("planningQuestions") },
+      { id: "questions", label: t("creatingQuestions") },
+      { id: "opening", label: t("finalizingQuestions") },
+    ],
     [t],
   );
   const [estimatedProgress, setEstimatedProgressState] = useState(0);
@@ -243,9 +222,10 @@ export default function GenerationScreen() {
       const elapsed = Date.now() - journeyStartedAtRef.current;
       setJourneyElapsedMs(elapsed);
       setEstimatedProgress(
-        Math.min(
+        linearJourneyProgress(
+          elapsed,
+          journeyDurationMs,
           LINEAR_PROGRESS_LIMIT,
-          (elapsed / journeyDurationMs) * LINEAR_PROGRESS_LIMIT,
         ),
       );
     };
@@ -280,10 +260,21 @@ export default function GenerationScreen() {
         );
       }
       let generationRecord: GenerationRecord = storedRecord;
+      if (!generationRecord.watched) {
+        const normalizedRecord = await updateGenerationRecord(
+          generationRecord.generationId,
+          { watched: true },
+        );
+        if (!normalizedRecord) {
+          throw new Error(
+            "The local generation record disappeared while the quiz was running.",
+          );
+        }
+        generationRecord = normalizedRecord;
+      }
       const routeMatchesRecord =
         generationRecord.quizLanguage === params.quizLanguage &&
         generationRecord.sessionLength === params.sessionLength &&
-        generationRecord.watched === (params.watched === "true") &&
         generationRecord.questionTypes.length === questionTypes.length &&
         generationRecord.questionTypes.every(
           (type, index) => type === questionTypes[index],
@@ -358,7 +349,7 @@ export default function GenerationScreen() {
               mode: "learn",
               sessionLength: params.sessionLength,
               questionTypes,
-              watched: params.watched === "true",
+              watched: true,
             }),
             signal,
           },
@@ -418,7 +409,7 @@ export default function GenerationScreen() {
               ? `ClipQuest Android ${requirement.minimumVersion} or newer is required.`
               : localClient.kind === "ios_app"
                 ? `ClipQuest iOS ${requirement.minimumVersion} or newer is required.`
-                : `ClipQuest Local AI ${requirement.minimumVersion} or newer is required.`,
+                : `ClipQuest ${requirement.minimumVersion} or newer is required.`,
           );
         }
         if (!localClient.configured) {
@@ -436,21 +427,12 @@ export default function GenerationScreen() {
       const recoverySessionId = Crypto.randomUUID();
       const imported = await loadImportedVideo(session.user.id, params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
-      setVideoDurationSeconds(imported.video.durationSeconds || undefined);
-      setCaptionWordCount(
-        imported.captions.preferredSegments?.length
-          ? countCaptionWords(imported.captions.preferredSegments)
-          : undefined,
-      );
-      setLocalTranscription(imported.transcriptionMode === "device_media");
       updateStage("getting_video");
       let segments: TranscriptSegment[] = [];
       let completeness: TranscriptCompleteness | null = null;
       let language = imported.video.sourceLanguage ?? "und";
       let verifiedDurationSeconds = imported.video.durationSeconds;
-      let captionSourceCategory:
-        "manual" | "automatic" | "local_transcription" | "unknown" = "unknown";
-      updateStage("preparing_audio");
+      let captionSourceCategory: "manual" | "automatic" | "unknown" = "unknown";
       const textTranscript = await acquireTextTranscript(
         imported,
         signal,
@@ -464,50 +446,14 @@ export default function GenerationScreen() {
         captionSourceCategory = textTranscript.captionSourceCategory;
       }
       if (!segments.length) {
-        if (Platform.OS === "android") {
-          throw new Error(
-            "This Android beta requires a public YouTube video with usable captions.",
-          );
-        }
-        setLocalTranscription(true);
-        const media = await apiRequest(
-          "/api/media/resolve",
-          {
-            method: "POST",
-            body: jsonBody({ videoId: imported.video.id }),
-            signal,
-          },
-          MediaResolveResponseSchema,
+        throw new LocalGenerationRequestError(
+          CAPTIONS_REQUIRED_MESSAGE,
+          "source_unavailable",
         );
-        const result = await transcribeLocally({
-          ownerUserId: session.user.id,
-          videoId: imported.video.id,
-          mediaUrl: media.mediaUrl,
-          durationSeconds: imported.video.durationSeconds,
-          language: imported.video.sourceLanguage,
-          signal,
-          onPhase: (phase) => updateStage(phase),
-          onProgress: () => undefined,
-        });
-        language = result.language;
-        segments = result.segments;
-        const inferredDurationSeconds = Math.max(
-          1,
-          Math.ceil(
-            Math.max(...segments.map((segment) => segment.endMs)) / 1_000,
-          ),
-        );
-        verifiedDurationSeconds =
-          imported.video.durationSeconds > 0
-            ? imported.video.durationSeconds
-            : inferredDurationSeconds;
-        completeness = createTranscriptCompleteness(
-          segments,
-          verifiedDurationSeconds,
-        );
-        captionSourceCategory = "local_transcription";
       }
-      if (signal.aborted) throw new TranscriptionPausedError();
+      if (signal.aborted) {
+        throw new DOMException("Quiz generation was paused.", "AbortError");
+      }
       if (!completeness) {
         throw new Error(
           "ClipQuest could not verify a complete transcript for this video.",
@@ -539,9 +485,6 @@ export default function GenerationScreen() {
         },
         VerifiedVideoMetadataResponseSchema,
       );
-      beginJourney();
-      setCaptionWordCount(completeCaptionWordCount);
-      setVideoDurationSeconds(verifiedDurationSeconds);
       updateStage("creating_questions");
       const retryBaseEstimateMs = estimatedFirstQuestionDurationMs({
         captionWordCount: completeCaptionWordCount,
@@ -686,34 +629,41 @@ export default function GenerationScreen() {
 
       const enqueueQuestion = (chunk: LocalConceptQuizQuestionChunk) => {
         questionIngestion = questionIngestion.then(async () => {
-          const response = progressiveQuizId
-            ? await apiRequest(
-                `/api/quiz-imports/${progressiveQuizId}/questions`,
-                {
-                  method: "PUT",
-                  headers: { "Idempotency-Key": idempotencyKey },
-                  body: jsonBody({ chunk }),
-                  signal,
-                },
-                ExtensionQuizProgressiveImportResponseSchema,
-              )
-            : await apiRequest(
-                "/api/quiz-imports/progressive",
-                {
-                  method: "POST",
-                  headers: { "Idempotency-Key": idempotencyKey },
-                  body: jsonBody({
-                    videoId: imported.video.id,
-                    quizLanguage: params.quizLanguage,
-                    sessionLength: params.sessionLength,
-                    questionTypes,
-                    watched: params.watched === "true",
-                    chunk,
-                  }),
-                  signal,
-                },
-                ExtensionQuizProgressiveImportResponseSchema,
-              );
+          let response: ExtensionQuizProgressiveImportResponse;
+          try {
+            response = progressiveQuizId
+              ? await apiRequest(
+                  `/api/quiz-imports/${progressiveQuizId}/questions`,
+                  {
+                    method: "PUT",
+                    headers: { "Idempotency-Key": idempotencyKey },
+                    body: jsonBody({ chunk }),
+                    signal,
+                  },
+                  ExtensionQuizProgressiveImportResponseSchema,
+                )
+              : await apiRequest(
+                  "/api/quiz-imports/progressive",
+                  {
+                    method: "POST",
+                    headers: { "Idempotency-Key": idempotencyKey },
+                    body: jsonBody({
+                      videoId: imported.video.id,
+                      quizLanguage: params.quizLanguage,
+                      sessionLength: params.sessionLength,
+                      questionTypes,
+                      watched: true,
+                      chunk,
+                    }),
+                    signal,
+                  },
+                  ExtensionQuizProgressiveImportResponseSchema,
+                );
+          } catch (error) {
+            throw new Error(
+              `Accepted question upload failed: ${error instanceof Error ? error.message : "unknown API error"}`,
+            );
+          }
           if (
             isAutomaticGenerationProfile(rolloutProfile.generationProfile) &&
             generationRecord.version === 2
@@ -734,7 +684,7 @@ export default function GenerationScreen() {
               quizLanguage: generationRecord.quizLanguage,
               questionTypes: generationRecord.questionTypes,
               sessionLength: generationRecord.sessionLength,
-              watched: generationRecord.watched,
+              watched: true,
               questionPlan: chunk.questionPlan,
               quizId: response.quizId,
               acceptedCount: response.generation.availableQuestions,
@@ -769,12 +719,26 @@ export default function GenerationScreen() {
                 });
             generationRecord = upgraded;
           }
-          await publishStoredState(response);
+          try {
+            await publishStoredState(response);
+          } catch (error) {
+            throw new Error(
+              `Accepted question state save failed: ${error instanceof Error ? error.message : "unknown state error"}`,
+            );
+          }
           if (chunk.questionPlan && !generationRecord.questionPlan) {
             await persistRecord({ questionPlan: chunk.questionPlan });
           }
           lastProgressKey = undefined;
-          if (!attemptId) await startAttempt(response.quizId);
+          if (!attemptId) {
+            try {
+              await startAttempt(response.quizId);
+            } catch (error) {
+              throw new Error(
+                `First-question attempt start failed: ${error instanceof Error ? error.message : "unknown attempt error"}`,
+              );
+            }
+          }
           if (!callEventsReady) schedulePendingCallFlush();
         });
         void questionIngestion.catch(() => undefined);
@@ -941,7 +905,7 @@ export default function GenerationScreen() {
         await Promise.allSettled([questionIngestion, callIngestion]);
         if (Platform.OS !== "web" && signal.aborted) {
           await persistRecord({ state: "generating" }).catch(() => undefined);
-          throw new TranscriptionPausedError();
+          throw new DOMException("Quiz generation was paused.", "AbortError");
         }
         const reasonCode =
           cause instanceof LocalGenerationRequestError
@@ -950,22 +914,8 @@ export default function GenerationScreen() {
         const automatic = isAutomaticGenerationProfile(
           rolloutProfile.generationProfile,
         );
-        const grounded = isGroundedGenerationProfile(
-          rolloutProfile.generationProfile,
-        );
-        const groundedExhausted =
-          grounded &&
-          groundedRecoveryIsExhausted({
-            reasonCode,
-            record: generationRecord,
-          });
         const terminalState = automatic
-          ? reasonCode === "credential_required" ||
-            reasonCode === "billing_required"
-            ? "action_required"
-            : grounded && !groundedExhausted
-              ? "cooldown"
-              : "generation_failed"
+          ? automaticRecoveryDisposition(reasonCode)
           : "retry_required";
         const nextRecoveryAt =
           terminalState === "cooldown"
@@ -1022,7 +972,6 @@ export default function GenerationScreen() {
       params.quizLanguage,
       params.sessionLength,
       params.videoId,
-      params.watched,
       questionCount,
       questionTypes,
       session?.user.id,
@@ -1054,10 +1003,7 @@ export default function GenerationScreen() {
       })
       .catch((cause) => {
         if (!active || taskKeyRef.current !== taskKey) return;
-        if (
-          cause instanceof TranscriptionPausedError ||
-          task.controller.signal.aborted
-        ) {
+        if (task.controller.signal.aborted) {
           setPaused(true);
           return;
         }
@@ -1127,10 +1073,6 @@ export default function GenerationScreen() {
       ? t("paused")
       : activeStep.label;
 
-  const pause = () => {
-    if (taskKeyRef.current) cancelProgressiveGenerationTask(taskKeyRef.current);
-    setPaused(true);
-  };
   const resumePausedGeneration = useCallback(() => {
     if (resumeInFlightRef.current) return;
     resumeInFlightRef.current = true;
@@ -1245,21 +1187,6 @@ export default function GenerationScreen() {
                     : "Open extension settings"}
               </PrimaryButton>
             </View>
-          ) : localTranscription &&
-            [
-              "preparing_audio",
-              "downloading_model",
-              "transcribing_device",
-            ].includes(stage) ? (
-            <View style={styles.footerAction}>
-              <PrimaryButton
-                variant="secondary"
-                disabled={cancelling}
-                onPress={pause}
-              >
-                {t("pause")}
-              </PrimaryButton>
-            </View>
           ) : null}
         </View>
       }
@@ -1357,8 +1284,8 @@ export default function GenerationScreen() {
               <Text style={[styles.privacyText, { color: theme.textMuted }]}>
                 {t(
                   Platform.OS !== "web"
-                    ? "privateTranscriptionAndroid"
-                    : "privateTranscription",
+                    ? "captionPrivacyNative"
+                    : "captionPrivacyWeb",
                 )}
               </Text>
             </View>
@@ -1413,7 +1340,8 @@ function LinearJourneyBar({
     >
       <MotionProgressFill
         progress={value}
-        duration={120}
+        duration={JOURNEY_TICK_MS}
+        linear
         color={failed ? theme.secondary : theme.primary}
         style={styles.journeyFill}
       >

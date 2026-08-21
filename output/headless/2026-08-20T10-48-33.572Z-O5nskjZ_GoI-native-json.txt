@@ -1,0 +1,100 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.000] SOURCE_STARTED videoId="O5nskjZ_GoI"
+[00:02.499] CAPTIONS_COMPLETE videoId="O5nskjZ_GoI" title="Early Computing: Crash Course Computer Science #1" language="en" durationSeconds=681 segmentCount=183 sourceSegmentCount=183 characterCount=13127 transcriptFingerprint="35ab6ade" acquisition="youtube_local_ytdlp"
+[00:02.499] PLAN_REQUESTED questionCount=5 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:05.912] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:05.955] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:08.630] QUESTION_ACCEPTED ordinal=1 concept="computing device function" prompt="What operation does the slide rule assist with?"
+[00:08.630] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2718 inputTokens=9755 outputTokens=136 reasoningTokens=0
+[00:08.630] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f11c92d9-10ca-41a6-8bc8-d107d688120c"
+[00:08.643] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:08.678] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:10.477] QUESTION_ACCEPTED ordinal=2 concept="computing device relationship" prompt="What relationship does the abacus have to the state of a computation?"
+[00:10.478] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1834 inputTokens=10066 outputTokens=147 reasoningTokens=0
+[00:10.478] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f11c92d9-10ca-41a6-8bc8-d107d688120c"
+[00:10.490] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:10.512] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:12.580] QUESTION_ACCEPTED ordinal=3 concept="Step Reckoner arithmetic operations" prompt="The Step Reckoner could multiply and divide numbers through mechanical tricks."
+[00:12.580] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2090 inputTokens=10357 outputTokens=137 reasoningTokens=0
+[00:12.580] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f11c92d9-10ca-41a6-8bc8-d107d688120c"
+[00:12.595] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:12.613] AI_CALL_STARTED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:14.841] QUESTION_ACCEPTED ordinal=4 concept="astrolabe navigation relationship" prompt="What did the astrolabe enable ships to calculate at sea?"
+[00:14.842] AI_CALL_COMPLETED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2246 inputTokens=10310 outputTokens=152 reasoningTokens=0
+[00:14.842] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f11c92d9-10ca-41a6-8bc8-d107d688120c"
+[00:14.854] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:14.873] AI_CALL_STARTED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:17.130] QUESTION_ACCEPTED ordinal=5 concept="abacus origin" prompt="Why was the abacus created?"
+[00:17.131] AI_CALL_COMPLETED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2276 inputTokens=10019 outputTokens=158 reasoningTokens=0
+[00:17.131] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="f11c92d9-10ca-41a6-8bc8-d107d688120c"
+[00:17.131] BANK_COMPLETE accepted=5 requested=5 aiCalls=5 retryCount=0 generationElapsedMs=11223 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: computing device function
+Prompt: What operation does the slide rule assist with?
+Retry prompt: Which mathematical operations is the slide rule designed to help perform?
+A. Addition and subtraction
+B. Multiplication and division
+C. Determining sunrise and tides
+D. Calculating latitude at sea
+Correct answer: B. Multiplication and division
+Explanation: The slide rule is a computing device that assists with multiplication and division, making these calculations faster and easier.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=c13382878ea90bdbd6aa510a0e013c5503658de8d148ab7a91589745a153c691
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — SHORT_ANSWER
+Concept: computing device relationship
+Prompt: What relationship does the abacus have to the state of a computation?
+Retry prompt: How does the abacus relate to the current state of a computation?
+Reference answer: The abacus stores the current state of the computation.
+Rubric ideas: The abacus stores the current state of the computation.
+Short-answer mode: proposition
+Explanation: The abacus stores the current state of the computation, similar to how a hard drive stores data today.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=7ac90a7ed60930ff21f36f57a3d8bf7a0068b7791048cb0dc04825c1e1310964
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 3 — TRUE_FALSE
+Concept: Step Reckoner arithmetic operations
+Prompt: The Step Reckoner could multiply and divide numbers through mechanical tricks.
+Retry prompt: The Step Reckoner was limited to addition and subtraction, lacking the ability to multiply or divide.
+Correct answer: True
+Correction: The Step Reckoner could multiply and divide numbers through mechanical tricks.
+Explanation: This statement is true: The Step Reckoner could multiply and divide numbers through mechanical tricks.
+AI provenance: call=2 attempt=1 classification=primary fingerprint=b4a272a536b0b673c68844d8ccea4755e86e06dd0f4d44de05f33b1a2ee1747e
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 4 — SHORT_ANSWER
+Concept: astrolabe navigation relationship
+Prompt: What did the astrolabe enable ships to calculate at sea?
+Retry prompt: What navigational calculation did the astrolabe allow ships to perform while at sea?
+Reference answer: The astrolabe enabled ships to calculate their latitude at sea.
+Rubric ideas: The astrolabe enabled ships to calculate their latitude at sea.
+Short-answer mode: proposition
+Explanation: The astrolabe was a computing device that enabled ships to calculate their latitude while at sea.
+AI provenance: call=3 attempt=1 classification=primary fingerprint=1c11800835aa243d7421c429966352bbdbaf20c693e2de2241147300b7b8851f
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 5 — MULTIPLE_CHOICE
+Concept: abacus origin
+Prompt: Why was the abacus created?
+Retry prompt: What societal condition led to the creation of the abacus?
+A. Because the scale of society had become greater than what a single person could keep and manipulate in their mind.
+B. Because counting on fingers was too slow for everyday arithmetic.
+C. Because early civilizations wanted a portable way to record trade transactions.
+D. Because people needed a device to perform multiplication and division quickly.
+Correct answer: A. Because the scale of society had become greater than what a single person could keep and manipulate in their mind.
+Explanation: The abacus was created because the scale of society had grown beyond what a single person could keep and manipulate in their mind, such as thousands of people in a village or tens of thousands of cattle.
+AI provenance: call=4 attempt=1 classification=primary fingerprint=1519c73fbc3195d130025e6b24b34b1c2178770c7cc7c6f5d20b1bc044114606
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:17.131] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="Multiplication and division"
+[00:19.172] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="Your response correctly identifies that the slide rule assists with multiplication and division." matchedIdeas=["Multiplication and division"] source="deepseek_local"
+[00:19.172] GRADE_STARTED ordinal=2 questionType="short_answer" response="The abacus stores the current state of the computation."
+[00:21.192] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Your response correctly identifies that the abacus stores the current state of the computation." matchedIdeas=["The abacus stores the current state of the computation."] source="deepseek_local"
+[00:21.193] GRADE_STARTED ordinal=3 questionType="true_false" response="True"
+[00:23.610] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="Correct! The Step Reckoner was indeed capable of performing multiplication and division through mechanical tricks." matchedIdeas=["Step Reckoner could multiply and divide through mechanical tricks"] source="deepseek_local"
+[00:23.610] GRADE_STARTED ordinal=4 questionType="short_answer" response="The astrolabe enabled ships to calculate their latitude at sea."
+[00:25.769] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your response correctly identifies that the astrolabe enabled ships to calculate their latitude at sea." matchedIdeas=["The astrolabe enabled ships to calculate their latitude at sea."] source="deepseek_local"
+[00:25.769] GRADE_STARTED ordinal=5 questionType="multiple_choice" response="Because the scale of society had become greater than what a single person could keep and manipulate in their mind."
+[00:28.362] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="You correctly identified that the abacus was created because society's growing scale exceeded what one person could manage mentally." matchedIdeas=["The scale of society had become greater than what a single person could keep and manipulate in their mind."] source="deepseek_local"

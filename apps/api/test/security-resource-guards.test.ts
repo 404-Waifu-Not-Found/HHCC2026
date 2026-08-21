@@ -9,11 +9,6 @@ import {
   isValidExpoPushToken,
 } from "../src/routes/push";
 import {
-  MEDIA_TOKEN_MAX_USES,
-  MEDIA_USER_REQUESTS_PER_MINUTE,
-  enforceMediaRequestBudget,
-} from "../src/routes/media";
-import {
   ANSWER_RESERVATION_SQL,
   ANSWER_RESERVATION_TTL_MS,
 } from "../src/routes/quizzes";
@@ -21,10 +16,6 @@ import { safeErrorName } from "../src/lib/safe-error";
 
 const pushSource = await readFile(
   new URL("../src/routes/push.ts", import.meta.url),
-  "utf8",
-);
-const mediaSource = await readFile(
-  new URL("../src/routes/media.ts", import.meta.url),
   "utf8",
 );
 const quizSource = await readFile(
@@ -222,30 +213,6 @@ describe("security resource guards", () => {
     expect(rows.map((row) => row.review_id)).toEqual(["review-a", "review-v"]);
     expect(rows[0]?.token).toBeNull();
     expect(rows[1]?.token).toBe("ExpoPushToken[victim_token_123]");
-  });
-
-  it("budgets every media-token read, not only token issuance", async () => {
-    expect(mediaSource).toContain("enforceMediaRequestBudget");
-    expect(mediaSource).toContain("MEDIA_TOKEN_MAX_USES");
-    const keys: string[] = [];
-    const db = {
-      prepare() {
-        return {
-          bind(key: string) {
-            keys.push(key);
-            return { first: async () => ({ count: 1 }) };
-          },
-        };
-      },
-    } as unknown as D1Database;
-
-    await enforceMediaRequestBudget(db, "user-1", "token-1");
-    expect(keys).toEqual([
-      "media-stream-user:user-1",
-      "media-stream-token:token-1",
-    ]);
-    expect(MEDIA_USER_REQUESTS_PER_MINUTE).toBeGreaterThan(0);
-    expect(MEDIA_TOKEN_MAX_USES).toBeGreaterThan(0);
   });
 
   it("requires idempotent quiz starts and reserves attempts before grading", () => {

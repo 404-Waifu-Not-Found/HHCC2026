@@ -1,0 +1,101 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.001] SOURCE_STARTED videoId="LsFdROZ2OdA"
+[00:02.160] CAPTIONS_COMPLETE videoId="LsFdROZ2OdA" title="Climate Science: Crash Course History of Science #45" language="en" durationSeconds=717 segmentCount=182 sourceSegmentCount=182 characterCount=12086 transcriptFingerprint="6cf530a2" acquisition="youtube_local_ytdlp"
+[00:02.160] PLAN_REQUESTED questionCount=5 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:05.450] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:05.522] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:07.955] QUESTION_ACCEPTED ordinal=1 concept="Anthropocene naming alternatives" prompt="Which proposed name for the current geological era emphasizes the role of economic and political systems in shaping global change?"
+[00:07.955] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2505 inputTokens=9840 outputTokens=158 reasoningTokens=0
+[00:07.955] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="993730b9-fe05-4811-9843-20aedcd4d7ba"
+[00:07.972] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:08.016] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:10.404] QUESTION_ACCEPTED ordinal=2 concept="geoengineering definition" prompt="What is the term for the intentional, global-scale transformation of the environment to combat global warming and other disruptions?"
+[00:10.404] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2432 inputTokens=10081 outputTokens=158 reasoningTokens=0
+[00:10.404] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="993730b9-fe05-4811-9843-20aedcd4d7ba"
+[00:10.420] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:10.484] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:12.442] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="true_false_compound_claim" acceptedCount=0 retryDelayMs=198 callElapsedMs=2022
+[00:12.442] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" retryDelayMs=198 reasonCode="true_false_compound_claim" recoverySessionId="993730b9-fe05-4811-9843-20aedcd4d7ba"
+[00:12.664] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" recoverySessionId="993730b9-fe05-4811-9843-20aedcd4d7ba"
+[00:12.711] AI_CALL_STARTED callIndex=3 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:14.596] QUESTION_ACCEPTED ordinal=3 concept="Capitalocene scientific questions" prompt="The big questions for scientists in the Capitalocene include only epistemic and technical ones."
+[00:14.596] AI_CALL_COMPLETED callIndex=3 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1932 inputTokens=10463 outputTokens=134 reasoningTokens=0
+[00:14.596] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="993730b9-fe05-4811-9843-20aedcd4d7ba"
+[00:14.619] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:14.727] AI_CALL_STARTED callIndex=4 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:17.160] QUESTION_ACCEPTED ordinal=4 concept="Anthropocene golden spike candidates" prompt="Why is selecting a single golden spike for the Anthropocene difficult?"
+[00:17.160] AI_CALL_COMPLETED callIndex=4 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2541 inputTokens=10304 outputTokens=203 reasoningTokens=0
+[00:17.160] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="993730b9-fe05-4811-9843-20aedcd4d7ba"
+[00:17.184] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:17.300] AI_CALL_STARTED callIndex=5 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:19.424] QUESTION_ACCEPTED ordinal=5 concept="recognition delay of existential climate evidence" prompt="Evidence for the possible end of the living world took a while to be seen as such."
+[00:19.425] AI_CALL_COMPLETED callIndex=5 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2241 inputTokens=10127 outputTokens=121 reasoningTokens=0
+[00:19.425] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="993730b9-fe05-4811-9843-20aedcd4d7ba"
+[00:19.427] BANK_COMPLETE accepted=5 requested=5 aiCalls=6 retryCount=1 generationElapsedMs=13985 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: Anthropocene naming alternatives
+Prompt: Which proposed name for the current geological era emphasizes the role of economic and political systems in shaping global change?
+Retry prompt: Which alternative term for the current geological era highlights the influence of economic and political systems?
+A. Manthropocene
+B. Capitalocene
+C. Anthropocene
+D. Chthulhucene
+Correct answer: B. Capitalocene
+Explanation: The Capitalocene, or Age of Political–Economics, is a proposed name that emphasizes economic and political systems as drivers of global change.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=2db67d4f8542184023cd608dabb7794dd9bf9a3b6f6c74b1544f901cb7b97efb
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — SHORT_ANSWER
+Concept: geoengineering definition
+Prompt: What is the term for the intentional, global-scale transformation of the environment to combat global warming and other disruptions?
+Retry prompt: Which term refers to deliberate, planet-wide environmental modification aimed at countering global warming and related disruptions?
+Reference answer: Geoengineering
+Rubric ideas: Geoengineering
+Short-answer mode: atomic_term
+Explanation: Geoengineering, also called climate engineering, is defined as the intentional, global-scale transformation of the environment to address global warming and other disruptions.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=564f7eeec4020a653c63f35b96b4909b5523d187e705dbf47a1e00a1146ca93f
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 3 — TRUE_FALSE
+Concept: Capitalocene scientific questions
+Prompt: The big questions for scientists in the Capitalocene include only epistemic and technical ones.
+Retry prompt: In the Capitalocene, scientists' big questions are limited to epistemic and technical concerns.
+Correct answer: False
+Correction: The big questions for scientists in the Capitalocene include epistemic, technical, and moral ones.
+Explanation: The false statement omits the moral dimension, which is part of the full set of big questions alongside epistemic and technical ones.
+AI provenance: call=3 attempt=2 classification=automatic_retry fingerprint=265c605860ac4e71f9ad3b8da762f2d91a5f52497ce8d058baf56a2d782ff7ea
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=NOTICE | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 4 — SHORT_ANSWER
+Concept: Anthropocene golden spike candidates
+Prompt: Why is selecting a single golden spike for the Anthropocene difficult?
+Retry prompt: What makes it hard to choose one golden spike for the Anthropocene?
+Reference answer: Because there are many good candidate markers for the start of a human epoch.
+Rubric ideas: Because there are many good candidate markers for the start of a human epoch.
+Short-answer mode: proposition
+Explanation: The difficulty arises because many distinct events qualify as markers of human-induced geological change, such as the Industrial Revolution's coal use and the global spread of radioactive strontium-90 from nuclear tests.
+AI provenance: call=4 attempt=1 classification=primary fingerprint=31e15a6139496d72406dd919661e9b9cc5b9af2abcacf16d8726513de49fd6cb
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 5 — TRUE_FALSE
+Concept: recognition delay of existential climate evidence
+Prompt: Evidence for the possible end of the living world took a while to be seen as such.
+Retry prompt: The possibility that the living world could end was supported by evidence that was slow to be recognized as such.
+Correct answer: True
+Correction: Evidence for the possible end of the living world took a while to be seen as such.
+Explanation: Scientists are generally cautious about accepting dramatic claims, so evidence pointing to a potential end of life on Earth was not immediately interpreted that way.
+AI provenance: call=5 attempt=1 classification=primary fingerprint=ba70780ada6f03bb1aa5149a7963151da4dda66b9effeaefe2435130ee9fdba6
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+ANSWER GRADING
+[00:19.428] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="Capitalocene"
+[00:21.724] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="Your response correctly identifies the Capitalocene, which highlights how economic and political systems drive global change." matchedIdeas=["Capitalocene"] source="deepseek_local"
+[00:21.724] GRADE_STARTED ordinal=2 questionType="short_answer" response="Geoengineering"
+[00:24.321] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Your response correctly identifies the term for intentional, large-scale environmental modification to address climate change." matchedIdeas=["Geoengineering"] source="deepseek_local"
+[00:24.321] GRADE_STARTED ordinal=3 questionType="true_false" response="False"
+[00:26.673] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="The response correctly identifies that the statement is false, as the big questions for scientists in the Capitalocene also include moral ones, not just epistemic and technical ones." matchedIdeas=["Correctly identifies the statement as false"] source="deepseek_local"
+[00:26.673] GRADE_STARTED ordinal=4 questionType="short_answer" response="Because there are many good candidate markers for the start of a human epoch."
+[00:28.867] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your response correctly identifies that the difficulty lies in the abundance of viable candidate markers for the start of the human epoch." matchedIdeas=["Because there are many good candidate markers for the start of a human epoch."] source="deepseek_local"
+[00:28.867] GRADE_STARTED ordinal=5 questionType="true_false" response="True"
+[00:31.023] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="True — the response correctly recognizes that evidence for the possible end of the living world was not immediately recognized as such." matchedIdeas=["Learner answered True, matching referenceAnswer"] source="deepseek_local"

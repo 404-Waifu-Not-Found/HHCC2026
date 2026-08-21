@@ -1,0 +1,2030 @@
+{
+  "runId": "7343ee9e-9f16-471f-9d21-4de36c05fa84",
+  "source": {
+    "videoId": "ur9aGqcmq8M",
+    "title": "The Internet and Computing: Crash Course History of Science #43",
+    "language": "en",
+    "durationSeconds": 739,
+    "segments": [
+      {
+        "id": "youtube-json3-0-5480",
+        "startMs": 5480,
+        "endMs": 7639,
+        "text": "We’ve talked a lot about advances in biotech."
+      },
+      {
+        "id": "youtube-json3-1-7639",
+        "startMs": 7639,
+        "endMs": 10870,
+        "text": "But none of those could have happened without advances in computing."
+      },
+      {
+        "id": "youtube-json3-2-10870",
+        "startMs": 10870,
+        "endMs": 16160,
+        "text": "It’s time to get back to data and explore the unlikely birth, strange life, and potential"
+      },
+      {
+        "id": "youtube-json3-3-16160",
+        "startMs": 16160,
+        "endMs": 17869,
+        "text": "futures of the Internet."
+      },
+      {
+        "id": "youtube-json3-4-17869",
+        "startMs": 17869,
+        "endMs": 23369,
+        "text": "The theme of the history of computing is that what we mean by “computing” keeps changing."
+      },
+      {
+        "id": "youtube-json3-5-23369",
+        "startMs": 23369,
+        "endMs": 27859,
+        "text": "With the invention of the transistor in 1947, the computer started to shrink!"
+      },
+      {
+        "id": "youtube-json3-6-27859",
+        "startMs": 27859,
+        "endMs": 29140,
+        "text": "And speed up!"
+      },
+      {
+        "id": "youtube-json3-7-29140",
+        "startMs": 29140,
+        "endMs": 35200,
+        "text": "And change meaning yet again, becoming a ubiquitous dimension of contemporary life—not to mention"
+      },
+      {
+        "id": "youtube-json3-8-35200",
+        "startMs": 35200,
+        "endMs": 37680,
+        "text": "a totally normal thing to yell at."
+      },
+      {
+        "id": "youtube-json3-9-37680",
+        "startMs": 37680,
+        "endMs": 40420,
+        "text": "Hey Google... can you roll the intro?"
+      },
+      {
+        "id": "youtube-json3-11-41480",
+        "startMs": 41480,
+        "endMs": 43360,
+        "text": "Google: I'm not sure."
+      },
+      {
+        "id": "youtube-json3-13-52120",
+        "startMs": 52120,
+        "endMs": 56920,
+        "text": "In 1965, Electronics Magazine asked computer scientist Gordon Moore to do something scientists"
+      },
+      {
+        "id": "youtube-json3-14-56930",
+        "startMs": 56930,
+        "endMs": 61190,
+        "text": "are generally taught not to do: predict the future."
+      },
+      {
+        "id": "youtube-json3-15-61190",
+        "startMs": 61190,
+        "endMs": 65290,
+        "text": "Moore guessed that, roughly every year, the number of electronic switches that people"
+      },
+      {
+        "id": "youtube-json3-16-65290",
+        "startMs": 65290,
+        "endMs": 68259,
+        "text": "could squeeze onto one computer chip would double."
+      },
+      {
+        "id": "youtube-json3-17-68259",
+        "startMs": 68259,
+        "endMs": 72579,
+        "text": "This meant computer chips would continue to become faster, more powerful, and cheaper—at"
+      },
+      {
+        "id": "youtube-json3-18-72579",
+        "startMs": 72579,
+        "endMs": 74929,
+        "text": "an absolutely amazing rate."
+      },
+      {
+        "id": "youtube-json3-19-74929",
+        "startMs": 74929,
+        "endMs": 78630,
+        "text": "Which might have sounded suspiciously awesome to readers."
+      },
+      {
+        "id": "youtube-json3-20-78630",
+        "startMs": 78630,
+        "endMs": 80460,
+        "text": "But Moore’s prediction came true!"
+      },
+      {
+        "id": "youtube-json3-21-80460",
+        "startMs": 80460,
+        "endMs": 85350,
+        "text": "Although it took eighteen months for each doubling, and, arguably, this was a self-fulfilling"
+      },
+      {
+        "id": "youtube-json3-22-85350",
+        "startMs": 85350,
+        "endMs": 88609,
+        "text": "prophecy, since engineers actively worked towards it."
+      },
+      {
+        "id": "youtube-json3-23-88609",
+        "startMs": 88609,
+        "endMs": 92770,
+        "text": "Moore went on to serve as CEO as Intel and is now worth billions."
+      },
+      {
+        "id": "youtube-json3-24-92770",
+        "startMs": 92770,
+        "endMs": 94829,
+        "text": "His prediction is called “Moore’s law.”"
+      },
+      {
+        "id": "youtube-json3-25-94829",
+        "startMs": 94829,
+        "endMs": 100560,
+        "text": "Think about what this means for manufacturers: they keep competing to invent hot new machines"
+      },
+      {
+        "id": "youtube-json3-26-100560",
+        "startMs": 100560,
+        "endMs": 102110,
+        "text": "that make their old ones obsolete."
+      },
+      {
+        "id": "youtube-json3-27-102110",
+        "startMs": 102110,
+        "endMs": 110289,
+        "text": "The same applies to methods of data Today, engineers face big questions about"
+      },
+      {
+        "id": "youtube-json3-28-110289",
+        "startMs": 110289,
+        "endMs": 112990,
+        "text": "the physical limit of Moore’s law."
+      },
+      {
+        "id": "youtube-json3-29-112990",
+        "startMs": 112990,
+        "endMs": 117490,
+        "text": "Even with new tricks here and there, just how small and fast can conventional chips"
+      },
+      {
+        "id": "youtube-json3-30-117490",
+        "startMs": 117490,
+        "endMs": 118490,
+        "text": "get?"
+      },
+      {
+        "id": "youtube-json3-31-118490",
+        "startMs": 118490,
+        "endMs": 122509,
+        "text": "Currently, teams at different chip manufacturers are working to create transistors at the nanometer"
+      },
+      {
+        "id": "youtube-json3-32-122509",
+        "startMs": 122509,
+        "endMs": 123509,
+        "text": "scale."
+      },
+      {
+        "id": "youtube-json3-33-123509",
+        "startMs": 123509,
+        "endMs": 128170,
+        "text": "IBM made a whole computer that’s only one millimeter by one millimeter wide and is about"
+      },
+      {
+        "id": "youtube-json3-34-128170",
+        "startMs": 128170,
+        "endMs": 130310,
+        "text": "as fast as a computer from 1990."
+      },
+      {
+        "id": "youtube-json3-35-130310",
+        "startMs": 130310,
+        "endMs": 135240,
+        "text": "As computers became smaller and cheaper, they moved from military bases to businesses in"
+      },
+      {
+        "id": "youtube-json3-36-135240",
+        "startMs": 135240,
+        "endMs": 139500,
+        "text": "the 1960s and to schools and homes by the late 1970s and 1980s."
+      },
+      {
+        "id": "youtube-json3-37-139500",
+        "startMs": 139500,
+        "endMs": 142480,
+        "text": "And computers changed these spaces."
+      },
+      {
+        "id": "youtube-json3-38-142480",
+        "startMs": 142480,
+        "endMs": 145090,
+        "text": "People got used to using them for certain tasks."
+      },
+      {
+        "id": "youtube-json3-39-145090",
+        "startMs": 145090,
+        "endMs": 147640,
+        "text": "But computers were pretty intimidating."
+      },
+      {
+        "id": "youtube-json3-40-147640",
+        "startMs": 147640,
+        "endMs": 149800,
+        "text": "Manufacturers had to make them work better with people."
+      },
+      {
+        "id": "youtube-json3-41-149800",
+        "startMs": 149800,
+        "endMs": 155430,
+        "text": "So in 1970 the Xerox Corporation founded the Palo Alto Research Center—known as Xerox"
+      },
+      {
+        "id": "youtube-json3-42-155430",
+        "startMs": 155430,
+        "endMs": 156430,
+        "text": "PARC."
+      },
+      {
+        "id": "youtube-json3-43-156430",
+        "startMs": 156430,
+        "endMs": 159630,
+        "text": "Here, researchers invented many features of modern computing."
+      },
+      {
+        "id": "youtube-json3-44-159630",
+        "startMs": 159630,
+        "endMs": 164570,
+        "text": "In 1973, they came up with the Xerox Alto, the first personal computer…"
+      },
+      {
+        "id": "youtube-json3-45-164570",
+        "startMs": 164570,
+        "endMs": 168840,
+        "text": "But Xerox didn’t think there was a market for computers in the home yet."
+      },
+      {
+        "id": "youtube-json3-46-168840",
+        "startMs": 168840,
+        "endMs": 173290,
+        "text": "Other Xerox PARC inventions include laser printing, the important networking standard"
+      },
+      {
+        "id": "youtube-json3-47-173290",
+        "startMs": 173290,
+        "endMs": 178050,
+        "text": "called Ethernet, and even the graphical user interface or GUI—which included folders,"
+      },
+      {
+        "id": "youtube-json3-48-178050",
+        "startMs": 178050,
+        "endMs": 180050,
+        "text": "icons, and windows."
+      },
+      {
+        "id": "youtube-json3-49-180050",
+        "startMs": 180050,
+        "endMs": 183180,
+        "text": "But Xerox didn’t capitalize on these inventions."
+      },
+      {
+        "id": "youtube-json3-50-183180",
+        "startMs": 183180,
+        "endMs": 185000,
+        "text": "You probably know who did."
+      },
+      {
+        "id": "youtube-json3-51-185000",
+        "startMs": 185000,
+        "endMs": 189400,
+        "text": "In the 1970s, two nerds who dropped out of college started selling computers you were"
+      },
+      {
+        "id": "youtube-json3-52-189400",
+        "startMs": 189400,
+        "endMs": 196480,
+        "text": "meant to use at home, for fun and—you know, to do… stuff, whatever you wanted."
+      },
+      {
+        "id": "youtube-json3-53-196480",
+        "startMs": 196480,
+        "endMs": 202190,
+        "text": "In retrospect, that was the genius of the Apple Two, released in 1977."
+      },
+      {
+        "id": "youtube-json3-54-202190",
+        "startMs": 202190,
+        "endMs": 208200,
+        "text": "Along with decades of shrewd engineering and business moves, fun made video game designer"
+      },
+      {
+        "id": "youtube-json3-55-208200",
+        "startMs": 208200,
+        "endMs": 213550,
+        "text": "and meditation enthusiast Steve Jobs and engineer Steve Wozniak into mega-billionaires."
+      },
+      {
+        "id": "youtube-json3-56-213550",
+        "startMs": 213550,
+        "endMs": 218290,
+        "text": "They had a commitment to computing for play, not always just work."
+      },
+      {
+        "id": "youtube-json3-57-218290",
+        "startMs": 218290,
+        "endMs": 219420,
+        "text": "And they weren’t alone."
+      },
+      {
+        "id": "youtube-json3-58-219420",
+        "startMs": 219420,
+        "endMs": 224820,
+        "text": "In 1981, IBM started marketing the PC powered by the DOS operating system, which they licensed"
+      },
+      {
+        "id": "youtube-json3-59-224820",
+        "startMs": 224820,
+        "endMs": 229670,
+        "text": "from Microsoft—founded by Harvard dropout Bill Gates in 1975."
+      },
+      {
+        "id": "youtube-json3-60-229670",
+        "startMs": 229670,
+        "endMs": 234190,
+        "text": "By 1989, Microsoft’s revenues reached one billion dollars."
+      },
+      {
+        "id": "youtube-json3-61-234190",
+        "startMs": 234190,
+        "endMs": 238180,
+        "text": "You can find out more about college dropouts-turned-billionaires elsewhere."
+      },
+      {
+        "id": "youtube-json3-62-238180",
+        "startMs": 238180,
+        "endMs": 243150,
+        "text": "For our purposes, note that some of the inventors who influenced the future of computing were"
+      },
+      {
+        "id": "youtube-json3-63-243150",
+        "startMs": 243150,
+        "endMs": 246040,
+        "text": "traditional corporate engineers like Gordon Moore."
+      },
+      {
+        "id": "youtube-json3-64-246040",
+        "startMs": 246040,
+        "endMs": 250130,
+        "text": "But increasingly, they were people like the Steves who didn’t focus on discoveries in"
+      },
+      {
+        "id": "youtube-json3-65-250130",
+        "startMs": 250130,
+        "endMs": 256840,
+        "text": "computer science, but on design and marketing: how to create new kinds of interactions with,"
+      },
+      {
+        "id": "youtube-json3-66-256840",
+        "startMs": 256840,
+        "endMs": 258590,
+        "text": "and on, computers."
+      },
+      {
+        "id": "youtube-json3-67-258590",
+        "startMs": 258590,
+        "endMs": 262030,
+        "text": "Compare this to the birth of social media in the early 2000s."
+      },
+      {
+        "id": "youtube-json3-68-262030",
+        "startMs": 262030,
+        "endMs": 265300,
+        "text": "So new social spaces emerged on computers."
+      },
+      {
+        "id": "youtube-json3-69-265300",
+        "startMs": 265300,
+        "endMs": 269370,
+        "text": "And connecting computers together allowed for new communities to form—from Second"
+      },
+      {
+        "id": "youtube-json3-70-269370",
+        "startMs": 269370,
+        "endMs": 270410,
+        "text": "Life to 4chan."
+      },
+      {
+        "id": "youtube-json3-71-270410",
+        "startMs": 270410,
+        "endMs": 274400,
+        "text": "For that, we have to once again thank U.S. military research."
+      },
+      {
+        "id": "youtube-json3-72-274400",
+        "startMs": 274400,
+        "endMs": 276120,
+        "text": "ThoughtBubble, plug us in."
+      },
+      {
+        "id": "youtube-json3-73-276120",
+        "startMs": 276120,
+        "endMs": 281479,
+        "text": "Back in the late 1950s, the U.S. was really worried about Soviet technologies."
+      },
+      {
+        "id": "youtube-json3-74-281479",
+        "startMs": 281479,
+        "endMs": 286650,
+        "text": "So in 1958, the Secretary of Defense authorized a new initiative called the Defense Advanced"
+      },
+      {
+        "id": "youtube-json3-75-286650",
+        "startMs": 286650,
+        "endMs": 289560,
+        "text": "Research Projects Agency or DARPA."
+      },
+      {
+        "id": "youtube-json3-76-289560",
+        "startMs": 289560,
+        "endMs": 295680,
+        "text": "DARPA set about solving a glaring problem: what happened if Soviet attacks cut U.S. telephone"
+      },
+      {
+        "id": "youtube-json3-77-295680",
+        "startMs": 295680,
+        "endMs": 296680,
+        "text": "lines?"
+      },
+      {
+        "id": "youtube-json3-78-296680",
+        "startMs": 296680,
+        "endMs": 300729,
+        "text": "How could information be moved around quickly, even after a nuclear strike?"
+      },
+      {
+        "id": "youtube-json3-79-300729",
+        "startMs": 300729,
+        "endMs": 304169,
+        "text": "A faster computer wouldn’t help if itt was blown to bits."
+      },
+      {
+        "id": "youtube-json3-80-304169",
+        "startMs": 304169,
+        "endMs": 306500,
+        "text": "What was needed was a network."
+      },
+      {
+        "id": "youtube-json3-81-306500",
+        "startMs": 306500,
+        "endMs": 311009,
+        "text": "So in part to defend against information loss during a war—and in part to make researchers’"
+      },
+      {
+        "id": "youtube-json3-82-311009",
+        "startMs": 311009,
+        "endMs": 316509,
+        "text": "lives easier—DARPA funded the first true network of computers, the Advanced Research"
+      },
+      {
+        "id": "youtube-json3-83-316509",
+        "startMs": 316509,
+        "endMs": 320169,
+        "text": "Projects Agency Nework, better known as ARPANET."
+      },
+      {
+        "id": "youtube-json3-84-320169",
+        "startMs": 320169,
+        "endMs": 323590,
+        "text": "People give different dates for the birthday of the Internet, but two stand out."
+      },
+      {
+        "id": "youtube-json3-85-323590",
+        "startMs": 323590,
+        "endMs": 327360,
+        "text": "On September 2nd, 1969, ARPANET went online."
+      },
+      {
+        "id": "youtube-json3-86-327360",
+        "startMs": 327360,
+        "endMs": 332990,
+        "text": "It used the then-new technology of packet switching, or sending data in small, independent,"
+      },
+      {
+        "id": "youtube-json3-87-332990",
+        "startMs": 332990,
+        "endMs": 337590,
+        "text": "broken-up parts that can each find their own fastest routes and be reassembled later."
+      },
+      {
+        "id": "youtube-json3-88-337590",
+        "startMs": 337590,
+        "endMs": 340410,
+        "text": "This is still the basis of our networks today!"
+      },
+      {
+        "id": "youtube-json3-89-340410",
+        "startMs": 340410,
+        "endMs": 343190,
+        "text": "At first, ARPANET only linked a few universities."
+      },
+      {
+        "id": "youtube-json3-90-343190",
+        "startMs": 343190,
+        "endMs": 348379,
+        "text": "But it grew as researchers found that linking computers was useful for all sorts of reasons,"
+      },
+      {
+        "id": "youtube-json3-91-348379",
+        "startMs": 348379,
+        "endMs": 349379,
+        "text": "nukes aside!"
+      },
+      {
+        "id": "youtube-json3-92-349379",
+        "startMs": 349379,
+        "endMs": 355389,
+        "text": "And then, on January 1st, 1983, several computer networks including ARPANET were joined together"
+      },
+      {
+        "id": "youtube-json3-93-355389",
+        "startMs": 355389,
+        "endMs": 360860,
+        "text": "using a standard way of requesting and sharing information: TCP/IP."
+      },
+      {
+        "id": "youtube-json3-94-360860",
+        "startMs": 360860,
+        "endMs": 363410,
+        "text": "This remains the backbone of the Internet today."
+      },
+      {
+        "id": "youtube-json3-95-363410",
+        "startMs": 363410,
+        "endMs": 366610,
+        "text": "Meanwhile, French engineers created their own computer network, connected through through"
+      },
+      {
+        "id": "youtube-json3-96-366610",
+        "startMs": 366610,
+        "endMs": 372919,
+        "text": "telephone lines, Minitel, back in 1978—five years before TCP/IP!"
+      },
+      {
+        "id": "youtube-json3-97-372919",
+        "startMs": 372919,
+        "endMs": 375749,
+        "text": "Minitel was retired in 2012."
+      },
+      {
+        "id": "youtube-json3-98-375749",
+        "startMs": 375749,
+        "endMs": 378870,
+        "text": "And the Soviets developed their own versions of ARPANET."
+      },
+      {
+        "id": "youtube-json3-99-378870",
+        "startMs": 378870,
+        "endMs": 384830,
+        "text": "But after 1991, these joined the TCP/IP-driven Internet, and the virtual world became both"
+      },
+      {
+        "id": "youtube-json3-100-384830",
+        "startMs": 384830,
+        "endMs": 386759,
+        "text": "larger and smaller."
+      },
+      {
+        "id": "youtube-json3-101-386759",
+        "startMs": 386759,
+        "endMs": 392080,
+        "text": "The Internet in the 1980s was literally that: a network interconnecting computers."
+      },
+      {
+        "id": "youtube-json3-102-392080",
+        "startMs": 392080,
+        "endMs": 395000,
+        "text": "It didn’t look like a new space yet."
+      },
+      {
+        "id": "youtube-json3-103-395000",
+        "startMs": 395000,
+        "endMs": 400270,
+        "text": "For that, we can thank British computer scientist Sir Tim Berners-Lee, who invented the World"
+      },
+      {
+        "id": "youtube-json3-104-400270",
+        "startMs": 400270,
+        "endMs": 402460,
+        "text": "Wide Web in 1990."
+      },
+      {
+        "id": "youtube-json3-105-402460",
+        "startMs": 402460,
+        "endMs": 406819,
+        "text": "Berners-Lee pulled together existing ideas, like hypertext and the internet, and built"
+      },
+      {
+        "id": "youtube-json3-106-406819",
+        "startMs": 406819,
+        "endMs": 412569,
+        "text": "the first web browser to create the beginnings of the functional and useful web we know today."
+      },
+      {
+        "id": "youtube-json3-107-412569",
+        "startMs": 412569,
+        "endMs": 414809,
+        "text": "The Web had profound effects."
+      },
+      {
+        "id": "youtube-json3-108-414809",
+        "startMs": 414809,
+        "endMs": 420229,
+        "text": "It brought the Internet to millions of people—and brought them into it, making them feel like"
+      },
+      {
+        "id": "youtube-json3-109-420229",
+        "startMs": 420229,
+        "endMs": 425860,
+        "text": "they had a home “online,” a virtual place to represent themselves, meet strangers all"
+      },
+      {
+        "id": "youtube-json3-110-425860",
+        "startMs": 425860,
+        "endMs": 429169,
+        "text": "over the world, and troll educational video shows!"
+      },
+      {
+        "id": "youtube-json3-111-429169",
+        "startMs": 429169,
+        "endMs": 433120,
+        "text": "The Web also democratized the tools of knowledge making."
+      },
+      {
+        "id": "youtube-json3-112-433120",
+        "startMs": 433120,
+        "endMs": 437719,
+        "text": "From World War Two until 1990, building computers and using them to do work was largely the"
+      },
+      {
+        "id": "youtube-json3-113-437719",
+        "startMs": 437719,
+        "endMs": 438789,
+        "text": "domain of elites."
+      },
+      {
+        "id": "youtube-json3-114-438789",
+        "startMs": 438789,
+        "endMs": 443939,
+        "text": "A short time later, we can trade software on GitHub, freely share 3D printing templates"
+      },
+      {
+        "id": "youtube-json3-115-443939",
+        "startMs": 443939,
+        "endMs": 447360,
+        "text": "on Thingiverse, and benefit from the collective wisdom of Wikipedia."
+      },
+      {
+        "id": "youtube-json3-116-447360",
+        "startMs": 447360,
+        "endMs": 452990,
+        "text": "It’s as if the Internet now contains not one but several Libraries of Alexandria."
+      },
+      {
+        "id": "youtube-json3-117-452990",
+        "startMs": 452990,
+        "endMs": 456830,
+        "text": "They’ve radically changed how we learn and make knowledge."
+      },
+      {
+        "id": "youtube-json3-118-456830",
+        "startMs": 456830,
+        "endMs": 460930,
+        "text": "Just as scientific journals had once been invented as printed objects, since 1990, they’ve"
+      },
+      {
+        "id": "youtube-json3-119-460930",
+        "startMs": 460930,
+        "endMs": 464460,
+        "text": "moved online—though often behind steep paywalls."
+      },
+      {
+        "id": "youtube-json3-120-464460",
+        "startMs": 464460,
+        "endMs": 469370,
+        "text": "In fact, Russian philosopher Vladimir Odoevsky predicted way back in"
+      },
+      {
+        "id": "youtube-json3-121-469370",
+        "startMs": 469370,
+        "endMs": 476520,
+        "text": "1837—in The Year 4338—that our houses would be connected by “magnetic telegraphs.”"
+      },
+      {
+        "id": "youtube-json3-122-476520",
+        "startMs": 476520,
+        "endMs": 480219,
+        "text": "But this came true only one hundred and fifty years later—not two millennia!"
+      },
+      {
+        "id": "youtube-json3-123-480219",
+        "startMs": 480219,
+        "endMs": 483120,
+        "text": "So what will happen in another hundred and fifty years?"
+      },
+      {
+        "id": "youtube-json3-124-483120",
+        "startMs": 483120,
+        "endMs": 486020,
+        "text": "Well, computing seems to be changing unpredictably."
+      },
+      {
+        "id": "youtube-json3-125-486020",
+        "startMs": 486020,
+        "endMs": 490759,
+        "text": "Not only because computers are still getting faster, but because of at least three more"
+      },
+      {
+        "id": "youtube-json3-126-490759",
+        "startMs": 490759,
+        "endMs": 491759,
+        "text": "fundamental shifts."
+      },
+      {
+        "id": "youtube-json3-127-491759",
+        "startMs": 491759,
+        "endMs": 495949,
+        "text": "One, scientists are experimenting with quantum computers, which work in a different way than"
+      },
+      {
+        "id": "youtube-json3-128-495949",
+        "startMs": 495949,
+        "endMs": 497980,
+        "text": "“classical,” binary ones."
+      },
+      {
+        "id": "youtube-json3-129-498020",
+        "startMs": 498020,
+        "endMs": 501960,
+        "text": "This is called superposition, and it has the potential to make the computers of the future"
+      },
+      {
+        "id": "youtube-json3-130-501969",
+        "startMs": 501969,
+        "endMs": 503740,
+        "text": "much faster than today’s."
+      },
+      {
+        "id": "youtube-json3-131-503740",
+        "startMs": 503740,
+        "endMs": 508099,
+        "text": "This could lead to major shifts in cryptography: the current method of protecting our credit"
+      },
+      {
+        "id": "youtube-json3-132-508099",
+        "startMs": 508099,
+        "endMs": 512640,
+        "text": "cards works because classical computers aren’t strong enough to factor very large numbers"
+      },
+      {
+        "id": "youtube-json3-133-512640",
+        "startMs": 512640,
+        "endMs": 513640,
+        "text": "quickly."
+      },
+      {
+        "id": "youtube-json3-134-513640",
+        "startMs": 513640,
+        "endMs": 516519,
+        "text": "But a quantum computer should be able to do this kind of math easily."
+      },
+      {
+        "id": "youtube-json3-135-516519",
+        "startMs": 516519,
+        "endMs": 521440,
+        "text": "To date, however, quantum computers are not yet finished technologies that engineers can"
+      },
+      {
+        "id": "youtube-json3-136-521440",
+        "startMs": 521440,
+        "endMs": 526779,
+        "text": "improve, but epistemic objects: things that scientists are still working to understand."
+      },
+      {
+        "id": "youtube-json3-137-526779",
+        "startMs": 526779,
+        "endMs": 529190,
+        "text": "So will quantum computing change everything?"
+      },
+      {
+        "id": "youtube-json3-138-529190",
+        "startMs": 529190,
+        "endMs": 532130,
+        "text": "Or mostly remain a weird footnote to classical computing?"
+      },
+      {
+        "id": "youtube-json3-139-532130",
+        "startMs": 532130,
+        "endMs": 534889,
+        "text": "I don’t know… we’ll find out!"
+      },
+      {
+        "id": "youtube-json3-140-534889",
+        "startMs": 534889,
+        "endMs": 539490,
+        "text": "Fundamental shift two: some researchers across computing, history, and epistemology—the"
+      },
+      {
+        "id": "youtube-json3-141-539490",
+        "startMs": 539490,
+        "endMs": 544300,
+        "text": "branch of philosophy that asks, what counts as knowledge?—wonder if really really large"
+      },
+      {
+        "id": "youtube-json3-142-544300",
+        "startMs": 544300,
+        "endMs": 548750,
+        "text": "amounts of data, called Big Data, will change how we do science."
+      },
+      {
+        "id": "youtube-json3-143-548750",
+        "startMs": 548750,
+        "endMs": 553100,
+        "text": "One of the main jobs of being a scientist has been to just collect data."
+      },
+      {
+        "id": "youtube-json3-144-553100",
+        "startMs": 553100,
+        "endMs": 558519,
+        "text": "But if Internet-enabled sensors of all kinds are always transmitting back to databases,"
+      },
+      {
+        "id": "youtube-json3-145-558519",
+        "startMs": 558519,
+        "endMs": 563260,
+        "text": "then maybe the work of science will shift away from data collection, and even away from"
+      },
+      {
+        "id": "youtube-json3-146-563260",
+        "startMs": 563260,
+        "endMs": 568980,
+        "text": "analysis—AI can crunch numbers—and into asking questions about patterns that emerge"
+      },
+      {
+        "id": "youtube-json3-147-568980",
+        "startMs": 568980,
+        "endMs": 571570,
+        "text": "from data, seemingly on their own."
+      },
+      {
+        "id": "youtube-json3-148-571570",
+        "startMs": 571570,
+        "endMs": 576420,
+        "text": "So instead of saying, I wonder if X is true about the natural or social world, and then"
+      },
+      {
+        "id": "youtube-json3-149-576420",
+        "startMs": 576420,
+        "endMs": 581079,
+        "text": "going out to observe or test, the scientist of the future might wait for a computer to"
+      },
+      {
+        "id": "youtube-json3-150-581079",
+        "startMs": 581079,
+        "endMs": 586029,
+        "text": "tell her, X seems true about the world, are you interested in knowing more?"
+      },
+      {
+        "id": "youtube-json3-151-586029",
+        "startMs": 586029,
+        "endMs": 590720,
+        "text": "This vision for using Big Data has been called “hypothesis-free science,” and it would"
+      },
+      {
+        "id": "youtube-json3-152-590720",
+        "startMs": 590720,
+        "endMs": 593620,
+        "text": "qualify as a new paradigm."
+      },
+      {
+        "id": "youtube-json3-153-593620",
+        "startMs": 593620,
+        "endMs": 596220,
+        "text": "But will it replace hypothesis-driven science?"
+      },
+      {
+        "id": "youtube-json3-154-596220",
+        "startMs": 596220,
+        "endMs": 600420,
+        "text": "Even if AI is mostly “weak,” meaning not like a human brain—but only, say, a sensor"
+      },
+      {
+        "id": "youtube-json3-155-600420",
+        "startMs": 600420,
+        "endMs": 604740,
+        "text": "system that knows what temperature it is in your house and how to adjust to the temp you"
+      },
+      {
+        "id": "youtube-json3-156-604740",
+        "startMs": 604740,
+        "endMs": 610160,
+        "text": "want—once it’s very common, it could challenge long-held assumptions about what thought is."
+      },
+      {
+        "id": "youtube-json3-157-610160",
+        "startMs": 610160,
+        "endMs": 614700,
+        "text": "In fact, many people have already entrusted cognitive responsibilities such as knowing"
+      },
+      {
+        "id": "youtube-json3-158-614700",
+        "startMs": 614700,
+        "endMs": 619550,
+        "text": "what time it is to AI scripts on computers in their phones, watches, cars, and homes."
+      },
+      {
+        "id": "youtube-json3-159-619550",
+        "startMs": 619550,
+        "endMs": 624550,
+        "text": "Will human cognition feel different if we keep giving AI more and more human stuff to"
+      },
+      {
+        "id": "youtube-json3-160-624550",
+        "startMs": 624550,
+        "endMs": 625649,
+        "text": "take care of?"
+      },
+      {
+        "id": "youtube-json3-161-625649",
+        "startMs": 625649,
+        "endMs": 627820,
+        "text": "How will society change?"
+      },
+      {
+        "id": "youtube-json3-162-627820",
+        "startMs": 627820,
+        "endMs": 630000,
+        "text": "I don’t know… we’ll find out!!!"
+      },
+      {
+        "id": "youtube-json3-163-630000",
+        "startMs": 630000,
+        "endMs": 634329,
+        "text": "And these are only some of the anxieties of our hyper-connected world!"
+      },
+      {
+        "id": "youtube-json3-164-634329",
+        "startMs": 634329,
+        "endMs": 638730,
+        "text": "We could do a whole episode on blockchain, a list of time-stamped records which are linked"
+      },
+      {
+        "id": "youtube-json3-165-638730",
+        "startMs": 638730,
+        "endMs": 643500,
+        "text": "using cryptography and (theoretically) resistant to fraud, and the new social technologies"
+      },
+      {
+        "id": "youtube-json3-166-643500",
+        "startMs": 643500,
+        "endMs": 647970,
+        "text": "it enables: like cryptocurrency, kinds of money not backed by sovereign nations but"
+      },
+      {
+        "id": "youtube-json3-167-647970",
+        "startMs": 647970,
+        "endMs": 650940,
+        "text": "by groups of co-invested strangers on the Internet."
+      },
+      {
+        "id": "youtube-json3-168-650940",
+        "startMs": 650940,
+        "endMs": 655380,
+        "text": "Will blockchain change money, and fundamentally, trust in strangers?"
+      },
+      {
+        "id": "youtube-json3-169-655380",
+        "startMs": 655380,
+        "endMs": 657079,
+        "text": "Or is it just another shift in cryptography?"
+      },
+      {
+        "id": "youtube-json3-170-657079",
+        "startMs": 657079,
+        "endMs": 658079,
+        "text": "A fad?"
+      },
+      {
+        "id": "youtube-json3-171-658079",
+        "startMs": 658079,
+        "endMs": 660569,
+        "text": "I don't know... we'll find out!"
+      },
+      {
+        "id": "youtube-json3-172-660569",
+        "startMs": 660569,
+        "endMs": 665130,
+        "text": "Let’s head back to the physical world to look at the cost of these developments."
+      },
+      {
+        "id": "youtube-json3-173-665130",
+        "startMs": 665130,
+        "endMs": 669830,
+        "text": "One feature they have in common is they require ever greater amounts of electricity and rare-earth"
+      },
+      {
+        "id": "youtube-json3-174-669830",
+        "startMs": 669830,
+        "endMs": 670830,
+        "text": "metals."
+      },
+      {
+        "id": "youtube-json3-175-670830",
+        "startMs": 670830,
+        "endMs": 675810,
+        "text": "And older computers become e-waste, toxic trash recycled by some impoverished persons"
+      },
+      {
+        "id": "youtube-json3-176-675810",
+        "startMs": 675810,
+        "endMs": 677990,
+        "text": "at cost to their own bodies."
+      },
+      {
+        "id": "youtube-json3-177-677990",
+        "startMs": 677990,
+        "endMs": 682330,
+        "text": "Even as computers become so small they’re invisible, so common they feel like part of"
+      },
+      {
+        "id": "youtube-json3-178-682330",
+        "startMs": 682330,
+        "endMs": 687089,
+        "text": "our own brains, and so fast that they may fundamentally change critical social structures"
+      },
+      {
+        "id": "youtube-json3-179-687089",
+        "startMs": 687089,
+        "endMs": 691389,
+        "text": "like banking and buying animal hoodies on Etsy… they also contribute to dangerous"
+      },
+      {
+        "id": "youtube-json3-180-691389",
+        "startMs": 691389,
+        "endMs": 694579,
+        "text": "shifts of natural resources."
+      },
+      {
+        "id": "youtube-json3-181-694579",
+        "startMs": 694579,
+        "endMs": 698920,
+        "text": "Next time—we’ll wrap up our story of the life sciences by asking questions about the"
+      },
+      {
+        "id": "youtube-json3-182-698920",
+        "startMs": 698920,
+        "endMs": 704750,
+        "text": "future of medicine and the human brain that remain unanswered as of early 2019."
+      },
+      {
+        "id": "youtube-json3-183-704750",
+        "startMs": 704750,
+        "endMs": 706760,
+        "text": "History isn’t finished!"
+      },
+      {
+        "id": "youtube-json3-184-706760",
+        "startMs": 706760,
+        "endMs": 710310,
+        "text": "Crash Course History of Science is filmed in the Cheryl C. Kinney Studio in Missoula,"
+      },
+      {
+        "id": "youtube-json3-185-710310",
+        "startMs": 710310,
+        "endMs": 713110,
+        "text": "MT and it's made with the help of all these nice people."
+      },
+      {
+        "id": "youtube-json3-186-713110",
+        "startMs": 713110,
+        "endMs": 714940,
+        "text": "And our animation team is Thought Cafe."
+      },
+      {
+        "id": "youtube-json3-187-714940",
+        "startMs": 714940,
+        "endMs": 716820,
+        "text": "Crash Course is a Complexly Production."
+      },
+      {
+        "id": "youtube-json3-188-716820",
+        "startMs": 716820,
+        "endMs": 720060,
+        "text": "If you want to keep imagining the world complexly with us you can check out some of our other"
+      },
+      {
+        "id": "youtube-json3-189-720060",
+        "startMs": 720060,
+        "endMs": 721060,
+        "text": "channels"
+      },
+      {
+        "id": "youtube-json3-190-721060",
+        "startMs": 721060,
+        "endMs": 723970,
+        "text": "like Animal Wonders, The Art Assignment, and Scishow Psych."
+      },
+      {
+        "id": "youtube-json3-191-723970",
+        "startMs": 723970,
+        "endMs": 727829,
+        "text": "And if you would like to keep Crash Course free forever for everyone, you can support"
+      },
+      {
+        "id": "youtube-json3-192-727829",
+        "startMs": 727829,
+        "endMs": 732069,
+        "text": "the series on Patreon, a crowd funding platform that allows you to support the content you"
+      },
+      {
+        "id": "youtube-json3-193-732069",
+        "startMs": 732069,
+        "endMs": 733110,
+        "text": "love."
+      },
+      {
+        "id": "youtube-json3-194-733110",
+        "startMs": 733110,
+        "endMs": 738600,
+        "text": "Thank you to all our patrons for making Crash Course possible with your continued support."
+      }
+    ],
+    "sourceSegmentCount": 193,
+    "characterCount": 11953,
+    "transcriptFingerprint": "6479b3c7",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "23a8207d-d56d-42cf-bbd6-1af94c724a23",
+    "generationSessionId": "78198a7c-c100-40d4-8535-5992f7500886",
+    "recoverySessionId": "c95532bd-02fc-4328-ab69-bc97b06f4d29",
+    "questionPlan": {
+      "seed": "e5645f912a16d62f408bc72ab01765742fa498e7292af219ba145353984e6748",
+      "types": [
+        "multiple_choice",
+        "short_answer",
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "The Internet and Computing: Crash Course History of Science #43",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "quantum computing",
+          "question": "How do quantum computers differ from classical binary computers?",
+          "retryQuestion": "What is the key difference between quantum computers and classical binary computers?",
+          "explanation": "Quantum computers operate using superposition, which differs from the binary operation of classical computers and may enable much faster computation.",
+          "type": "multiple_choice",
+          "choices": [
+            "They use superposition instead of binary operation.",
+            "They are slower than classical computers.",
+            "They use the same binary operation but with more bits.",
+            "They do not use any form of computation."
+          ],
+          "answerIndex": 0,
+          "answer": "They use superposition instead of binary operation."
+        },
+        {
+          "id": "q2",
+          "concept": "historical access to computing",
+          "question": "From World War Two until 1990, who was largely able to build computers and use them to do work?",
+          "retryQuestion": "Between World War Two and 1990, which group primarily had the ability to build and use computers for work?",
+          "explanation": "During that period, computing was largely restricted to elites, meaning a small, privileged group with the resources and access to build and operate computers.",
+          "type": "short_answer",
+          "answer": "Elites",
+          "rubricIdeas": [
+            "Elites"
+          ],
+          "acceptableAnswers": [
+            "The elite",
+            "A small privileged group"
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "Elites"
+            ],
+            "acceptableAnswers": [
+              "Elites",
+              "The elite",
+              "A small privileged group"
+            ]
+          }
+        },
+        {
+          "id": "q3",
+          "concept": "weak AI and assumptions about thought",
+          "question": "What could happen once weak AI, such as a sensor system that adjusts home temperature, becomes very common?",
+          "retryQuestion": "Which outcome is supported for a widespread weak AI system like a home temperature sensor?",
+          "explanation": "The fact states that once weak AI is very common, it could challenge long-held assumptions about what thought is.",
+          "type": "multiple_choice",
+          "choices": [
+            "It would prove that machines have human-like consciousness.",
+            "It would have no effect on how people understand thinking.",
+            "It could challenge long-held assumptions about what thought is.",
+            "It would eliminate the need for human cognition entirely."
+          ],
+          "answerIndex": 2,
+          "answer": "It could challenge long-held assumptions about what thought is."
+        },
+        {
+          "id": "q4",
+          "concept": "TCP/IP adoption",
+          "question": "On January 1, 1983, several computer networks including ARPANET were joined together using Minitel, a standard way of requesting and sharing information.",
+          "retryQuestion": "On January 1, 1983, the joining of several computer networks including ARPANET used Minitel as the standard way of requesting and sharing information.",
+          "explanation": "TCP/IP was the standard protocol used to join the networks on that date; Minitel was a separate French network connected via telephone lines, not the protocol used for the ARPANET interconnection.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "On January 1, 1983, several computer networks including ARPANET were joined together using TCP/IP, a standard way of requesting and sharing information."
+        },
+        {
+          "id": "q5",
+          "concept": "condition for scientific work shift",
+          "question": "Under what condition might the work of science shift away from data collection and analysis and toward asking questions about patterns that emerge from data?",
+          "retryQuestion": "What condition would cause scientific work to move away from data collection and analysis and toward asking questions about patterns that emerge from data?",
+          "explanation": "The shift is proposed to occur when Internet-enabled sensors of all kinds are always transmitting back to databases, so that data collection and even analysis can be automated, leaving scientists to ask questions about patterns that emerge from the data.",
+          "type": "short_answer",
+          "answer": "When Internet-enabled sensors of all kinds are always transmitting back to databases",
+          "rubricIdeas": [
+            "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+            ],
+            "acceptableAnswers": [
+              "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+            ]
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 5,
+      "retryCount": 0,
+      "inputTokens": 50589,
+      "outputTokens": 900,
+      "reasoningTokens": 0,
+      "elapsedMs": 12559,
+      "sourceSelection": {
+        "sentenceCount": 125,
+        "excludedSentenceCount": 5,
+        "candidateWindowCount": 86,
+        "selectedWindowCount": 30,
+        "focusWordCount": 131
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "quantum computing",
+      "question": "How do quantum computers differ from classical binary computers?",
+      "retryQuestion": "What is the key difference between quantum computers and classical binary computers?",
+      "explanation": "Quantum computers operate using superposition, which differs from the binary operation of classical computers and may enable much faster computation.",
+      "type": "multiple_choice",
+      "choices": [
+        "They use superposition instead of binary operation.",
+        "They are slower than classical computers.",
+        "They use the same binary operation but with more bits.",
+        "They do not use any form of computation."
+      ],
+      "answerIndex": 0,
+      "answer": "They use superposition instead of binary operation."
+    },
+    {
+      "id": "q2",
+      "concept": "historical access to computing",
+      "question": "From World War Two until 1990, who was largely able to build computers and use them to do work?",
+      "retryQuestion": "Between World War Two and 1990, which group primarily had the ability to build and use computers for work?",
+      "explanation": "During that period, computing was largely restricted to elites, meaning a small, privileged group with the resources and access to build and operate computers.",
+      "type": "short_answer",
+      "answer": "Elites",
+      "rubricIdeas": [
+        "Elites"
+      ],
+      "acceptableAnswers": [
+        "The elite",
+        "A small privileged group"
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "Elites"
+        ],
+        "acceptableAnswers": [
+          "Elites",
+          "The elite",
+          "A small privileged group"
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "concept": "weak AI and assumptions about thought",
+      "question": "What could happen once weak AI, such as a sensor system that adjusts home temperature, becomes very common?",
+      "retryQuestion": "Which outcome is supported for a widespread weak AI system like a home temperature sensor?",
+      "explanation": "The fact states that once weak AI is very common, it could challenge long-held assumptions about what thought is.",
+      "type": "multiple_choice",
+      "choices": [
+        "It would prove that machines have human-like consciousness.",
+        "It would have no effect on how people understand thinking.",
+        "It could challenge long-held assumptions about what thought is.",
+        "It would eliminate the need for human cognition entirely."
+      ],
+      "answerIndex": 2,
+      "answer": "It could challenge long-held assumptions about what thought is."
+    },
+    {
+      "id": "q4",
+      "concept": "TCP/IP adoption",
+      "question": "On January 1, 1983, several computer networks including ARPANET were joined together using Minitel, a standard way of requesting and sharing information.",
+      "retryQuestion": "On January 1, 1983, the joining of several computer networks including ARPANET used Minitel as the standard way of requesting and sharing information.",
+      "explanation": "TCP/IP was the standard protocol used to join the networks on that date; Minitel was a separate French network connected via telephone lines, not the protocol used for the ARPANET interconnection.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "On January 1, 1983, several computer networks including ARPANET were joined together using TCP/IP, a standard way of requesting and sharing information."
+    },
+    {
+      "id": "q5",
+      "concept": "condition for scientific work shift",
+      "question": "Under what condition might the work of science shift away from data collection and analysis and toward asking questions about patterns that emerge from data?",
+      "retryQuestion": "What condition would cause scientific work to move away from data collection and analysis and toward asking questions about patterns that emerge from data?",
+      "explanation": "The shift is proposed to occur when Internet-enabled sensors of all kinds are always transmitting back to databases, so that data collection and even analysis can be automated, leaving scientists to ask questions about patterns that emerge from the data.",
+      "type": "short_answer",
+      "answer": "When Internet-enabled sensors of all kinds are always transmitting back to databases",
+      "rubricIdeas": [
+        "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+        ],
+        "acceptableAnswers": [
+          "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+        ]
+      }
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "2512932c1151ff469d1351753401551a75759346569be48078d55af078a474ce"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "b7b294ae3bb87b690cb524d00ace1b46e325d2d478aaa314f98bdc783a95a69f"
+    },
+    {
+      "callIndex": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "d2584a6570d2d3a40cc0771448d54f080e2e8468e09cf7bd6faee57bda6ea8ba"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "b0931077be26a5add1e1dfd4bcd5161930fc8159abd61a3dcac23ad0b218199d"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "f0c74de86be9d4dfd0dd89e2d49eb07bce1b068c3d5925020346dca7cf116abb"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "They use superposition instead of binary operation.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the key difference: quantum computers use superposition, unlike classical binary computers.",
+        "matchedIdeas": [
+          "Quantum computers use superposition instead of binary operation"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "Elites",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that elites were the primary group able to build and use computers during this period.",
+        "matchedIdeas": [
+          "Elites"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "It could challenge long-held assumptions about what thought is.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that widespread weak AI could challenge our assumptions about what thought is.",
+        "matchedIdeas": [
+          "It could challenge long-held assumptions about what thought is."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the statement is false, as the networks were joined using TCP/IP, not Minitel.",
+        "matchedIdeas": [
+          "Learner correctly identified the statement as False"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "When Internet-enabled sensors of all kinds are always transmitting back to databases",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the shift occurs when Internet-enabled sensors are constantly transmitting data to databases.",
+        "matchedIdeas": [
+          "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "ur9aGqcmq8M"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 2228,
+      "videoId": "ur9aGqcmq8M",
+      "title": "The Internet and Computing: Crash Course History of Science #43",
+      "language": "en",
+      "durationSeconds": 739,
+      "segmentCount": 193,
+      "sourceSegmentCount": 193,
+      "characterCount": 11953,
+      "transcriptFingerprint": "6479b3c7",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 2228,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 4917,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 4942,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 7626,
+      "ordinal": 1,
+      "concept": "quantum computing",
+      "prompt": "How do quantum computers differ from classical binary computers?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 7626,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2709,
+      "inputTokens": 9675,
+      "outputTokens": 153,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7626,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "c95532bd-02fc-4328-ab69-bc97b06f4d29"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7632,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 7642,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 9945,
+      "ordinal": 2,
+      "concept": "historical access to computing",
+      "prompt": "From World War Two until 1990, who was largely able to build computers and use them to do work?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 9945,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2313,
+      "inputTokens": 10064,
+      "outputTokens": 172,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9945,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "c95532bd-02fc-4328-ab69-bc97b06f4d29"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9954,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10010,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 12320,
+      "ordinal": 3,
+      "concept": "weak AI and assumptions about thought",
+      "prompt": "What could happen once weak AI, such as a sensor system that adjusts home temperature, becomes very common?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12321,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2366,
+      "inputTokens": 9929,
+      "outputTokens": 177,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12321,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "c95532bd-02fc-4328-ab69-bc97b06f4d29"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12332,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12351,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 15080,
+      "ordinal": 4,
+      "concept": "TCP/IP adoption",
+      "prompt": "On January 1, 1983, several computer networks including ARPANET were joined together using Minitel, a standard way of requesting and sharing information."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 15080,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2748,
+      "inputTokens": 10497,
+      "outputTokens": 191,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 15080,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "c95532bd-02fc-4328-ab69-bc97b06f4d29"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 15094,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 15133,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 17471,
+      "ordinal": 5,
+      "concept": "condition for scientific work shift",
+      "prompt": "Under what condition might the work of science shift away from data collection and analysis and toward asking questions about patterns that emerge from data?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 17471,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2377,
+      "inputTokens": 10424,
+      "outputTokens": 207,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 17471,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "c95532bd-02fc-4328-ab69-bc97b06f4d29"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 17472,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 5,
+      "retryCount": 0,
+      "generationElapsedMs": 12559,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 17473,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "They use superposition instead of binary operation."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 19642,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the key difference: quantum computers use superposition, unlike classical binary computers.",
+      "matchedIdeas": [
+        "Quantum computers use superposition instead of binary operation"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 19642,
+      "ordinal": 2,
+      "questionType": "short_answer",
+      "response": "Elites"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 21437,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that elites were the primary group able to build and use computers during this period.",
+      "matchedIdeas": [
+        "Elites"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 21437,
+      "ordinal": 3,
+      "questionType": "multiple_choice",
+      "response": "It could challenge long-held assumptions about what thought is."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 24060,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that widespread weak AI could challenge our assumptions about what thought is.",
+      "matchedIdeas": [
+        "It could challenge long-held assumptions about what thought is."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 24060,
+      "ordinal": 4,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 26133,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the statement is false, as the networks were joined using TCP/IP, not Minitel.",
+      "matchedIdeas": [
+        "Learner correctly identified the statement as False"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 26133,
+      "ordinal": 5,
+      "questionType": "short_answer",
+      "response": "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 28327,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the shift occurs when Internet-enabled sensors are constantly transmitting data to databases.",
+      "matchedIdeas": [
+        "When Internet-enabled sensors of all kinds are always transmitting back to databases"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

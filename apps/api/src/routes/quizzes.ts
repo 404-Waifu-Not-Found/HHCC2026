@@ -53,9 +53,6 @@ const QuestionTypeSchema = z.enum([
 // delayed browser heartbeat.
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 5 * 60 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
-const AUTOMATIC_RECOVERY_RETRY_LIMIT = 3;
-const AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
-const AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
 
 function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
@@ -84,25 +81,9 @@ function recoverableFailureReason(reasonCode: string | undefined): boolean {
     "credential_invalid",
     "credential_missing",
     "billing_required",
-    "source_unavailable",
-    "recovery_budget_exhausted",
+    "non_instructional_source",
     "cost_limit_reached",
   ]).has(reasonCode ?? "");
-}
-
-function hasAutomaticRecoveryBudget(
-  snapshot: ProgressiveGenerationSnapshot,
-): boolean {
-  const retryBudgetUsed =
-    snapshot.telemetry.automaticRetries +
-    (snapshot.summary?.resultProtocolVersion === 5
-      ? snapshot.telemetry.manualContinuations
-      : 0);
-  return (
-    retryBudgetUsed < AUTOMATIC_RECOVERY_RETRY_LIMIT &&
-    snapshot.telemetry.automaticRecoveries < AUTOMATIC_RECOVERY_CYCLE_LIMIT &&
-    snapshot.telemetry.elapsedMs < AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS
-  );
 }
 
 function recoverableStoppedGeneration(
@@ -113,8 +94,7 @@ function recoverableStoppedGeneration(
     snapshot.availability?.state === "generation_failed" &&
     recoverableFailureReason(
       snapshot.availability.reasonCode ?? snapshot.summary?.reasonCode,
-    ) &&
-    hasAutomaticRecoveryBudget(snapshot),
+    ),
   );
 }
 const QuestionRowSchema = z.object({
@@ -217,7 +197,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     );
   }
   const quiz = await c.env.DB.prepare(
-    "SELECT id, video_id, primer, watched, pipeline_version, language, session_length FROM quiz_banks WHERE id = ? AND user_id = ? AND ((pipeline_version = ? AND quality_status = 'passed') OR (pipeline_version = ? AND quality_status IN ('generating', 'passed')))",
+    "SELECT id, video_id, pipeline_version, language, session_length FROM quiz_banks WHERE id = ? AND user_id = ? AND ((pipeline_version = ? AND quality_status = 'passed') OR (pipeline_version = ? AND quality_status IN ('generating', 'passed')))",
   )
     .bind(
       quizId,
@@ -228,8 +208,6 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     .first<{
       id: string;
       video_id: string;
-      primer: string;
-      watched: number;
       pipeline_version: number;
       language: string;
       session_length: "short" | "medium" | "long";
@@ -411,7 +389,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     : readyGeneration(itemCount);
   const startResponse = QuizStartResponseSchema.parse({
     attemptId,
-    primer: (input.watched ?? Boolean(quiz.watched)) ? null : quiz.primer,
+    primer: null,
     question: toPublicQuestion(firstQuestion, 0, itemCount, false),
     generation,
   });
@@ -510,6 +488,13 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   let reservationCommitted = false;
   try {
     const grade = await gradeAnswer(c.env, attempt, question, input.answer);
+    const correctAnswer = question.correct_answer_json
+      ? parseStoredJson(
+          question.correct_answer_json,
+          AnswerValueSchema,
+          "correct answer",
+        )
+      : null;
     // Freeze one coherent generation snapshot before any answer write. A
     // concurrent append may become visible on the next poll, but can never turn
     // this committed answer into a generation-state error response.
@@ -537,7 +522,11 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       gradingToken,
     );
 
-    if (!grade.correct && !attempt.retry_pending) {
+    if (
+      !grade.correct &&
+      !attempt.retry_pending &&
+      hasDistinctAdaptiveRetry(question)
+    ) {
       const results = await c.env.DB.batch([
         answerInsert,
         c.env.DB.prepare(
@@ -549,6 +538,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       return c.json(
         AttemptAnswerResponseSchema.parse({
           correct: false,
+          correctAnswer,
           explanation: grade.feedback,
           evidenceSegmentIds: parseQuestionEvidence(question),
           nextQuestion: toPublicQuestion(
@@ -604,6 +594,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       return c.json(
         AttemptAnswerResponseSchema.parse({
           correct: grade.correct,
+          correctAnswer,
           explanation: grade.feedback,
           evidenceSegmentIds: parseQuestionEvidence(question),
           nextQuestion: null,
@@ -666,6 +657,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     return c.json(
       AttemptAnswerResponseSchema.parse({
         correct: grade.correct,
+        correctAnswer,
         explanation: grade.feedback,
         evidenceSegmentIds: parseQuestionEvidence(question),
         nextQuestion: nextQuestion
@@ -1208,7 +1200,17 @@ async function attemptGenerationState(
       "The attempt and progressive quiz totals do not agree.",
     );
   }
-  return { snapshot, generation: snapshot.availability };
+  const retryAvailable =
+    snapshot.availability.state === "generation_failed"
+      ? claimForSnapshot(snapshot).state === "available"
+      : undefined;
+  return {
+    snapshot,
+    generation: AttemptGenerationAvailabilitySchema.parse({
+      ...snapshot.availability,
+      ...(retryAvailable !== undefined ? { retryAvailable } : {}),
+    }),
+  };
 }
 
 function requireProgressiveAvailability(
@@ -1556,6 +1558,20 @@ export function parseQuestionEvidence(
     z.array(z.string()),
     "question evidence",
   );
+}
+
+export function hasDistinctAdaptiveRetry(
+  question: Pick<QuestionRow, "prompt" | "reformulated_prompt">,
+): boolean {
+  const normalizePrompt = (value: string) =>
+    value
+      .normalize("NFKC")
+      .toLocaleLowerCase("en-US")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  const original = normalizePrompt(question.prompt);
+  const retry = normalizePrompt(question.reformulated_prompt);
+  return Boolean(original && retry && original !== retry);
 }
 
 async function adaptNextQuestion(

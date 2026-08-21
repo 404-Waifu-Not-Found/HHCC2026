@@ -8,7 +8,7 @@ Site: `https://clipquest.ccwu.cc`
 
 Account: `unoxyrich`
 
-Chrome extension observed: `ClipQuest Local AI 0.8.5`
+Chrome extension observed: `ClipQuest 0.8.5`
 
 Worker version: `a8d8cda5-ea66-4e87-afae-388b2cf237dd`
 Worker tag / Git SHA: `9c1bc3b75929819cc18f1a7bb4a50b7cd954dc03`
@@ -25,18 +25,18 @@ Worker tag / Git SHA: `9c1bc3b75929819cc18f1a7bb4a50b7cd954dc03`
 
 Times are measured from clicking **Create my quiz**. “Q1” is the time until question 1 was visibly interactive. “Ready” is the time until the authoritative stored-count indicator reached completion and disappeared stably. Model calls and retry classifications come from `quiz_generation_call_events`.
 
-| Run | Video | Length / types | ETA | Q1 visible | Full bank ready | Model calls | Auto retries | Manual continuations | Result |
-|---:|---|---|---:|---:|---:|---:|---:|---:|---|
-| 1 | CRISPR gene editing (`6tw_JVz_IEc`) | 5 · MC/TF/SA | 15.0 s | 25.655 s | 57.993 s | 3 | 0 | 0 | 5/5, 100% |
-| 2 | Periodic Table (`0RRVV4Diomg`) | 5 · MC/SA | 15.0 s | 15.737 s | 62.617 s | 3 | 0 | 0 | 5/5, 100% |
-| 3 | AP Calculus derivatives (`7qNE_B0r4z4`) | 5 · MC/TF | 15.0 s | 14.073 s | 30.554 s | 3 | 0 | 0 | 5/5, 100% |
-| 4 | Nervous System (`x4PPZCLnVkA`) | 10 · TF/SA | 15.0 s | 8.990 s | 103.692 s | 6 | 0 | 0 | 10/10, 100% |
-| 5 | Agricultural Revolution (`Yocja_N5s1I`) | 10 · MC/TF | 15.0 s | 10.561 s | 73.217 s | 4 | 0 | 0 | 10/10, 100% |
-| 6 | Neural Networks (`aircAruvnKk`) | 10 · MC/SA | 20.0 s | 7.969 s | 79.754 s | 6 | 0 | 0 | 10/10, 100% |
-| 7 | Map of Mathematics (`OmJ-4B-mS-Y`) | 10 · MC/TF/SA | 15.0 s | 9.429 s | 91.034 s | 6 | 0 | 0 | 10/10, 100% |
-| 8 | Einstein, Oppenheimer, Feynman (`PbITFIGLciI`) | 15 · MC/TF/SA | 20.0 s | 12.229 s | 132.386 s | 8 | 0 | 0 | 15/15, 100% |
-| 9 | Quantum Superposition (`lZ3bPUKo5zc`) | 15 · MC/TF | 20.0 s | 7.702 s | 106.042 s | 6 | 0 | 0 | 15/15, 100% |
-| 10 | The Nucleus (`FSyAehMdpyI`) | 15 · MC/TF/SA | 20.0 s | 12.264 s | 124.790 s | 8 | 0 | 0 | 15/15, 100% |
+| Run | Video                                          | Length / types |    ETA | Q1 visible | Full bank ready | Model calls | Auto retries | Manual continuations | Result      |
+| --: | ---------------------------------------------- | -------------- | -----: | ---------: | --------------: | ----------: | -----------: | -------------------: | ----------- |
+|   1 | CRISPR gene editing (`6tw_JVz_IEc`)            | 5 · MC/TF/SA   | 15.0 s |   25.655 s |        57.993 s |           3 |            0 |                    0 | 5/5, 100%   |
+|   2 | Periodic Table (`0RRVV4Diomg`)                 | 5 · MC/SA      | 15.0 s |   15.737 s |        62.617 s |           3 |            0 |                    0 | 5/5, 100%   |
+|   3 | AP Calculus derivatives (`7qNE_B0r4z4`)        | 5 · MC/TF      | 15.0 s |   14.073 s |        30.554 s |           3 |            0 |                    0 | 5/5, 100%   |
+|   4 | Nervous System (`x4PPZCLnVkA`)                 | 10 · TF/SA     | 15.0 s |    8.990 s |       103.692 s |           6 |            0 |                    0 | 10/10, 100% |
+|   5 | Agricultural Revolution (`Yocja_N5s1I`)        | 10 · MC/TF     | 15.0 s |   10.561 s |        73.217 s |           4 |            0 |                    0 | 10/10, 100% |
+|   6 | Neural Networks (`aircAruvnKk`)                | 10 · MC/SA     | 20.0 s |    7.969 s |        79.754 s |           6 |            0 |                    0 | 10/10, 100% |
+|   7 | Map of Mathematics (`OmJ-4B-mS-Y`)             | 10 · MC/TF/SA  | 15.0 s |    9.429 s |        91.034 s |           6 |            0 |                    0 | 10/10, 100% |
+|   8 | Einstein, Oppenheimer, Feynman (`PbITFIGLciI`) | 15 · MC/TF/SA  | 20.0 s |   12.229 s |       132.386 s |           8 |            0 |                    0 | 15/15, 100% |
+|   9 | Quantum Superposition (`lZ3bPUKo5zc`)          | 15 · MC/TF     | 20.0 s |    7.702 s |       106.042 s |           6 |            0 |                    0 | 15/15, 100% |
+|  10 | The Nucleus (`FSyAehMdpyI`)                    | 15 · MC/TF/SA  | 20.0 s |   12.264 s |       124.790 s |           8 |            0 |                    0 | 15/15, 100% |
 
 Attempt IDs:
 

@@ -4,6 +4,7 @@ import {
   estimatedFirstQuestionDurationMs,
   firstQuestionEtaBreakdown,
   firstQuestionRetryRemainingMs,
+  linearJourneyProgress,
   updateFirstQuestionRetryEtaPhase,
 } from "../src/generation/eta";
 
@@ -118,6 +119,16 @@ describe("first-question ETA", () => {
     expect(JSON.stringify(breakdown)).not.toMatch(
       /transcript|prompt|sourceText|captionText/i,
     );
+  });
+});
+
+describe("linear first-question journey", () => {
+  it("moves equal distances over equal time intervals without stage jumps", () => {
+    const samples = [0, 10_000, 20_000, 30_000].map((elapsedMs) =>
+      linearJourneyProgress(elapsedMs, 40_000, 0.96),
+    );
+    expect(samples).toEqual([0, 0.24, 0.48, 0.72]);
+    expect(linearJourneyProgress(80_000, 40_000, 0.96)).toBe(0.96);
   });
 });
 

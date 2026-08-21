@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+  MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
   isCompatibleClipQuestExtensionVersion,
   supportsQuestionStream,
 } from "../src/transcription/extension-compat";
@@ -22,13 +23,19 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("keeps v0.8.2 and stream v2 available only for the v5.2 compatibility profile", () => {
+  it("requires v0.8.31 and stream v2 for the progressive v5.2 profile", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.1",
-        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+        "0.8.30",
+        MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.31",
+        MINIMUM_STABLE_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(true);
     expect(
       supportsQuestionStream(
         ["question-stream-v1"],
@@ -64,7 +71,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.17 and stream v7 for current prompt-first generation", () => {
+  it("requires v0.8.31 and stream v7 for the current extension", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -115,7 +122,13 @@ describe("extension generation profile compatibility", () => {
     ).toBe(false);
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.17",
+        "0.8.23",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.31",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(true);
@@ -192,7 +205,7 @@ describe("extension generation profile compatibility", () => {
     expect(indicator).toContain('"打开本地 AI 设置"');
   });
 
-  it("latches terminal automatic recovery instead of reclaiming forever", () => {
+  it("keeps automatic recovery in the background and removes learner retry controls", () => {
     const recovery = readFileSync(
       resolve(
         dirname(fileURLToPath(import.meta.url)),
@@ -207,16 +220,40 @@ describe("extension generation profile compatibility", () => {
       ),
       "utf8",
     );
-    expect(recovery).toContain("terminalAutomaticRecoveryAttempts");
-    expect(recovery).toContain("persistedRecoveryExhausted");
-    expect(recovery).toContain("reportedRecoveryExhausted");
+    const indicator = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/components/QuestionStreamIndicator.tsx",
+      ),
+      "utf8",
+    );
+    expect(recovery).toContain("runAutomaticRecoveryUntilSettled");
+    expect(recovery).toContain("while (!signal.aborted)");
+    expect(recovery).not.toContain("AUTOMATIC_RECOVERY_LOOP_MAX_PASSES");
+    expect(recovery).toContain("waitForAutomaticRecovery");
+    expect(recovery).toContain('status.generation.state === "cooldown"');
+    expect(recovery).toContain(
+      'status.continuation?.claim.state === "available"',
+    );
+    expect(recovery).toContain("automaticRecoveryDisposition(reasonCode)");
+    expect(recovery).toContain("recoveryRoundRetryCount");
+    expect(recovery).toContain("AUTOMATIC_REFILL_MAX_TRACKED_CYCLES");
+    expect(recovery).not.toContain("terminalAutomaticRecoveryAttempts");
+    expect(recovery).toContain("isLeaseConflict(error) && !options.force");
     expect(recovery).toContain("options.force");
-    expect(quiz).toContain(
-      "ensureProgressiveAttemptRecovery(attemptId, { force: true })",
+    expect(quiz).not.toContain("onRetry={");
+    expect(quiz).not.toContain("force: true");
+    expect(quiz).toContain("current.retryAvailable === next.retryAvailable");
+    expect(indicator).not.toContain("onRetry");
+    expect(indicator).not.toContain("retryAction");
+    expect(indicator).not.toMatch(/start a new quiz/i);
+    expect(indicator).toContain("Automatically recovering");
+    expect(indicator).toContain(
+      "ClipQuest will keep generating the remaining questions automatically.",
     );
   });
 
-  it("keeps first-question admission independent from call telemetry", () => {
+  it("admits question one independently from suffix generation and call telemetry", () => {
     const source = readFileSync(
       resolve(
         dirname(fileURLToPath(import.meta.url)),
@@ -237,9 +274,12 @@ describe("extension generation profile compatibility", () => {
       "A conflicting progress snapshot must never poison the",
     );
     expect(source).toContain(").catch(() => undefined);");
-    expect(source).toContain(
-      "if (!attemptId) await startAttempt(response.quizId)",
+    expect(source).not.toContain(
+      'rolloutProfile.generationProfile !== "stable_non_thinking_v5_2"',
     );
+    expect(source).toContain("if (!attemptId) {");
+    expect(source).toContain("await startAttempt(response.quizId);");
+    expect(source).toContain("First-question attempt start failed:");
     const admissionBlock = source.slice(
       source.indexOf("lastProgressKey = undefined"),
       source.indexOf("void questionIngestion.catch"),
@@ -250,6 +290,24 @@ describe("extension generation profile compatibility", () => {
     expect(source).toContain("The local engine must not wait for diagnostics");
     expect(source).toContain("await questionIngestion;");
     expect(source).toContain('scope: "generation_call_telemetry"');
+  });
+
+  it("keeps polling for streamed questions through transient resume failures", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../app/quiz/[attemptId].tsx",
+      ),
+      "utf8",
+    );
+    const pollingStart = source.indexOf("if (!waitingForQuestions) return;");
+    const pollingEffect = source.slice(
+      pollingStart,
+      source.indexOf("subscribeToAttemptGeneration", pollingStart),
+    );
+    expect(pollingEffect).toContain("Math.min(5_000");
+    expect(pollingEffect).not.toContain("setWaitingForQuestions(false)");
+    expect(pollingEffect).not.toContain("setError(");
   });
 
   it("keeps recovery question ingestion independent from call telemetry", () => {
@@ -304,5 +362,22 @@ describe("extension generation profile compatibility", () => {
       "/api/videos/${encodeURIComponent(continuation.videoId)}/recovery",
     );
     expect(source).toContain("saveImportedVideo(session.user.id, imported)");
+  });
+
+  it("stops source-unavailable recovery instead of offering a no-op retry", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/generation/progressive-continuation.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain('"source_unavailable"');
+    expect(source).toContain("automaticRecoveryDisposition(reasonCode)");
+    expect(source).toContain(
+      'const state = automatic && !terminal ? "cooldown" : "generation_failed"',
+    );
+    expect(source).toContain("CAPTIONS_REQUIRED_MESSAGE");
+    expect(source).not.toContain('"/api/media/resolve"');
   });
 });

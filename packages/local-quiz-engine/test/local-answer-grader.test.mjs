@@ -9,6 +9,9 @@ test("local answer grading sends question and response to a required tool call",
       question: "Why does a battery need a complete external circuit?",
       response: "It lets charge move through the circuit.",
       questionType: "short_answer",
+      referenceAnswer: "It lets charge move through the circuit.",
+      requiredIdeas: ["charge can move through the circuit"],
+      acceptableAlternatives: ["It gives charge a complete path."],
     },
     "sk-test-key",
     undefined,
@@ -56,8 +59,16 @@ test("local answer grading sends question and response to a required tool call",
   );
   assert.match(
     body.messages[0].content,
-    /central relationship correctly and gives at least one relevant supporting fact/,
+    /An exact match to referenceAnswer is correct/,
   );
+  const gradingInput = JSON.parse(body.messages[1].content);
+  assert.equal(
+    gradingInput.gradingReference.referenceAnswer,
+    "It lets charge move through the circuit.",
+  );
+  assert.deepEqual(gradingInput.gradingReference.requiredIdeas, [
+    "charge can move through the circuit",
+  ]);
   assert.equal(result.correct, true);
   assert.equal(result.reason, "Your response identifies the key mechanism.");
   assert.equal(result.source, "deepseek_local");

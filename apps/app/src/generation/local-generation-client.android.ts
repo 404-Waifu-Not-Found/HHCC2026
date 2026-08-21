@@ -17,7 +17,6 @@ import {
   testDeepSeekKey,
 } from "@clipquest/local-quiz-engine";
 import Constants from "expo-constants";
-import * as ExpoCrypto from "expo-crypto";
 import { fetch as expoFetch } from "expo/fetch";
 import { router } from "expo-router";
 import { authClient } from "../lib/auth-client";
@@ -37,6 +36,7 @@ import {
   type LocalGenerationClientStatus,
   type LocalGenerationRequest,
 } from "./local-generation-client.types";
+import { createLocalCrypto } from "./local-crypto";
 
 export {
   LocalGenerationRequestError,
@@ -44,21 +44,6 @@ export {
 } from "./local-generation-client.types";
 
 export const ANDROID_LOCAL_AI_VERSION = "0.2.0";
-
-const nativeCrypto = {
-  subtle: {
-    digest(algorithm: "SHA-256", data: BufferSource) {
-      if (algorithm !== "SHA-256") {
-        throw new Error("The requested digest is not supported.");
-      }
-      return ExpoCrypto.digest(ExpoCrypto.CryptoDigestAlgorithm.SHA256, data);
-    },
-  },
-  getRandomValues<T extends ArrayBufferView>(values: T): T {
-    return ExpoCrypto.getRandomValues(values as never) as T;
-  },
-  randomUUID: ExpoCrypto.randomUUID,
-};
 
 function androidClientMetadata() {
   return {
@@ -95,6 +80,13 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
       "credential_required",
     );
   }
+  const localCrypto = createLocalCrypto([
+    userId,
+    context.generationId ?? context.jobId,
+    context.generationSessionId ?? "generation-session",
+    context.recoverySessionId ?? "recovery-session",
+    context.transcriptFingerprint,
+  ]);
   try {
     const generationId = context.generationId ?? context.jobId;
     const result = await generateLocalQuiz(
@@ -131,8 +123,11 @@ export const requestLocalQuiz: LocalGenerationRequest = async (
         await removeAndroidGenerationOutboxEntry(userId, generationId, id);
       },
       {
-        fetch: expoFetch as unknown as typeof globalThis.fetch,
-        crypto: nativeCrypto,
+        // Use the completed JSON response exposed by React Native's global
+        // fetch. Expo fetch's body bridge can reject a successful DeepSeek
+        // response before the first question reaches the learner.
+        fetch: globalThis.fetch.bind(globalThis),
+        crypto: localCrypto,
         // Android's native fetch bridge can leave an SSE body open without
         // delivering the first chunk. Use the bounded JSON envelope on this
         // platform so the AI-generated bank either arrives or times out as a
@@ -176,9 +171,15 @@ export async function requestLocalCheatSheet(
       "Add your DeepSeek API key in Local AI settings.",
       "credential_required",
     );
+  const localCrypto = createLocalCrypto([
+    userId,
+    context.videoId,
+    context.quizId,
+    context.sourceRevision,
+  ]);
   const document = await generateLocalCheatSheet(context, apiKey, signal, {
     fetch: expoFetch as unknown as typeof fetch,
-    crypto: nativeCrypto,
+    crypto: localCrypto,
   });
   return CheatSheetDocumentSchema.parse({
     ...document,
@@ -204,9 +205,14 @@ export async function requestLocalAnswerGrade(
       "Add your DeepSeek API key in Local AI settings.",
       "credential_required",
     );
+  const localCrypto = createLocalCrypto([
+    userId,
+    request.questionType,
+    request.question,
+  ]);
   const result = await gradeLocalAnswerWithDeepSeek(request, apiKey, signal, {
     fetch: expoFetch as unknown as typeof fetch,
-    crypto: nativeCrypto,
+    crypto: localCrypto,
   });
   return LocalAnswerGradeSchema.parse(result);
 }

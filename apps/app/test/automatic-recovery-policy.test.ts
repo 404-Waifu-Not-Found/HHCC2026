@@ -1,67 +1,54 @@
 import { describe, expect, it } from "vitest";
 import {
+  AUTOMATIC_REFILL_MAX_TRACKED_CYCLES,
+  AUTOMATIC_REFILL_MAX_TRACKED_ORDINAL_ATTEMPT,
+  automaticRecoveryDisposition,
   GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
   GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
   CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
   CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT,
   authoritativeRecoveryFailureCode,
   groundedRecoveryCooldownMs,
-  groundedRecoveryIsExhausted,
 } from "../src/generation/automatic-recovery-policy";
 
 describe("grounded automatic recovery policy", () => {
   it("uses increasing bounded cooldowns without becoming negative", () => {
     expect(groundedRecoveryCooldownMs(-1)).toBe(2_000);
-    expect(groundedRecoveryCooldownMs(1)).toBe(4_000);
-    expect(groundedRecoveryCooldownMs(20)).toBe(8_000);
+    expect(groundedRecoveryCooldownMs(1)).toBe(5_000);
+    expect(groundedRecoveryCooldownMs(2)).toBe(15_000);
+    expect(groundedRecoveryCooldownMs(20)).toBe(30_000);
   });
 
-  it("stops only after a declared hard budget is genuinely exhausted", () => {
-    expect(
-      groundedRecoveryIsExhausted({
-        reasonCode: "schema_invalid",
-        automaticRetryCount: GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
-      }),
-    ).toBe(false);
-    expect(
-      groundedRecoveryIsExhausted({
-        reasonCode: "recovery_budget_exhausted",
-        automaticRetryCount: 2,
-        ordinalAttempt: 2,
-      }),
-    ).toBe(false);
-    expect(
-      groundedRecoveryIsExhausted({
-        reasonCode: "recovery_budget_exhausted",
-        automaticRetryCount: GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
-      }),
-    ).toBe(true);
-    expect(
-      groundedRecoveryIsExhausted({
-        reasonCode: "recovery_budget_exhausted",
-        ordinalAttempt: GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
-      }),
-    ).toBe(true);
+  it("turns an exhausted hot retry round into another automatic refill", () => {
+    expect(automaticRecoveryDisposition("schema_invalid")).toBe("cooldown");
+    expect(automaticRecoveryDisposition("recovery_budget_exhausted")).toBe(
+      "cooldown",
+    );
+    expect(automaticRecoveryDisposition("stream_idle_timeout")).toBe(
+      "cooldown",
+    );
   });
 
-  it("uses the high-stability automatic-only budget for concept-first banks", () => {
+  it("keeps each refill round bounded without imposing a quiz-level cutoff", () => {
     expect(CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES).toBe(3);
     expect(CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT).toBe(3);
-    expect(
-      groundedRecoveryIsExhausted({
-        reasonCode: "recovery_budget_exhausted",
-        automaticRetryCount: 2,
-        ordinalAttempt: 2,
-        strictBudget: true,
-      }),
-    ).toBe(false);
-    expect(
-      groundedRecoveryIsExhausted({
-        reasonCode: "recovery_budget_exhausted",
-        automaticRetryCount: 3,
-        strictBudget: true,
-      }),
-    ).toBe(true);
+    expect(GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES).toBe(3);
+    expect(GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT).toBe(3);
+    expect(AUTOMATIC_REFILL_MAX_TRACKED_CYCLES).toBe(24);
+    expect(AUTOMATIC_REFILL_MAX_TRACKED_ORDINAL_ATTEMPT).toBe(24);
+  });
+
+  it("stops only when AI generation is impossible without account or content changes", () => {
+    expect(automaticRecoveryDisposition("credential_required")).toBe(
+      "action_required",
+    );
+    expect(automaticRecoveryDisposition("billing_required")).toBe(
+      "action_required",
+    );
+    expect(automaticRecoveryDisposition("source_unavailable")).toBe("cooldown");
+    expect(automaticRecoveryDisposition("non_instructional_source")).toBe(
+      "generation_failed",
+    );
   });
 
   it("preserves the newest model outcome when an incomplete bank ends", () => {

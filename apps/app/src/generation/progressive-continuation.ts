@@ -4,10 +4,8 @@ import {
   ExtensionQuizProgressiveImportResponseSchema,
   GenerationFailureCodeSchema,
   GenerationClaimResponseSchema,
-  MediaResolveResponseSchema,
   VideoImportResponseSchema,
   VerifiedVideoMetadataResponseSchema,
-  createTranscriptCompleteness,
   type AutomaticRetryKind,
   type GenerationFailureCode,
   type GenerationRecord,
@@ -36,37 +34,32 @@ import {
   startGenerationRecordHeartbeat,
   updateGenerationRecord,
 } from "../state/creation";
-import { acquireTextTranscript } from "../transcription/acquire-text-transcript";
+import {
+  acquireTextTranscript,
+  CAPTIONS_REQUIRED_MESSAGE,
+} from "../transcription/acquire-text-transcript";
 import {
   flushLocalGenerationOutbox,
   LocalGenerationRequestError,
   requestLocalQuiz,
   type LocalGenerationProgress,
 } from "./local-generation-client";
-import { transcribeLocally } from "../transcription/local-transcriber";
 import {
   getOrStartProgressiveRecoveryTask,
   publishAttemptGeneration,
 } from "./progressive-coordinator";
 import {
+  AUTOMATIC_REFILL_MAX_TRACKED_CYCLES,
+  AUTOMATIC_REFILL_MAX_TRACKED_ORDINAL_ATTEMPT,
+  automaticRecoveryDisposition,
   authoritativeRecoveryFailureCode,
   CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
-  CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT,
   GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES,
-  GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT,
-  GROUNDED_GENERATION_MAX_RECOVERY_CYCLES,
   groundedRecoveryCooldownMs,
-  groundedRecoveryIsExhausted,
 } from "./automatic-recovery-policy";
 import { retryAuthoritativeTelemetryWrite } from "./telemetry-write";
 
 const RECOVERY_HEARTBEAT_MS = 10_000;
-// A recovery can fail before the extension emits a call event (for example a
-// port disconnect while the worker is waking). The server cannot derive that
-// attempt from call telemetry, so keep a tab-local terminal latch as well as
-// the persisted recovery-cycle budget. Without this latch the quiz poller can
-// immediately reclaim the same incomplete bank forever.
-const terminalAutomaticRecoveryAttempts = new Set<string>();
 
 function automaticProfile(profile: string | undefined): boolean {
   return (
@@ -85,17 +78,111 @@ export function ensureProgressiveAttemptRecovery(
   options: { allowActionRequired?: boolean; force?: boolean } = {},
 ): Promise<void> {
   return getOrStartProgressiveRecoveryTask(attemptId, (signal) =>
-    runAutomaticRecovery(attemptId, signal, options),
+    runAutomaticRecoveryUntilSettled(attemptId, signal, options),
   ).completion;
 }
 
-async function runAutomaticRecovery(
+async function runAutomaticRecoveryUntilSettled(
+  attemptId: string,
+  signal: AbortSignal,
+  options: { allowActionRequired?: boolean; force?: boolean },
+): Promise<void> {
+  // Every individual model-call round is bounded by the local engine's retry
+  // policy. The quiz-level loop must not add a second arbitrary cutoff: a
+  // transient formula/schema or caption failure should keep recovering while
+  // this quiz remains open. The coordinator aborts this loop when the screen
+  // unmounts, so this does not create a background task after the learner
+  // leaves the quiz.
+  while (!signal.aborted) {
+    if (signal.aborted) return;
+    await runAutomaticRecoveryOnce(attemptId, signal, options);
+    if (signal.aborted) return;
+
+    const status = await readStatus(attemptId, signal);
+    if (status.generation.state === "ready") return;
+    if (status.generation.state === "action_required") return;
+
+    if (
+      status.generation.state === "cooldown" &&
+      status.generation.nextRecoveryAt
+    ) {
+      const delayMs = Math.max(
+        0,
+        Date.parse(status.generation.nextRecoveryAt) - Date.now(),
+      );
+      await waitForAutomaticRecovery(delayMs, signal);
+      continue;
+    }
+
+    if (
+      status.generation.state === "generation_failed" &&
+      status.continuation?.claim.state === "available"
+    ) {
+      // Reclaim the missing suffix in this same background task instead of
+      // waiting for a learner action.
+      continue;
+    }
+
+    if (
+      status.generation.state === "generation_failed" &&
+      isPermanentAutomaticRecoveryFailure(status.generation.reasonCode)
+    ) {
+      return;
+    }
+
+    if (
+      status.generation.state === "recovering" ||
+      status.generation.state === "retrying" ||
+      status.generation.state === "generation_failed"
+    ) {
+      await waitForAutomaticRecovery(1_000, signal);
+      continue;
+    }
+    return;
+  }
+}
+
+function isPermanentAutomaticRecoveryFailure(
+  reasonCode: string | undefined,
+): boolean {
+  return new Set([
+    "credential_required",
+    "credential_invalid",
+    "credential_missing",
+    "billing_required",
+    "cost_limit_reached",
+    "non_instructional_source",
+  ]).has(reasonCode ?? "");
+}
+
+async function waitForAutomaticRecovery(
+  delayMs: number,
+  signal: AbortSignal,
+): Promise<void> {
+  if (delayMs <= 0) return;
+  await new Promise<void>((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    };
+    const onAbort = () => {
+      finish();
+    };
+    timer = setTimeout(finish, delayMs);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function runAutomaticRecoveryOnce(
   attemptId: string,
   signal: AbortSignal,
   options: { allowActionRequired?: boolean; force?: boolean } = {},
 ): Promise<void> {
-  if (terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force)
-    return;
   const status = await readStatus(attemptId, signal);
   if (status.generation.state === "ready" || !status.continuation) {
     return;
@@ -111,18 +198,6 @@ async function runAutomaticRecovery(
     continuation.generationProfile === "prompt_first_auto_v5_10" ||
     continuation.generationProfile === "prompt_first_auto_v5_11" ||
     continuation.generationProfile === "prompt_first_auto_v5_12";
-  const storedBeforeClaim = await loadGenerationRecordForAttempt(attemptId);
-  const persistedRecoveryExhausted =
-    storedBeforeClaim?.version === 4 &&
-    storedBeforeClaim.recoveryCycle >= GROUNDED_GENERATION_MAX_RECOVERY_CYCLES;
-  const reportedRecoveryExhausted =
-    (continuation.automaticRecoveryCount ?? 0) >=
-      GROUNDED_GENERATION_MAX_RECOVERY_CYCLES ||
-    (continuation.retryBudgetUsedCount ?? 0) >=
-      GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES;
-  const maxOrdinalAttempt = grounded
-    ? GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT
-    : CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT;
   if (
     status.generation.state === "cooldown" &&
     status.generation.nextRecoveryAt &&
@@ -134,9 +209,7 @@ async function runAutomaticRecovery(
     (status.generation.state === "action_required" &&
       !options.allowActionRequired) ||
     (status.generation.state === "generation_failed" &&
-      (status.continuation.claim.state !== "available" ||
-        persistedRecoveryExhausted ||
-        reportedRecoveryExhausted))
+      status.continuation.claim.state !== "available")
   ) {
     return;
   }
@@ -158,7 +231,10 @@ async function runAutomaticRecovery(
     Platform.OS !== "web" &&
     stored &&
     (stored.version === 3 || stored.version === 4) &&
-    stored.generationSessionId === continuation.generationSessionId
+    stored.generationSessionId === continuation.generationSessionId &&
+    (stored.state === "generating" ||
+      stored.state === "retrying" ||
+      stored.state === "recovering")
       ? stored
       : undefined;
   const claimKey = resumableNativeLease
@@ -175,6 +251,9 @@ async function runAutomaticRecovery(
       ? resumableNativeLease.recoverySessionId
       : Crypto.randomUUID()
     : undefined;
+  const recoveryRoundRetryCount = resumableNativeLease
+    ? resumableNativeLease.automaticRetryCount
+    : 0;
 
   let claim;
   try {
@@ -192,7 +271,10 @@ async function runAutomaticRecovery(
       GenerationClaimResponseSchema,
     );
   } catch (error) {
-    if (isLeaseConflict(error)) return;
+    // Background polling treats a lease conflict as expected contention. A
+    // learner-triggered retry must surface it instead of appearing to do
+    // nothing, so the UI can explain that another tab is still recovering.
+    if (isLeaseConflict(error) && !options.force) return;
     throw error;
   }
 
@@ -267,31 +349,37 @@ async function runAutomaticRecovery(
   let transcript;
   try {
     transcript = await acquireContinuationTranscript(
-      session.user.id,
       imported,
       signal,
       continuation.quizLanguage,
     );
-  } catch (error) {
+    const captionWordCount = countCaptionWords(transcript.segments);
+    await apiRequest(
+      `/api/videos/${encodeURIComponent(imported.video.id)}/source-metadata`,
+      {
+        method: "PATCH",
+        body: jsonBody({
+          durationSeconds: transcript.verifiedDurationSeconds,
+          sourceLanguage: transcript.language || "und",
+          captionSourceCategory: transcript.captionSourceCategory,
+          captionSegmentCount: transcript.segments.length,
+          captionWordCount,
+        }),
+        signal,
+      },
+      VerifiedVideoMetadataResponseSchema,
+    );
+  } catch (cause) {
     stopLeaseHeartbeat();
-    throw error;
+    if (signal.aborted) throw cause;
+    if (cause instanceof LocalGenerationRequestError) throw cause;
+    throw new LocalGenerationRequestError(
+      cause instanceof Error
+        ? cause.message
+        : "The video source metadata is unavailable for local recovery.",
+      "source_unavailable",
+    );
   }
-  const captionWordCount = countCaptionWords(transcript.segments);
-  await apiRequest(
-    `/api/videos/${encodeURIComponent(imported.video.id)}/source-metadata`,
-    {
-      method: "PATCH",
-      body: jsonBody({
-        durationSeconds: transcript.verifiedDurationSeconds,
-        sourceLanguage: transcript.language || "und",
-        captionSourceCategory: transcript.captionSourceCategory,
-        captionSegmentCount: transcript.segments.length,
-        captionWordCount,
-      }),
-      signal,
-    },
-    VerifiedVideoMetadataResponseSchema,
-  );
 
   const timestamp = Date.now();
   try {
@@ -321,7 +409,7 @@ async function runAutomaticRecovery(
           [String(status.generation.availableQuestions + 1)]:
             continuation.nextOrdinalAttempt ?? 1,
         },
-        automaticRetryCount: continuation.automaticRetryCount ?? 0,
+        automaticRetryCount: recoveryRoundRetryCount,
         activeRecoveryStartedAt: timestamp,
         createdAt: stored?.createdAt ?? timestamp,
         updatedAt: timestamp,
@@ -340,7 +428,7 @@ async function runAutomaticRecovery(
             recoveryCycle:
               stored?.version === 4
                 ? Math.min(
-                    GROUNDED_GENERATION_MAX_RECOVERY_CYCLES,
+                    AUTOMATIC_REFILL_MAX_TRACKED_CYCLES,
                     stored.recoveryCycle + 1,
                   )
                 : 1,
@@ -413,15 +501,22 @@ async function runAutomaticRecovery(
       nextCallIndex: automatic ? continuation.nextCallIndex : 0,
       nextOrdinalAttempt: continuation.activeCall
         ? Math.min(
-            maxOrdinalAttempt,
+            AUTOMATIC_REFILL_MAX_TRACKED_ORDINAL_ATTEMPT,
             continuation.activeCall.ordinalAttempt + 1,
           )
         : continuation.nextOrdinalAttempt,
       retryKind: continuation.activeCall
         ? "automatic_resume"
         : continuation.retryKind,
-      automaticRetryCount: continuation.automaticRetryCount,
-      retryBudgetUsedCount: continuation.retryBudgetUsedCount,
+      // Retry limits are per automatic refill round. Authoritative telemetry
+      // remains cumulative on the server, while a fresh recoverySessionId gets
+      // a fresh small hot-retry allowance.
+      automaticRetryCount: automatic
+        ? recoveryRoundRetryCount
+        : continuation.automaticRetryCount,
+      retryBudgetUsedCount: automatic
+        ? recoveryRoundRetryCount
+        : continuation.retryBudgetUsedCount,
       retryOrdinals: continuation.activeCall
         ? [
             ...new Set([
@@ -445,11 +540,15 @@ async function runAutomaticRecovery(
   let automaticRetryCount =
     stored?.version === 3 || stored?.version === 4
       ? stored.automaticRetryCount
-      : (continuation.automaticRetryCount ?? 0);
-  let retryBudgetUsedCount =
-    continuation.retryBudgetUsedCount ?? automaticRetryCount;
-  let latestOrdinalAttempt = continuation.nextOrdinalAttempt ?? 1;
+      : automatic
+        ? recoveryRoundRetryCount
+        : (continuation.automaticRetryCount ?? 0);
   let latestModelFailureReason: GenerationFailureCode | undefined;
+  let recoveryStep:
+    | "flush_outbox"
+    | "refresh_after_replay"
+    | "generate_suffix"
+    | "verify_complete" = "flush_outbox";
   const stopLocalHeartbeat = startGenerationRecordHeartbeat(generationId);
 
   const uploadCallEvent = async (event: LocalGenerationCallEvent) => {
@@ -494,12 +593,6 @@ async function runAutomaticRecovery(
           ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
           : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
         automaticRetryCount + 1,
-      );
-      retryBudgetUsedCount = Math.min(
-        grounded
-          ? GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES
-          : CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES,
-        retryBudgetUsedCount + 1,
       );
     }
     // The Worker event is authoritative. A stale or missing browser cache
@@ -592,6 +685,7 @@ async function runAutomaticRecovery(
     );
     await ingestion;
     if (replayed.questions > 0) {
+      recoveryStep = "refresh_after_replay";
       const refreshed = await readStatus(attemptId, signal);
       latest = refreshed.generation;
       publishAttemptGeneration(attemptId, status.quizId, latest);
@@ -609,12 +703,17 @@ async function runAutomaticRecovery(
         nextCallIndex: refreshed.continuation.nextCallIndex,
         nextOrdinalAttempt: refreshed.continuation.nextOrdinalAttempt,
         retryKind: refreshed.continuation.retryKind,
-        automaticRetryCount: refreshed.continuation.automaticRetryCount,
-        retryBudgetUsedCount: refreshed.continuation.retryBudgetUsedCount,
+        automaticRetryCount: automatic
+          ? automaticRetryCount
+          : refreshed.continuation.automaticRetryCount,
+        retryBudgetUsedCount: automatic
+          ? automaticRetryCount
+          : refreshed.continuation.retryBudgetUsedCount,
         retryOrdinals: refreshed.continuation.retryOrdinals,
         previousOutcome: refreshed.continuation.previousOutcome,
       };
     }
+    recoveryStep = "generate_suffix";
     await requestLocalQuiz(
       context,
       signal,
@@ -629,9 +728,6 @@ async function runAutomaticRecovery(
           return;
         }
         lastProgressState = nextState;
-        if (detail.ordinalAttempt) {
-          latestOrdinalAttempt = detail.ordinalAttempt;
-        }
         callIngestion = callIngestion.then(async () => {
           // A progress snapshot may race an append. It is safe to drop after
           // bounded retries; model-call and question writes remain fail-closed.
@@ -676,6 +772,7 @@ async function runAutomaticRecovery(
       enqueueCall,
     );
     await ingestion;
+    recoveryStep = "verify_complete";
     if (latest.state !== "ready") {
       throw new Error("Automatic recovery ended before the bank was complete.");
     }
@@ -683,6 +780,24 @@ async function runAutomaticRecovery(
   } catch (error) {
     await Promise.allSettled([ingestion, callIngestion]);
     if (signal.aborted || isLeaseConflict(error)) return;
+    console.warn(
+      JSON.stringify({
+        scope: "automatic_generation_recovery",
+        event: "failed",
+        attemptId,
+        quizId: status.quizId,
+        recoveryStep,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        errorMessage:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : "Automatic recovery failed.",
+        reasonCode:
+          error instanceof LocalGenerationRequestError
+            ? error.reasonCode
+            : undefined,
+      }),
+    );
     const reasonCode = authoritativeRecoveryFailureCode({
       requestReasonCode:
         error instanceof LocalGenerationRequestError
@@ -694,32 +809,9 @@ async function runAutomaticRecovery(
           "Automatic recovery ended before the bank was complete.",
       latestModelFailureReason,
     });
-    const groundedExhausted =
-      grounded &&
-      groundedRecoveryIsExhausted({
-        reasonCode,
-        record: stored,
-        automaticRetryCount,
-        ordinalAttempt: latestOrdinalAttempt,
-        strictBudget:
-          continuation.promptVersion === "quiz-local-json-stream-v5.12" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.11" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.10" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.9" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
-          continuation.promptVersion === "quiz-local-json-stream-v5.6",
-      });
-    const compatibilityExhausted =
-      legacyAutomaticRecovery &&
-      (retryBudgetUsedCount >= CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES ||
-        (continuation.automaticRecoveryCount ?? 0) + 1 >= 3);
-    const state =
-      reasonCode === "credential_required" || reasonCode === "billing_required"
-        ? "action_required"
-        : automatic && !groundedExhausted && !compatibilityExhausted
-          ? "cooldown"
-          : "generation_failed";
+    const state = automatic
+      ? automaticRecoveryDisposition(reasonCode)
+      : "generation_failed";
     const nextRecoveryAt =
       state === "cooldown"
         ? Date.now() +
@@ -751,9 +843,6 @@ async function runAutomaticRecovery(
     if (failed) {
       latest = failed.generation;
       publishAttemptGeneration(attemptId, status.quizId, latest);
-    }
-    if (state === "generation_failed" && automatic) {
-      terminalAutomaticRecoveryAttempts.add(attemptId);
     }
   } finally {
     stopLeaseHeartbeat();
@@ -837,7 +926,6 @@ async function matchingGenerationRecord(
 }
 
 async function acquireContinuationTranscript(
-  ownerUserId: string,
   imported: NonNullable<Awaited<ReturnType<typeof loadImportedVideo>>>,
   signal: AbortSignal,
   preferredLanguage: string,
@@ -846,8 +934,7 @@ async function acquireContinuationTranscript(
   completeness: TranscriptCompleteness;
   language: string;
   verifiedDurationSeconds: number;
-  captionSourceCategory:
-    "manual" | "automatic" | "local_transcription" | "unknown";
+  captionSourceCategory: "manual" | "automatic" | "unknown";
 }> {
   const textTranscript = await acquireTextTranscript(
     imported,
@@ -856,50 +943,10 @@ async function acquireContinuationTranscript(
     preferredLanguage,
   );
   if (textTranscript) return textTranscript;
-  if (Platform.OS === "android") {
-    throw new Error(
-      "This Android beta requires a public YouTube video with usable captions.",
-    );
-  }
-  const media = await apiRequest(
-    "/api/media/resolve",
-    {
-      method: "POST",
-      body: jsonBody({ videoId: imported.video.id }),
-      signal,
-    },
-    MediaResolveResponseSchema,
+  throw new LocalGenerationRequestError(
+    CAPTIONS_REQUIRED_MESSAGE,
+    "source_unavailable",
   );
-  const result = await transcribeLocally({
-    ownerUserId,
-    videoId: imported.video.id,
-    mediaUrl: media.mediaUrl,
-    durationSeconds: imported.video.durationSeconds,
-    language: imported.video.sourceLanguage,
-    signal,
-    onPhase: () => undefined,
-    onProgress: () => undefined,
-  });
-  const inferredDurationSeconds = Math.max(
-    1,
-    Math.ceil(
-      Math.max(...result.segments.map((segment) => segment.endMs)) / 1_000,
-    ),
-  );
-  const verifiedDurationSeconds =
-    imported.video.durationSeconds > 0
-      ? imported.video.durationSeconds
-      : inferredDurationSeconds;
-  return {
-    segments: result.segments,
-    language: result.language,
-    verifiedDurationSeconds,
-    captionSourceCategory: "local_transcription",
-    completeness: createTranscriptCompleteness(
-      result.segments,
-      verifiedDurationSeconds,
-    ),
-  };
 }
 
 function updateProgress(

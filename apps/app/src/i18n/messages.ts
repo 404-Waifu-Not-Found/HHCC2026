@@ -58,6 +58,9 @@ export const messages = {
     replacePicture: "Replace picture",
     removePicture: "Remove",
     exportNotes: "Export notes",
+    downloadPdf: "Download PDF",
+    preparingPdf: "Preparing PDF",
+    retryPdf: "Retry PDF",
     preparingNotes: "Preparing notes",
     notesNotReady: "Notes not ready",
     retryNotes: "Retry notes",
@@ -68,9 +71,6 @@ export const messages = {
     continue: "Continue",
     review: "Review",
     start: "Start",
-    watchedQuestion: "Have you watched this video?",
-    watchedYes: "Yes, quiz me",
-    watchedNo: "Not yet",
     quizLanguage: "Quiz language",
     questionTypes: "Question types",
     questionTypesHelp:
@@ -84,20 +84,14 @@ export const messages = {
     generate: "Create my quiz",
     gettingVideo: "Getting video",
     checkingCaptions: "Verifying captions",
-    preparingAudio: "Checking captions / downloading audio",
-    downloadingModel: "Downloading speech model",
-    transcribing: "Transcribing on this device",
     planningQuestions: "Planning the complete quiz",
     creatingQuestions: "Creating questions",
     finalizingQuestions: "Opening your quiz",
     estimatedProgress: "Estimated progress",
     firstQuestionEta: "Ready-to-start ETA",
     firstQuestionTakingLonger:
-      "Question 1 is taking longer than usual — still streaming",
+      "Question 1 is taking longer than usual — still generating",
     takingLonger: "Still working carefully — almost there",
-    cached: "Already downloaded",
-    removeModel: "Remove downloaded model",
-    pause: "Pause",
     retry: "Retry",
     true: "True",
     false: "False",
@@ -138,38 +132,27 @@ export const messages = {
     videoReady: "Video ready",
     thumbnailUnavailable: "The thumbnail is taking longer than expected.",
     retryThumbnail: "Reload thumbnail",
-    sourceCaptions: "Complete source captions are ready.",
-    sourceCaptionsPreparing: "Checking this video's captions…",
-    sourceCaptionsUnavailable:
-      "This Android beta needs a public YouTube video with usable captions.",
-    sourceCaptionsFailed:
-      "Captions could not be verified. Paste the video again to retry.",
-    localTranscript:
-      "No usable captions. Audio will be transcribed privately on this device.",
     localAiSetupTitle: "Local AI setup required",
     localAiSetupBody:
       "Add and test your DeepSeek API key on this device before creating the quiz.",
     openLocalAiSettings: "Open Local AI settings",
-    extensionRequiredTitle: "Install the Chrome extension",
+    extensionRequiredTitle: "Install ClipQuest",
     extensionRequiredBody:
       "ClipQuest needs this browser extension to read YouTube subtitles and generate quizzes with your own DeepSeek API key.",
-    extensionUpdateTitle: "Update ClipQuest Local AI",
+    extensionUpdateTitle: "Update ClipQuest",
     extensionUpdateBody:
-      "This version cannot use prompt-first quiz generation yet. Install ClipQuest Local AI 0.8.17 or newer to continue.",
+      "This version cannot use progressive quiz generation yet. Install ClipQuest 0.8.31 or newer to continue.",
     extensionStepDownload: "Download and unzip the extension package.",
     extensionStepOpen: "Open chrome://extensions and turn on Developer mode.",
     extensionStepLoad:
       "Choose Load unpacked, select the unzipped folder, then return here.",
     extensionPrivacy:
-      "Your DeepSeek key stays in Chrome extension storage. ClipQuest never receives it, and YouTube audio/video never reaches ClipQuest’s servers.",
+      "Your DeepSeek key stays in Chrome extension storage. Only verified subtitle text is sent directly to DeepSeek; ClipQuest never downloads or processes video audio.",
     extensionDownload: "Download extension",
     extensionDownloadAgain: "Download again",
     extensionCheck: "Check installation",
     extensionDownloaded:
       "Downloaded. Unzip it, load the folder in Chrome, and ClipQuest will connect automatically.",
-    modelSize: "Speech model · about 45 MB",
-    removeModelConfirm: "Downloaded speech model removed from this device.",
-    modelNotDownloaded: "No speech model is stored on this device.",
     downloading: "Downloading",
     paused: "Paused",
     cancel: "Cancel",
@@ -181,6 +164,7 @@ export const messages = {
     answerReason: "Reason",
     answerMarkedCorrect: "Marked correct.",
     answerMarkedIncorrect: "Marked incorrect.",
+    correctAnswer: "Correct answer",
     finish: "Finish",
     returnToLibrary: "Return to library",
     quizComplete: "Quest complete!",
@@ -209,10 +193,10 @@ export const messages = {
       "Local generation stopped. Open the extension to verify your DeepSeek key, then retry.",
     cancelGenerationFailed: "Could not cancel quiz creation. Please try again.",
     tryAgain: "Try again",
-    privateTranscription:
-      "Captions and your DeepSeek key stay browser-side. The extension sends transcript text directly to DeepSeek, then ClipQuest stores only validated quiz questions so you can answer them and save progress.",
-    privateTranscriptionAndroid:
-      "Captions and your DeepSeek key stay on this device. The app sends caption text directly to DeepSeek; ClipQuest stores only validated quiz questions and learning progress.",
+    captionPrivacyWeb:
+      "Verified subtitles and your DeepSeek key stay browser-side. The extension sends subtitle text directly to DeepSeek; ClipQuest stores only validated quiz questions and learning progress.",
+    captionPrivacyNative:
+      "Verified subtitles and your DeepSeek key stay on this device. The app sends subtitle text directly to DeepSeek; ClipQuest stores only validated quiz questions and learning progress.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -240,23 +224,15 @@ export const messages = {
     account: "Account",
     deleteAccount: "Delete account",
     deleteAccountBody:
-      "This permanently deletes your account, progress, transcripts, and downloaded thumbnails. Enter your password to continue.",
+      "This permanently deletes your account, progress, saved caption data, and downloaded thumbnails. Enter your password to continue.",
     confirmDeleteAccount: "Permanently delete account",
     deleteAccountFailed: "The account could not be deleted.",
     appearance: "Appearance",
     privacyStorage: "Privacy & storage",
-    speechModel: "On-device speech model",
-    removeModelFailed: "Could not remove the model.",
     signOutFailed: "Could not sign out.",
     languageEnglish: "English",
     languageChinese: "简体中文",
     quizLanguageHelp: "Questions and explanations use this language.",
-    watchedHelp: "If not, you’ll see a short primer before the quiz.",
-    unsupportedLength: "Captionless videos can be at most 90 minutes.",
-    webUnsupportedLength:
-      "Captionless videos can be at most 20 minutes in a browser. Use the mobile app for longer videos.",
-    transcriptionQualityError:
-      "The local transcript was too uncertain to create a trustworthy quiz.",
   },
   "zh-CN": {
     appName: "ClipQuest",
@@ -311,6 +287,9 @@ export const messages = {
     replacePicture: "更换头像",
     removePicture: "移除",
     exportNotes: "导出笔记",
+    downloadPdf: "下载 PDF",
+    preparingPdf: "正在准备 PDF",
+    retryPdf: "重试 PDF",
     preparingNotes: "正在准备笔记",
     notesNotReady: "笔记尚未准备好",
     retryNotes: "重试笔记",
@@ -321,9 +300,6 @@ export const messages = {
     continue: "继续",
     review: "复习",
     start: "开始",
-    watchedQuestion: "你看过这个视频吗？",
-    watchedYes: "看过，考考我",
-    watchedNo: "还没有",
     quizLanguage: "测验语言",
     questionTypes: "题目类型",
     questionTypesHelp:
@@ -337,9 +313,6 @@ export const messages = {
     generate: "生成测验",
     gettingVideo: "正在获取视频",
     checkingCaptions: "正在验证字幕",
-    preparingAudio: "正在检查字幕 / 下载音频",
-    downloadingModel: "正在下载语音模型",
-    transcribing: "正在此设备上转写",
     planningQuestions: "正在规划完整测验",
     creatingQuestions: "正在生成题目",
     finalizingQuestions: "正在打开测验",
@@ -347,9 +320,6 @@ export const messages = {
     firstQuestionEta: "开始答题倒计时",
     firstQuestionTakingLonger: "第一题比平时稍慢，仍在生成中",
     takingLonger: "正在认真处理，很快就好",
-    cached: "已下载",
-    removeModel: "删除已下载模型",
-    pause: "暂停",
     retry: "重试",
     true: "正确",
     false: "错误",
@@ -387,36 +357,27 @@ export const messages = {
     videoReady: "视频已准备好",
     thumbnailUnavailable: "缩略图加载时间比预期更长。",
     retryThumbnail: "重新加载缩略图",
-    sourceCaptions: "完整的来源字幕已准备好。",
-    sourceCaptionsPreparing: "正在检查此视频的字幕…",
-    sourceCaptionsUnavailable:
-      "此 Android 测试版需要带有可用字幕的公开 YouTube 视频。",
-    sourceCaptionsFailed: "无法验证字幕，请重新粘贴视频后再试。",
-    localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
     localAiSetupTitle: "需要设置本地 AI",
     localAiSetupBody:
       "创建测验前，请在此设备上添加并测试你的 DeepSeek API 密钥。",
     openLocalAiSettings: "打开本地 AI 设置",
-    extensionRequiredTitle: "安装 Chrome 扩展",
+    extensionRequiredTitle: "安装 ClipQuest",
     extensionRequiredBody:
       "ClipQuest 需要此浏览器扩展读取 YouTube 字幕，并使用你自己的 DeepSeek API 密钥在本地发起测验生成。",
-    extensionUpdateTitle: "更新 ClipQuest Local AI",
+    extensionUpdateTitle: "更新 ClipQuest",
     extensionUpdateBody:
-      "当前版本尚不支持提示词优先的测验生成。请安装 ClipQuest Local AI 0.8.17 或更高版本后继续。",
+      "当前版本尚不支持渐进式测验生成。请安装 ClipQuest 0.8.31 或更高版本后继续。",
     extensionStepDownload: "下载并解压扩展安装包。",
     extensionStepOpen: "打开 chrome://extensions，并启用开发者模式。",
     extensionStepLoad:
       "点击“加载已解压的扩展程序”，选择解压后的文件夹，然后返回此页面。",
     extensionPrivacy:
-      "DeepSeek 密钥只保存在 Chrome 扩展本地存储中，ClipQuest 不会收到它；YouTube 音视频也不会经过 ClipQuest 服务器。",
+      "DeepSeek 密钥只保存在 Chrome 扩展本地存储中。只有经过验证的字幕文本会直接发送给 DeepSeek；ClipQuest 不会下载或处理视频音频。",
     extensionDownload: "下载扩展",
     extensionDownloadAgain: "重新下载",
     extensionCheck: "检查安装状态",
     extensionDownloaded:
       "已下载。解压后在 Chrome 中加载该文件夹，ClipQuest 会自动连接。",
-    modelSize: "语音模型 · 约 45 MB",
-    removeModelConfirm: "已从此设备删除语音模型。",
-    modelNotDownloaded: "此设备未保存语音模型。",
     downloading: "正在下载",
     paused: "已暂停",
     cancel: "取消",
@@ -428,6 +389,7 @@ export const messages = {
     answerReason: "理由",
     answerMarkedCorrect: "已判定为正确。",
     answerMarkedIncorrect: "已判定为错误。",
+    correctAnswer: "正确答案",
     finish: "完成",
     returnToLibrary: "返回资料库",
     quizComplete: "学习任务完成！",
@@ -451,10 +413,10 @@ export const messages = {
     generationTimeout: "本地生成已停止。请在扩展中检查 DeepSeek 密钥后重试。",
     cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
-    privateTranscription:
-      "字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目，供你作答并保存学习进度。",
-    privateTranscriptionAndroid:
-      "字幕与 DeepSeek 密钥都保留在此设备上。应用会将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目与学习进度。",
+    captionPrivacyWeb:
+      "经过验证的字幕与 DeepSeek 密钥都保留在浏览器侧。扩展将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目与学习进度。",
+    captionPrivacyNative:
+      "经过验证的字幕与 DeepSeek 密钥都保留在此设备上。应用会将字幕文本直接发送给 DeepSeek；ClipQuest 只保存通过验证的测验题目与学习进度。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",
@@ -480,22 +442,15 @@ export const messages = {
     account: "账户",
     deleteAccount: "删除账户",
     deleteAccountBody:
-      "此操作会永久删除账户、学习进度、转写文本和已下载缩略图。请输入密码继续。",
+      "此操作会永久删除账户、学习进度、已保存字幕数据和已下载缩略图。请输入密码继续。",
     confirmDeleteAccount: "永久删除账户",
     deleteAccountFailed: "无法删除账户。",
     appearance: "外观",
     privacyStorage: "隐私与存储",
-    speechModel: "设备端语音模型",
-    removeModelFailed: "无法删除语音模型。",
     signOutFailed: "无法退出登录。",
     languageEnglish: "English",
     languageChinese: "简体中文",
     quizLanguageHelp: "题目与解析将使用此语言。",
-    watchedHelp: "如果没看过，答题前会显示简短导读。",
-    unsupportedLength: "无字幕视频最长支持 90 分钟。",
-    webUnsupportedLength:
-      "浏览器中无字幕视频最长支持 20 分钟；更长视频请使用移动应用。",
-    transcriptionQualityError: "本地转写可信度不足，无法生成可靠测验。",
   },
 } as const;
 

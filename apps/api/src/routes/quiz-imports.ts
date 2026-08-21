@@ -78,7 +78,7 @@ function versionAtLeast(actual: string, minimum: string): boolean {
 function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
   if (!chunk.client) return;
   const native = chunk.client.kind !== "chrome_extension";
-  const minimum = native ? "0.2.0" : "0.8.17";
+  const minimum = native ? "0.2.0" : "0.8.31";
   const clientName =
     chunk.client.kind === "android_app"
       ? "Android"
@@ -90,6 +90,31 @@ function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
       403,
       "local_generation_client_outdated",
       `ClipQuest ${clientName} ${minimum} or newer is required.`,
+    );
+  }
+}
+
+export function assertCurrentRetryQuestion(
+  chunk: LocalConceptQuizQuestionChunk,
+): void {
+  if (chunk.promptVersion !== "quiz-local-json-stream-v5.12") {
+    return;
+  }
+  const normalizePrompt = (value: string) =>
+    value
+      .normalize("NFKC")
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  const original = normalizePrompt(chunk.question.question);
+  const retry = chunk.question.retryQuestion
+    ? normalizePrompt(chunk.question.retryQuestion)
+    : "";
+  if (!retry || retry === original) {
+    throw new ApiError(
+      422,
+      "quiz_retry_question_invalid",
+      "The AI-generated adaptive retry prompt must be present and distinct.",
     );
   }
 }
@@ -276,7 +301,7 @@ quizImportsRouter.post("/progressive", async (c) => {
     throw new ApiError(
       403,
       "quiz_generation_profile_disabled",
-      "Install the current ClipQuest Local AI release before creating a new grounded quiz.",
+      "Install the current ClipQuest release before creating a new grounded quiz.",
     );
   }
   if (input.chunk.startIndex !== 0) {
@@ -398,6 +423,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     .normalize("NFKC")
     .toLocaleLowerCase()
     .trim();
+  assertCurrentRetryQuestion(input.chunk);
   if (
     !isPromptFirstProfile(summary.generationProfile) &&
     summary.acceptedQuestionSummaries.some(
@@ -771,13 +797,13 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
 
   if (input.classification === "automatic_retry") {
     const existingRetry = await c.env.DB.prepare(
-      legacyAutomaticRecovery
-        ? "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND classification IN ('automatic_retry', 'manual_continuation')"
+      automaticEvent
+        ? "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND recovery_session_id = ? AND classification = 'automatic_retry'"
         : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND classification = 'automatic_retry'",
     )
       .bind(
-        ...(legacyAutomaticRecovery
-          ? [bank.id]
+        ...(automaticEvent
+          ? [bank.id, input.generationSessionId, input.recoverySessionId]
           : [bank.id, input.generationSessionId]),
       )
       .first<{ count: number }>();
@@ -1196,6 +1222,7 @@ async function persistProgressiveQuiz(input: {
   const timestamp = now();
   const chunk = input.input.chunk;
   const question = chunk.question;
+  assertCurrentRetryQuestion(chunk);
   if (
     chunk.generationProfile === "evidence_grounded_auto_v5_4" ||
     chunk.generationProfile === "concept_first_auto_v5_8"
@@ -1294,7 +1321,7 @@ async function persistProgressiveQuiz(input: {
             evidenceSegmentIds: [],
           },
         ]),
-        input.input.watched ? 1 : 0,
+        1,
         LOCAL_QUIZ_PIPELINE_VERSION,
         JSON.stringify(summary),
         input.importKey,
@@ -2017,7 +2044,10 @@ async function assertAutomaticGenerationCallSequence(
     return;
   }
 
-  const expectedAttempt = Number(previous.ordinal_attempt ?? 1) + 1;
+  const expectedAttempt = Math.min(
+    24,
+    Number(previous.ordinal_attempt ?? 1) + 1,
+  );
   if (
     previous.outcome_code === "complete" ||
     event.startIndex !== Number(previous.start_ordinal) ||
@@ -2175,7 +2205,7 @@ async function persistImportedQuiz(input: {
             evidenceSegmentIds: [],
           })),
         ),
-        input.input.watched ? 1 : 0,
+        1,
         LOCAL_QUIZ_PIPELINE_VERSION,
         JSON.stringify(summary),
         input.importKey,
@@ -2240,6 +2270,17 @@ function questionInsert(
 ): D1PreparedStatement {
   const stored = storedQuestionFields(question);
   const difficulty = structuralDifficulty(question);
+  const reformulatedPrompt =
+    metadata.promptVersion === "quiz-local-json-stream-v5.12"
+      ? question.retryQuestion
+      : (question.retryQuestion ?? question.question);
+  if (!reformulatedPrompt) {
+    throw new ApiError(
+      422,
+      "quiz_retry_question_invalid",
+      "The AI-generated adaptive retry prompt must be present and distinct.",
+    );
+  }
   const columns = `(id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)`;
   const placeholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?`;
   const statement = liveClaim
@@ -2261,7 +2302,7 @@ function questionInsert(
     question.type,
     question.id,
     question.question,
-    question.question,
+    reformulatedPrompt,
     stored.optionsJson,
     stored.correctAnswerJson,
     stored.rubricJson,
@@ -2312,11 +2353,26 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
     };
   }
   if (question.type === "true_false") {
+    const normalizedPrompt = normalizeTrueFalseStatement(question.question);
+    const normalizedCorrection = normalizeTrueFalseCorrection(
+      question.correction,
+    );
+    // Defend the storage boundary as well as the shared generator. An older or
+    // not-yet-reloaded client may send an AI-generated item whose correction
+    // simply restates the displayed prompt while its boolean is false. Keeping
+    // the question and fixing that unambiguous polarity avoids both a false
+    // negative grade and an extra model request.
+    const answer =
+      question.answer === false &&
+      normalizedPrompt.length > 0 &&
+      normalizedPrompt === normalizedCorrection
+        ? true
+        : question.answer;
     return {
       optionsJson: null,
-      correctAnswerJson: JSON.stringify(question.answer),
+      correctAnswerJson: JSON.stringify(answer),
       rubricJson: null,
-      explanation: question.answer
+      explanation: answer
         ? question.explanation
         : `${question.correction} ${question.explanation}`,
     };
@@ -2331,6 +2387,27 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
     }),
     explanation: question.explanation,
   };
+}
+
+function normalizeTrueFalseStatement(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function normalizeTrueFalseCorrection(value: string): string {
+  return normalizeTrueFalseStatement(
+    value
+      .normalize("NFKC")
+      .trim()
+      .replace(
+        /^(?:the\s+)?correct\s+(?:statement|claim)\s+is\s*[:：\-–—]?\s*/iu,
+        "",
+      )
+      .replace(/^正确(?:的)?(?:说法|陈述|表述)(?:是|为)\s*[:：\-–—]?\s*/u, ""),
+  );
 }
 
 function assertGroundedQuestionIdentity(

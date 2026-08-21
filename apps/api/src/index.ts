@@ -23,8 +23,6 @@ import { authenticated, type ApiBindings } from "./middleware/authenticated";
 import { adminRouter } from "./routes/admin";
 import { generationRouter } from "./routes/generation";
 import { libraryRouter } from "./routes/library";
-import { mediaRouter } from "./routes/media";
-import { modelsRouter } from "./routes/models";
 import { pushRouter, sendDueReviewNotifications } from "./routes/push";
 import { profileRouter } from "./routes/profile";
 import {
@@ -155,11 +153,11 @@ app.get("/health", (c) => {
       supportedValidatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
       rolloutMode,
       effectiveDefaultProfile: effectiveDefaultProfile.generationProfile,
-      requiredExtensionVersion: "0.8.17",
+      requiredExtensionVersion: "0.8.31",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       clients: {
         chromeExtension: {
-          minimumVersion: "0.8.17",
+          minimumVersion: "0.8.31",
           requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         },
         androidApp: {
@@ -200,7 +198,6 @@ app.route("/api/videos", thumbnailRouter);
 app.use("/api/*", authenticated);
 app.route("/api/admin", adminRouter);
 app.route("/api/videos", videosRouter);
-app.route("/api/media", mediaRouter);
 app.route("/api/local-ai", generationRouter);
 app.route("/api/quiz-imports", quizImportsRouter);
 app.route("/api", quizzesRouter);
@@ -209,7 +206,6 @@ app.route("/api/push", pushRouter);
 app.route("/api/profile", profileRouter);
 app.route("/api/cheat-sheets", cheatSheetsRouter);
 app.route("/api", cheatSheetContextRouter);
-app.route("/api/models", modelsRouter);
 app.route("/api/youtube", youtubeRouter);
 
 app.notFound((c) => {

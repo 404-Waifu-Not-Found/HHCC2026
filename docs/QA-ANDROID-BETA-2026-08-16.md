@@ -30,7 +30,7 @@ The EAS build ID, release APK checksum, and EAS certificate fingerprints must be
 - Android-local DeepSeek SSE transport through Expo fetch and Expo Crypto.
 - Account-scoped SecureStore key management with direct credential test and removal on account boundaries.
 - Foreground-only generation, bounded outbox, abort-on-background, authoritative-frontier recovery, and accepted-prefix preservation.
-- Caption-only Android boundary with a zero-DeepSeek captionless failure and no `/api/media/resolve` path.
+- Caption-only Android boundary that stops before DeepSeek when verified subtitles are unavailable.
 - Paste and Android Sharesheet handoffs, including cold and warm `ACTION_SEND` handling.
 - Native mixed-prose/formula rendering using local KaTeX MathML in a locked-down WebView.
 - App Links endpoint and intent filters, pending a real signing certificate.

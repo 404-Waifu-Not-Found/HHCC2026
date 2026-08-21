@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertCurrentRetryQuestion,
   currentGroundedNewBankMetadataMatches,
   storedQuestionFields,
 } from "../src/routes/quiz-imports";
+import type { LocalConceptQuizQuestionChunk } from "@clipquest/contracts";
 
 const common = {
   id: "q1",
@@ -39,6 +41,19 @@ describe("extension mixed-question persistence", () => {
       correctAnswerJson: "false",
       rubricJson: null,
       explanation: `This is the corrected statement. ${common.explanation}`,
+    });
+    expect(
+      storedQuestionFields({
+        ...common,
+        type: "true_false",
+        answer: false,
+        correction: `The correct statement is: ${common.question}`,
+      }),
+    ).toEqual({
+      optionsJson: null,
+      correctAnswerJson: "true",
+      rubricJson: null,
+      explanation: common.explanation,
     });
     expect(
       storedQuestionFields({
@@ -108,5 +123,47 @@ describe("extension mixed-question persistence", () => {
         ),
       ).toBe(false);
     }
+  });
+
+  it("requires current AI output to include a distinct adaptive retry prompt", () => {
+    const chunk = {
+      promptVersion: "quiz-local-json-stream-v5.12",
+      client: {
+        kind: "chrome_extension",
+        version: "0.8.26",
+        capability: "question-stream-v7",
+      },
+      question: {
+        ...common,
+        type: "short_answer",
+        answer: "By testing a different wording.",
+        rubricIdeas: ["different wording"],
+        acceptableAnswers: [],
+      },
+    } as unknown as LocalConceptQuizQuestionChunk;
+
+    expect(() => assertCurrentRetryQuestion(chunk)).toThrowError(
+      "The AI-generated adaptive retry prompt must be present and distinct.",
+    );
+    expect(() =>
+      assertCurrentRetryQuestion({
+        ...chunk,
+        question: {
+          ...chunk.question,
+          retryQuestion: "How can the same concept be checked another way?",
+        },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertCurrentRetryQuestion({
+        ...chunk,
+        question: {
+          ...chunk.question,
+          retryQuestion: `${common.question}!`,
+        },
+      }),
+    ).toThrowError(
+      "The AI-generated adaptive retry prompt must be present and distinct.",
+    );
   });
 });

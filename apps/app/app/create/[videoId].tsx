@@ -44,7 +44,6 @@ import {
   spacing,
   typography,
 } from "../../src/theme/tokens";
-import { canTranscribeInBrowser } from "../../src/transcription/limits";
 import { blurActiveWebElement } from "../../src/lib/web-focus";
 import {
   detectLocalGenerationClient,
@@ -66,7 +65,6 @@ export default function CreateQuestScreen() {
   const { width } = useWindowDimensions();
   const [video, setVideo] = useState<VideoImportResponse>();
   const [error, setError] = useState<string>();
-  const [watched, setWatched] = useState(true);
   const [quizLanguage, setQuizLanguage] = useState<AppLanguage>(locale);
   const [sessionLength, setSessionLength] = useState<SessionLength>("medium");
   const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
@@ -176,17 +174,6 @@ export default function CreateQuestScreen() {
       </Screen>
     );
   }
-  const nativeLocalFallback =
-    Platform.OS === "ios" &&
-    (preworkStatus === "unavailable" || preworkStatus === "failed");
-  const needsLocalTranscription =
-    video.requiresLocalTranscription || nativeLocalFallback;
-  const tooLong =
-    needsLocalTranscription && video.video.durationSeconds > 5_400;
-  const tooLongForWeb =
-    video.requiresLocalTranscription &&
-    Platform.OS === "web" &&
-    !canTranscribeInBrowser(video.video.durationSeconds);
   const compact = width < breakpoints.tablet;
   const nativeCaptionState =
     Platform.OS !== "web" && generationId ? preworkStatus : undefined;
@@ -196,21 +183,8 @@ export default function CreateQuestScreen() {
     (nativeCaptionState === undefined || nativeCaptionState === "running");
   const captionsUnavailable = nativeCaptionState === "unavailable";
   const captionsFailed = nativeCaptionState === "failed";
-  const transcriptStatus = (
-    captionsPending
-      ? t("sourceCaptionsPreparing")
-      : nativeLocalFallback
-        ? t("localTranscript")
-        : captionsUnavailable
-          ? t("sourceCaptionsUnavailable")
-          : captionsFailed
-            ? t("sourceCaptionsFailed")
-            : needsLocalTranscription
-              ? t("localTranscript")
-              : t("sourceCaptions")
-  ).replace(/[—–]/g, "-");
   const captionsBlocked =
-    Platform.OS === "android" && (captionsUnavailable || captionsFailed);
+    captionsUnavailable || captionsFailed || video.captions.available === false;
   const localAiMissing = Platform.OS !== "web" && localAiConfigured === false;
   const proceed = async () => {
     blurActiveWebElement();
@@ -235,7 +209,7 @@ export default function CreateQuestScreen() {
         quizLanguage,
         questionTypes,
         sessionLength,
-        watched,
+        watched: true,
         plannedCount,
       });
     } else {
@@ -250,7 +224,7 @@ export default function CreateQuestScreen() {
         quizLanguage,
         questionTypes,
         sessionLength,
-        watched,
+        watched: true,
         acceptedCount: 0,
         plannedCount,
         state: "pending",
@@ -264,7 +238,6 @@ export default function CreateQuestScreen() {
       params: {
         videoId: video.video.id,
         generationId: nextGenerationId,
-        watched: String(watched),
         quizLanguage,
         sessionLength,
         questionTypes: questionTypes.join(","),
@@ -283,7 +256,7 @@ export default function CreateQuestScreen() {
             // Video ready screen. The generation route re-checks the key
             // before dispatching any AI request.
             loading={captionsPending}
-            disabled={tooLong || tooLongForWeb || captionsBlocked}
+            disabled={captionsBlocked}
             onPress={
               localAiMissing
                 ? openLocalGenerationClientSettings
@@ -331,46 +304,6 @@ export default function CreateQuestScreen() {
                 >
                   {video.video.title}
                 </Text>
-                <View
-                  style={[
-                    styles.captionStatus,
-                    {
-                      backgroundColor: captionsBlocked
-                        ? theme.errorSoft
-                        : captionsPending || needsLocalTranscription
-                          ? theme.secondarySoft
-                          : theme.successSoft,
-                      borderColor: captionsBlocked
-                        ? theme.error
-                        : captionsPending || needsLocalTranscription
-                          ? theme.secondary
-                          : theme.success,
-                    },
-                  ]}
-                >
-                  <VoxelIcon
-                    name={
-                      captionsBlocked
-                        ? "error"
-                        : captionsPending || needsLocalTranscription
-                          ? "processing"
-                          : "captions"
-                    }
-                    size={22}
-                    color={
-                      captionsBlocked
-                        ? theme.error
-                        : captionsPending || needsLocalTranscription
-                          ? theme.secondaryPressed
-                          : theme.successPressed
-                    }
-                  />
-                  <Text
-                    style={[styles.captionStatusText, { color: theme.text }]}
-                  >
-                    {transcriptStatus}
-                  </Text>
-                </View>
               </View>
             </View>
           </Surface>
@@ -378,21 +311,7 @@ export default function CreateQuestScreen() {
 
         <MotionView preset="rise" delay={88}>
           <Surface style={styles.setupSurface}>
-            <SettingGroup title={t("watchedQuestion")} help={t("watchedHelp")}>
-              <SegmentedControl
-                label={t("watchedQuestion")}
-                value={watched ? "yes" : "no"}
-                onChange={(value) => setWatched(value === "yes")}
-                options={
-                  [
-                    { value: "yes", label: t("watchedYes") },
-                    { value: "no", label: t("watchedNo") },
-                  ] as const
-                }
-              />
-            </SettingGroup>
             <SettingGroup
-              divided
               title={t("quizLanguage")}
               help={t("quizLanguageHelp")}
             >
@@ -435,31 +354,6 @@ export default function CreateQuestScreen() {
           </Surface>
         </MotionView>
 
-        {needsLocalTranscription ? (
-          <MotionView preset="rise" delay={132} exiting>
-            <Surface tone="tinted" style={styles.noticeSurface}>
-              <View style={styles.noticeRow}>
-                <View
-                  style={[
-                    styles.noticeIcon,
-                    { backgroundColor: theme.surface },
-                  ]}
-                >
-                  <VoxelIcon name="privacy" size={27} color={theme.primary} />
-                </View>
-                <View style={styles.noticeCopy}>
-                  <Text style={[styles.noticeTitle, { color: theme.text }]}>
-                    {t("modelSize")}
-                  </Text>
-                  <Text style={[styles.help, { color: theme.textMuted }]}>
-                    {t("privateTranscription")}
-                  </Text>
-                </View>
-              </View>
-            </Surface>
-          </MotionView>
-        ) : null}
-
         {localAiMissing && !captionsBlocked ? (
           <MotionView preset="rise" delay={154} exiting>
             <Surface tone="warning" style={styles.noticeSurface}>
@@ -483,31 +377,6 @@ export default function CreateQuestScreen() {
               </View>
             </Surface>
           </MotionView>
-        ) : null}
-
-        {tooLong || tooLongForWeb ? (
-          <FeedbackMotion
-            signal={tooLongForWeb ? "web" : "duration"}
-            kind="error"
-          >
-            <MotionView preset="rise" exiting>
-              <Surface tone="error" style={styles.limitSurface}>
-                <View style={styles.noticeRow}>
-                  <VoxelIcon name="error" size={25} color={theme.error} />
-                  <Text
-                    accessibilityRole="alert"
-                    style={[styles.limitText, { color: theme.text }]}
-                  >
-                    {t(
-                      tooLongForWeb
-                        ? "webUnsupportedLength"
-                        : "unsupportedLength",
-                    )}
-                  </Text>
-                </View>
-              </Surface>
-            </MotionView>
-          </FeedbackMotion>
         ) : null}
       </View>
     </Screen>
@@ -626,20 +495,6 @@ const styles = StyleSheet.create({
     fontSize: typography.size.title,
     lineHeight: typography.lineHeight.title,
   },
-  captionStatus: {
-    borderWidth: borders.standard,
-    borderRadius: radii.medium,
-    padding: spacing[3],
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-  },
-  captionStatusText: {
-    flex: 1,
-    fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
-  },
   setupSurface: { gap: 0 },
   settingGroup: { gap: spacing[4], paddingVertical: spacing[1] },
   settingGroupDivided: {
@@ -672,13 +527,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyBold,
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
-  },
-  limitSurface: { padding: spacing[4] },
-  limitText: {
-    flex: 1,
-    fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
   },
   footerInner: { width: "100%", maxWidth: layout.reading, alignSelf: "center" },
   expiredCard: { width: "100%", alignItems: "center", gap: spacing[5] },

@@ -64,10 +64,14 @@ export function isMathExpressionText(value: string): boolean {
   const hasOperand = /[\p{L}\p{N}][\p{L}\p{N}_']*\s*(?:\([^)]*\))?/u.test(
     compact,
   );
+  const hasDerivativeShape =
+    /(?:^|[^\p{L}\p{M}\p{N}_])(?:d\p{L}\s*\/\s*d\p{L}|\p{L}'(?:\s*\(\s*\p{L}\s*\))?)(?:$|[^\p{L}\p{M}\p{N}_])/u.test(
+      compact,
+    );
   const hasFormulaShape =
     /\([^()]+\)\s*\/\s*\([^()]+\)/u.test(compact) ||
     /(?:\p{L}|\d)\s*\^\s*[+\-]?\d+/u.test(compact) ||
-    /(?:d\p{L}\s*\/\s*d\p{L}|\p{L}'\s*\(?\p{L}?\)?)/u.test(compact);
+    hasDerivativeShape;
   // A slash is common prose punctuation ("yes/no", "true/false",
   // "input/output"). Do not send those labels through KaTeX merely because
   // they contain two word operands and `/`.
@@ -196,6 +200,10 @@ function mathRanges(value: string): MathRange[] {
       const start = match.index ?? 0;
       const text = match[0];
       if (!text) continue;
+      const alphabeticHyphen =
+        /^[\p{L}\p{M}]+-[\p{L}\p{M}]+$/u.test(text) &&
+        !/^\p{L}-\p{L}$/u.test(text);
+      if (alphabeticHyphen) continue;
       candidates.push({ start, end: start + text.length });
     }
   }

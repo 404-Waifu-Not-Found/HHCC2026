@@ -1,0 +1,1848 @@
+{
+  "runId": "b15ea3d8-6f01-4f17-987a-54c0189f1357",
+  "source": {
+    "videoId": "NgVSHXOz3jI",
+    "title": "Einstein's Revolution: Crash Course History of Science #32",
+    "language": "en",
+    "durationSeconds": 717,
+    "segments": [
+      {
+        "id": "youtube-json3-0-5400",
+        "startMs": 5400,
+        "endMs": 10280,
+        "text": "There was physics before Einstein… in the same way that there was biology before Darwin."
+      },
+      {
+        "id": "youtube-json3-1-10280",
+        "startMs": 10280,
+        "endMs": 15099,
+        "text": "Einstein didn’t just add some new ideas to physics. And he didn’t just add a unifying"
+      },
+      {
+        "id": "youtube-json3-2-15099",
+        "startMs": 15099,
+        "endMs": 20050,
+        "text": "framework for doing physics, like Newton. Einstein took what people thought was physics,"
+      },
+      {
+        "id": "youtube-json3-3-20050",
+        "startMs": 20050,
+        "endMs": 22840,
+        "text": "turned it upside down, then turned it inside out."
+      },
+      {
+        "id": "youtube-json3-4-22840",
+        "startMs": 22840,
+        "endMs": 27160,
+        "text": "In the same way Darwin’s work made people see life itself differently, Einstein’s"
+      },
+      {
+        "id": "youtube-json3-5-27160",
+        "startMs": 27160,
+        "endMs": 31620,
+        "text": "work made humanity reexamine time and space."
+      },
+      {
+        "id": "youtube-json3-7-40340",
+        "startMs": 40340,
+        "endMs": 45000,
+        "text": "The classical worldview—associated with names you know, like Euclid, Aristotle, and"
+      },
+      {
+        "id": "youtube-json3-8-45010",
+        "startMs": 45010,
+        "endMs": 49790,
+        "text": "Newton—held that the rules governing space and time were absolute. One meter was always"
+      },
+      {
+        "id": "youtube-json3-9-49790",
+        "startMs": 49790,
+        "endMs": 53330,
+        "text": "one meter long; one hour would always be one hour long…"
+      },
+      {
+        "id": "youtube-json3-10-53330",
+        "startMs": 53330,
+        "endMs": 56830,
+        "text": "Matter was made up of immutable and indivisible atoms."
+      },
+      {
+        "id": "youtube-json3-11-56830",
+        "startMs": 56830,
+        "endMs": 61870,
+        "text": "And energy moved through a medium called ether—because everything had to move through something,"
+      },
+      {
+        "id": "youtube-json3-12-61870",
+        "startMs": 61870,
+        "endMs": 65960,
+        "text": "right? God wouldn’t just make, I dunno, a howling void?"
+      },
+      {
+        "id": "youtube-json3-13-65960",
+        "startMs": 65960,
+        "endMs": 70390,
+        "text": "And with new disciplines like thermodynamics and fun applications like steam power and"
+      },
+      {
+        "id": "youtube-json3-14-70390",
+        "startMs": 70390,
+        "endMs": 74799,
+        "text": "light bulbs, human understanding of the fundamental forces of nature seemed pretty solid."
+      },
+      {
+        "id": "youtube-json3-15-74799",
+        "startMs": 74799,
+        "endMs": 79040,
+        "text": "To quote historian of science Milena Wazeck, by 1900, “physics"
+      },
+      {
+        "id": "youtube-json3-16-79040",
+        "startMs": 79040,
+        "endMs": 83259,
+        "text": "was perceived by many to be an almost completed discipline.”"
+      },
+      {
+        "id": "youtube-json3-17-83259",
+        "startMs": 83259,
+        "endMs": 87740,
+        "text": "But within this almost-completeness lurked many unanswered questions. One of the biggest"
+      },
+      {
+        "id": "youtube-json3-18-87740",
+        "startMs": 87740,
+        "endMs": 92400,
+        "text": "was the failure of the Michelson–Morley experiment in 1887. They’d attempted to"
+      },
+      {
+        "id": "youtube-json3-19-92400",
+        "startMs": 92400,
+        "endMs": 97049,
+        "text": "demonstrate that the speed of light changed just a little when measured from the earth,"
+      },
+      {
+        "id": "youtube-json3-20-97049",
+        "startMs": 97049,
+        "endMs": 100509,
+        "text": "which is always moving, relative to the ether, which never moves."
+      },
+      {
+        "id": "youtube-json3-21-100509",
+        "startMs": 100509,
+        "endMs": 106700,
+        "text": "But despite meticulous efforts, they couldn’t find any slowing-down. Light moved at a constant"
+      },
+      {
+        "id": "youtube-json3-22-106700",
+        "startMs": 106700,
+        "endMs": 111469,
+        "text": "speed—almost as if there was no ether. Then there was the electron and radioactivity."
+      },
+      {
+        "id": "youtube-json3-23-111469",
+        "startMs": 111469,
+        "endMs": 117969,
+        "text": "In 1897, English physicist J. J. Thomson showed that cathode rays were made up of discrete"
+      },
+      {
+        "id": "youtube-json3-24-117969",
+        "startMs": 117969,
+        "endMs": 123810,
+        "text": "particles, way smaller than whole atoms—electrons. And around the same time, Marie Curie proposed"
+      },
+      {
+        "id": "youtube-json3-25-123810",
+        "startMs": 123810,
+        "endMs": 127560,
+        "text": "the theory of radioactivity, which classical physics didn’t predict."
+      },
+      {
+        "id": "youtube-json3-26-127560",
+        "startMs": 127560,
+        "endMs": 133530,
+        "text": "Then, in the early 1900s, Ernest Rutherford experimented on radioactive decay. He named"
+      },
+      {
+        "id": "youtube-json3-27-133530",
+        "startMs": 133530,
+        "endMs": 138380,
+        "text": "radioactive alpha, beta, and gamma particles, classifying them by their ability to penetrate"
+      },
+      {
+        "id": "youtube-json3-28-138380",
+        "startMs": 138380,
+        "endMs": 140900,
+        "text": "different kinds of matter. And Henri Becquerel measured"
+      },
+      {
+        "id": "youtube-json3-29-140910",
+        "startMs": 140910,
+        "endMs": 145820,
+        "text": "beta particles and realized they were actually electrons exiting the nuclei of atoms at high"
+      },
+      {
+        "id": "youtube-json3-30-145830",
+        "startMs": 145830,
+        "endMs": 148670,
+        "text": "speeds. So by the early 1900s, radioactive decay was"
+      },
+      {
+        "id": "youtube-json3-31-148670",
+        "startMs": 148670,
+        "endMs": 154580,
+        "text": "understood, and the crisis of the immutable atom was as deep as the crisis of the ether."
+      },
+      {
+        "id": "youtube-json3-32-154580",
+        "startMs": 154580,
+        "endMs": 158690,
+        "text": "A bunch of folks were investigating Maxwell’s equations and looking at black-body radiation,"
+      },
+      {
+        "id": "youtube-json3-33-158690",
+        "startMs": 158690,
+        "endMs": 161970,
+        "text": "or the heat emitted by dark objects when they absorb light."
+      },
+      {
+        "id": "youtube-json3-34-161970",
+        "startMs": 161970,
+        "endMs": 166650,
+        "text": "Then Heinrich Hertz, the original radio wave guy, discovered the photoelectric effect,"
+      },
+      {
+        "id": "youtube-json3-35-166650",
+        "startMs": 166650,
+        "endMs": 172040,
+        "text": "or the paradox that certain metals produce electrical currents when zapped with wavelengths"
+      },
+      {
+        "id": "youtube-json3-36-172040",
+        "startMs": 172040,
+        "endMs": 176790,
+        "text": "of light above a certain threshold. Things started to get messy. Energy was thought"
+      },
+      {
+        "id": "youtube-json3-37-176790",
+        "startMs": 176790,
+        "endMs": 181890,
+        "text": "to be a continuous wave. But according to wave-based theory, there might be infinite"
+      },
+      {
+        "id": "youtube-json3-38-181890",
+        "startMs": 181890,
+        "endMs": 187440,
+        "text": "energy radiated back by black bodies zapped with certain wavelengths. This seemingly violated"
+      },
+      {
+        "id": "youtube-json3-39-187440",
+        "startMs": 187440,
+        "endMs": 194230,
+        "text": "the newly established laws of thermodynamics. Like, infinite energy doesn't seem right. So, in trying to explain the weird results"
+      },
+      {
+        "id": "youtube-json3-40-194230",
+        "startMs": 194230,
+        "endMs": 199250,
+        "text": "about light and heat, German physicist Max Planck theorized that light"
+      },
+      {
+        "id": "youtube-json3-41-199250",
+        "startMs": 199250,
+        "endMs": 206140,
+        "text": "may not be a wave after all, but a series of particles or quantum units. All very non-“classical.”"
+      },
+      {
+        "id": "youtube-json3-42-206140",
+        "startMs": 206140,
+        "endMs": 210530,
+        "text": "Sorry, Aristotle! Check out Crash Course: Physics for more about"
+      },
+      {
+        "id": "youtube-json3-43-210530",
+        "startMs": 210530,
+        "endMs": 213230,
+        "text": "quantum weirdness! Enter Albert."
+      },
+      {
+        "id": "youtube-json3-44-213230",
+        "startMs": 213230,
+        "endMs": 219150,
+        "text": "Einstein was born in 1879 and grew up in southern Germany, Italy, and Switzerland. He dropped"
+      },
+      {
+        "id": "youtube-json3-45-219150",
+        "startMs": 219150,
+        "endMs": 223840,
+        "text": "out of high school, then studied to teach physics and math and became a Swiss citizen."
+      },
+      {
+        "id": "youtube-json3-46-223840",
+        "startMs": 223840,
+        "endMs": 226420,
+        "text": "But he couldn’t get a teaching job—because he was Jewish."
+      },
+      {
+        "id": "youtube-json3-47-226420",
+        "startMs": 226420,
+        "endMs": 231860,
+        "text": "So in 1901 he took a job at the patent office and started a Ph.D. at the University of Zurich,"
+      },
+      {
+        "id": "youtube-json3-48-231860",
+        "startMs": 231860,
+        "endMs": 235790,
+        "text": "which he finished in 1905. You’re going to want to remember that year…. 1905."
+      },
+      {
+        "id": "youtube-json3-49-235790",
+        "startMs": 235790,
+        "endMs": 242070,
+        "text": "Now, Al wasn’t an academic hotshot or self-funded amateur. He was a working-class nobody who"
+      },
+      {
+        "id": "youtube-json3-50-242070",
+        "startMs": 242070,
+        "endMs": 247600,
+        "text": "did physics on the side. But he was also a patent officer who spent his days pouring"
+      },
+      {
+        "id": "youtube-json3-51-247600",
+        "startMs": 247600,
+        "endMs": 251390,
+        "text": "over technical documents. He was an outsider obsessed with math because"
+      },
+      {
+        "id": "youtube-json3-52-251390",
+        "startMs": 251390,
+        "endMs": 256989,
+        "text": "math is beautiful, and yet he was a deeply practical person who believed that good math"
+      },
+      {
+        "id": "youtube-json3-53-256989",
+        "startMs": 256989,
+        "endMs": 261340,
+        "text": "and science could be communicated plainly. Plus, he was young and bold. And he had a"
+      },
+      {
+        "id": "youtube-json3-54-261340",
+        "startMs": 261340,
+        "endMs": 265240,
+        "text": "super smart and supportive first wife, Serbian mathematician Mileva Marić."
+      },
+      {
+        "id": "youtube-json3-55-265240",
+        "startMs": 265240,
+        "endMs": 268540,
+        "text": "So, the year he finished his Ph.D., 1905,"
+      },
+      {
+        "id": "youtube-json3-56-268560",
+        "startMs": 268560,
+        "endMs": 274240,
+        "text": "Al published his dissertation and four papers that changed physics overnight. This was his"
+      },
+      {
+        "id": "youtube-json3-57-274249",
+        "startMs": 274249,
+        "endMs": 279169,
+        "text": "annus mirabilis or miracle year, like 1666 had been for Newton."
+      },
+      {
+        "id": "youtube-json3-58-279169",
+        "startMs": 279169,
+        "endMs": 283460,
+        "text": "Help us out, ThoughtBubble. At age twenty six, Einstein published revolutionary"
+      },
+      {
+        "id": "youtube-json3-59-283460",
+        "startMs": 283460,
+        "endMs": 284759,
+        "text": "work on:"
+      },
+      {
+        "id": "youtube-json3-60-284759",
+        "startMs": 284759,
+        "endMs": 289210,
+        "text": "1. Brownian motion, or the random motion of particles in fluids;"
+      },
+      {
+        "id": "youtube-json3-61-289210",
+        "startMs": 289210,
+        "endMs": 295039,
+        "text": "2. the photoelectric effect, supporting the idea of energy as a series of particles, not a wave;"
+      },
+      {
+        "id": "youtube-json3-62-295039",
+        "startMs": 295039,
+        "endMs": 299659,
+        "text": "3. the equivalence of mass and energy; and"
+      },
+      {
+        "id": "youtube-json3-63-299659",
+        "startMs": 299659,
+        "endMs": 300870,
+        "text": "4.special relativity."
+      },
+      {
+        "id": "youtube-json3-64-300870",
+        "startMs": 300870,
+        "endMs": 305659,
+        "text": "Special relativity, especially made Einstein a scientific rock star. He proved that nothing"
+      },
+      {
+        "id": "youtube-json3-65-305659",
+        "startMs": 305659,
+        "endMs": 310969,
+        "text": "can move faster than light. This explained why Michelson and Morley hadn’t observed"
+      },
+      {
+        "id": "youtube-json3-66-310969",
+        "startMs": 310969,
+        "endMs": 316610,
+        "text": "light slowing in ether. And a lot of other things. Einstein got rid of all reference frames for"
+      },
+      {
+        "id": "youtube-json3-67-316610",
+        "startMs": 316610,
+        "endMs": 321870,
+        "text": "space and time. There was no longer some universal space in which physics happened. All measurements"
+      },
+      {
+        "id": "youtube-json3-68-321870",
+        "startMs": 321870,
+        "endMs": 325710,
+        "text": "became relative to the position and speed of the observer."
+      },
+      {
+        "id": "youtube-json3-69-325710",
+        "startMs": 325710,
+        "endMs": 331689,
+        "text": "Space and time became one mathematically continuous spacetime. So an event at one time for observer"
+      },
+      {
+        "id": "youtube-json3-70-331689",
+        "startMs": 331689,
+        "endMs": 335439,
+        "text": "A could take place at a completely different time for observer B."
+      },
+      {
+        "id": "youtube-json3-71-335439",
+        "startMs": 335439,
+        "endMs": 339830,
+        "text": "And the only constant in the entire system became the speed of light—which classical"
+      },
+      {
+        "id": "youtube-json3-72-339830",
+        "startMs": 339830,
+        "endMs": 343669,
+        "text": "physics predicted could change! From special relativity followed the equivalence"
+      },
+      {
+        "id": "youtube-json3-73-343669",
+        "startMs": 343669,
+        "endMs": 349129,
+        "text": "of mass and energy proof. Which was also mind-blowing. It’s probably the most memorable physics"
+      },
+      {
+        "id": "youtube-json3-74-349129",
+        "startMs": 349129,
+        "endMs": 354990,
+        "text": "formula ever, since it’s printed on mugs and T-shirts the world over: E = mc2. Or,"
+      },
+      {
+        "id": "youtube-json3-75-354990",
+        "startMs": 354990,
+        "endMs": 360309,
+        "text": "energy equals mass times the speed of light, squared. Or, mass and energy can be converted"
+      },
+      {
+        "id": "youtube-json3-76-360309",
+        "startMs": 360309,
+        "endMs": 364139,
+        "text": "into each other! Or, as Einstein said: “…mass and energy"
+      },
+      {
+        "id": "youtube-json3-77-364139",
+        "startMs": 364139,
+        "endMs": 369780,
+        "text": "are both but different manifestations of the same thing—a somewhat unfamiliar conception"
+      },
+      {
+        "id": "youtube-json3-78-369780",
+        "startMs": 369780,
+        "endMs": 372830,
+        "text": "for the average mind.” Now, it’s important to note that Einstein’s"
+      },
+      {
+        "id": "youtube-json3-79-372830",
+        "startMs": 372830,
+        "endMs": 378009,
+        "text": "new system of physics is simply a different system than Netwon’s. “Mass” and “energy”"
+      },
+      {
+        "id": "youtube-json3-80-378009",
+        "startMs": 378009,
+        "endMs": 382590,
+        "text": "mean something different in the two systems—because, to put it bluntly, Newton’s system turns"
+      },
+      {
+        "id": "youtube-json3-81-382590",
+        "startMs": 382590,
+        "endMs": 387900,
+        "text": "out to be not so universal. It only seems to work on earth, because we aren’t particularly"
+      },
+      {
+        "id": "youtube-json3-82-387900",
+        "startMs": 387900,
+        "endMs": 390590,
+        "text": "massive or fast-moving, compared to stars."
+      },
+      {
+        "id": "youtube-json3-83-390590",
+        "startMs": 390590,
+        "endMs": 395559,
+        "text": "Thanks Thought Bubble. We don’t have time to explain all of the cool science that Einstein"
+      },
+      {
+        "id": "youtube-json3-84-395559",
+        "startMs": 395559,
+        "endMs": 400639,
+        "text": "and his generation of physicists did around World War One, but two things stand out:"
+      },
+      {
+        "id": "youtube-json3-85-400639",
+        "startMs": 400639,
+        "endMs": 405750,
+        "text": "In 1915, Einstein published the theory of general relativity. Special relativity was"
+      },
+      {
+        "id": "youtube-json3-86-405750",
+        "startMs": 405750,
+        "endMs": 410469,
+        "text": "all about comparing physical effects from different observer positions in terms of velocity,"
+      },
+      {
+        "id": "youtube-json3-87-410469",
+        "startMs": 410469,
+        "endMs": 415150,
+        "text": "or speed in a particular direction. General relativity provided all of the complicated"
+      },
+      {
+        "id": "youtube-json3-88-415150",
+        "startMs": 415150,
+        "endMs": 420189,
+        "text": "math regarding relativity and acceleration, or speeding up or down."
+      },
+      {
+        "id": "youtube-json3-89-420189",
+        "startMs": 420189,
+        "endMs": 425129,
+        "text": "General relativity explains the physics of all situations. Special relativity is one"
+      },
+      {
+        "id": "youtube-json3-90-425129",
+        "startMs": 425129,
+        "endMs": 430259,
+        "text": "specific case of general relativity. nailed the coffin shut"
+      },
+      {
+        "id": "youtube-json3-91-430259",
+        "startMs": 430259,
+        "endMs": 436180,
+        "text": "on the classical, Euclidean worldview: now gravity itself was shown not to be a force like light,"
+      },
+      {
+        "id": "youtube-json3-92-436180",
+        "startMs": 436180,
+        "endMs": 440529,
+        "text": "but an effect, a distortion in the shape of space due to mass…"
+      },
+      {
+        "id": "youtube-json3-93-440529",
+        "startMs": 440529,
+        "endMs": 445470,
+        "text": "So the planets didn’t follow certain paths because of the attraction of the sun’s gravity,"
+      },
+      {
+        "id": "youtube-json3-94-445470",
+        "startMs": 445470,
+        "endMs": 449830,
+        "text": "but because the space before them was curved by the sun’s mass."
+      },
+      {
+        "id": "youtube-json3-95-449830",
+        "startMs": 449830,
+        "endMs": 455280,
+        "text": "Einstein’s universe wasn’t a series of perfect spheres in an ether, but a void whose"
+      },
+      {
+        "id": "youtube-json3-96-455280",
+        "startMs": 455280,
+        "endMs": 459960,
+        "text": "very dimensions—whose rules, basically, other than the speed of light—could change."
+      },
+      {
+        "id": "youtube-json3-97-459960",
+        "startMs": 459960,
+        "endMs": 464710,
+        "text": "Many of his colleagues initially objected to this, but Einstein was confident—and"
+      },
+      {
+        "id": "youtube-json3-98-464710",
+        "startMs": 464710,
+        "endMs": 469990,
+        "text": "patient. Astronomers awaited a solar eclipse in 1919, that allowed them to experimentally"
+      },
+      {
+        "id": "youtube-json3-99-469990",
+        "startMs": 469990,
+        "endMs": 471960,
+        "text": "confirm Einstein’s theory."
+      },
+      {
+        "id": "youtube-json3-100-471960",
+        "startMs": 471960,
+        "endMs": 477500,
+        "text": "The confirmation of gravitational lensing made Einstein a scientific hero and an icon of"
+      },
+      {
+        "id": "youtube-json3-101-477509",
+        "startMs": 477509,
+        "endMs": 483069,
+        "text": "pop culture. As The Times of London reported, “Newtonian Ideas Overthrown.”"
+      },
+      {
+        "id": "youtube-json3-102-483069",
+        "startMs": 483069,
+        "endMs": 487090,
+        "text": "The second major act of science Einstein did around World War One was contribute to the"
+      },
+      {
+        "id": "youtube-json3-103-487090",
+        "startMs": 487090,
+        "endMs": 493039,
+        "text": "birth of modern particle physics. This story is about, in part, Einstein getting it wrong."
+      },
+      {
+        "id": "youtube-json3-104-493039",
+        "startMs": 493039,
+        "endMs": 496770,
+        "text": "In 1911, Ernest Rutherford and Danish physicist Niels Bohr [“NEELS BOAR”] theorized a"
+      },
+      {
+        "id": "youtube-json3-105-496770",
+        "startMs": 496770,
+        "endMs": 502800,
+        "text": "model of the atom with electrons zipping around a heavy nucleus. Scientists began to study"
+      },
+      {
+        "id": "youtube-json3-106-502800",
+        "startMs": 502800,
+        "endMs": 508050,
+        "text": "the physics of the very small, just as Einstein was working out the physics of the very large."
+      },
+      {
+        "id": "youtube-json3-107-508050",
+        "startMs": 508050,
+        "endMs": 513209,
+        "text": "But over the 1920s, these particle physicists saw a lot of weird quantum or particle-like"
+      },
+      {
+        "id": "youtube-json3-108-513209",
+        "startMs": 513209,
+        "endMs": 516300,
+        "text": "effects. Basically, Bohr’s Copenhagen group showed"
+      },
+      {
+        "id": "youtube-json3-109-516300",
+        "startMs": 516300,
+        "endMs": 521690,
+        "text": "that very small particles tend to act like particles sometimes but like waves at other"
+      },
+      {
+        "id": "youtube-json3-110-521690",
+        "startMs": 521690,
+        "endMs": 527019,
+        "text": "times. Like waves, their behaviors have probabilities. But when measured, individual particles are,"
+      },
+      {
+        "id": "youtube-json3-111-527019",
+        "startMs": 527019,
+        "endMs": 532519,
+        "text": "well particles. They are or aren’t there. In 1926, two German physicists worked out"
+      },
+      {
+        "id": "youtube-json3-112-532519",
+        "startMs": 532519,
+        "endMs": 538190,
+        "text": "the math behind these quantum mechanics: Werner Heisenberg invented matrix mechanics, which"
+      },
+      {
+        "id": "youtube-json3-113-538190",
+        "startMs": 538190,
+        "endMs": 544660,
+        "text": "[large exhale] are complex and Erwin Schrödinger, wave mechanics. And lots of dead/not-dead"
+      },
+      {
+        "id": "youtube-json3-114-544660",
+        "startMs": 544660,
+        "endMs": 548540,
+        "text": "cat jokes. Because, in 1927, Heisenberg proposed his"
+      },
+      {
+        "id": "youtube-json3-115-548540",
+        "startMs": 548540,
+        "endMs": 554220,
+        "text": "uncertainty principle: any observer can detect the position or velocity of any quantum particle,"
+      },
+      {
+        "id": "youtube-json3-116-554220",
+        "startMs": 554220,
+        "endMs": 559269,
+        "text": "at any given time interval, but not both at the same time."
+      },
+      {
+        "id": "youtube-json3-117-559269",
+        "startMs": 559269,
+        "endMs": 565149,
+        "text": "Einstein haaated this. He believed in a universe ordered by an ultimate rationality, and he"
+      },
+      {
+        "id": "youtube-json3-118-565149",
+        "startMs": 565149,
+        "endMs": 570300,
+        "text": "famously quipped, “God doesn’t play dice with the world.” But Al, who had contributed"
+      },
+      {
+        "id": "youtube-json3-119-570300",
+        "startMs": 570300,
+        "endMs": 576209,
+        "text": "in lots of ways to the emerging model of atoms and particles of energy, was wrong about uncertainty."
+      },
+      {
+        "id": "youtube-json3-120-576209",
+        "startMs": 576209,
+        "endMs": 581360,
+        "text": "By the 1930s, Einstein was easily the most famous scientist since Darwin. There was just"
+      },
+      {
+        "id": "youtube-json3-121-581360",
+        "startMs": 581360,
+        "endMs": 585079,
+        "text": "one problem. He was still Jewish. And living in Germany."
+      },
+      {
+        "id": "youtube-json3-122-585079",
+        "startMs": 585079,
+        "endMs": 590610,
+        "text": "So in 1933, Einstein renounced his German citizenship and took a professorship at Princeton."
+      },
+      {
+        "id": "youtube-json3-123-590610",
+        "startMs": 590610,
+        "endMs": 595769,
+        "text": "As a celebrity genius with intimate knowledge of the cutting-edge of German science—and"
+      },
+      {
+        "id": "youtube-json3-124-595769",
+        "startMs": 595769,
+        "endMs": 601440,
+        "text": "perfect hair—Einstein had the ears of politicians anxiously planning for another great war in"
+      },
+      {
+        "id": "youtube-json3-125-601440",
+        "startMs": 601440,
+        "endMs": 604090,
+        "text": "Europe. And, after one of his physicist buddies demonstrated"
+      },
+      {
+        "id": "youtube-json3-126-604090",
+        "startMs": 604090,
+        "endMs": 610060,
+        "text": "that an atom could be straight-up, stone-cold split open, Einstein felt that he had a moral"
+      },
+      {
+        "id": "youtube-json3-127-610060",
+        "startMs": 610060,
+        "endMs": 615880,
+        "text": "obligation to explain to the American establishment just how powerful atomic energy could be…"
+      },
+      {
+        "id": "youtube-json3-128-615880",
+        "startMs": 615880,
+        "endMs": 621370,
+        "text": "We’ll pick up this thread next time. Suffice to say, World War Two eventually ended,"
+      },
+      {
+        "id": "youtube-json3-129-621370",
+        "startMs": 621370,
+        "endMs": 625680,
+        "text": "and a new Cold War started—with scientific discovery, especially in the physics that"
+      },
+      {
+        "id": "youtube-json3-130-625680",
+        "startMs": 625680,
+        "endMs": 629810,
+        "text": "Einstein had created, as the new measuring stick of imperial might."
+      },
+      {
+        "id": "youtube-json3-131-629810",
+        "startMs": 629810,
+        "endMs": 635210,
+        "text": "Israel offered Einstein the presidency, which he turned down. He lived the rest of his life"
+      },
+      {
+        "id": "youtube-json3-132-635210",
+        "startMs": 635210,
+        "endMs": 639630,
+        "text": "in the home of technological innovation and “fat sandwiches”—New Jersey."
+      },
+      {
+        "id": "youtube-json3-133-639630",
+        "startMs": 639630,
+        "endMs": 644670,
+        "text": "Einstein always regretted that his work was used for violent ends. In fact, he was generally"
+      },
+      {
+        "id": "youtube-json3-134-644670",
+        "startMs": 644670,
+        "endMs": 650360,
+        "text": "skeptical of modernity. Way back during World War One, he wrote: “Our entire much-praised"
+      },
+      {
+        "id": "youtube-json3-135-650360",
+        "startMs": 650360,
+        "endMs": 655899,
+        "text": "technological progress, and civilization generally, could be compared to an axe in the hand of"
+      },
+      {
+        "id": "youtube-json3-136-655899",
+        "startMs": 655899,
+        "endMs": 659560,
+        "text": "a pathological criminal.” And yet, in the end, even the horrors of two"
+      },
+      {
+        "id": "youtube-json3-137-659560",
+        "startMs": 659560,
+        "endMs": 665319,
+        "text": "world wars never shook his faith that there was great meaning in the universe—a code"
+      },
+      {
+        "id": "youtube-json3-138-665319",
+        "startMs": 665319,
+        "endMs": 670310,
+        "text": "to be deciphered by science. He died never quite accepting quantum randomness,"
+      },
+      {
+        "id": "youtube-json3-139-670310",
+        "startMs": 670310,
+        "endMs": 673470,
+        "text": "and believing that, one day, humans would crack the code."
+      },
+      {
+        "id": "youtube-json3-140-673470",
+        "startMs": 673470,
+        "endMs": 678240,
+        "text": "Next time—the Americans use Einstein’s world-threatening Bomb, and warfare changes"
+      },
+      {
+        "id": "youtube-json3-141-678240",
+        "startMs": 678240,
+        "endMs": 684020,
+        "text": "forever. It’s the birth of nuclear physics, the end of World War Two, and the beginning"
+      },
+      {
+        "id": "youtube-json3-142-684020",
+        "startMs": 684020,
+        "endMs": 684740,
+        "text": "of the Cold War."
+      },
+      {
+        "id": "youtube-json3-143-684740",
+        "startMs": 684740,
+        "endMs": 687760,
+        "text": "Crash Course History of Science is filmed in the Dr. Cheryl C. Kinney studio"
+      },
+      {
+        "id": "youtube-json3-144-687760",
+        "startMs": 687760,
+        "endMs": 691520,
+        "text": "in Missoula, MT and it's made possible with the help of all these nice people."
+      },
+      {
+        "id": "youtube-json3-145-691520",
+        "startMs": 691520,
+        "endMs": 693520,
+        "text": "And our animation team is Thought Cafe."
+      },
+      {
+        "id": "youtube-json3-146-693520",
+        "startMs": 693520,
+        "endMs": 697420,
+        "text": "Crash Course is a Complexly production. If you wanna keep imagining the world complexly with us,"
+      },
+      {
+        "id": "youtube-json3-147-697420",
+        "startMs": 697420,
+        "endMs": 699420,
+        "text": "you can check out some of our other channels like"
+      },
+      {
+        "id": "youtube-json3-148-699420",
+        "startMs": 699420,
+        "endMs": 701900,
+        "text": "Scishow, Eons, and Sexplanations."
+      },
+      {
+        "id": "youtube-json3-149-701900",
+        "startMs": 701900,
+        "endMs": 707400,
+        "text": "And, if you'd like to keep Crash Course free for everyone forever, you can support the series at Patreon,"
+      },
+      {
+        "id": "youtube-json3-150-707400",
+        "startMs": 707400,
+        "endMs": 711780,
+        "text": "a crowd funding platform that allows you to support the content you love."
+      },
+      {
+        "id": "youtube-json3-151-711780",
+        "startMs": 711780,
+        "endMs": 716940,
+        "text": "Thank you to all of our Patrons for making Crash Course possible with your continued support."
+      }
+    ],
+    "sourceSegmentCount": 151,
+    "characterCount": 11758,
+    "transcriptFingerprint": "edae6d59",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 5,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "bc86a747-6207-4852-8486-207c1b93f73d",
+    "generationSessionId": "482eb51d-842c-41c9-869f-d88230c28473",
+    "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b",
+    "questionPlan": {
+      "seed": "1081c1f1310e6a21c3e3f8cc06cff1862fd668f698c727fb30757e0f44babc6b",
+      "types": [
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+        "true_false",
+        "multiple_choice"
+      ]
+    },
+    "promptFingerprint": "9abab846400f5dce21c6198a00356b9b928d41036686a8345b7eeb1a682cd52c",
+    "quiz": {
+      "title": "Einstein's Revolution: Crash Course History of Science #32",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "mass-energy equivalence",
+          "question": "What relationship does the equation E = mc² express?",
+          "retryQuestion": "Which statement correctly describes the relationship expressed by E = mc²?",
+          "explanation": "The equation states that energy equals mass times the speed of light squared, meaning mass and energy are interconvertible forms of the same underlying quantity.",
+          "type": "multiple_choice",
+          "choices": [
+            "Energy is converted into mass only, never mass into energy.",
+            "Mass and energy can be converted into each other.",
+            "Mass is converted into energy only, never energy into mass.",
+            "Mass and energy are independent and cannot be interconverted."
+          ],
+          "answerIndex": 1,
+          "answer": "Mass and energy can be converted into each other."
+        },
+        {
+          "id": "q2",
+          "concept": "Michelson-Morley experiment result",
+          "question": "The Michelson-Morley experiment found a change in the speed of light due to Earth's motion relative to the ether.",
+          "retryQuestion": "The Michelson-Morley experiment detected a variation in the speed of light caused by Earth's motion through the ether.",
+          "explanation": "The experiment expected a slight change in light's speed depending on its direction relative to Earth's motion through the ether, but no such change was observed, indicating that the speed of light is constant.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "The Michelson-Morley experiment found no change in the speed of light due to Earth's motion relative to the ether."
+        },
+        {
+          "id": "q3",
+          "concept": "Heisenberg uncertainty principle mechanism",
+          "question": "What limitation does the Heisenberg uncertainty principle place on measuring a quantum particle?",
+          "retryQuestion": "What cannot be simultaneously known about a quantum particle?",
+          "explanation": "The uncertainty principle states that an observer can determine either the position or the velocity of a quantum particle at a given time, but not both at the same time.",
+          "type": "short_answer",
+          "answer": "An observer can detect the position or velocity of a quantum particle, but not both at the same time.",
+          "rubricIdeas": [
+            "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+            ],
+            "acceptableAnswers": [
+              "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+            ]
+          }
+        },
+        {
+          "id": "q4",
+          "concept": "classical worldview absoluteness",
+          "question": "The classical worldview held that the rules governing space and time were absolute.",
+          "retryQuestion": "In the classical worldview, the rules governing space and time were absolute.",
+          "explanation": "This worldview treated measurements like length and duration as fixed and unchanging, independent of observer or situation.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "The classical worldview held that the rules governing space and time were absolute."
+        },
+        {
+          "id": "q5",
+          "concept": "Newtonian physics scope",
+          "question": "Under what condition does Newton's system of physics apply?",
+          "retryQuestion": "For which objects is Newton's system of physics applicable?",
+          "explanation": "Newton's system works only for objects that are not particularly massive or fast-moving, such as those on Earth.",
+          "type": "multiple_choice",
+          "choices": [
+            "It applies only to extremely massive objects like stars.",
+            "It applies only to objects moving near the speed of light.",
+            "It applies to all objects regardless of mass or speed.",
+            "It applies to objects that are not particularly massive or fast-moving."
+          ],
+          "answerIndex": 3,
+          "answer": "It applies to objects that are not particularly massive or fast-moving."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 7,
+      "retryCount": 2,
+      "inputTokens": 50469,
+      "outputTokens": 769,
+      "reasoningTokens": 0,
+      "elapsedMs": 15333,
+      "sourceSelection": {
+        "sentenceCount": 121,
+        "excludedSentenceCount": 7,
+        "candidateWindowCount": 93,
+        "selectedWindowCount": 30,
+        "focusWordCount": 140
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "mass-energy equivalence",
+      "question": "What relationship does the equation E = mc² express?",
+      "retryQuestion": "Which statement correctly describes the relationship expressed by E = mc²?",
+      "explanation": "The equation states that energy equals mass times the speed of light squared, meaning mass and energy are interconvertible forms of the same underlying quantity.",
+      "type": "multiple_choice",
+      "choices": [
+        "Energy is converted into mass only, never mass into energy.",
+        "Mass and energy can be converted into each other.",
+        "Mass is converted into energy only, never energy into mass.",
+        "Mass and energy are independent and cannot be interconverted."
+      ],
+      "answerIndex": 1,
+      "answer": "Mass and energy can be converted into each other."
+    },
+    {
+      "id": "q2",
+      "concept": "Michelson-Morley experiment result",
+      "question": "The Michelson-Morley experiment found a change in the speed of light due to Earth's motion relative to the ether.",
+      "retryQuestion": "The Michelson-Morley experiment detected a variation in the speed of light caused by Earth's motion through the ether.",
+      "explanation": "The experiment expected a slight change in light's speed depending on its direction relative to Earth's motion through the ether, but no such change was observed, indicating that the speed of light is constant.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "The Michelson-Morley experiment found no change in the speed of light due to Earth's motion relative to the ether."
+    },
+    {
+      "id": "q3",
+      "concept": "Heisenberg uncertainty principle mechanism",
+      "question": "What limitation does the Heisenberg uncertainty principle place on measuring a quantum particle?",
+      "retryQuestion": "What cannot be simultaneously known about a quantum particle?",
+      "explanation": "The uncertainty principle states that an observer can determine either the position or the velocity of a quantum particle at a given time, but not both at the same time.",
+      "type": "short_answer",
+      "answer": "An observer can detect the position or velocity of a quantum particle, but not both at the same time.",
+      "rubricIdeas": [
+        "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+        ],
+        "acceptableAnswers": [
+          "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+        ]
+      }
+    },
+    {
+      "id": "q4",
+      "concept": "classical worldview absoluteness",
+      "question": "The classical worldview held that the rules governing space and time were absolute.",
+      "retryQuestion": "In the classical worldview, the rules governing space and time were absolute.",
+      "explanation": "This worldview treated measurements like length and duration as fixed and unchanging, independent of observer or situation.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "The classical worldview held that the rules governing space and time were absolute."
+    },
+    {
+      "id": "q5",
+      "concept": "Newtonian physics scope",
+      "question": "Under what condition does Newton's system of physics apply?",
+      "retryQuestion": "For which objects is Newton's system of physics applicable?",
+      "explanation": "Newton's system works only for objects that are not particularly massive or fast-moving, such as those on Earth.",
+      "type": "multiple_choice",
+      "choices": [
+        "It applies only to extremely massive objects like stars.",
+        "It applies only to objects moving near the speed of light.",
+        "It applies to all objects regardless of mass or speed.",
+        "It applies to objects that are not particularly massive or fast-moving."
+      ],
+      "answerIndex": 3,
+      "answer": "It applies to objects that are not particularly massive or fast-moving."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "824b4c0d5c21b1701021cc28966f0f89b2d2196f5e3d20813da84188a1ad61dd"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "questionFingerprint": "12a9e424ec0fbb4dfff446e0fdcb9bb8b3d4747b2e58a4c33347ab86042b95a2"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "c5937c3272c4163cddde01e8184c959af9f9e01dfcd4c6f724127fcc528f814c"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "d95d00e3b4ffa1bfe94e30275b93431ca0deb69fc014f2e0612d0f8a5b821d7f"
+    },
+    {
+      "callIndex": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "b1a03e4e43d87db3fb10930ce4dcb6466ee018efa7c4843c389cee33ad05aebe"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "Mass and energy can be converted into each other.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that mass and energy are interchangeable, which is the key relationship expressed by E = mc².",
+        "matchedIdeas": [
+          "Mass and energy can be converted into each other."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the experiment found no change in the speed of light, which is the key point of the question.",
+        "matchedIdeas": [
+          "Correctly identifies the statement as false"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "An observer can detect the position or velocity of a quantum particle, but not both at the same time.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly captures the key limitation: you can measure either a particle's position or its velocity, but not both simultaneously.",
+        "matchedIdeas": [
+          "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the classical worldview treated the rules of space and time as absolute.",
+        "matchedIdeas": [
+          "Classical worldview held space and time rules as absolute"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "It applies to objects that are not particularly massive or fast-moving.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that Newton's physics applies to everyday objects that aren't extremely massive or moving near the speed of light.",
+        "matchedIdeas": [
+          "Newton's physics applies to objects that are not particularly massive or fast-moving"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "NgVSHXOz3jI"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 2325,
+      "videoId": "NgVSHXOz3jI",
+      "title": "Einstein's Revolution: Crash Course History of Science #32",
+      "language": "en",
+      "durationSeconds": 717,
+      "segmentCount": 151,
+      "sourceSegmentCount": 151,
+      "characterCount": 11758,
+      "transcriptFingerprint": "edae6d59",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 2325,
+      "questionCount": 5,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 5287,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 5319,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 8096,
+      "ordinal": 1,
+      "concept": "mass-energy equivalence",
+      "prompt": "What relationship does the equation E = mc² express?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 8097,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2809,
+      "inputTokens": 9724,
+      "outputTokens": 172,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8097,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 8113,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 8157,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 10003,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "true_false_compound_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 194,
+      "callElapsedMs": 1889
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10003,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 194,
+      "reasonCode": "true_false_compound_claim",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10228,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10281,
+      "callIndex": 2,
+      "ordinal": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12266,
+      "callIndex": 2,
+      "ordinal": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "true_false_compound_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 553,
+      "callElapsedMs": 2037
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12266,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "retryDelayMs": 553,
+      "reasonCode": "true_false_compound_claim",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12852,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12873,
+      "callIndex": 3,
+      "ordinal": 2,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 14798,
+      "ordinal": 2,
+      "concept": "Michelson-Morley experiment result",
+      "prompt": "The Michelson-Morley experiment found a change in the speed of light due to Earth's motion relative to the ether."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14799,
+      "callIndex": 3,
+      "ordinal": 2,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1947,
+      "inputTokens": 10281,
+      "outputTokens": 174,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14799,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14828,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14855,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 16743,
+      "ordinal": 3,
+      "concept": "Heisenberg uncertainty principle mechanism",
+      "prompt": "What limitation does the Heisenberg uncertainty principle place on measuring a quantum particle?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 16743,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1915,
+      "inputTokens": 10209,
+      "outputTokens": 177,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16743,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16777,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 16813,
+      "callIndex": 5,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 18372,
+      "ordinal": 4,
+      "concept": "classical worldview absoluteness",
+      "prompt": "The classical worldview held that the rules governing space and time were absolute."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 18373,
+      "callIndex": 5,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1595,
+      "inputTokens": 10072,
+      "outputTokens": 82,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18373,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18396,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 18494,
+      "callIndex": 6,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 20609,
+      "ordinal": 5,
+      "concept": "Newtonian physics scope",
+      "prompt": "Under what condition does Newton's system of physics apply?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 20610,
+      "callIndex": 6,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2213,
+      "inputTokens": 10183,
+      "outputTokens": 164,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20610,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "31dc948e-5010-498e-b3ba-a1075fc3014b"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 20610,
+      "accepted": 5,
+      "requested": 5,
+      "aiCalls": 7,
+      "retryCount": 2,
+      "generationElapsedMs": 15333,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 20610,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "Mass and energy can be converted into each other."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 22722,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that mass and energy are interchangeable, which is the key relationship expressed by E = mc².",
+      "matchedIdeas": [
+        "Mass and energy can be converted into each other."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 22722,
+      "ordinal": 2,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 24762,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the experiment found no change in the speed of light, which is the key point of the question.",
+      "matchedIdeas": [
+        "Correctly identifies the statement as false"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 24762,
+      "ordinal": 3,
+      "questionType": "short_answer",
+      "response": "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 26681,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly captures the key limitation: you can measure either a particle's position or its velocity, but not both simultaneously.",
+      "matchedIdeas": [
+        "An observer can detect the position or velocity of a quantum particle, but not both at the same time."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 26681,
+      "ordinal": 4,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 28871,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the classical worldview treated the rules of space and time as absolute.",
+      "matchedIdeas": [
+        "Classical worldview held space and time rules as absolute"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 28871,
+      "ordinal": 5,
+      "questionType": "multiple_choice",
+      "response": "It applies to objects that are not particularly massive or fast-moving."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 31090,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that Newton's physics applies to everyday objects that aren't extremely massive or moving near the speed of light.",
+      "matchedIdeas": [
+        "Newton's physics applies to objects that are not particularly massive or fast-moving"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

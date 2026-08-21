@@ -1,0 +1,99 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.001] SOURCE_STARTED videoId="O5nskjZ_GoI"
+[00:00.500] CAPTIONS_COMPLETE videoId="O5nskjZ_GoI" title="Early Computing: Crash Course Computer Science #1" language="en" durationSeconds=677 segmentCount=22 sourceSegmentCount=22 characterCount=13288 transcriptFingerprint="087746fa" acquisition="youtube_text_provider"
+[00:00.501] PLAN_REQUESTED questionCount=5 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:04.610] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:04.658] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:07.105] QUESTION_ACCEPTED ordinal=1 concept="slide rule function" prompt="What arithmetic operations does a slide rule assist with?"
+[00:07.105] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2495 inputTokens=9755 outputTokens=126 reasoningTokens=0
+[00:07.105] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="af8dab11-c1bc-44b5-aa8b-c4089b6e0492"
+[00:07.111] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:07.148] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:08.938] QUESTION_ACCEPTED ordinal=2 concept="abacus origin and function" prompt="The earliest recognized computing device was the abacus, invented in Mesopotamia around 2500 BCE."
+[00:08.938] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1826 inputTokens=9865 outputTokens=97 reasoningTokens=0
+[00:08.938] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="af8dab11-c1bc-44b5-aa8b-c4089b6e0492"
+[00:08.945] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:08.971] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:10.890] QUESTION_ACCEPTED ordinal=3 concept="Step Reckoner arithmetic operations" prompt="The Step Reckoner could only add and subtract numbers using mechanical tricks."
+[00:10.890] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1945 inputTokens=10373 outputTokens=124 reasoningTokens=0
+[00:10.890] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="af8dab11-c1bc-44b5-aa8b-c4089b6e0492"
+[00:10.901] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:10.925] AI_CALL_STARTED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:12.757] QUESTION_ACCEPTED ordinal=4 concept="astrolabe method" prompt="How did the astrolabe help ships navigate at sea?"
+[00:12.758] AI_CALL_COMPLETED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1856 inputTokens=10085 outputTokens=167 reasoningTokens=0
+[00:12.758] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="af8dab11-c1bc-44b5-aa8b-c4089b6e0492"
+[00:12.772] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:12.797] AI_CALL_STARTED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:14.899] QUESTION_ACCEPTED ordinal=5 concept="abacus motivation" prompt="Why was the abacus created?"
+[00:14.899] AI_CALL_COMPLETED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2127 inputTokens=10341 outputTokens=172 reasoningTokens=0
+[00:14.899] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="af8dab11-c1bc-44b5-aa8b-c4089b6e0492"
+[00:14.901] BANK_COMPLETE accepted=5 requested=5 aiCalls=5 retryCount=0 generationElapsedMs=10337 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: slide rule function
+Prompt: What arithmetic operations does a slide rule assist with?
+Retry prompt: Which operations is a slide rule designed to help perform?
+A. Trigonometric functions
+B. Square roots and cube roots
+C. Multiplication and division
+D. Addition and subtraction
+Correct answer: C. Multiplication and division
+Explanation: The slide rule is a computing device that assists with multiplication and division.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=d0eb134af9077c075ca0761e809a16eed0cbabe872e94d4e446455009e823d5d
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — TRUE_FALSE
+Concept: abacus origin and function
+Prompt: The earliest recognized computing device was the abacus, invented in Mesopotamia around 2500 BCE.
+Retry prompt: The abacus, invented in Mesopotamia around 2500 BCE, is recognized as the earliest computing device.
+Correct answer: True
+Correction: The earliest recognized computing device was the abacus, invented in Mesopotamia around 2500 BCE.
+Explanation: The abacus is a hand-operated calculator that helps add and subtract many numbers and stores the current state of the computation.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=2ef243b863c2dc78eeb0e599ed4cdeee039cd6888913910218e86df6cbfcac43
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 3 — TRUE_FALSE
+Concept: Step Reckoner arithmetic operations
+Prompt: The Step Reckoner could only add and subtract numbers using mechanical tricks.
+Retry prompt: The Step Reckoner was limited to addition and subtraction operations.
+Correct answer: False
+Correction: The Step Reckoner could multiply and divide numbers using mechanical tricks.
+Explanation: The Step Reckoner could perform multiplication and division, not just addition and subtraction, by using mechanical tricks.
+AI provenance: call=2 attempt=1 classification=primary fingerprint=682a66fd5207b7e96f1070f3d13cd06b7cfe8360643bee22d18654162312bd0a
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=NOTICE | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 4 — MULTIPLE_CHOICE
+Concept: astrolabe method
+Prompt: How did the astrolabe help ships navigate at sea?
+Retry prompt: What method did the astrolabe provide for ships to determine their position at sea?
+A. It enabled ships to calculate their latitude at sea.
+B. It enabled ships to calculate their longitude at sea.
+C. It enabled ships to predict the weather at sea.
+D. It enabled ships to measure their speed through the water.
+Correct answer: A. It enabled ships to calculate their latitude at sea.
+Explanation: The astrolabe enabled ships to calculate their latitude at sea, which helped them determine their north-south position.
+AI provenance: call=3 attempt=1 classification=primary fingerprint=02cd36804beef1326728bc988721325d27a6f9fe60fd8959f5878ee6dcd88e6e
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 5 — SHORT_ANSWER
+Concept: abacus motivation
+Prompt: Why was the abacus created?
+Retry prompt: What societal condition led to the creation of the abacus?
+Reference answer: The abacus was created because the scale of society had become greater than what a single person could keep and manipulate in their mind.
+Rubric ideas: The abacus was created because the scale of society had become greater than what a single person could keep and manipulate in their mind.
+Short-answer mode: proposition
+Explanation: The abacus was created because the scale of society had grown beyond what a single person could keep and manipulate in their mind.
+AI provenance: call=4 attempt=1 classification=primary fingerprint=1f4086e560220b2708a3dd6402ca95d0a545555a9adcf3f46448b6fea389fdaf
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:14.901] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="Multiplication and division"
+[00:17.184] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="Your response correctly identifies that a slide rule is primarily used for multiplication and division, which is the key arithmetic operation it assists with." matchedIdeas=["Multiplication and division"] source="deepseek_local"
+[00:17.184] GRADE_STARTED ordinal=2 questionType="true_false" response="True"
+[00:19.244] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Correct — the abacus is indeed recognized as one of the earliest computing devices, originating in Mesopotamia around 2500 BCE." matchedIdeas=["abacus as earliest recognized computing device","invented in Mesopotamia around 2500 BCE"] source="deepseek_local"
+[00:19.244] GRADE_STARTED ordinal=3 questionType="true_false" response="False"
+[00:21.815] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="The response correctly identifies that the statement is false, as the Step Reckoner could also multiply, divide, and extract square roots, not just add and subtract." matchedIdeas=["The Step Reckoner could perform more than just addition and subtraction"] source="deepseek_local"
+[00:21.815] GRADE_STARTED ordinal=4 questionType="multiple_choice" response="It enabled ships to calculate their latitude at sea."
+[00:24.009] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your response correctly identifies that the astrolabe helped sailors determine their latitude by measuring the sun's or stars' position." matchedIdeas=["The astrolabe enabled ships to calculate their latitude at sea."] source="deepseek_local"
+[00:24.009] GRADE_STARTED ordinal=5 questionType="short_answer" response="The abacus was created because the scale of society had become greater than what a single person could keep and manipulate in their mind."
+[00:26.479] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="The response correctly identifies that the abacus was created to handle calculations too complex for mental arithmetic as society grew." matchedIdeas=["The abacus was created because society's scale exceeded what one person could keep in mind"] source="deepseek_local"

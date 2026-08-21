@@ -218,7 +218,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.17",
+            version: outdated ? "0.8.30" : "0.8.31",
             configured: true,
             capabilities: outdated
               ? []
@@ -731,7 +731,7 @@ test("requires the local caption extension and reconnects automatically", async 
   await page.reload();
 
   await expect(
-    page.getByRole("heading", { name: "Install the Chrome extension" }),
+    page.getByRole("heading", { name: "Install ClipQuest" }),
   ).toBeVisible();
   await expect(page.getByTestId("download-caption-extension")).toBeVisible();
   await expect(
@@ -743,7 +743,7 @@ test("requires the local caption extension and reconnects automatically", async 
   );
   await page.getByTestId("check-caption-extension").click();
   await expect(
-    page.getByRole("heading", { name: "Install the Chrome extension" }),
+    page.getByRole("heading", { name: "Install ClipQuest" }),
   ).toBeHidden();
   await expect(page).toHaveURL(/\/$/);
   await expect(
@@ -764,10 +764,10 @@ test("an older extension is gated until question streaming is available", async 
   await page.reload();
 
   await expect(
-    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+    page.getByRole("heading", { name: "Update ClipQuest" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.17 or newer", { exact: false }),
+    page.getByText("0.8.31 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -775,7 +775,7 @@ test("an older extension is gated until question streaming is available", async 
   );
   await page.getByTestId("check-caption-extension").click();
   await expect(
-    page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
+    page.getByRole("heading", { name: "Update ClipQuest" }),
   ).toBeHidden();
 });
 
@@ -978,7 +978,7 @@ test("legacy retry-required quizzes recover automatically from the authoritative
   await page.goto(`/quiz/${ATTEMPT_ID}`);
 
   await expect(page.getByTestId("question-stream-indicator")).toContainText(
-    "Recovering legacy generation automatically · 3/5 ready",
+    "Automatically generating the remaining questions · 3/5 ready",
   );
   await expect(
     page.getByRole("button", { name: "Continue generating" }),
@@ -2060,8 +2060,8 @@ async function installMocks(page: Page): Promise<Scenario> {
           supportedProfile: "prompt_first_auto_v5_12",
           supportedPromptVersion: "quiz-local-json-stream-v5.12",
           supportedValidatorVersion: "validator-minimal-gradeability-v5.3",
-          effectiveDefaultProfile: "concept_first_auto_v5_8",
-          requiredExtensionVersion: "0.8.17",
+          effectiveDefaultProfile: "stable_non_thinking_v5_2",
+          requiredExtensionVersion: "0.8.31",
           requiredCapability: "question-stream-v7",
           states: {
             generating: 2,

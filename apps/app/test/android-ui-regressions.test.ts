@@ -49,7 +49,7 @@ describe("Android UI regressions", () => {
     expect(verification).toContain('variant="ghost"');
   });
 
-  it("does not claim native captions are ready while prework is pending", () => {
+  it("keeps caption gating without showing a warning card", () => {
     const creation = source("app/create/[videoId].tsx");
     const generation = source("app/generation/[videoId].tsx");
     const localClient = source(
@@ -57,14 +57,32 @@ describe("Android UI regressions", () => {
     );
 
     expect(creation).toContain('nativeCaptionState === "running"');
-    expect(creation).toContain('t("sourceCaptionsPreparing")');
     expect(creation).toContain("loading={captionsPending}");
+    expect(creation).toContain("disabled={captionsBlocked}");
+    expect(creation).not.toContain("captionStatus");
+    expect(creation).not.toContain("sourceCaptionsUnavailable");
     expect(creation).toContain(
       "The local-client probe is diagnostic. It may wait on native",
     );
-    expect(generation).toContain('"privateTranscriptionAndroid"');
+    expect(generation).toContain('"captionPrivacyNative"');
     expect(generation).toContain('label: t("checkingCaptions")');
+    expect(localClient).toContain("globalThis.fetch.bind(globalThis)");
+    expect(localClient).toContain("createLocalCrypto([");
+    expect(localClient).not.toContain("requireNativeModule");
+    expect(localClient).not.toContain("nativeExpoCrypto");
+    expect(localClient).not.toContain("import * as ExpoCrypto");
     expect(localClient).toContain("disableStreaming: true");
+  });
+
+  it("assumes the learner watched the video on every shared client", () => {
+    const creation = source("app/create/[videoId].tsx");
+    const generation = source("app/generation/[videoId].tsx");
+
+    expect(creation).not.toContain("watchedQuestion");
+    expect(creation).not.toContain("setWatched");
+    expect(creation).toContain("watched: true");
+    expect(generation).not.toContain("params.watched");
+    expect(generation).toContain("{ watched: true }");
   });
 
   it("never calls browser focus listeners from a native quiz", () => {
@@ -111,5 +129,22 @@ describe("Android UI regressions", () => {
     expect(videoCard).not.toContain("event.stopPropagation()");
     expect(videoCard).toContain('accessibilityRole="text"');
     expect(videoCard).not.toContain("onPress={() => undefined}");
+  });
+
+  it("keeps an explicit PDF action on the quiz completion screen", () => {
+    const quiz = readFileSync(
+      resolve(appRoot, "app/quiz/[attemptId].tsx"),
+      "utf8",
+    );
+    expect(quiz).toContain('testID="download-cheat-sheet-pdf"');
+    expect(quiz).toContain('t("downloadPdf")');
+    expect(quiz).toContain('t("preparingPdf")');
+    expect(quiz).toContain('t("retryPdf")');
+  });
+
+  it("omits empty AI sections from exported cheat sheets", () => {
+    const cheatSheet = source("src/lib/cheat-sheet.ts");
+
+    expect(cheatSheet).toContain("if (section[1].length === 0) continue;");
   });
 });
