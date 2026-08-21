@@ -26,7 +26,7 @@ const PROTOCOL_VERSION = 9;
 const GROUNDED_PROTOCOL_VERSION = 8;
 const PIPELINE_VERSION = 9;
 const PROMPT_VERSION = "quiz-local-json-stream-v5.8";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.9";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.10";
 const IMPORT_VERSION = "extension-progressive-import-v7";
 const GENERATION_PROFILE = "concept_first_auto_v5_8";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
@@ -3538,6 +3538,7 @@ async function generateAutomaticQuiz({
       lastStreamActivityElapsedMs: undefined,
     };
     const acceptedBeforeCall = acceptedQuestions.length;
+    let publishedQuestionFingerprint;
     const publishQuestion = async (rawQuestion, relativeIndex) => {
       if (relativeIndex !== 0 || acceptedQuestions.length !== questionOffset) {
         validationFailure(
@@ -3546,6 +3547,7 @@ async function generateAutomaticQuiz({
         );
       }
       const validated = validateQuiz({ questions: [rawQuestion] }, chunkInput);
+      publishedQuestionFingerprint = JSON.stringify(rawQuestion);
       const question = randomizeQuestionAtPosition(
         validated.questions[0],
         answerPositionByQuestion.get(questionOffset),
@@ -3603,7 +3605,22 @@ async function generateAutomaticQuiz({
           });
         },
       );
-      validateQuiz(result.quiz, chunkInput);
+      // The incremental parser already validated the exact closed singleton
+      // before it was persisted. Re-running semantic construction after the
+      // root object closes can disagree with that accepted view and produce a
+      // false failed lifecycle. Instead, prove the final root contains the
+      // same byte-for-byte question object that was streamed and validated.
+      if (
+        !Array.isArray(result.quiz?.questions) ||
+        result.quiz.questions.length !== 1 ||
+        JSON.stringify(result.quiz.questions[0]) !==
+          publishedQuestionFingerprint
+      ) {
+        validationFailure(
+          "DeepSeek changed the singleton after it was streamed.",
+          "schema_invalid",
+        );
+      }
       if (acceptedQuestions.length !== acceptedBeforeCall + 1) {
         validationFailure(
           "DeepSeek did not stream the requested singleton question.",

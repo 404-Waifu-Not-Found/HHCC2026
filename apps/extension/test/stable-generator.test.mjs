@@ -941,7 +941,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
 
   assert.equal(result.protocolVersion, 9);
   assert.equal(result.promptVersion, "quiz-local-json-stream-v5.8");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.9");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.10");
   assert.equal(result.importVersion, "extension-progressive-import-v7");
   assert.equal(result.generationProfile, "concept_first_auto_v5_8");
   assert.match(result.promptFingerprint, /^[a-f0-9]{64}$/u);
@@ -1077,6 +1077,35 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
   );
 });
 
+test("v5.8 does not revalidate an already persisted streamed singleton", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => conceptFirstResponse(init.body);
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 0);
+  assert.equal(calls.length, 10);
+  assert.ok(
+    calls
+      .filter((event) => event.lifecycleState === "completed")
+      .every(
+        (event) => event.outcome === "complete" && event.acceptedCount === 1,
+      ),
+  );
+});
+
 test("v5.8 does not retry source wording confined to private MC validation aids", async (context) => {
   const originalFetch = globalThis.fetch;
   const calls = [];
@@ -1134,7 +1163,7 @@ test("v5.8 rejects a pre-release continuation with a different prompt fingerprin
             startIndex: 1,
             resultProtocolVersion: 9,
             promptVersion: "quiz-local-json-stream-v5.8",
-            validatorVersion: "validator-local-progressive-v4.9",
+            validatorVersion: "validator-local-progressive-v4.10",
             promptFingerprint: "0".repeat(64),
             generationProfile: "concept_first_auto_v5_8",
             acceptedQuestions: [
@@ -1277,7 +1306,7 @@ test("v5.8 repairs a relationship answer that drops its directional qualifier", 
     startIndex: 4,
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
-    validatorVersion: "validator-local-progressive-v4.9",
+    validatorVersion: "validator-local-progressive-v4.10",
     promptFingerprint: createHash("sha256")
       .update(CONCEPT_FIRST_SYSTEM_PROMPT)
       .digest("hex"),
