@@ -614,9 +614,12 @@ export default function QuizScreen() {
                 {t("primerTitle")}
               </Text>
             </View>
-            <Text selectable style={[styles.primerText, { color: theme.text }]}>
+            <MathText
+              selectable
+              style={[styles.primerText, { color: theme.text }]}
+            >
               {primer}
-            </Text>
+            </MathText>
           </Surface>
         </MotionView>
         <MotionView preset="rise" delay={140} style={styles.primerButton}>
@@ -850,9 +853,9 @@ function QuestionInput({
                 {position + 1}
               </Text>
             </View>
-            <Text style={[styles.orderText, { color: theme.text }]}>
-              {question.items?.[itemIndex]}
-            </Text>
+            <MathText style={[styles.orderText, { color: theme.text }]}>
+              {question.items?.[itemIndex] ?? ""}
+            </MathText>
             <View style={styles.orderActions}>
               <IconButton
                 label={t("moveUp")}

@@ -55,6 +55,11 @@ const STANDALONE_MATH_IDENTIFIERS = new Set([
 export function isMathExpressionText(value: string): boolean {
   const compact = value.normalize("NFC").replace(/\s+/g, " ").trim();
   if (!compact || compact.length > 700) return false;
+  const hasExplicitMath =
+    /\$[^$\n]+\$|\\\([^\n]+?\\\)/u.test(compact) ||
+    /\b[\p{L}][\p{L}\p{M}\p{N}_']*\s+(?:approaches|tends\s+to)\s+(?:[+\-]?\d+(?:\.\d+)?|infinity|∞)\b/iu.test(
+      compact,
+    );
   const hasOperator = /(?:[=+*/^×÷≤≥≈]|\s-\s|->|<=|>=)/u.test(compact);
   const hasOperand = /[\p{L}\p{N}][\p{L}\p{N}_']*\s*(?:\([^)]*\))?/u.test(
     compact,
@@ -63,7 +68,7 @@ export function isMathExpressionText(value: string): boolean {
     /\([^()]+\)\s*\/\s*\([^()]+\)/u.test(compact) ||
     /(?:\p{L}|\d)\s*\^\s*[+\-]?\d+/u.test(compact) ||
     /(?:d\p{L}\s*\/\s*d\p{L}|\p{L}'\s*\(?\p{L}?\)?)/u.test(compact);
-  return hasOperand && (hasOperator || hasFormulaShape);
+  return hasExplicitMath || (hasOperand && (hasOperator || hasFormulaShape));
 }
 
 /**
@@ -106,8 +111,180 @@ export type MathTextSegment = {
   mathematical: boolean;
 };
 
-const INLINE_EXPRESSION_PATTERN =
-  /\((?:[^()]|\([^()]*\))+\)\s*\/\s*\((?:[^()]|\([^()]*\))+\)|(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?)\s*(?:=|\+|-|\*|\/|\^|×|÷|≤|≥|≈|->|<=|>=)\s*(?:(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?)(?:\s*(?:=|\+|-|\*|\/|\^|×|÷|≤|≥|≈|->|<=|>=)\s*(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?))*)/giu;
+const MATH_FUNCTIONS = [
+  "arccos",
+  "arcsin",
+  "arctan",
+  "cosh",
+  "sinh",
+  "tanh",
+  "acos",
+  "asin",
+  "atan",
+  "sqrt",
+  "cos",
+  "cot",
+  "csc",
+  "det",
+  "exp",
+  "gcd",
+  "lim",
+  "ln",
+  "log",
+  "max",
+  "min",
+  "sec",
+  "sin",
+  "sup",
+  "tan",
+] as const;
+
+const GREEK_IDENTIFIERS = [
+  "alpha",
+  "beta",
+  "gamma",
+  "delta",
+  "lambda",
+  "omega",
+  "phi",
+  "pi",
+  "psi",
+  "sigma",
+  "theta",
+] as const;
+
+const PARENTHESIZED_EXPRESSION = String.raw`\((?:[^()]|\([^()]*\))+\)`;
+const SIMPLE_MATH_ATOM = String.raw`[+\-]?(?:\d+(?:\.\d+)?|[\p{L}][\p{L}\p{M}\p{N}_']*(?:\([^)]*\))?)`;
+const APPROACH_SUFFIX = String.raw`(?:\s+(?:approaches|tends\s+to)\s+(?:[+\-]?\d+(?:\.\d+)?|infinity|∞))?`;
+
+const INLINE_EXPRESSION_PATTERNS = [
+  new RegExp(String.raw`\$[^$\n]+\$|\\\([^\n]+?\\\)`, "gu"),
+  new RegExp(
+    String.raw`${PARENTHESIZED_EXPRESSION}\s*\/\s*(?:${PARENTHESIZED_EXPRESSION}|${SIMPLE_MATH_ATOM})${APPROACH_SUFFIX}`,
+    "giu",
+  ),
+  /\b[\p{L}][\p{L}\p{M}\p{N}_']*\s+(?:approaches|tends\s+to)\s+(?:[+\-]?\d+(?:\.\d+)?|infinity|∞)\b/giu,
+  new RegExp(
+    String.raw`(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{M}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?)\s*(?:=|\+|-|\*|\/|\^|×|÷|≤|≥|≈|->|<=|>=)\s*(?:(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{M}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?)(?:\s*(?:=|\+|-|\*|\/|\^|×|÷|≤|≥|≈|->|<=|>=)\s*(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{M}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?))*)`,
+    "giu",
+  ),
+] as const;
+
+type MathRange = {
+  start: number;
+  end: number;
+};
+
+function mathRanges(value: string): MathRange[] {
+  const candidates: MathRange[] = [];
+  for (const pattern of INLINE_EXPRESSION_PATTERNS) {
+    pattern.lastIndex = 0;
+    for (const match of value.matchAll(pattern)) {
+      const start = match.index ?? 0;
+      const text = match[0];
+      if (!text) continue;
+      candidates.push({ start, end: start + text.length });
+    }
+  }
+
+  candidates.sort((left, right) => {
+    if (left.start !== right.start) return left.start - right.start;
+    return right.end - right.start - (left.end - left.start);
+  });
+
+  const selected: MathRange[] = [];
+  for (const candidate of candidates) {
+    const overlaps = selected.some(
+      (range) => candidate.start < range.end && candidate.end > range.start,
+    );
+    if (!overlaps) selected.push(candidate);
+  }
+  return selected.sort((left, right) => left.start - right.start);
+}
+
+function stripOneOuterPair(value: string): string {
+  const compact = value.trim();
+  if (!compact.startsWith("(") || !compact.endsWith(")")) return compact;
+  let depth = 0;
+  for (let index = 0; index < compact.length; index += 1) {
+    const character = compact[index];
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (depth === 0 && index < compact.length - 1) return compact;
+  }
+  return compact.slice(1, -1).trim();
+}
+
+function topLevelDivisionIndex(value: string): number {
+  let depth = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === "(") depth += 1;
+    else if (character === ")") depth = Math.max(0, depth - 1);
+    else if (character === "/" && depth === 0) return index;
+  }
+  return -1;
+}
+
+/** Convert the deliberately small plaintext math dialect used by generated
+ * questions into safe KaTeX input. This is presentation-only: it never
+ * changes stored questions, submitted answers, or grading expressions. */
+export function mathTextToLatex(value: string): string {
+  let compact = value.normalize("NFC").trim();
+  if (compact.startsWith("$") && compact.endsWith("$")) {
+    return compact.slice(1, -1).trim();
+  }
+  if (compact.startsWith("\\(") && compact.endsWith("\\)")) {
+    return compact.slice(2, -2).trim();
+  }
+
+  const approach = compact.match(
+    /^(.*?)\s+(?:approaches|tends\s+to)\s+([+\-]?\d+(?:\.\d+)?|infinity|∞)$/iu,
+  );
+  if (approach?.[1] && approach[2]) {
+    const target = /^(?:infinity|∞)$/iu.test(approach[2])
+      ? "\\infty"
+      : approach[2];
+    return `${mathTextToLatex(approach[1])} \\to ${target}`;
+  }
+
+  const divisionIndex = topLevelDivisionIndex(compact);
+  if (divisionIndex > 0 && divisionIndex < compact.length - 1) {
+    const numerator = stripOneOuterPair(compact.slice(0, divisionIndex));
+    const denominator = stripOneOuterPair(compact.slice(divisionIndex + 1));
+    return `\\frac{${mathTextToLatex(numerator)}}{${mathTextToLatex(denominator)}}`;
+  }
+
+  let latex = compact
+    .replace(/<=/g, "\\le ")
+    .replace(/>=/g, "\\ge ")
+    .replace(/->/g, "\\to ")
+    .replace(/≤/g, "\\le ")
+    .replace(/≥/g, "\\ge ")
+    .replace(/≈/g, "\\approx ")
+    .replace(/×/g, "\\times ")
+    .replace(/÷/g, "\\div ")
+    .replace(/\*/g, "\\cdot ")
+    .replace(/∞/g, "\\infty ")
+    .replace(/%/g, "\\%")
+    .replace(/√\s*\(([^()]*)\)/gu, "\\sqrt{$1}")
+    .replace(/\bsqrt\s*\(([^()]*)\)/giu, "\\sqrt{$1}");
+
+  for (const identifier of MATH_FUNCTIONS) {
+    if (identifier === "sqrt") continue;
+    latex = latex.replace(
+      new RegExp(String.raw`\b${identifier}\b`, "giu"),
+      `\\${identifier}`,
+    );
+  }
+  for (const identifier of GREEK_IDENTIFIERS) {
+    latex = latex.replace(
+      new RegExp(String.raw`\b${identifier}\b`, "giu"),
+      `\\${identifier}`,
+    );
+  }
+  return latex.replace(/\s+/g, " ").trim();
+}
 
 /**
  * Split prose from inline formulas so a formula can use a technical face
@@ -123,15 +300,16 @@ export function segmentMathText(value: string): MathTextSegment[] {
 
   const segments: MathTextSegment[] = [];
   let cursor = 0;
-  for (const match of value.matchAll(INLINE_EXPRESSION_PATTERN)) {
-    const index = match.index ?? 0;
-    const expression = match[0];
-    if (!expression || !isMathExpressionText(expression)) continue;
-    if (index > cursor) {
-      segments.push({ text: value.slice(cursor, index), mathematical: false });
+  for (const range of mathRanges(value)) {
+    const expression = value.slice(range.start, range.end);
+    if (range.start > cursor) {
+      segments.push({
+        text: value.slice(cursor, range.start),
+        mathematical: false,
+      });
     }
-    segments.push({ text: formatMathText(expression), mathematical: true });
-    cursor = index + expression.length;
+    segments.push({ text: expression, mathematical: true });
+    cursor = range.end;
   }
   if (cursor < value.length) {
     segments.push({ text: value.slice(cursor), mathematical: false });

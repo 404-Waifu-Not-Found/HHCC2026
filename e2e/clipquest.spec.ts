@@ -100,10 +100,15 @@ const shortAnswerQuestion: PublicQuestion = {
 const formulaProseQuestion: PublicQuestion = {
   ...baseQuestion,
   id: "69696969-6969-4969-8969-696969696969",
-  type: "true_false",
+  type: "multiple_choice",
   prompt:
-    "For a function f defined on an interval from x = a to x = b, the average rate of change is (f(b)-f(a))/(b-a), and this value is the slope of the secant line through the points (a, f(a)) and (b, f(b)).",
-  options: undefined,
+    "When evaluating the limit as x approaches 0 of (4x cos 2x) / (5 tan 2x), how is the expression split to apply the identity that (2x)/(tan 2x) approaches 1?",
+  options: [
+    "It is split into the limit of (x)/(tan 2x) times the limit of (4 cos 2x)/5.",
+    "It is split into the limit of (4x)/(tan 2x) times the limit of (cos 2x)/5.",
+    "It is split into the limit of (2x)/(tan 2x) times the limit of (2 cos 2x)/5.",
+    "It is split into the limit of (2x)/(tan 2x) times the limit of (4 cos 2x)/5.",
+  ],
 };
 
 const captionSegments = [
@@ -1451,7 +1456,7 @@ test("all generated question types keep the tactile learning layout", async ({
   await capture(page, "tablet-quiz-short-answer");
 });
 
-test("formula-containing question prose keeps the display typeface", async ({
+test("formula-containing prose keeps the display face and typesets expressions", async ({
   page,
 }) => {
   const scenario = await installMocks(page);
@@ -1474,6 +1479,16 @@ test("formula-containing question prose keeps the display typeface", async ({
       heading.evaluate((element) => getComputedStyle(element).letterSpacing),
     )
     .toBe("-0.3px");
+  await expect(heading.locator("math")).toHaveCount(3);
+  await expect(heading.locator("mfrac")).toHaveCount(2);
+  await expect(
+    heading.locator('[data-clipquest-math="(4x cos 2x) / (5 tan 2x)"]'),
+  ).toBeVisible();
+  const formattedChoice = page.getByRole("button", {
+    name: formulaProseQuestion.options?.[0],
+  });
+  await expect(formattedChoice).toBeVisible();
+  await expect(formattedChoice.locator("mfrac")).toHaveCount(2);
 });
 
 test("dark theme stays polished across learner, auth, settings, and admin shells", async ({

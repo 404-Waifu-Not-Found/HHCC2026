@@ -10,6 +10,7 @@ import {
   typography,
 } from "../theme/tokens";
 import { FeedbackMotion, MotionView } from "../motion/Motion";
+import { MathText } from "./MathText";
 
 export function FeedbackPanel({
   status,
@@ -68,9 +69,9 @@ export function FeedbackPanel({
             {title}
           </Text>
           {detail ? (
-            <Text selectable style={[styles.detail, { color: theme.text }]}>
+            <MathText selectable style={[styles.detail, { color: theme.text }]}>
               {detail}
-            </Text>
+            </MathText>
           ) : null}
           {children}
         </MotionView>
