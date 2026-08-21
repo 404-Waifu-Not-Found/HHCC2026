@@ -31,7 +31,11 @@ const VALIDATOR_VERSION = "validator-minimal-gradeability-v5.3";
 const IMPORT_VERSION = "extension-progressive-import-v8";
 const GENERATION_PROFILE = "prompt_first_auto_v5_12";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
-const MAX_TRANSCRIPT_CHARACTERS = 320_000;
+// Complete captions stay on the client. Prompt-first requests send only the
+// bounded evidence window to DeepSeek, so the local selection guard can honor
+// the shared 750k-character transcript contract instead of rejecting longer
+// educational videos before AI generation begins.
+const MAX_TRANSCRIPT_CHARACTERS = 750_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
 // Keep recovery useful without turning a transient/local model problem into
 // dozens of repeated DeepSeek calls. One primary call plus at most two
