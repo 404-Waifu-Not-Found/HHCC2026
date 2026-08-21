@@ -19,6 +19,8 @@ const config: ExpoConfig = {
     associatedDomains: ["applinks:clipquest.ccwu.cc"],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSPhotoLibraryUsageDescription:
+        "ClipQuest uses your photo library so you can choose a private profile picture.",
     },
   },
   android: {

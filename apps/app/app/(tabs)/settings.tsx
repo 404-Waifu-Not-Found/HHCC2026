@@ -5,6 +5,7 @@ import { apiBinaryRequest, apiMultipartRequest } from "../../src/lib/api";
 import { ProfileAvatarResponseSchema } from "@clipquest/contracts";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import { File as ExpoFile } from "expo-file-system";
 import { router } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -93,10 +94,12 @@ export default function SettingsScreen() {
         const input = document.createElement("input");
         input.type = "file";
         input.accept = "image/jpeg,image/png,image/webp";
-        const selected = await new Promise<File | null>((resolve) => {
-          input.onchange = () => resolve(input.files?.[0] ?? null);
-          input.click();
-        });
+        const selected = await new Promise<globalThis.File | null>(
+          (resolve) => {
+            input.onchange = () => resolve(input.files?.[0] ?? null);
+            input.click();
+          },
+        );
         if (!selected) return;
         body.append("file", await normalizeWebAvatar(selected), "avatar.webp");
       } else {
@@ -128,11 +131,9 @@ export default function SettingsScreen() {
           ],
           { compress: 0.86, format: ImageManipulator.SaveFormat.WEBP },
         );
-        body.append("file", {
-          uri: output.uri,
-          name: "avatar.webp",
-          type: "image/webp",
-        } as unknown as Blob);
+        // Expo's native fetch serializer accepts File/Blob parts, but not the
+        // legacy React Native `{ uri, name, type }` FormData shape.
+        body.append("file", new ExpoFile(output.uri), "avatar.webp");
       }
       const response = await apiMultipartRequest(
         "/api/profile/avatar",
