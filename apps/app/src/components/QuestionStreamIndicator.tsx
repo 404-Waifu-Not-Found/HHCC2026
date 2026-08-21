@@ -31,7 +31,11 @@ export function QuestionStreamIndicator({
       generation.retryAvailable === true);
   const label = generationLabel(generation, count, locale);
   const explanation = stopped
-    ? generationReasonExplanation(generation.reasonCode, locale)
+    ? generationReasonExplanation(
+        generation.reasonCode,
+        generation.retryAvailable,
+        locale,
+      )
     : undefined;
 
   return (
@@ -176,9 +180,15 @@ function generationLabel(
 
 function generationReasonExplanation(
   reasonCode: string | undefined,
+  retryAvailable: boolean | undefined,
   locale: "en" | "zh-CN",
 ): string {
   const chinese = locale === "zh-CN";
+  if (retryAvailable === false) {
+    return chinese
+      ? "本次 AI 生成已停止；请重新开始测验以请求新的题库。"
+      : "This AI generation has stopped; start a new quiz to request a fresh question bank.";
+  }
   if (reasonCode === "credential_required") {
     return chinese
       ? "请更新 ClipQuest Local AI 中的 DeepSeek 密钥；验证后会自动恢复。"
