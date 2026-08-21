@@ -13,6 +13,45 @@ const SUPERSCRIPTS: Record<string, string> = {
   "-": "⁻",
 };
 
+const STANDALONE_MATH_IDENTIFIERS = new Set([
+  "abs",
+  "acos",
+  "alpha",
+  "asin",
+  "atan",
+  "beta",
+  "cos",
+  "cosh",
+  "cot",
+  "csc",
+  "delta",
+  "det",
+  "exp",
+  "gamma",
+  "gcd",
+  "inf",
+  "lambda",
+  "lim",
+  "ln",
+  "log",
+  "max",
+  "min",
+  "mod",
+  "omega",
+  "phi",
+  "pi",
+  "psi",
+  "sec",
+  "sigma",
+  "sin",
+  "sinh",
+  "sqrt",
+  "sup",
+  "tan",
+  "tanh",
+  "theta",
+]);
+
 export function isMathExpressionText(value: string): boolean {
   const compact = value.normalize("NFC").replace(/\s+/g, " ").trim();
   if (!compact || compact.length > 700) return false;
@@ -25,6 +64,26 @@ export function isMathExpressionText(value: string): boolean {
     /(?:\p{L}|\d)\s*\^\s*[+\-]?\d+/u.test(compact) ||
     /(?:d\p{L}\s*\/\s*d\p{L}|\p{L}'\s*\(?\p{L}?\)?)/u.test(compact);
   return hasOperand && (hasOperator || hasFormulaShape);
+}
+
+/**
+ * Returns true only when the complete value reads as a mathematical
+ * expression. A sentence can contain valid math without surrendering its
+ * display/body typeface to monospace.
+ */
+export function isStandaloneMathExpressionText(value: string): boolean {
+  const compact = value.normalize("NFC").replace(/\s+/g, " ").trim();
+  if (!isMathExpressionText(compact) || /[!?。！？]/u.test(compact)) {
+    return false;
+  }
+
+  const identifiers = compact.match(/\p{L}[\p{L}\p{M}]*/gu) ?? [];
+  return identifiers.every((identifier) => {
+    const normalized = identifier.toLocaleLowerCase("en-US");
+    return (
+      [...normalized].length <= 2 || STANDALONE_MATH_IDENTIFIERS.has(normalized)
+    );
+  });
 }
 
 export function formatMathText(value: string): string {

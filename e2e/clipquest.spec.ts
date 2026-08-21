@@ -86,6 +86,15 @@ const shortAnswerQuestion: PublicQuestion = {
   options: undefined,
 };
 
+const formulaProseQuestion: PublicQuestion = {
+  ...baseQuestion,
+  id: "69696969-6969-4969-8969-696969696969",
+  type: "true_false",
+  prompt:
+    "For a function f defined on an interval from x = a to x = b, the average rate of change is (f(b)-f(a))/(b-a), and this value is the slope of the secant line through the points (a, f(a)) and (b, f(b)).",
+  options: undefined,
+};
+
 const captionSegments = [
   {
     id: "segment-1",
@@ -1223,6 +1232,31 @@ test("all generated question types keep the tactile learning layout", async ({
     ),
   ).toBe(false);
   await capture(page, "tablet-quiz-short-answer");
+});
+
+test("formula-containing question prose keeps the display typeface", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.question = formulaProseQuestion;
+  await page.goto("/");
+  await seedAttempt(page, ATTEMPT_ID, formulaProseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+
+  const heading = page.getByRole("heading", {
+    name: formulaProseQuestion.prompt,
+  });
+  await expect(heading).toBeVisible();
+  await expect
+    .poll(() =>
+      heading.evaluate((element) => getComputedStyle(element).fontFamily),
+    )
+    .toContain("Fredoka_600SemiBold");
+  await expect
+    .poll(() =>
+      heading.evaluate((element) => getComputedStyle(element).letterSpacing),
+    )
+    .toBe("-0.3px");
 });
 
 test("dark theme stays polished across learner, auth, settings, and admin shells", async ({

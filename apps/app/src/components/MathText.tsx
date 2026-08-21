@@ -6,7 +6,11 @@ import {
   type StyleProp,
   type TextStyle,
 } from "react-native";
-import { formatMathText, isMathExpressionText } from "../lib/math-text";
+import {
+  formatMathText,
+  isMathExpressionText,
+  isStandaloneMathExpressionText,
+} from "../lib/math-text";
 
 export function MathText({
   children,
@@ -17,11 +21,12 @@ export function MathText({
   style?: StyleProp<TextStyle>;
 }) {
   const mathematical = isMathExpressionText(children);
+  const standaloneExpression = isStandaloneMathExpressionText(children);
   return (
     <Text
       {...props}
       accessibilityLabel={props.accessibilityLabel ?? children}
-      style={[style, mathematical && styles.math]}
+      style={[style, standaloneExpression && styles.math]}
     >
       {mathematical ? formatMathText(children) : children}
     </Text>
