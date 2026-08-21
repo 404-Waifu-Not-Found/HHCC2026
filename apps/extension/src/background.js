@@ -588,11 +588,16 @@ chrome.runtime.onConnect.addListener((port) => {
           });
         };
         const generationContext = message.context;
+        const client = {
+          kind: "chrome_extension",
+          version: chrome.runtime.getManifest().version,
+          capability: "question-stream-v7",
+        };
         const question = async (result) => {
           const outgoing = {
             type: "question",
             requestId,
-            result,
+            result: { ...result, client },
           };
           await appendGenerationOutbox(generationContext, outgoing);
           post(outgoing);
@@ -601,7 +606,7 @@ chrome.runtime.onConnect.addListener((port) => {
           const outgoing = {
             type: "call",
             requestId,
-            event,
+            event: { ...event, client },
           };
           await appendGenerationOutbox(generationContext, outgoing);
           post(outgoing);
@@ -634,7 +639,17 @@ chrome.runtime.onConnect.addListener((port) => {
         const outgoing = {
           type: "result",
           requestId,
-          response: { ok: true, result },
+          response: {
+            ok: true,
+            result: {
+              ...result,
+              client: {
+                kind: "chrome_extension",
+                version: chrome.runtime.getManifest().version,
+                capability: "question-stream-v7",
+              },
+            },
+          },
         };
         await appendGenerationOutbox(message.context, outgoing);
         post(outgoing);

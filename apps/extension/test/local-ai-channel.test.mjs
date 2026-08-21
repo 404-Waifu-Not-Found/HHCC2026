@@ -20,7 +20,10 @@ const bridge = await readFile(
   "utf8",
 );
 const generator = await readFile(
-  new URL("../src/local-generator.js", import.meta.url),
+  new URL(
+    "../../../packages/local-quiz-engine/src/local-generator.js",
+    import.meta.url,
+  ),
   "utf8",
 );
 const popup = await readFile(
@@ -191,7 +194,7 @@ test("release ZIPs normalize metadata for reproducible matching artifacts", () =
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.17");
+  assert.equal(manifest.version, "0.8.18");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -206,7 +209,7 @@ test("the popup exposes only DeepSeek configuration", () => {
   assert.match(background, /captionsToPlainText/);
 });
 
-test("release 0.8.17 uses prompt-first v5.12 and the gradeability validator", () => {
+test("release 0.8.18 uses prompt-first v5.12 and the gradeability validator", () => {
   assert.match(generator, /quiz-local-json-stream-v5\.12/);
   assert.match(generator, /quiz-local-json-stream-v5\.11/);
   assert.match(generator, /quiz-local-json-stream-v5\.10/);
@@ -433,7 +436,8 @@ test("choice order uses unbiased random shuffling and preserves every answer", (
     positionCounts[question.answerIndex] += 1;
   });
   assert.ok(Math.max(...positionCounts) - Math.min(...positionCounts) <= 1);
-  assert.match(generator, /crypto\.getRandomValues/);
+  assert.match(generator, /cryptoImpl\.getRandomValues/);
+  assert.match(generator, /rawInput\?\.cryptoImpl \?\? globalThis\.crypto/);
   assert.doesNotMatch(generator, /Math\.random/);
 });
 

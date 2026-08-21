@@ -570,6 +570,19 @@ export type LocalGenerationProfile = z.infer<
   typeof LocalGenerationProfileSchema
 >;
 
+export const LocalGenerationClientSchema = z
+  .object({
+    kind: z.enum(["chrome_extension", "android_app"]),
+    version: z
+      .string()
+      .trim()
+      .regex(/^\d+\.\d+\.\d+$/)
+      .max(32),
+    capability: z.literal(LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY),
+  })
+  .strict();
+export type LocalGenerationClient = z.infer<typeof LocalGenerationClientSchema>;
+
 export const QuizGenerationRolloutModeSchema = z.enum([
   "disabled",
   "canary",
@@ -609,6 +622,25 @@ export const QuizGenerationProfileResponseSchema = z
       CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     ]),
+    clientRequirements: z
+      .object({
+        chromeExtension: z
+          .object({
+            minimumVersion: z.string().trim().min(1).max(32),
+            requiredCapability: z.string().trim().min(1).max(64),
+          })
+          .strict(),
+        androidApp: z
+          .object({
+            minimumVersion: z.literal("0.2.0"),
+            requiredCapability: z.literal(
+              LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+            ),
+          })
+          .strict(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -716,6 +748,7 @@ export type LocalGenerationCallOutcome = z.infer<
 
 export const LegacyLocalGenerationCallEventSchema = z
   .object({
+    client: LocalGenerationClientSchema.optional(),
     generationSessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(127),
     startIndex: z.number().int().min(0).max(14),
@@ -785,6 +818,7 @@ export const LegacyLocalGenerationCallEventSchema = z
 
 export const LegacyAutomaticRecoveryCallEventSchema = z
   .object({
+    client: LocalGenerationClientSchema.optional(),
     protocolVersion: z.literal(LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
     purpose: z.literal("automatic_recovery"),
     generationSessionId: z.string().uuid(),
@@ -847,6 +881,7 @@ export type LegacyAutomaticRecoveryCallEvent = z.infer<
 >;
 export const LocalGenerationCallEventV3Schema = z
   .object({
+    client: LocalGenerationClientSchema.optional(),
     protocolVersion: z.literal(AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
     generationSessionId: z.string().uuid(),
     recoverySessionId: z.string().uuid(),
@@ -909,6 +944,7 @@ export type LocalGenerationCallEventV3 = z.infer<
 
 export const LocalGenerationCallEventV4Schema = z
   .object({
+    client: LocalGenerationClientSchema.optional(),
     protocolVersion: z.literal(GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
     purpose: z.literal("generation"),
     generationSessionId: z.string().uuid(),
@@ -972,6 +1008,7 @@ export type LocalGenerationCallEventV4 = z.infer<
 
 export const LocalGenerationCallEventV5Schema = z
   .object({
+    client: LocalGenerationClientSchema.optional(),
     protocolVersion: z.literal(
       CONCEPT_FIRST_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
     ),
@@ -1078,6 +1115,7 @@ export type LocalGenerationCallEventV5 = z.infer<
 
 export const LocalGenerationCallEventV6Schema = z
   .object({
+    client: LocalGenerationClientSchema.optional(),
     protocolVersion: z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
     purpose: z.literal("generation"),
     lifecycleState: LocalGenerationCallLifecycleSchema,
@@ -1572,6 +1610,7 @@ export const LocalQuizContextSchema = z
           .regex(/^[a-f0-9]{64}$/)
           .optional(),
         generationProfile: LocalGenerationProfileSchema.optional(),
+        client: LocalGenerationClientSchema.optional(),
         questionPlan: LocalQuestionPlanSchema.optional(),
         claim: GenerationClaimSchema.optional(),
         nextCallIndex: z.number().int().min(0).max(256).optional(),
@@ -2120,6 +2159,7 @@ export const LocalConceptQuizResultSchema = z
     validatorVersion: LocalQuizValidatorVersionSchema,
     importVersion: LocalQuizProgressiveImportVersionSchema.optional(),
     generationProfile: LocalGenerationProfileSchema.optional(),
+    client: LocalGenerationClientSchema.optional(),
     generationId: z.string().uuid().optional(),
     generationSessionId: z.string().uuid().optional(),
     recoverySessionId: z.string().uuid().optional(),
@@ -2149,6 +2189,7 @@ export const LocalConceptQuizContinuationResultSchema = z
     validatorVersion: LocalQuizValidatorVersionSchema,
     importVersion: LocalQuizProgressiveImportVersionSchema.optional(),
     generationProfile: LocalGenerationProfileSchema.optional(),
+    client: LocalGenerationClientSchema.optional(),
     generationId: z.string().uuid().optional(),
     generationSessionId: z.string().uuid().optional(),
     recoverySessionId: z.string().uuid().optional(),
@@ -2184,6 +2225,7 @@ export const LocalConceptQuizQuestionChunkSchema = z
     validatorVersion: LocalQuizValidatorVersionSchema,
     importVersion: LocalQuizProgressiveImportVersionSchema.optional(),
     generationProfile: LocalGenerationProfileSchema.optional(),
+    client: LocalGenerationClientSchema.optional(),
     generationId: z.string().uuid().optional(),
     generationSessionId: z.string().uuid().optional(),
     recoverySessionId: z.string().uuid().optional(),
@@ -2485,6 +2527,7 @@ export const AttemptGenerationResponseSchema = z
           .optional(),
         importVersion: LocalQuizProgressiveImportVersionSchema,
         generationProfile: LocalGenerationProfileSchema,
+        client: LocalGenerationClientSchema.optional(),
         generationId: z.string().uuid().optional(),
         generationSessionId: z.string().uuid().optional(),
         recoverySessionId: z.string().uuid().optional(),
@@ -2764,6 +2807,15 @@ export const PushRegisterRequestSchema = z.object({
   platform: z.enum(["ios", "android", "web"]),
   locale: LanguageSchema,
 });
+export const PushRegisterResponseSchema = z
+  .object({ registered: z.literal(true) })
+  .strict();
+export const PushUnregisterRequestSchema = z
+  .object({ token: z.string().min(8).max(1_000) })
+  .strict();
+export const PushUnregisterResponseSchema = z
+  .object({ removed: z.boolean() })
+  .strict();
 
 export const YouTubeDeviceStartResponseSchema = z.object({
   flowId: z.string().uuid(),

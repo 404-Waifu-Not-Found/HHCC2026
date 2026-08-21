@@ -133,6 +133,14 @@ export type AdminGenerationState = z.infer<typeof AdminGenerationStateSchema>;
 export const AdminGenerationSchema = z
   .object({
     quizId: z.string().uuid(),
+    client: z
+      .object({
+        kind: z.enum(["chrome_extension", "android_app"]),
+        version: z.string().min(1).max(32),
+        capability: z.string().min(1).max(64),
+      })
+      .strict()
+      .optional(),
     state: AdminGenerationStateSchema,
     acceptedQuestions: z.number().int().min(1).max(15),
     plannedQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
@@ -272,6 +280,15 @@ export const AdminSystemResponseSchema = z.object({
       backendEnabled: z.literal(false),
       extensionEnabled: z.literal(true),
       extensionRequired: z.literal(true),
+      androidEnabled: z.literal(true).optional(),
+      androidApp: z
+        .object({
+          minimumVersion: z.literal("0.2.0"),
+          requiredCapability: z.literal("question-stream-v7"),
+          foregroundOnly: z.literal(true),
+        })
+        .strict()
+        .optional(),
       model: z.string(),
       pipelineVersion: z.number().int().positive(),
       promptVersion: z.string(),

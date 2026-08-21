@@ -16,11 +16,15 @@ import {
   LocalConceptQuizResultSchema,
   LocalConceptQuizQuestionChunkSchema,
   LocalGenerationCallEventSchema,
+  LocalGenerationClientSchema,
   MinimalGenerationFailureCodeSchema,
   PromptFirstQuestionSchema,
   LocalQuizContextSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
+  PushRegisterResponseSchema,
+  PushUnregisterRequestSchema,
+  PushUnregisterResponseSchema,
   identifyVideoSource,
   questionLimitForSession,
   questionTypePlanForSelection,
@@ -204,6 +208,38 @@ describe("session length", () => {
 });
 
 describe("generated questions", () => {
+  it("models Android local generation without weakening Chrome compatibility", () => {
+    const android = {
+      kind: "android_app",
+      version: "0.2.0",
+      capability: "question-stream-v7",
+    } as const;
+    expect(LocalGenerationClientSchema.parse(android)).toEqual(android);
+    expect(
+      LocalGenerationClientSchema.safeParse({
+        ...android,
+        version: "0.2",
+      }).success,
+    ).toBe(false);
+    expect(
+      QuizGenerationProfileResponseSchema.parse({
+        generationProfile: "prompt_first_auto_v5_12",
+        minimumExtensionVersion: "0.8.17",
+        requiredCapability: "question-stream-v7",
+        clientRequirements: {
+          chromeExtension: {
+            minimumVersion: "0.8.17",
+            requiredCapability: "question-stream-v7",
+          },
+          androidApp: {
+            minimumVersion: "0.2.0",
+            requiredCapability: "question-stream-v7",
+          },
+        },
+      }).clientRequirements?.androidApp.minimumVersion,
+    ).toBe("0.2.0");
+  });
+
   it("binds rollout profiles to their exact extension contracts", () => {
     expect(
       QuizGenerationProfileResponseSchema.safeParse({
@@ -897,6 +933,20 @@ describe("generated questions", () => {
         usageComplete: false,
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("push token lifecycle", () => {
+  it("models bounded registration and owner-requested removal responses", () => {
+    expect(PushRegisterResponseSchema.parse({ registered: true })).toEqual({
+      registered: true,
+    });
+    expect(
+      PushUnregisterRequestSchema.parse({ token: "ExponentPushToken[test]" }),
+    ).toEqual({ token: "ExponentPushToken[test]" });
+    expect(PushUnregisterResponseSchema.parse({ removed: false })).toEqual({
+      removed: false,
+    });
   });
 });
 
