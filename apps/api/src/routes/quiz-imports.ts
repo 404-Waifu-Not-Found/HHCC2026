@@ -78,7 +78,7 @@ function versionAtLeast(actual: string, minimum: string): boolean {
 function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
   if (!chunk.client) return;
   const native = chunk.client.kind !== "chrome_extension";
-  const minimum = native ? "0.2.0" : "0.8.24";
+  const minimum = native ? "0.2.0" : "0.8.25";
   const clientName =
     chunk.client.kind === "android_app"
       ? "Android"

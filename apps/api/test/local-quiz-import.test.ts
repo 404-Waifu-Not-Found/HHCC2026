@@ -117,7 +117,7 @@ describe("extension mixed-question persistence", () => {
       promptVersion: "quiz-local-json-stream-v5.12",
       client: {
         kind: "chrome_extension",
-        version: "0.8.24",
+        version: "0.8.25",
         capability: "question-stream-v7",
       },
       question: {

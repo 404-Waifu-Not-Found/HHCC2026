@@ -2495,6 +2495,65 @@ test("v5.12 deprioritizes presentation-bound equation examples", () => {
   assert.doesNotMatch(selection.primaryClaims[0], /first equation/iu);
 });
 
+test("v5.12 excludes episode dependency metadata without rejecting mathematical series", () => {
+  assert.equal(
+    questionConceptFailure({
+      concept: "layers of abstraction",
+      question:
+        "What relationship does the series establish between its episodes?",
+      answerText:
+        "Episodes build on prior episodes but do not depend on one another.",
+      explanation:
+        "The series says later episodes build on earlier ones without requiring them.",
+    }),
+    "course_logistics_invalid",
+  );
+  assert.equal(
+    questionConceptFailure({
+      concept: "arithmetic series",
+      question:
+        "What relationship does an arithmetic series establish between successive terms?",
+      answerText: "Successive terms differ by a constant amount.",
+      explanation:
+        "An arithmetic sequence uses the same common difference between successive terms.",
+    }),
+    null,
+  );
+
+  const selection = buildConceptFirstInstructionalSelection(
+    [
+      "Each episode builds on the previous episode but does not depend on it.",
+      "The abacus enables people to perform calculations with movable counters.",
+      "A slide rule uses logarithmic scales to support multiplication and division.",
+      "The Analytical Engine was designed as a general-purpose mechanical computer.",
+    ].join(" "),
+    {
+      topicHint: "early computing",
+      diverse: true,
+      strictPromptFirst: true,
+      coherentPromptFirst: true,
+    },
+  );
+  const evidence = selection.excerpts.join(" ");
+  assert.doesNotMatch(evidence, /episode|previous episode|does not depend/iu);
+  assert.match(evidence, /abacus|slide rule|Analytical Engine/iu);
+
+  const mathSelection = buildConceptFirstInstructionalSelection(
+    [
+      "A geometric series is the sum of terms in a geometric sequence.",
+      "A geometric series converges when the absolute value of its common ratio is less than one.",
+      "The convergent sum equals the first term divided by one minus the common ratio.",
+    ].join(" "),
+    {
+      topicHint: "geometric series",
+      diverse: true,
+      strictPromptFirst: true,
+      coherentPromptFirst: true,
+    },
+  );
+  assert.match(mathSelection.excerpts.join(" "), /geometric series/iu);
+});
+
 test("v5.8 source selection fails closed for logistics-only material", () => {
   const selection = buildConceptFirstInstructionalSelection(
     "Welcome to the course. The exam is worth 40 percent. Office hours begin at noon. Subscribe for updates.",

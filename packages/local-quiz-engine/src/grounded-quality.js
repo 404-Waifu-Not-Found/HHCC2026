@@ -43,6 +43,12 @@ const LOGISTICS_PATTERNS = [
   /\b(?:course (?:aims?|goals?|objectives?|numbers?|codes?)|class (?:aims?|goals?|objectives?)|cross[- ]listed|attendance policy|due dates?|deadlines?|late (?:work|homework|assignments?|problem sets?)|problem set policy|submission policy|office location|contact information|how many (?:times|years?) .{0,60}(?:taught|teach|requested)|university admission|applied to (?:a |the )?(?:university|college)|popularity|request count|presentation order|first topic|last topic)\b/iu,
   /\b(?:(?:presenter|speaker|lecturer|narrator|instructor).{0,40}(?:jokes?|introduction|outro)|(?:jokes?|introduction|outro).{0,40}(?:presenter|speaker|lecturer|narrator|instructor)|recording metadata)\b/iu,
   /\b(?:(?:this|the) (?:episode|video|recording) (?:was |is )?(?:filmed|recorded|produced|shot|made)|(?:filmed|recorded|produced|shot) (?:in|at|by)|(?:crash course|production|recording|film) studio|(?:episode|video) (?:number|title|series|channel))\b/iu,
+  // Course-navigation claims describe how recordings relate to one another,
+  // not the transferable subject matter taught by those recordings. Require
+  // both a media noun and an ordering/dependency relationship so legitimate
+  // mathematical or historical uses of "series" remain assessable.
+  /\b(?=[^.!?]{0,180}\b(?:episodes?|videos?|lessons?)\b)(?=[^.!?]{0,180}\b(?:previous|prior|earlier|last)\b)[^.!?]{0,180}\b(?:build(?:s|ing)?\s+(?:on|upon)|depend(?:s|ing)?\s+(?:on|upon)|stand(?:s|ing)?\s+alone|self[- ]contained)\b/iu,
+  /\b(?:series\b[^.!?]{0,120}\bepisodes?|episodes?\b[^.!?]{0,120}\bseries)\b/iu,
   /\b(?:where did|when did|what (?:year|date|institution|university|college|city|country)|how many times)\b.{0,100}\b(?:apply|attend|graduate|study|teach|present|record|upload|request|live|born)\b/iu,
   /(?:课程安排|课程大纲|助教|办公时间|作业|评分|教材|投诉|订阅|赞助|推广|欢迎来到|讲师介绍|考试占比|考试权重|考试分值|单元占比|课程进度|考试时间|教师姓名|讲师姓名|教师简介|讲师简介|视频时长|上传日期)/u,
   /(?:课程目标|课程编号|交叉课程|出勤|截止日期|迟交|授课次数|大学申请|受欢迎程度|请求次数|讲解顺序)/u,
