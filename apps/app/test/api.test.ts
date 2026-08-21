@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   API_REQUEST_TIMEOUT_MS,
+  apiBinaryRequest,
   apiRequest,
   apiMultipartRequest,
   readBoundedApiResponseText,
@@ -112,5 +113,29 @@ describe("bounded ClipQuest API responses", () => {
     expect(captured?.method).toBe("PUT");
     expect(captured?.body).toBe(body);
     expect(new Headers(captured?.headers).has("content-type")).toBe(false);
+  });
+
+  it("preserves structured errors for private binary exports", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          {
+            error: {
+              code: "cheat_sheet_unavailable",
+              message: "The cheat sheet is not ready.",
+            },
+          },
+          { status: 404 },
+        ),
+      ),
+    );
+
+    await expect(
+      apiBinaryRequest("/api/cheat-sheets/sheet/file"),
+    ).rejects.toMatchObject({
+      code: "cheat_sheet_unavailable",
+      status: 404,
+    });
   });
 });

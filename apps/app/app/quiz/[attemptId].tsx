@@ -298,12 +298,21 @@ export default function QuizScreen() {
     const pending = pendingCheatSheetRef.current;
     if (!pending) return;
     const task = (async () => {
-      try {
-        const uploaded = await uploadCheatSheet(pending);
-        setCheatSheetId(uploaded.id);
-      } catch {
-        setCheatSheetStatus("failed");
+      let failed = false;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const uploaded = await uploadCheatSheet(pending);
+          setCheatSheetId(uploaded.id);
+          return;
+        } catch {
+          failed = true;
+          if (attempt < 2)
+            await new Promise((resolve) =>
+              setTimeout(resolve, [500, 1_500][attempt]),
+            );
+        }
       }
+      if (failed) setCheatSheetStatus("failed");
     })();
     cheatSheetSyncRef.current = task;
     try {
@@ -316,8 +325,15 @@ export default function QuizScreen() {
   }
 
   useEffect(() => {
-    if (showCompletion && cheatSheetStatus === "ready") void syncCheatSheet();
-  }, [cheatSheetStatus, showCompletion]);
+    if (
+      showCompletion &&
+      pendingCheatSheetRef.current &&
+      !cheatSheetId &&
+      cheatSheetStatus !== "preparing"
+    ) {
+      void syncCheatSheet();
+    }
+  }, [cheatSheetId, cheatSheetStatus, showCompletion]);
 
   const resume = useCallback(async () => {
     const resumed = await apiRequest(

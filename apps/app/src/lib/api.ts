@@ -147,13 +147,15 @@ export async function apiBinaryRequest(
   });
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
+    let code = "request_failed";
     try {
       const body = (await response.json()) as ApiErrorBody;
       message = body.error?.message ?? message;
+      code = body.error?.code ?? code;
     } catch {
       // Keep the status fallback for binary error responses.
     }
-    throw new ClientApiError(response.status, "request_failed", message);
+    throw new ClientApiError(response.status, code, message);
   }
   return response;
 }

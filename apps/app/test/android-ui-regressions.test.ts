@@ -91,4 +91,12 @@ describe("Android UI regressions", () => {
     expect(settings).toContain("useState(true)");
     expect(settings).toContain('typeof parsed.reduceMotion === "boolean"');
   });
+
+  it("uses an ordered full-width card stack on compact Home layouts", () => {
+    const home = source("app/(tabs)/index.tsx");
+
+    expect(home).toContain("compact ? styles.cardStack : styles.cardRow");
+    expect(home).toContain("styles.cardStackItem");
+    expect(home).toContain("compact={compact}");
+  });
 });

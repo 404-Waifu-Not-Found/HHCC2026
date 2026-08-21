@@ -425,6 +425,7 @@ export default function HomeScreen() {
             <CardSection
               title={t("dueReviews")}
               cards={library.dueReviews}
+              compact={compact}
               openingId={openingId}
               onOpen={(card) => void open(card)}
             />
@@ -482,15 +483,16 @@ export default function HomeScreen() {
                   ))}
                 </View>
               ) : library.saved.length ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.cardRow}
-                >
+                <View style={compact ? styles.cardStack : styles.cardRow}>
                   {library.saved.slice(0, 8).map((card, index) => (
-                    <StaggerItem key={card.videoId} index={index}>
+                    <StaggerItem
+                      key={card.videoId}
+                      index={index}
+                      style={compact ? styles.cardStackItem : undefined}
+                    >
                       <VideoCard
                         compact
+                        fill={compact}
                         card={card}
                         onPress={() => void open(card)}
                         onExport={
@@ -507,7 +509,7 @@ export default function HomeScreen() {
                       />
                     </StaggerItem>
                   ))}
-                </ScrollView>
+                </View>
               ) : (
                 <Surface
                   padded={false}
@@ -556,11 +558,13 @@ function PlatformBadge({
 function CardSection({
   title,
   cards,
+  compact,
   openingId,
   onOpen,
 }: {
   title: string;
   cards: LibraryCard[];
+  compact: boolean;
   openingId?: string;
   onOpen(card: LibraryCard): void;
 }) {
@@ -568,42 +572,81 @@ function CardSection({
   return (
     <View>
       <SectionHeader title={title} />
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.cardRow}
-      >
-        {cards.map((card, index) => (
-          <StaggerItem
-            key={card.videoId}
-            index={index}
-            style={openingId === card.videoId ? styles.opening : undefined}
-          >
-            <VideoCard
-              compact
-              card={card}
-              onPress={() => onOpen(card)}
-              onExport={
-                card.cheatSheet.status === "failed"
-                  ? () => onOpen(card)
-                  : card.cheatSheet.sheetId
-                    ? () =>
-                        exportCheatSheet(
-                          card.cheatSheet.sheetId!,
-                          card.title,
-                        )
-                    : undefined
-              }
-            />
-            {openingId === card.videoId ? (
-              <ActivityIndicator
-                style={styles.cardSpinner}
-                color={theme.secondary}
+      {compact ? (
+        <View style={styles.cardStack}>
+          {cards.map((card, index) => (
+            <StaggerItem
+              key={card.videoId}
+              index={index}
+              style={[
+                styles.cardStackItem,
+                openingId === card.videoId && styles.opening,
+              ]}
+            >
+              <VideoCard
+                compact
+                fill
+                card={card}
+                onPress={() => onOpen(card)}
+                onExport={
+                  card.cheatSheet.status === "failed"
+                    ? () => onOpen(card)
+                    : card.cheatSheet.sheetId
+                      ? () =>
+                          exportCheatSheet(
+                            card.cheatSheet.sheetId!,
+                            card.title,
+                          )
+                      : undefined
+                }
               />
-            ) : null}
-          </StaggerItem>
-        ))}
-      </ScrollView>
+              {openingId === card.videoId ? (
+                <ActivityIndicator
+                  style={styles.cardSpinner}
+                  color={theme.secondary}
+                />
+              ) : null}
+            </StaggerItem>
+          ))}
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardRow}
+        >
+          {cards.map((card, index) => (
+            <StaggerItem
+              key={card.videoId}
+              index={index}
+              style={openingId === card.videoId ? styles.opening : undefined}
+            >
+              <VideoCard
+                compact
+                card={card}
+                onPress={() => onOpen(card)}
+                onExport={
+                  card.cheatSheet.status === "failed"
+                    ? () => onOpen(card)
+                    : card.cheatSheet.sheetId
+                      ? () =>
+                          exportCheatSheet(
+                            card.cheatSheet.sheetId!,
+                            card.title,
+                          )
+                      : undefined
+                }
+              />
+              {openingId === card.videoId ? (
+                <ActivityIndicator
+                  style={styles.cardSpinner}
+                  color={theme.secondary}
+                />
+              ) : null}
+            </StaggerItem>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -710,6 +753,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
     paddingRight: spacing[5],
     gap: spacing[4],
+  },
+  cardStack: {
+    gap: spacing[4],
+    paddingTop: spacing[2],
+  },
+  cardStackItem: {
+    width: "100%",
   },
   cardGrid: {
     flexDirection: "row",
