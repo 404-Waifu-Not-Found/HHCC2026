@@ -10,6 +10,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { useState } from "react";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, motion, radii, spacing, typography } from "../theme/tokens";
 import { MotionPressable, MotionView } from "../motion/Motion";
@@ -40,6 +41,9 @@ export function VideoCard({
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
+  const [hoveredAction, setHoveredAction] = useState<
+    "notes" | "open" | undefined
+  >();
   const horizontal = !compact && width >= 720;
   // Home's compact carousel should read as a deliberate single-card surface
   // on phones, not a desktop-width card with a distracting clipped sliver.
@@ -151,52 +155,99 @@ export function VideoCard({
         </View>
       </MotionPressable>
       <View style={styles.actions}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={notesLabel}
-          accessibilityState={{
-            busy: notesPending,
-            disabled: notesPending || !notesAction,
-          }}
-          onPress={() => {
-            if (!notesAction || notesPending) return;
-            void Promise.resolve(notesAction()).catch((cause) => {
-              Alert.alert(
-                notesLabel,
-                cause instanceof Error
-                  ? cause.message
-                  : "The cheat sheet could not be prepared.",
-              );
-            });
-          }}
-          style={({ pressed }) => [
-            styles.iconButton,
-            {
-              backgroundColor: theme.surfaceSunken,
-              opacity: notesPending || !notesAction ? 0.45 : pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          {notesPending ? (
-            <ActivityIndicator color={theme.secondary} size="small" />
-          ) : (
-            <VoxelIcon name={notesIcon} size={26} />
-          )}
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={actionLabel}
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.iconButton,
-            {
-              backgroundColor: theme.surfaceSunken,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <VoxelIcon name="next" size={26} />
-        </Pressable>
+        <View style={styles.actionWrap}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={notesLabel}
+            accessibilityHint={notesLabel}
+            accessibilityState={{
+              busy: notesPending,
+              disabled: notesPending || !notesAction,
+            }}
+            onBlur={() => setHoveredAction(undefined)}
+            onFocus={() => setHoveredAction("notes")}
+            onHoverIn={() => setHoveredAction("notes")}
+            onHoverOut={() => setHoveredAction(undefined)}
+            onPress={() => {
+              if (!notesAction || notesPending) return;
+              void Promise.resolve(notesAction()).catch((cause) => {
+                Alert.alert(
+                  notesLabel,
+                  cause instanceof Error
+                    ? cause.message
+                    : "The cheat sheet could not be prepared.",
+                );
+              });
+            }}
+            style={({ pressed }) => [
+              styles.iconButton,
+              {
+                backgroundColor: theme.surfaceSunken,
+                opacity:
+                  notesPending || !notesAction ? 0.45 : pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            {notesPending ? (
+              <ActivityIndicator color={theme.secondary} size="small" />
+            ) : (
+              <VoxelIcon name={notesIcon} size={26} />
+            )}
+          </Pressable>
+          {hoveredAction === "notes" ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.tooltip,
+                {
+                  backgroundColor: theme.text,
+                  borderColor: theme.borderStrong,
+                },
+              ]}
+            >
+              <Text style={[styles.tooltipText, { color: theme.background }]}>
+                {notesLabel}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.actionWrap}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+            accessibilityHint={actionLabel}
+            onBlur={() => setHoveredAction(undefined)}
+            onFocus={() => setHoveredAction("open")}
+            onHoverIn={() => setHoveredAction("open")}
+            onHoverOut={() => setHoveredAction(undefined)}
+            onPress={onPress}
+            style={({ pressed }) => [
+              styles.iconButton,
+              {
+                backgroundColor: theme.surfaceSunken,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <VoxelIcon name="next" size={26} />
+          </Pressable>
+          {hoveredAction === "open" ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.tooltip,
+                {
+                  backgroundColor: theme.text,
+                  borderColor: theme.borderStrong,
+                },
+              ]}
+            >
+              <Text style={[styles.tooltipText, { color: theme.background }]}>
+                {actionLabel}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -304,11 +355,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
   },
+  actionWrap: {
+    position: "relative",
+  },
   iconButton: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.pill,
+  },
+  tooltip: {
+    position: "absolute",
+    right: 0,
+    bottom: "100%",
+    zIndex: 2,
+    minWidth: 116,
+    maxWidth: 190,
+    marginBottom: spacing[2],
+    borderWidth: borders.standard,
+    borderRadius: radii.small,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  tooltipText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+    textAlign: "center",
   },
 });
