@@ -1328,8 +1328,8 @@ export function generationAvailability(
  * Grade current progressive short answers without making a Worker-side model
  * call. DeepSeek supplies bounded rubric ideas and acceptable paraphrases while
  * generating the question in the extension; the authenticated API remains the
- * authoritative grader by comparing normalized semantic tokens. Pipeline-7
- * attempts keep their historical grader for compatibility.
+ * authoritative grader by comparing normalized semantic tokens. Legacy and
+ * current stored rubric shapes share this deterministic compatibility path.
  */
 export type ProgressiveShortAnswerGradingPath =
   | "atomic_exact"

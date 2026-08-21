@@ -15,7 +15,7 @@
 | 1   | High          | Password-reset secrets could be accepted through the custom `clipquest://` URL scheme, exposing a sensitive link to any application able to register or intercept the same scheme.                                                                       | Password reset now accepts only the verified HTTPS app-link origin. The Worker serves an Apple App Site Association document, iOS declares the matching associated domain, and custom-scheme reset links are rejected by tests.                                                        |
 | 2   | Medium        | The production Chrome extension trusted `localhost` and `127.0.0.1` origins through manifest host permissions, content scripts, and origin policy.                                                                                                       | Development origins were removed from the packaged extension. Only the exact production ClipQuest origin is authorized; the origin-policy and bridge tests cover the boundary.                                                                                                         |
 | 3   | Medium        | Native transcript checkpoints, imported-video state, and the Android generation outbox were keyed by video or generation ID without an authenticated user boundary. A subsequent account on the same device could inherit another account's local state. | New versioned records include the authenticated user ID in both the key and validated envelope. Ambiguous legacy records are deleted instead of migrated, and sign-out, deletion, and observed user changes clear account-bound state.                                                 |
-| 4   | Medium        | Device-media downloads trusted declared size and could continue reading an unbounded response body.                                                                                                                                                      | Native and web download paths enforce both declared and cumulative 180 MiB limits while streaming, abort oversized downloads, and clean temporary state.                                                                                                                               |
+| 4   | Medium        | The web media reader originally trusted declared size and could continue buffering an unbounded response body.                                                                                                                                           | The web path enforces both declared and cumulative 180 MiB limits while streaming, aborts oversized reads, and discards temporary state.                                                                                                                                               |
 | 5   | Low           | DeepSeek SSE and non-stream JSON reads had no strict byte or frame ceilings.                                                                                                                                                                             | The shared engine now bounds raw response bytes, individual SSE frames, and accumulated model content; focused tests cover oversized streamed and non-streamed responses.                                                                                                              |
 | 6   | Medium        | Answer insertion and mastery updates could occur after a grading reservation was lost, because the answer insert was unconditional and the compare-and-set update result was not checked before side effects.                                            | Answer insertion is conditional on the live grading token, both answer and attempt mutation counts are verified, and mastery is written only after the reservation compare-and-set succeeds. Legacy short-answer grading is deterministic and no longer transmits answers to DeepSeek. |
 | 7   | Medium        | Progressive question append and generation progress could commit after a recovery lease expired, allowing a stale tab to resurrect or race generation state.                                                                                             | Question insertion, bank updates, progress transitions, and lease renewal now require the live owner claim in SQL. Failed conditional mutations close without appending or advancing the bank.                                                                                         |
@@ -32,13 +32,18 @@
 | 18  | Low           | Public thumbnail rate limits ran before immutable R2 cache lookup, so ordinary cache hits consumed D1 counters and could be denied despite requiring no upstream fetch.                                                                                  | Cache hits now return before the IP/video request budgets. Only cache misses that can amplify a third-party fetch consume those limits.                                                                                                                                                |
 | 19  | Medium        | Account cleanup removed transcript and creation records but could leave owner-bound generation records and attempt mappings on a shared native device.                                                                                                   | Sign-out, deletion, and user switching now parse generation records, remove only those owned by the departing user, delete their attempt mappings, and discard malformed or ambiguous legacy records.                                                                                  |
 | 20  | Build         | The machine defaulted to JDK 25, which failed Android CMake configuration with an SDK XML compatibility error.                                                                                                                                           | Android documentation now requires an explicit JDK 17 `JAVA_HOME`. The same clean dependency tree builds successfully with JDK 17; the failed JDK 25 command is treated as an environment diagnostic, not an application failure.                                                      |
+| 21  | Low           | Quiz language and question-type preferences were keyed only by video ID, so a second account on the same device could inherit the previous account's setup for the same video.                                                                           | Preferences now use an authenticated-user/video v2 key. Ambiguous unowned records are discarded, departing-account cleanup removes only that account's current preferences, and two-account regression coverage proves isolation.                                                      |
+| 22  | Low security  | Caption prework owned an unreachable `AbortController` and could finish after sign-out, deletion, or account switching, recreating the previous account's transcript cache after cleanup.                                                                | Active prework is registered by generation and owner, canceled before account cleanup, and guarded by owner/current-task checks before and after caption acquisition. A late orphaned cache write is removed.                                                                          |
+| 23  | Low security  | The native file-backed transcription path had no cumulative or final media-size ceiling, unlike the bounded web reader. A large authenticated media response could consume device storage before decoding.                                               | Native progress cancels above 180 MiB, the final file size is checked again, and oversized partial files are deleted. Android and iOS builds plus focused boundary tests cover the remediation.                                                                                        |
+| 24  | Maintenance   | Hono, Wrangler, and Cloudflare Worker types were behind safe patch releases, including Wrangler dependencies covered by advisories with a compatible update.                                                                                             | Updated Hono to `4.13.2`, Wrangler to `4.123.0`, and Workers types to `5.20260817.1`; regenerated Worker types and reran the complete Worker build/dry-run suite. No forced Expo/React Native downgrade was applied.                                                                   |
+| 25  | Documentation | The progressive short-answer grader comment claimed pipeline-7 attempts still used a historical grader, while the route now correctly uses the deterministic compatibility grader for every stored rubric shape.                                         | Corrected the comment to describe the actual privacy-preserving compatibility path; existing legacy, atomic, proposition, enumeration, Chinese, and formula grading regressions all remain green.                                                                                      |
 
 ## Verification evidence
 
 ### Automated workspace gates
 
 - API tests: 163 passed.
-- App tests: 112 passed.
+- App tests: 117 passed.
 - Extension tests: 228 passed, including the recorded 100-bank generation benchmark.
 - Contracts tests: 25 passed.
 - Shared engine tests: 5 passed.
@@ -47,10 +52,11 @@
 - Expo Doctor: 21/21 checks pass.
 - `npm ci --dry-run --legacy-peer-deps` succeeds.
 - The complete canonical gate passed in one clean run after the Android Metro server was stopped: formatting, lint, typecheck, all workspace tests, all 23 Playwright scenarios, web/Worker builds, Cloudflare type generation, and both Wrangler dry-runs.
+- A fresh responsive browser review rendered the Chinese sign-in, sign-up, and password-reset experiences at a 390 × 844 viewport without overflow or console warnings/errors.
 
 ### Native build and runtime evidence
 
-- Android API 36 debug build: `BUILD SUCCESSFUL` with the explicit JDK 17 toolchain (522 Gradle tasks in the clean second pass). Running the same build under the machine-default JDK 25 correctly reproduced the unsupported CMake/SDK XML failure documented above.
+- Android API 36 debug build: `BUILD SUCCESSFUL` with the explicit JDK 17 toolchain (522 Gradle tasks). Running the same build under the machine-default JDK 25 correctly reproduced the unsupported CMake/SDK XML failure documented above.
 - Android emulator: the app launched, loaded the JavaScript bundle through Metro, and rendered the authenticated learner home with question-type selection, YouTube import, Library cards, and bottom navigation.
 - iOS simulator build: unsigned compile and signed Debug simulator build both succeeded. The second pass rebuilt the unsigned Debug app for the booted iPhone 17 Pro simulator with `ONLY_ACTIVE_ARCH=YES` and exited successfully.
 - iPhone 17 Pro simulator: the signed app launched and rendered the responsive sign-in experience. The earlier unsigned build's Keychain entitlement error was an invalid test artifact, not a release behavior.
@@ -59,9 +65,9 @@
 
 ### Dependency audit
 
-- Full dependency graph: 30 advisories (`1 low`, `10 moderate`, `19 high`, `0 critical`).
-- Production dependency graph: 26 advisories (`0 low`, `8 moderate`, `18 high`, `0 critical`).
-- Direct `sharp` was upgraded to `0.35.3`. Remaining advisories are inherited through the current Expo, React Native, native-build, and Hugging Face dependency trees. They cannot be removed safely without coordinated framework-major upgrades; `npm audit fix --force` was intentionally not used.
+- Current workspace graph after the safe patches: 27 advisories (`1 low`, `8 moderate`, `18 high`, `0 critical`).
+- Hono, Wrangler, and Workers types are on the verified patch releases listed above. Direct `sharp` remains `0.35.3`.
+- Remaining advisories are inherited through the current Expo 57, React Native 0.86, native-build, ONNX, Sharp-transitive, and Hugging Face dependency trees. Available audit suggestions require incompatible SDK/framework downgrades or have no upstream fix; `npm audit fix --force` was intentionally not used.
 
 ## Security review coverage
 
@@ -78,6 +84,14 @@ A focused diff scan then reviewed the three committed remediation changes agains
 - Reviewed committed range: `a4d85ac2da45cfa9b8e2b33081db2ecfc13a6497..0516b83ca2a3f9e1c1894c20d82ef51d7e4328d0`
 - Reportable findings: 1 low, fixed after the scan.
 - Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/0516b83ca2a3f9e1c1894c20d82ef51d7e4328d0_20260817T181929Z_aye9k503/report.md`
+
+A final fixed-range diff scan reviewed every file changed by the six local production-readiness commits. It found the two low-severity native lifecycle/resource findings listed above; both are remediated in the post-scan candidate and covered by focused tests and native builds. The non-sensitive cross-account preference inheritance was validated as a product defect and suppressed from the security report, then fixed as problem 21.
+
+- Diff scan ID: `8863d6e6-b748-4121-ad44-b668f266dd24`
+- Reviewed committed range: `a4d85ac2da45cfa9b8e2b33081db2ecfc13a6497..78f35c1ce4f689c115e6f8e40b2ab788346e1878`
+- Coverage: 34/34 changed files reviewed.
+- Reportable findings: 2 low, both fixed in the current candidate.
+- Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/78f35c1ce4f689c115e6f8e40b2ab788346e1878_20260817T185534Z_ppps9j8r/report.md`
 
 ### Read-only live browser smoke
 
