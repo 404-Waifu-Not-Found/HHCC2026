@@ -354,19 +354,6 @@ videosRouter.post("/:videoId/captions/resolve", async (c) => {
 
 thumbnailRouter.get("/:videoId/thumbnail", async (c) => {
   const videoId = c.req.param("videoId");
-  const requestIp = c.req.header("cf-connecting-ip") ?? "unknown";
-  await enforceRateLimit(c.env.DB, {
-    namespace: "public-thumbnail-ip",
-    identifier: requestIp,
-    maximum: 120,
-    windowSeconds: 60,
-  });
-  await enforceRateLimit(c.env.DB, {
-    namespace: "public-thumbnail-video",
-    identifier: videoId,
-    maximum: 30,
-    windowSeconds: 60,
-  });
   const video = await c.env.DB.prepare(
     "SELECT source_video_id, thumbnail_key, thumbnail_remote_url FROM videos WHERE id = ?",
   )
@@ -414,6 +401,20 @@ thumbnailRouter.get("/:videoId/thumbnail", async (c) => {
     );
     return new Response(object.body, { headers });
   }
+
+  const requestIp = c.req.header("cf-connecting-ip") ?? "unknown";
+  await enforceRateLimit(c.env.DB, {
+    namespace: "public-thumbnail-ip",
+    identifier: requestIp,
+    maximum: 120,
+    windowSeconds: 60,
+  });
+  await enforceRateLimit(c.env.DB, {
+    namespace: "public-thumbnail-video",
+    identifier: videoId,
+    maximum: 30,
+    windowSeconds: 60,
+  });
 
   const acquired = await cacheThumbnail(c.env, {
     videoId,

@@ -238,6 +238,12 @@ describe("security resource guards", () => {
     expect(videosSource).not.toContain("SET duration_seconds = ?");
     expect(videosSource).toContain('namespace: "public-thumbnail-ip"');
     expect(videosSource).toContain('namespace: "public-thumbnail-video"');
+    expect(videosSource.indexOf("if (object)")).toBeLessThan(
+      videosSource.indexOf('namespace: "public-thumbnail-ip"'),
+    );
+    expect(quizImportsSource).toMatch(
+      /INSERT OR IGNORE INTO attempt_items[\s\S]+JOIN questions ON questions\.id = \?/,
+    );
   });
 
   it("allows only one live grading reservation for an attempt state", () => {

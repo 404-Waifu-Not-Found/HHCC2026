@@ -1318,6 +1318,43 @@ describe("protocol-8 evidence-grounded call events", () => {
     });
     expect(stored.lease_expires_at).toBeLessThanOrEqual(Date.now());
   });
+
+  it("does not release another recovery session's active lease", async () => {
+    const db = createGroundedDatabase();
+    const original = db.sqlite
+      .prepare(
+        "SELECT lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+      )
+      .get(QUIZ_ID) as { lease_expires_at: number };
+    const { app, env } = testApp(db);
+    const response = await app.request(
+      `/imports/${QUIZ_ID}/progress`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": IMPORT_KEY,
+        },
+        body: JSON.stringify({
+          state: "cooldown",
+          reasonCode: "schema_invalid",
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+          nextRecoveryAt: new Date(Date.now() + 30_000).toISOString(),
+        }),
+      },
+      env,
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      error: { code: "quiz_generation_state_conflict" },
+    });
+    const stored = db.sqlite
+      .prepare(
+        "SELECT lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+      )
+      .get(QUIZ_ID) as { lease_expires_at: number };
+    expect(stored.lease_expires_at).toBe(original.lease_expires_at);
+  });
 });
 
 describe("authoritative progressive call events", () => {

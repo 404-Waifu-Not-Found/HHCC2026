@@ -513,8 +513,18 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
         liveClaim,
       ),
       c.env.DB.prepare(
-        "INSERT OR IGNORE INTO attempt_items (attempt_id, ordinal, question_id) SELECT id, ?, ? FROM attempts WHERE quiz_id = ?",
-      ).bind(input.chunk.startIndex, questionId, bank.id),
+        `INSERT OR IGNORE INTO attempt_items (attempt_id, ordinal, question_id)
+         SELECT attempts.id, ?, ?
+         FROM attempts
+         JOIN questions ON questions.id = ? AND questions.quiz_id = attempts.quiz_id AND questions.ordinal = ?
+         WHERE attempts.quiz_id = ?`,
+      ).bind(
+        input.chunk.startIndex,
+        questionId,
+        questionId,
+        input.chunk.startIndex,
+        bank.id,
+      ),
       c.env.DB.prepare(
         `UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ?, concepts_json = ?
          WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating'
@@ -1072,10 +1082,28 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
       const results = await c.env.DB.batch([
         updateSummary,
         c.env.DB.prepare(
-          "UPDATE quiz_generation_claims SET lease_expires_at = ?, updated_at = ? WHERE quiz_id = ? AND claim_key = ?",
-        ).bind(timestamp, timestamp, bank.id, importKey),
+          `UPDATE quiz_generation_claims
+           SET lease_expires_at = ?, updated_at = ?
+           WHERE quiz_id = ? AND claim_key = ?
+           ${automatic ? "AND lease_expires_at > ? AND (? IS NULL OR recovery_session_id = ?)" : ""}`,
+        ).bind(
+          timestamp,
+          timestamp,
+          bank.id,
+          importKey,
+          ...(automatic
+            ? [
+                timestamp,
+                input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+                input.recoverySessionId ?? snapshot.claimRecoverySessionId,
+              ]
+            : []),
+        ),
       ]);
-      if (results[0]?.meta.changes !== 1) {
+      if (
+        results[0]?.meta.changes !== 1 ||
+        (automatic && results[1]?.meta.changes !== 1)
+      ) {
         throw new ApiError(
           409,
           "quiz_generation_state_conflict",
