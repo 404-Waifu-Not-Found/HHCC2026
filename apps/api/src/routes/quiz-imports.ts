@@ -24,8 +24,7 @@ import { enforceRateLimit } from "../lib/rate-limit";
 import {
   ProgressiveQuizSummarySchema,
   acceptedQuestionSummary,
-  generationAvailability,
-  parseProgressiveQuizSummary,
+  readProgressiveGenerationSnapshot,
   tryProgressiveQuizSummary,
   type ProgressiveQuizSummary,
 } from "../lib/progressive-quiz";
@@ -115,7 +114,15 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     user.id,
     importKey,
   );
-  const summary = parseProgressiveQuizSummary(bank.quality_summary_json);
+  const snapshot = await readProgressiveGenerationSnapshot(c.env.DB, bank.id);
+  const summary = snapshot.summary;
+  if (!summary || !snapshot.availability) {
+    throw new ApiError(
+      409,
+      "quiz_not_progressive",
+      "This quiz does not support current progressive question delivery.",
+    );
+  }
   if (input.chunk.totalQuestions !== summary.plannedCount) {
     throw new ApiError(
       409,
@@ -134,8 +141,8 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
       "The streamed question did not match the requested type plan.",
     );
   }
-  const state = await progressiveImportState(c.env.DB, bank.id);
-  if (input.chunk.startIndex < state.generation.availableQuestions) {
+  const state = progressiveImportStateFromSnapshot(snapshot);
+  if (input.chunk.startIndex < snapshot.authoritativeCount) {
     if (
       await storedQuestionMatches(
         c.env.DB,
@@ -153,7 +160,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
       "That question position was already stored with different content.",
     );
   }
-  if (input.chunk.startIndex !== state.generation.availableQuestions) {
+  if (input.chunk.startIndex !== snapshot.authoritativeCount) {
     throw new ApiError(
       409,
       "quiz_question_out_of_sequence",
@@ -281,8 +288,16 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
     user.id,
     importKey,
   );
-  if (bank.quality_status !== "passed") {
-    const summary = parseProgressiveQuizSummary(bank.quality_summary_json);
+  const snapshot = await readProgressiveGenerationSnapshot(c.env.DB, bank.id);
+  if (snapshot.qualityStatus !== "passed") {
+    const summary = snapshot.summary;
+    if (!summary) {
+      throw new ApiError(
+        409,
+        "quiz_not_progressive",
+        "This quiz does not support current progressive question delivery.",
+      );
+    }
     const nextSummary = ProgressiveQuizSummarySchema.parse({
       ...summary,
       generationState: input.state,
@@ -290,7 +305,7 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
       lastProgressAt: now(),
     });
     await c.env.DB.prepare(
-      "UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating'",
+      "UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_status = 'generating' AND quality_summary_json = ?",
     )
       .bind(
         JSON.stringify(nextSummary),
@@ -298,6 +313,7 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
         user.id,
         importKey,
         LOCAL_QUIZ_PIPELINE_VERSION,
+        JSON.stringify(summary),
       )
       .run();
   }
@@ -462,8 +478,6 @@ async function findProgressiveImportedQuiz(
 
 type ProgressiveBank = {
   id: string;
-  quality_status: string;
-  quality_summary_json: string;
 };
 
 async function progressiveBank(
@@ -474,43 +488,37 @@ async function progressiveBank(
 ): Promise<ProgressiveBank> {
   const bank = await db
     .prepare(
-      "SELECT id, quality_status, quality_summary_json FROM quiz_banks WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ?",
+      "SELECT id FROM quiz_banks WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ?",
     )
     .bind(quizId, userId, importKey, LOCAL_QUIZ_PIPELINE_VERSION)
     .first<ProgressiveBank>();
   if (!bank) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
-  parseProgressiveQuizSummary(bank.quality_summary_json);
   return bank;
 }
 
 async function progressiveImportState(db: D1Database, quizId: string) {
-  const bank = await db
-    .prepare(
-      "SELECT quality_status, quality_summary_json FROM quiz_banks WHERE id = ? AND pipeline_version = ?",
-    )
-    .bind(quizId, LOCAL_QUIZ_PIPELINE_VERSION)
-    .first<{ quality_status: string; quality_summary_json: string }>();
-  if (!bank) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
-  const summary = parseProgressiveQuizSummary(bank.quality_summary_json);
-  const count = await db
-    .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
-    .bind(quizId)
-    .first<{ count: number }>();
-  const authoritativeCount = Number(count?.count ?? 0);
-  if (authoritativeCount < 1 || authoritativeCount !== summary.acceptedCount) {
+  return progressiveImportStateFromSnapshot(
+    await readProgressiveGenerationSnapshot(db, quizId),
+  );
+}
+
+function progressiveImportStateFromSnapshot(
+  snapshot: Awaited<ReturnType<typeof readProgressiveGenerationSnapshot>>,
+) {
+  if (
+    snapshot.pipelineVersion !== LOCAL_QUIZ_PIPELINE_VERSION ||
+    !snapshot.summary ||
+    !snapshot.availability
+  ) {
     throw new ApiError(
       409,
-      "quiz_generation_state_conflict",
-      "Stored question counts do not match generation state.",
+      "quiz_not_progressive",
+      "This quiz does not support current progressive question delivery.",
     );
   }
   return {
-    quizId,
-    generation: generationAvailability(
-      summary,
-      bank.quality_status,
-      authoritativeCount,
-    ),
+    quizId: snapshot.quizId,
+    generation: snapshot.availability,
   };
 }
 

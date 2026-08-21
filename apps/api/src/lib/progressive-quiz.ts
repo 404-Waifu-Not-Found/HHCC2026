@@ -171,6 +171,100 @@ export type ProgressiveQuizSummary = z.infer<
   typeof ProgressiveQuizSummarySchema
 >;
 
+const ProgressiveGenerationSnapshotRowSchema = z.object({
+  quiz_id: z.string().uuid(),
+  pipeline_version: z.number().int(),
+  quality_status: z.string(),
+  quality_summary_json: z.string(),
+  authoritative_count: z.coerce.number().int().nonnegative(),
+});
+
+export const PROGRESSIVE_GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
+
+export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
+  SELECT
+    qb.id AS quiz_id,
+    qb.pipeline_version,
+    qb.quality_status,
+    qb.quality_summary_json,
+    (
+      SELECT COUNT(*)
+      FROM questions stored_question
+      WHERE stored_question.quiz_id = qb.id
+    ) AS authoritative_count
+  FROM quiz_banks qb
+  WHERE qb.id = ?
+  LIMIT 1`;
+
+export type ProgressiveGenerationSnapshot = {
+  quizId: string;
+  pipelineVersion: number;
+  qualityStatus: string;
+  authoritativeCount: number;
+  summary: ProgressiveQuizSummary | null;
+  availability: AttemptGenerationAvailability | null;
+  stalled: boolean;
+};
+
+/**
+ * Read the mutable progressive bank state and its stored question count from a
+ * single D1 statement. D1 gives each statement one coherent database snapshot,
+ * so callers never compare an older summary with a count observed after an
+ * append commits.
+ */
+export async function readProgressiveGenerationSnapshot(
+  db: D1Database,
+  quizId: string,
+): Promise<ProgressiveGenerationSnapshot> {
+  const raw = await db
+    .prepare(PROGRESSIVE_GENERATION_SNAPSHOT_SQL)
+    .bind(quizId)
+    .first();
+  const row = ProgressiveGenerationSnapshotRowSchema.safeParse(raw);
+  if (!row.success) {
+    throw new ApiError(404, "quiz_not_found", "Quiz not found.");
+  }
+
+  const summary = tryProgressiveQuizSummary(row.data.quality_summary_json);
+  if (!summary) {
+    return {
+      quizId: row.data.quiz_id,
+      pipelineVersion: row.data.pipeline_version,
+      qualityStatus: row.data.quality_status,
+      authoritativeCount: row.data.authoritative_count,
+      summary: null,
+      availability: null,
+      stalled: false,
+    };
+  }
+
+  const availability = generationAvailability(
+    summary,
+    row.data.quality_status,
+    row.data.authoritative_count,
+  );
+  const stalled =
+    (availability.state === "generating" ||
+      availability.state === "retrying") &&
+    Date.now() - summary.lastProgressAt > PROGRESSIVE_GENERATION_STALE_AFTER_MS;
+
+  return {
+    quizId: row.data.quiz_id,
+    pipelineVersion: row.data.pipeline_version,
+    qualityStatus: row.data.quality_status,
+    authoritativeCount: row.data.authoritative_count,
+    summary,
+    availability: stalled
+      ? AttemptGenerationAvailabilitySchema.parse({
+          ...availability,
+          state: "retry_required",
+          reasonCode: "generation_stalled",
+        })
+      : availability,
+    stalled,
+  };
+}
+
 export function acceptedQuestionSummary(question: LocalConceptQuizQuestion) {
   return LocalAcceptedQuestionSummarySchema.parse({
     id: question.id,

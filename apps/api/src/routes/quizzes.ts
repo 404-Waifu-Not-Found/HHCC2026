@@ -26,9 +26,9 @@ import { createId, now } from "../lib/ids";
 import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
-  generationAvailability,
   gradeProgressiveShortAnswer,
-  tryProgressiveQuizSummary,
+  readProgressiveGenerationSnapshot,
+  type ProgressiveGenerationSnapshot,
 } from "../lib/progressive-quiz";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { StoredTranscriptSchema } from "../lib/stored-transcript";
@@ -76,9 +76,6 @@ const AttemptRowSchema = z.object({
   score: z.number().nullable(),
   mastery_state: MasteryStateSchema.nullable(),
   quiz_pipeline_version: z.number().int(),
-  quiz_quality_status: z.enum(["generating", "passed"]),
-  quiz_quality_summary_json: z.string(),
-  quiz_created_at: z.number().int(),
   quiz_language: z.string(),
   quiz_session_length: z.enum(["short", "medium", "long"]),
   quiz_watched: z.number().int(),
@@ -100,7 +97,6 @@ const RubricSchema = z.object({
 
 const QUIZ_STARTS_PER_MINUTE = 8;
 const LEGACY_LOCAL_QUIZ_PIPELINE_VERSION = 7;
-const GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
 export const ANSWER_RESERVATION_TTL_MS = 90_000;
 export const ANSWER_RESERVATION_SQL = `
   UPDATE attempts
@@ -132,10 +128,18 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     idempotencyKey,
   );
   if (existingStart) {
-    return c.json(replayAttemptStart(existingStart, quizId, startRequestJson));
+    return c.json(
+      await replayAttemptStart(
+        c.env.DB,
+        user.id,
+        existingStart,
+        quizId,
+        startRequestJson,
+      ),
+    );
   }
   const quiz = await c.env.DB.prepare(
-    "SELECT id, video_id, primer, watched, pipeline_version, quality_status, quality_summary_json, created_at, language, session_length FROM quiz_banks WHERE id = ? AND user_id = ? AND ((pipeline_version = ? AND quality_status = 'passed') OR (pipeline_version = ? AND quality_status IN ('generating', 'passed')))",
+    "SELECT id, video_id, primer, watched, pipeline_version, language, session_length FROM quiz_banks WHERE id = ? AND user_id = ? AND ((pipeline_version = ? AND quality_status = 'passed') OR (pipeline_version = ? AND quality_status IN ('generating', 'passed')))",
   )
     .bind(
       quizId,
@@ -149,18 +153,26 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
       primer: string;
       watched: number;
       pipeline_version: number;
-      quality_status: "generating" | "passed";
-      quality_summary_json: string;
-      created_at: number;
       language: string;
       session_length: "short" | "medium" | "long";
     }>();
   if (!quiz) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
+  const quizSnapshot = await readProgressiveGenerationSnapshot(
+    c.env.DB,
+    quiz.id,
+  );
+  if (quizSnapshot.pipelineVersion !== quiz.pipeline_version) {
+    throw new ApiError(
+      409,
+      "quiz_generation_state_conflict",
+      "Quiz pipeline metadata changed while starting the attempt.",
+    );
+  }
   const progressiveSummary =
     quiz.pipeline_version === LOCAL_QUIZ_PIPELINE_VERSION
-      ? tryProgressiveQuizSummary(quiz.quality_summary_json)
+      ? quizSnapshot.summary
       : null;
-  if (quiz.quality_status === "generating" && !progressiveSummary) {
+  if (quizSnapshot.qualityStatus === "generating" && !progressiveSummary) {
     throw new ApiError(
       409,
       "quiz_not_progressive",
@@ -169,7 +181,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
   }
 
   if (input.mode === "review") {
-    if (quiz.quality_status !== "passed") {
+    if (quizSnapshot.qualityStatus !== "passed") {
       throw new ApiError(
         409,
         "quiz_still_generating",
@@ -198,6 +210,20 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
   );
   if (activeAttemptId) {
     const activeAttempt = await getAttempt(c.env.DB, activeAttemptId, user.id);
+    const activeGeneration = await attemptGenerationState(
+      c.env.DB,
+      activeAttempt,
+    );
+    if (
+      activeAttempt.current_index >=
+      activeGeneration.generation.availableQuestions
+    ) {
+      throw new ApiError(
+        409,
+        "quiz_still_generating",
+        "The next quiz question is still being generated.",
+      );
+    }
     await reconcileAttemptItems(c.env.DB, activeAttempt.quiz_id);
     const activeQuestion = await getAttemptQuestion(
       c.env.DB,
@@ -221,10 +247,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
           activeAttempt.item_count,
           Boolean(activeAttempt.retry_pending),
         ),
-        generation: await attemptGenerationAvailability(
-          c.env.DB,
-          activeAttempt,
-        ),
+        generation: activeGeneration.generation,
       }),
     );
   }
@@ -236,16 +259,32 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     windowSeconds: 60,
   });
 
-  const questionResult = await c.env.DB.prepare(
-    "SELECT id, quiz_id, ordinal, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty FROM questions WHERE quiz_id = ? ORDER BY ABS(difficulty - 2), ordinal",
-  )
-    .bind(quiz.id)
-    .all();
+  const questionResult = progressiveSummary
+    ? await c.env.DB.prepare(
+        "SELECT id, quiz_id, ordinal, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty FROM questions WHERE quiz_id = ? AND ordinal < ? ORDER BY ordinal",
+      )
+        .bind(quiz.id, quizSnapshot.authoritativeCount)
+        .all()
+    : await c.env.DB.prepare(
+        "SELECT id, quiz_id, ordinal, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty FROM questions WHERE quiz_id = ? ORDER BY ABS(difficulty - 2), ordinal",
+      )
+        .bind(quiz.id)
+        .all();
   const questions = z
     .array(QuestionRowSchema)
     .safeParse(questionResult.results);
   if (!questions.success || questions.data.length < 1) {
     throw new ApiError(500, "quiz_empty", "This quiz has no valid questions.");
+  }
+  if (
+    progressiveSummary &&
+    questions.data.length !== quizSnapshot.authoritativeCount
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_generation_state_conflict",
+      "The streamed question sequence changed while starting the quiz.",
+    );
   }
 
   const eligibleQuestions = selectEligibleQuestions(
@@ -271,6 +310,16 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
         eligibleQuestions,
         Math.min(desired, eligibleQuestions.length),
       );
+  if (
+    progressiveSummary &&
+    selected.length !== quizSnapshot.authoritativeCount
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_generation_state_conflict",
+      "Stored questions do not match the progressive type plan.",
+    );
+  }
   const firstQuestion = selected.at(0);
   if (!firstQuestion)
     throw new ApiError(500, "quiz_empty", "This quiz has no valid questions.");
@@ -280,11 +329,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     ? progressiveSummary.plannedCount
     : selected.length;
   const generation = progressiveSummary
-    ? generationAvailability(
-        progressiveSummary,
-        quiz.quality_status,
-        selected.length,
-      )
+    ? requireProgressiveAvailability(quizSnapshot)
     : readyGeneration(itemCount);
   const startResponse = QuizStartResponseSchema.parse({
     attemptId,
@@ -324,7 +369,15 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
       idempotencyKey,
     );
     if (raced) {
-      return c.json(replayAttemptStart(raced, quizId, startRequestJson));
+      return c.json(
+        await replayAttemptStart(
+          c.env.DB,
+          user.id,
+          raced,
+          quizId,
+          startRequestJson,
+        ),
+      );
     }
     throw error;
   }
@@ -376,179 +429,182 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     );
   }
 
-  let grade: { correct: boolean; feedback: string };
+  let reservationCommitted = false;
   try {
-    grade = await gradeAnswer(c.env, attempt, question, input.answer);
-  } catch (error) {
-    await releaseAnswerReservation(c.env.DB, attempt.id, user.id, gradingToken);
-    throw error;
-  }
-  const timestamp = now();
-  const answerInsert = c.env.DB.prepare(
-    "INSERT INTO answers (id, attempt_id, question_id, answer_json, is_correct, feedback, variant_index, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-  ).bind(
-    createId(),
-    attempt.id,
-    question.id,
-    JSON.stringify(input.answer),
-    grade.correct ? 1 : 0,
-    grade.feedback,
-    attempt.current_variant,
-    timestamp,
-  );
-
-  if (!grade.correct && !attempt.retry_pending) {
-    await c.env.DB.batch([
-      answerInsert,
-      c.env.DB.prepare(
-        "UPDATE attempts SET retry_pending = 1, current_variant = 1, total_answered = total_answered + 1, target_difficulty = MAX(1, target_difficulty - 0.5), grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
-      ).bind(timestamp, attempt.id, user.id, gradingToken),
-    ]);
-    return c.json(
-      AttemptAnswerResponseSchema.parse({
-        correct: false,
-        explanation: grade.feedback,
-        evidenceSegmentIds: parseQuestionEvidence(question),
-        nextQuestion: toPublicQuestion(
-          question,
-          attempt.current_index,
-          attempt.item_count,
-          true,
-        ),
-        completed: false,
-        score: null,
-        mastery: null,
-        generation: await attemptGenerationAvailability(c.env.DB, attempt),
-      }),
-    );
-  }
-
-  const nextIndex = attempt.current_index + 1;
-  const nextCorrectCount = attempt.correct_count + (grade.correct ? 1 : 0);
-  const nextTargetDifficulty = Math.min(
-    5,
-    Math.max(1, attempt.target_difficulty + (grade.correct ? 0.5 : -0.5)),
-  );
-  const completionAvailability = await attemptGenerationAvailability(
-    c.env.DB,
-    attempt,
-  );
-  const completed =
-    nextIndex >= attempt.item_count && completionAvailability.state === "ready";
-  if (completed) {
-    const score = Math.round((nextCorrectCount / attempt.item_count) * 100);
-    const mastery = await updateMastery(c.env.DB, {
-      userId: user.id,
-      videoId: attempt.video_id,
-      attemptId: attempt.id,
-      mode: attempt.mode,
-      score,
+    const grade = await gradeAnswer(c.env, attempt, question, input.answer);
+    // Freeze one coherent generation snapshot before any answer write. A
+    // concurrent append may become visible on the next poll, but can never turn
+    // this committed answer into a generation-state error response.
+    const generationState = await attemptGenerationState(c.env.DB, attempt);
+    const generation = generationState.generation;
+    const timestamp = now();
+    const answerInsert = c.env.DB.prepare(
+      "INSERT INTO answers (id, attempt_id, question_id, answer_json, is_correct, feedback, variant_index, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    ).bind(
+      createId(),
+      attempt.id,
+      question.id,
+      JSON.stringify(input.answer),
+      grade.correct ? 1 : 0,
+      grade.feedback,
+      attempt.current_variant,
       timestamp,
-    });
+    );
+
+    if (!grade.correct && !attempt.retry_pending) {
+      await c.env.DB.batch([
+        answerInsert,
+        c.env.DB.prepare(
+          "UPDATE attempts SET retry_pending = 1, current_variant = 1, total_answered = total_answered + 1, target_difficulty = MAX(1, target_difficulty - 0.5), grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
+        ).bind(timestamp, attempt.id, user.id, gradingToken),
+      ]);
+      reservationCommitted = true;
+      return c.json(
+        AttemptAnswerResponseSchema.parse({
+          correct: false,
+          explanation: grade.feedback,
+          evidenceSegmentIds: parseQuestionEvidence(question),
+          nextQuestion: toPublicQuestion(
+            question,
+            attempt.current_index,
+            attempt.item_count,
+            true,
+          ),
+          completed: false,
+          score: null,
+          mastery: null,
+          generation,
+        }),
+      );
+    }
+
+    const nextIndex = attempt.current_index + 1;
+    const nextCorrectCount = attempt.correct_count + (grade.correct ? 1 : 0);
+    const nextTargetDifficulty = Math.min(
+      5,
+      Math.max(1, attempt.target_difficulty + (grade.correct ? 0.5 : -0.5)),
+    );
+    const completed =
+      nextIndex >= attempt.item_count && generation.state === "ready";
+    if (completed) {
+      const score = Math.round((nextCorrectCount / attempt.item_count) * 100);
+      const mastery = await updateMastery(c.env.DB, {
+        userId: user.id,
+        videoId: attempt.video_id,
+        attemptId: attempt.id,
+        mode: attempt.mode,
+        score,
+        timestamp,
+      });
+      await c.env.DB.batch([
+        answerInsert,
+        c.env.DB.prepare(
+          "UPDATE attempts SET status = 'complete', current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, score = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ?, completed_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
+        ).bind(
+          nextIndex,
+          nextCorrectCount,
+          nextTargetDifficulty,
+          score,
+          timestamp,
+          timestamp,
+          attempt.id,
+          user.id,
+          gradingToken,
+        ),
+      ]);
+      reservationCommitted = true;
+      return c.json(
+        AttemptAnswerResponseSchema.parse({
+          correct: grade.correct,
+          explanation: grade.feedback,
+          evidenceSegmentIds: parseQuestionEvidence(question),
+          nextQuestion: null,
+          completed: true,
+          score,
+          mastery,
+          generation: readyGeneration(attempt.item_count),
+        }),
+      );
+    }
+
+    let nextQuestion: QuestionRow | null = null;
+    const progressive = Boolean(generationState.snapshot.summary);
+    if (progressive && nextIndex < generation.availableQuestions) {
+      await reconcileAttemptItems(c.env.DB, attempt.quiz_id);
+      nextQuestion = await getAttemptQuestion(c.env.DB, attempt.id, nextIndex);
+      if (!nextQuestion) {
+        throw new ApiError(
+          500,
+          "attempt_corrupt",
+          "The next quiz question is missing.",
+        );
+      }
+    }
+
     await c.env.DB.batch([
       answerInsert,
       c.env.DB.prepare(
-        "UPDATE attempts SET status = 'complete', current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, score = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ?, completed_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
+        "UPDATE attempts SET current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
       ).bind(
         nextIndex,
         nextCorrectCount,
         nextTargetDifficulty,
-        score,
-        timestamp,
         timestamp,
         attempt.id,
         user.id,
         gradingToken,
       ),
     ]);
-    return c.json(
-      AttemptAnswerResponseSchema.parse({
-        correct: grade.correct,
-        explanation: grade.feedback,
-        evidenceSegmentIds: parseQuestionEvidence(question),
-        nextQuestion: null,
-        completed: true,
-        score,
-        mastery,
-        generation: readyGeneration(attempt.item_count),
-      }),
-    );
-  }
+    reservationCommitted = true;
 
-  await c.env.DB.batch([
-    answerInsert,
-    c.env.DB.prepare(
-      "UPDATE attempts SET current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, grading_token = NULL, grading_expires_at = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND grading_token = ?",
-    ).bind(
-      nextIndex,
-      nextCorrectCount,
-      nextTargetDifficulty,
-      timestamp,
-      attempt.id,
-      user.id,
-      gradingToken,
-    ),
-  ]);
-  await adaptNextQuestion(
-    c.env.DB,
-    attempt.id,
-    nextIndex,
-    nextTargetDifficulty,
-  );
-  await reconcileAttemptItems(c.env.DB, attempt.quiz_id);
-  let nextQuestion = await getAttemptQuestion(c.env.DB, attempt.id, nextIndex);
-  const generation = await attemptGenerationAvailability(c.env.DB, attempt);
-  if (!nextQuestion && generation.state === "ready") {
-    // The final append can commit between the first reconciliation and the
-    // availability read. Reconcile once more before treating a ready attempt
-    // as corrupt so that answer/append races remain self-healing.
-    await reconcileAttemptItems(c.env.DB, attempt.quiz_id);
-    nextQuestion = await getAttemptQuestion(c.env.DB, attempt.id, nextIndex);
-  }
-  if (!nextQuestion) {
-    if (generation.state === "ready") {
-      throw new ApiError(
-        500,
-        "attempt_corrupt",
-        "The next quiz question is missing.",
+    if (!progressive) {
+      await adaptNextQuestion(
+        c.env.DB,
+        attempt.id,
+        nextIndex,
+        nextTargetDifficulty,
       );
+      nextQuestion = await getAttemptQuestion(c.env.DB, attempt.id, nextIndex);
+      if (!nextQuestion) {
+        throw new ApiError(
+          500,
+          "attempt_corrupt",
+          "The next quiz question is missing.",
+        );
+      }
     }
+
     return c.json(
       AttemptAnswerResponseSchema.parse({
         correct: grade.correct,
         explanation: grade.feedback,
         evidenceSegmentIds: parseQuestionEvidence(question),
-        nextQuestion: null,
+        nextQuestion: nextQuestion
+          ? toPublicQuestion(nextQuestion, nextIndex, attempt.item_count, false)
+          : null,
         completed: false,
         score: null,
         mastery: null,
         generation,
       }),
     );
+  } finally {
+    if (!reservationCommitted) {
+      await releaseAnswerReservation(
+        c.env.DB,
+        attempt.id,
+        user.id,
+        gradingToken,
+      );
+    }
   }
-  return c.json(
-    AttemptAnswerResponseSchema.parse({
-      correct: grade.correct,
-      explanation: grade.feedback,
-      evidenceSegmentIds: parseQuestionEvidence(question),
-      nextQuestion: toPublicQuestion(
-        nextQuestion,
-        nextIndex,
-        attempt.item_count,
-        false,
-      ),
-      completed: false,
-      score: null,
-      mastery: null,
-      generation,
-    }),
-  );
 });
 
 quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
   const user = c.get("user");
   const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
-  const generation = await attemptGenerationAvailability(c.env.DB, attempt);
+  const generationState = await attemptGenerationState(c.env.DB, attempt);
+  const generation = generationState.generation;
   if (attempt.status === "complete") {
     return c.json(
       AttemptResumeResponseSchema.parse({
@@ -561,12 +617,17 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
       }),
     );
   }
-  await reconcileAttemptItems(c.env.DB, attempt.quiz_id);
-  const question = await getAttemptQuestion(
-    c.env.DB,
-    attempt.id,
-    attempt.current_index,
-  );
+  const question =
+    attempt.current_index < generation.availableQuestions
+      ? await (async () => {
+          await reconcileAttemptItems(c.env.DB, attempt.quiz_id);
+          return getAttemptQuestion(
+            c.env.DB,
+            attempt.id,
+            attempt.current_index,
+          );
+        })()
+      : null;
   if (!question) {
     if (generation.state === "ready") {
       throw new ApiError(
@@ -606,8 +667,9 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
 quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
   const user = c.get("user");
   const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
-  const generation = await attemptGenerationAvailability(c.env.DB, attempt);
-  const summary = tryProgressiveQuizSummary(attempt.quiz_quality_summary_json);
+  const generationState = await attemptGenerationState(c.env.DB, attempt);
+  const generation = generationState.generation;
+  const summary = generationState.snapshot.summary;
   return c.json(
     AttemptGenerationResponseSchema.parse({
       attemptId: attempt.id,
@@ -667,42 +729,61 @@ function readyGeneration(total: number): AttemptGenerationAvailability {
   });
 }
 
-async function attemptGenerationAvailability(
+async function attemptGenerationState(
   db: D1Database,
   attempt: AttemptRow,
-): Promise<AttemptGenerationAvailability> {
-  const summary = tryProgressiveQuizSummary(attempt.quiz_quality_summary_json);
-  if (!summary) {
-    if (attempt.quiz_quality_status !== "passed") {
+): Promise<{
+  snapshot: ProgressiveGenerationSnapshot;
+  generation: AttemptGenerationAvailability;
+}> {
+  const snapshot = await readProgressiveGenerationSnapshot(db, attempt.quiz_id);
+  if (!snapshot.summary || !snapshot.availability) {
+    if (
+      ![
+        LEGACY_LOCAL_QUIZ_PIPELINE_VERSION,
+        LOCAL_QUIZ_PIPELINE_VERSION,
+      ].includes(snapshot.pipelineVersion) ||
+      snapshot.qualityStatus !== "passed"
+    ) {
       throw new ApiError(
         409,
         "quiz_not_progressive",
         "This generating quiz does not support current progressive delivery.",
       );
     }
-    return readyGeneration(attempt.item_count);
+    return {
+      snapshot,
+      generation: readyGeneration(attempt.item_count),
+    };
   }
-  const count = await db
-    .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
-    .bind(attempt.quiz_id)
-    .first<{ count: number }>();
-  const availability = generationAvailability(
-    summary,
-    attempt.quiz_quality_status,
-    Number(count?.count ?? 0),
-  );
   if (
-    (availability.state === "generating" ||
-      availability.state === "retrying") &&
-    Date.now() - summary.lastProgressAt > GENERATION_STALE_AFTER_MS
+    snapshot.pipelineVersion !== LOCAL_QUIZ_PIPELINE_VERSION ||
+    snapshot.summary.plannedCount !== attempt.item_count
   ) {
-    return AttemptGenerationAvailabilitySchema.parse({
-      ...availability,
-      state: "retry_required",
-      reasonCode: "generation_stalled",
-    });
+    throw new ApiError(
+      409,
+      "quiz_generation_state_conflict",
+      "The attempt and progressive quiz totals do not agree.",
+    );
   }
-  return availability;
+  return { snapshot, generation: snapshot.availability };
+}
+
+function requireProgressiveAvailability(
+  snapshot: ProgressiveGenerationSnapshot,
+): AttemptGenerationAvailability {
+  if (
+    snapshot.pipelineVersion !== LOCAL_QUIZ_PIPELINE_VERSION ||
+    !snapshot.summary ||
+    !snapshot.availability
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_not_progressive",
+      "This quiz does not support current progressive question delivery.",
+    );
+  }
+  return snapshot.availability;
 }
 
 async function reconcileAttemptItems(
@@ -771,11 +852,13 @@ async function findAttemptStartByKey(
     .first<StoredAttemptStartRow>();
 }
 
-function replayAttemptStart(
+async function replayAttemptStart(
+  db: D1Database,
+  userId: string,
   stored: StoredAttemptStartRow,
   quizId: string,
   startRequestJson: string,
-): QuizStartResponse {
+): Promise<QuizStartResponse> {
   if (
     stored.quiz_id !== quizId ||
     stored.start_request_json !== startRequestJson
@@ -797,7 +880,6 @@ function replayAttemptStart(
     );
   }
   const current = QuizStartResponseSchema.safeParse(raw);
-  if (current.success) return current.data;
   const legacy = z
     .object({
       attemptId: z.string().uuid(),
@@ -805,16 +887,33 @@ function replayAttemptStart(
       question: PublicQuestionSchema,
     })
     .safeParse(raw);
-  if (!legacy.success) {
+  const storedResponse = current.success
+    ? current.data
+    : legacy.success
+      ? QuizStartResponseSchema.parse({
+          ...legacy.data,
+          generation: readyGeneration(legacy.data.question.total),
+        })
+      : null;
+  if (!storedResponse) {
     throw new ApiError(
       500,
       "stored_json_corrupt",
       "Stored quiz start response is invalid.",
     );
   }
+  const attempt = await getAttempt(db, storedResponse.attemptId, userId);
+  if (attempt.quiz_id !== quizId) {
+    throw new ApiError(
+      409,
+      "idempotency_key_reused",
+      "This idempotency key was already used for a different quiz start.",
+    );
+  }
+  const generationState = await attemptGenerationState(db, attempt);
   return QuizStartResponseSchema.parse({
-    ...legacy.data,
-    generation: readyGeneration(legacy.data.question.total),
+    ...storedResponse,
+    generation: generationState.generation,
   });
 }
 
@@ -878,7 +977,7 @@ async function getAttempt(
 ): Promise<AttemptRow> {
   const row = await db
     .prepare(
-      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, q.pipeline_version AS quiz_pipeline_version, q.quality_status AS quiz_quality_status, q.quality_summary_json AS quiz_quality_summary_json, q.created_at AS quiz_created_at, q.language AS quiz_language, q.session_length AS quiz_session_length, q.watched AS quiz_watched FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id AND ((q.pipeline_version = ? AND q.quality_status = 'passed') OR (q.pipeline_version = ? AND q.quality_status IN ('generating', 'passed'))) LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
+      "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, q.pipeline_version AS quiz_pipeline_version, q.language AS quiz_language, q.session_length AS quiz_session_length, q.watched AS quiz_watched FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id AND ((q.pipeline_version = ? AND q.quality_status = 'passed') OR (q.pipeline_version = ? AND q.quality_status IN ('generating', 'passed'))) LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
     )
     .bind(
       LEGACY_LOCAL_QUIZ_PIPELINE_VERSION,

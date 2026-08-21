@@ -56,8 +56,18 @@ describe("extension generation source guard", () => {
     expect(quizImportRoute).toContain('patch("/:quizId/progress"');
     expect(quizImportRoute).toContain("INSERT OR IGNORE INTO attempt_items");
     expect(quizRoute).toContain('get("/attempts/:attemptId/generation"');
-    expect(quizRoute).toContain("attemptGenerationAvailability");
+    expect(quizRoute).toContain("readProgressiveGenerationSnapshot");
+    expect(quizRoute).not.toContain("attemptGenerationAvailability");
     expect(quizRoute).toContain("progressiveSummary.plannedCount");
     expect(quizRoute).toContain("gradeProgressiveShortAnswer");
+
+    const answerRoute = quizRoute.slice(
+      quizRoute.indexOf('post("/attempts/:attemptId/answer"'),
+      quizRoute.indexOf('get("/attempts/:attemptId/resume"'),
+    );
+    expect(answerRoute.indexOf("attemptGenerationState")).toBeLessThan(
+      answerRoute.indexOf("UPDATE attempts SET retry_pending"),
+    );
+    expect(answerRoute).toContain("if (!reservationCommitted)");
   });
 });

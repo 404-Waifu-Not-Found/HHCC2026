@@ -6,6 +6,7 @@ import {
   generationAvailability,
   gradeProgressiveShortAnswer,
   parseProgressiveQuizSummary,
+  readProgressiveGenerationSnapshot,
   tryProgressiveQuizSummary,
 } from "../src/lib/progressive-quiz";
 
@@ -52,6 +53,76 @@ function summary(count = 2) {
 }
 
 describe("progressive quiz storage state", () => {
+  it("reads summary and authoritative count from one coherent statement", async () => {
+    const preparedSql: string[] = [];
+    const current = { ...summary(), lastProgressAt: Date.now() };
+    const db = {
+      prepare(sql: string) {
+        preparedSql.push(sql);
+        return {
+          bind() {
+            return {
+              first: async () => ({
+                quiz_id: "11111111-1111-4111-8111-111111111111",
+                pipeline_version: 9,
+                quality_status: "generating",
+                quality_summary_json: JSON.stringify(current),
+                authoritative_count: 2,
+              }),
+            };
+          },
+        };
+      },
+    } as unknown as D1Database;
+
+    const snapshot = await readProgressiveGenerationSnapshot(
+      db,
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    expect(preparedSql).toHaveLength(1);
+    expect(preparedSql[0]).toMatch(
+      /SELECT COUNT\(\*\)[\s\S]+WHERE stored_question\.quiz_id = qb\.id/,
+    );
+    expect(snapshot.authoritativeCount).toBe(2);
+    expect(snapshot.summary?.acceptedCount).toBe(2);
+    expect(snapshot.availability).toEqual({
+      state: "generating",
+      availableQuestions: 2,
+      totalQuestions: 5,
+    });
+  });
+
+  it("fails closed before callers can use a corrupt coherent snapshot", async () => {
+    const db = {
+      prepare() {
+        return {
+          bind() {
+            return {
+              first: async () => ({
+                quiz_id: "11111111-1111-4111-8111-111111111111",
+                pipeline_version: 9,
+                quality_status: "generating",
+                quality_summary_json: JSON.stringify({
+                  ...summary(),
+                  lastProgressAt: Date.now(),
+                }),
+                authoritative_count: 3,
+              }),
+            };
+          },
+        };
+      },
+    } as unknown as D1Database;
+
+    await expect(
+      readProgressiveGenerationSnapshot(
+        db,
+        "11111111-1111-4111-8111-111111111111",
+      ),
+    ).rejects.toThrow("Stored question counts do not match generation state.");
+  });
+
   it("derives availability only from agreeing typed and authoritative state", () => {
     const parsed = ProgressiveQuizSummarySchema.parse(summary());
     expect(generationAvailability(parsed, "generating", 2)).toEqual({
