@@ -45,7 +45,11 @@ export async function apiRequest<T>(
     authClient.getCookie(),
   );
   if (cookie) headers.set("Cookie", cookie);
-  if (options.body && !headers.has("Content-Type"))
+  if (
+    options.body &&
+    !(typeof FormData !== "undefined" && options.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  )
     headers.set("Content-Type", "application/json");
   const controller = new AbortController();
   const callerSignal = options.signal;
