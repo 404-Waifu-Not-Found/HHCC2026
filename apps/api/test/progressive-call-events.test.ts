@@ -1,8 +1,13 @@
 import { DatabaseSync, type StatementSync } from "node:sqlite";
+import type { LocalGenerationCallOutcome } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { errorResponse } from "../src/lib/errors";
-import { readProgressiveGenerationSnapshot } from "../src/lib/progressive-quiz";
+import {
+  automaticRetryKindForOutcome,
+  readProgressiveGenerationSnapshot,
+  retryKindMatchesGenerationOutcome,
+} from "../src/lib/progressive-quiz";
 import type { ApiBindings } from "../src/middleware/authenticated";
 import { quizImportsRouter } from "../src/routes/quiz-imports";
 import { quizzesRouter } from "../src/routes/quizzes";
@@ -410,12 +415,7 @@ function automaticCallEvent(
       | "duplicate_repair"
       | "answer_repair"
       | "automatic_resume";
-    outcome:
-      | "complete"
-      | "transient_http"
-      | "network_interrupted"
-      | "schema_invalid"
-      | "empty_content";
+    outcome: LocalGenerationCallOutcome;
     retryDelayMs: number;
     recoverySessionId: string;
   }> = {},
@@ -467,12 +467,7 @@ function conceptFirstLifecycleEvent(
       | "duplicate_repair"
       | "answer_repair"
       | "automatic_resume";
-    outcome:
-      | "complete"
-      | "transient_http"
-      | "network_interrupted"
-      | "schema_invalid"
-      | "empty_content";
+    outcome: LocalGenerationCallOutcome;
     retryDelayMs: number;
     elapsedMs: number;
   }> = {},
@@ -1316,6 +1311,118 @@ describe("authoritative progressive call events", () => {
 });
 
 describe("protocol-9 concept-first call lifecycles", () => {
+  it.each([
+    ["transient_http", "transport"],
+    ["network_interrupted", "transport"],
+    ["timeout", "transport"],
+    ["call_dispatch_timeout", "transport"],
+    ["stream_idle_timeout", "transport"],
+    ["empty_content", "empty_content"],
+    ["truncated_json", "truncated_output"],
+    ["finish_length", "truncated_output"],
+    ["duplicate_question", "duplicate_repair"],
+    ["schema_invalid", "content_repair"],
+    ["type_or_order_mismatch", "content_repair"],
+    ["source_framing_invalid", "content_repair"],
+    ["course_logistics_invalid", "content_repair"],
+    ["low_pedagogical_value", "content_repair"],
+    ["rubric_invalid", "content_repair"],
+    ["question_tautology_invalid", "content_repair"],
+    ["quiz_language_mismatch", "content_repair"],
+    ["answer_mapping_invalid", "answer_repair"],
+    ["mc_evidence_span_invalid", "answer_repair"],
+    ["mc_distractor_duplicate", "answer_repair"],
+    ["mc_distractor_equivalent", "answer_repair"],
+    ["mc_answer_kind_mismatch", "answer_repair"],
+    ["true_false_fact_invalid", "answer_repair"],
+    ["true_false_mutation_unavailable", "answer_repair"],
+    ["short_atomic_invalid", "answer_repair"],
+    ["short_proposition_invalid", "answer_repair"],
+    ["short_enumeration_invalid", "answer_repair"],
+    ["short_formula_invalid", "answer_repair"],
+    ["question_answer_kind_mismatch", "answer_repair"],
+    ["local_state_conflict", "automatic_resume"],
+    ["append_conflict", "automatic_resume"],
+  ] as const)("maps %s to the truthful %s retry kind", (outcome, kind) => {
+    expect(automaticRetryKindForOutcome(outcome)).toBe(kind);
+    expect(retryKindMatchesGenerationOutcome(kind, outcome)).toBe(true);
+  });
+
+  it.each([
+    "complete",
+    "partial_accepted",
+    "credential_required",
+    "billing_required",
+    "source_unavailable",
+    "recovery_budget_exhausted",
+    "non_instructional_source",
+  ] as const)("does not retry terminal outcome %s", (outcome) => {
+    expect(automaticRetryKindForOutcome(outcome)).toBeNull();
+  });
+
+  it("accepts an answer-repair lifecycle after a precise v5.8 MC failure", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("completed", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "mc_evidence_span_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(200);
+
+    const snapshot = await readProgressiveGenerationSnapshot(
+      db as unknown as D1Database,
+      QUIZ_ID,
+    );
+    expect(snapshot.nextRetryKind).toBe("answer_repair");
+    expect(snapshot.nextOrdinalAttempt).toBe(2);
+
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 2,
+            startIndex: 1,
+            ordinalAttempt: 2,
+            acceptedCount: 0,
+            classification: "automatic_retry",
+            retryKind: "answer_repair",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+  });
+
   it("records one dispatched request and finalizes the same row exactly once", async () => {
     const db = createConceptFirstDatabase();
     const { app, env } = testApp(db);
@@ -1474,7 +1581,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
       ordinalAttempt: 2,
       acceptedCount: 0,
       classification: "automatic_retry",
-      retryKind: "automatic_resume",
+      retryKind: "transport",
     });
     expect(
       (

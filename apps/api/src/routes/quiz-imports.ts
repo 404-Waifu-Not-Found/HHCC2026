@@ -37,6 +37,7 @@ import {
   acceptedQuestionSummary,
   assertProgressiveChunkMetadata,
   readProgressiveGenerationSnapshot,
+  retryKindMatchesGenerationOutcome,
   tryProgressiveQuizSummary,
   type ProgressiveQuizSummary,
 } from "../lib/progressive-quiz";
@@ -1631,7 +1632,7 @@ async function assertLegacyAutomaticRecoveryCallSequence(
     );
     if (
       event.ordinalAttempt !== expectedAttempt ||
-      !retryKindMatchesOutcome(
+      !retryKindMatchesGenerationOutcome(
         event.retryKind,
         history?.latest_outcome ?? "local_state_conflict",
       )
@@ -1751,7 +1752,7 @@ async function assertAutomaticGenerationCallSequence(
     event.startIndex !== Number(previous.start_ordinal) ||
     event.ordinalAttempt !== expectedAttempt ||
     !previous.outcome_code ||
-    !retryKindMatchesOutcome(event.retryKind, previous.outcome_code)
+    !retryKindMatchesGenerationOutcome(event.retryKind, previous.outcome_code)
   ) {
     throw new ApiError(
       409,
@@ -1759,26 +1760,6 @@ async function assertAutomaticGenerationCallSequence(
       "An automatic retry must repair the immediately preceding failed singleton call.",
     );
   }
-}
-
-function retryKindMatchesOutcome(
-  retryKind: AutomaticGenerationCallEvent["retryKind"],
-  outcome: string,
-): boolean {
-  const outcomesByKind: Record<string, Set<string>> = {
-    transport: new Set(["transient_http", "network_interrupted", "timeout"]),
-    empty_content: new Set(["empty_content"]),
-    truncated_output: new Set(["truncated_json", "finish_length"]),
-    duplicate_repair: new Set(["duplicate_question"]),
-    answer_repair: new Set(["answer_mapping_invalid"]),
-    content_repair: new Set(["schema_invalid", "type_or_order_mismatch"]),
-    automatic_resume: new Set([
-      "local_state_conflict",
-      "append_conflict",
-      "network_interrupted",
-    ]),
-  };
-  return retryKind ? (outcomesByKind[retryKind]?.has(outcome) ?? false) : false;
 }
 
 async function renewGenerationClaim(

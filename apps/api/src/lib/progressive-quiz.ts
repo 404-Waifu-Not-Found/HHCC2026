@@ -17,6 +17,7 @@ import {
   QuizQuestionTypesSchema,
   questionTypePlanForSelection,
   type AttemptGenerationAvailability,
+  type AutomaticRetryKind,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
   type LocalGenerationCallOutcome,
@@ -557,6 +558,82 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
 export const PROGRESSIVE_GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
 export const AUTOMATIC_GENERATION_STALE_AFTER_MS = 45 * 1_000;
 
+const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
+  transport: [
+    "transient_http",
+    "network_interrupted",
+    "timeout",
+    "call_dispatch_timeout",
+    "stream_idle_timeout",
+  ],
+  empty_content: ["empty_content"],
+  truncated_output: ["truncated_json", "finish_length"],
+  content_repair: [
+    "schema_invalid",
+    "type_or_order_mismatch",
+    "source_framing_invalid",
+    "course_logistics_invalid",
+    "low_pedagogical_value",
+    "rubric_invalid",
+    "question_tautology_invalid",
+    "quiz_language_mismatch",
+  ],
+  duplicate_repair: ["duplicate_question"],
+  answer_repair: [
+    "answer_mapping_invalid",
+    "mc_evidence_span_invalid",
+    "mc_distractor_duplicate",
+    "mc_distractor_equivalent",
+    "mc_answer_kind_mismatch",
+    "true_false_fact_invalid",
+    "true_false_mutation_unavailable",
+    "short_atomic_invalid",
+    "short_proposition_invalid",
+    "short_enumeration_invalid",
+    "short_formula_invalid",
+    "question_answer_kind_mismatch",
+  ],
+  automatic_resume: ["local_state_conflict", "append_conflict"],
+} as const satisfies Record<
+  AutomaticRetryKind,
+  readonly LocalGenerationCallOutcome[]
+>;
+
+export function automaticRetryKindForOutcome(
+  outcome: string,
+): AutomaticRetryKind | null {
+  for (const [kind, outcomes] of Object.entries(
+    AUTOMATIC_RETRY_OUTCOMES_BY_KIND,
+  ) as [AutomaticRetryKind, readonly string[]][]) {
+    if (outcomes.includes(outcome)) {
+      return kind;
+    }
+  }
+  return null;
+}
+
+export function retryKindMatchesGenerationOutcome(
+  retryKind: AutomaticRetryKind | undefined,
+  outcome: string,
+): boolean {
+  return retryKind
+    ? AUTOMATIC_RETRY_OUTCOMES_BY_KIND[retryKind].some(
+        (candidate) => candidate === outcome,
+      )
+    : false;
+}
+
+const AUTOMATIC_RETRY_KIND_SQL_CASE = Object.entries(
+  AUTOMATIC_RETRY_OUTCOMES_BY_KIND,
+)
+  .map(
+    ([kind, outcomes]) =>
+      `WHEN event.outcome_code IN (${outcomes
+        .map((outcome) => `'${outcome.replaceAll("'", "''")}'`)
+        .join(", ")}) THEN '${kind}'`,
+  )
+  .join("\n        ");
+
 export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
   SELECT
     qb.id AS quiz_id,
@@ -689,13 +766,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
     ), 1), 24) AS next_ordinal_attempt
     ,(
       SELECT CASE
-        WHEN event.outcome_code IN ('transient_http', 'network_interrupted', 'timeout') THEN 'transport'
-        WHEN event.outcome_code = 'empty_content' THEN 'empty_content'
-        WHEN event.outcome_code IN ('truncated_json', 'finish_length') THEN 'truncated_output'
-        WHEN event.outcome_code = 'duplicate_question' THEN 'duplicate_repair'
-        WHEN event.outcome_code = 'answer_mapping_invalid' THEN 'answer_repair'
-        WHEN event.outcome_code IN ('schema_invalid', 'type_or_order_mismatch') THEN 'content_repair'
-        WHEN event.outcome_code IN ('local_state_conflict', 'append_conflict') THEN 'automatic_resume'
+        ${AUTOMATIC_RETRY_KIND_SQL_CASE}
         ELSE NULL
       END
       FROM quiz_generation_call_events event
