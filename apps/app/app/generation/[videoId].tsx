@@ -14,12 +14,12 @@ import {
   type TranscriptCompleteness,
   type TranscriptSegment,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { Mascot } from "../../src/components/Mascot";
+import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
@@ -407,7 +407,7 @@ export default function GenerationScreen() {
     >
       <View style={styles.page}>
         <View style={styles.top}>
-          <Mascot mood={failed ? "oops" : "thinking"} size={112} />
+          <LearningPrism size={112} variant="tile" />
           <Text
             accessibilityRole="header"
             style={[styles.title, { color: theme.text }]}
@@ -450,11 +450,7 @@ export default function GenerationScreen() {
             <View
               style={[styles.privacyIcon, { backgroundColor: theme.surface }]}
             >
-              <MaterialCommunityIcons
-                name="shield-lock-outline"
-                size={27}
-                color={theme.primary}
-              />
+              <VoxelIcon name="privacy" size={27} color={theme.primary} />
             </View>
             <Text style={[styles.privacyText, { color: theme.textMuted }]}>
               {t("privateTranscription")}
@@ -466,11 +462,7 @@ export default function GenerationScreen() {
           <View accessibilityLiveRegion="assertive">
             <Surface tone="error" style={styles.errorSurface}>
               <View style={styles.errorRow}>
-                <MaterialCommunityIcons
-                  name="alert-circle-outline"
-                  size={27}
-                  color={theme.error}
-                />
+                <VoxelIcon name="error" size={27} color={theme.error} />
                 <Text
                   accessibilityRole="alert"
                   style={[styles.error, { color: theme.text }]}

@@ -23,7 +23,11 @@ export function LearningPrism({
         { width: size, height: size },
       ]}
     >
-      <Image source={learningPrismAsset} contentFit="contain" style={styles.image} />
+      <Image
+        source={learningPrismAsset}
+        contentFit="contain"
+        style={styles.image}
+      />
     </View>
   );
 }

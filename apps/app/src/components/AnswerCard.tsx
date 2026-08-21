@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import type { ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
@@ -128,13 +128,13 @@ export function AnswerCard({
         ) : null}
       </View>
       {selected ? (
-        <MaterialCommunityIcons
+        <VoxelIcon
           name={
             state === "correct"
-              ? "check-circle"
+              ? "correct"
               : state === "incorrect"
-                ? "close-circle"
-                : "check-circle-outline"
+                ? "error"
+                : "correct"
           }
           size={24}
           color={

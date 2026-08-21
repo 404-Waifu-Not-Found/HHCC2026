@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Mascot } from "../src/components/Mascot";
+import { LearningPrism } from "../src/components/LearningPrism";
 import { authClient } from "../src/lib/auth-client";
 import { useSettings } from "../src/providers/SettingsProvider";
 import { spacing, typography } from "../src/theme/tokens";
@@ -11,7 +11,7 @@ export default function Index() {
   if (isPending) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Mascot mood="thinking" size={104} />
+        <LearningPrism size={104} variant="tile" />
         <Text style={[styles.brand, { color: theme.text }]}>
           {t("appName")}
         </Text>

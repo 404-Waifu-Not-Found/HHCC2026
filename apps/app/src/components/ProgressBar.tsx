@@ -1,6 +1,6 @@
 import { Platform, StyleSheet, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { controls, motion, radii } from "../theme/tokens";
+import { borders, controls, motion, radii } from "../theme/tokens";
 
 export function ProgressBar({
   progress,
@@ -32,7 +32,7 @@ export function ProgressBar({
       style={[
         styles.track,
         compact && styles.trackCompact,
-        { backgroundColor: theme.surfaceSunken },
+        { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
       ]}
     >
       <View
@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
   track: {
     height: controls.progressHeight,
     overflow: "hidden",
+    borderWidth: borders.hairline,
     borderRadius: radii.pill,
   },
   trackCompact: {

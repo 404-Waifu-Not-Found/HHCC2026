@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
@@ -25,7 +25,7 @@ export default function AdminSystemScreen() {
     <AdminPage
       title={copy.system}
       subtitle="Read-only service health without secret values."
-      icon="server-outline"
+      icon="system"
     >
       <AdminDataState
         loading={loading}
@@ -48,12 +48,8 @@ export default function AdminSystemScreen() {
                             { borderBottomColor: theme.divider },
                           ]}
                         >
-                          <MaterialCommunityIcons
-                            name={
-                              configured
-                                ? "check-circle-outline"
-                                : "alert-circle-outline"
-                            }
+                          <VoxelIcon
+                            name={configured ? "correct" : "error"}
                             size={23}
                             color={configured ? theme.success : theme.error}
                           />
@@ -102,17 +98,17 @@ export default function AdminSystemScreen() {
               <Surface tone="tinted">
                 <View style={styles.detailList}>
                   <SystemDetail
-                    icon="brain"
+                    icon="model"
                     label={copy.model}
                     value={data.model}
                   />
                   <SystemDetail
-                    icon="database-check-outline"
+                    icon="database"
                     label={copy.database}
                     value={data.database.migration}
                   />
                   <SystemDetail
-                    icon="clipboard-check-outline"
+                    icon="checklist"
                     label={copy.audit}
                     value={copy.active}
                   />
@@ -131,14 +127,14 @@ function SystemDetail({
   label,
   value,
 }: {
-  icon: "brain" | "database-check-outline" | "clipboard-check-outline";
+  icon: "model" | "database" | "checklist";
   label: string;
   value: string;
 }) {
   const { theme } = useSettings();
   return (
     <View style={styles.detailRow}>
-      <MaterialCommunityIcons name={icon} size={22} color={theme.primary} />
+      <VoxelIcon name={icon} size={22} color={theme.primary} />
       <View style={styles.detailCopy}>
         <Text style={[styles.detailLabel, { color: theme.textMuted }]}>
           {label}

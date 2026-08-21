@@ -1,5 +1,5 @@
 import type { LibraryCard } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import { Image } from "expo-image";
 import {
   Platform,
@@ -92,11 +92,7 @@ export function VideoCard({
             { backgroundColor: "rgba(11,20,48,0.78)" },
           ]}
         >
-          <MaterialCommunityIcons
-            name={card.source === "youtube" ? "youtube" : "television-play"}
-            size={15}
-            color="#FFFFFF"
-          />
+          <VoxelIcon name="video" size={15} color="#FFFFFF" />
           <Text style={styles.source}>
             {card.source === "youtube" ? "YouTube" : "bilibili"}
           </Text>
@@ -125,11 +121,7 @@ export function VideoCard({
           <Text style={[styles.action, { color: theme.primary }]}>
             {actionLabel}
           </Text>
-          <MaterialCommunityIcons
-            name="arrow-right"
-            size={20}
-            color={theme.primary}
-          />
+          <VoxelIcon name="next" size={20} color={theme.primary} />
         </View>
       </View>
     </Pressable>

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { identifyVideoSource } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -39,11 +39,7 @@ export default function WelcomeScreen() {
       <Surface tone="tinted" style={styles.linkStarter}>
         <View style={styles.linkHeading}>
           <View style={[styles.linkIcon, { backgroundColor: theme.surface }]}>
-            <MaterialCommunityIcons
-              name="link-variant"
-              size={23}
-              color={theme.primary}
-            />
+            <VoxelIcon name="link" size={23} color={theme.primary} />
           </View>
           <View style={styles.linkHeadingCopy}>
             <Text style={[styles.linkTitle, { color: theme.text }]}>
@@ -70,24 +66,14 @@ export default function WelcomeScreen() {
           editable={!saving}
           large
           error={error}
-          leading={
-            <MaterialCommunityIcons
-              name="play-box-multiple-outline"
-              size={23}
-              color={theme.textMuted}
-            />
-          }
+          leading={<VoxelIcon name="video" size={23} color={theme.textMuted} />}
           onSubmitEditing={() => void continueWithLink()}
         />
         <PrimaryButton
           loading={saving}
           disabled={!url.trim()}
           trailingIcon={
-            <MaterialCommunityIcons
-              name="arrow-right"
-              size={21}
-              color={theme.textOnAction}
-            />
+            <VoxelIcon name="next" size={21} color={theme.textOnAction} />
           }
           onPress={() => void continueWithLink()}
         >
@@ -104,8 +90,8 @@ export default function WelcomeScreen() {
       <Link href="/(auth)/sign-up" asChild>
         <PrimaryButton
           leadingIcon={
-            <MaterialCommunityIcons
-              name="account-plus-outline"
+            <VoxelIcon
+              name="registration"
               size={21}
               color={theme.textOnAction}
             />
@@ -119,7 +105,7 @@ export default function WelcomeScreen() {
         <PrimaryButton
           variant="ghost"
           leadingIcon={
-            <MaterialCommunityIcons name="login" size={21} color={theme.text} />
+            <VoxelIcon name="sign-in" size={21} color={theme.text} />
           }
           onPress={() => undefined}
         >
@@ -128,11 +114,7 @@ export default function WelcomeScreen() {
       </Link>
       <Surface tone="tinted" style={styles.reassurance}>
         <View style={styles.reassuranceRow}>
-          <MaterialCommunityIcons
-            name="account-lock-outline"
-            size={24}
-            color={theme.primary}
-          />
+          <VoxelIcon name="privacy" size={24} color={theme.primary} />
           <Text style={[styles.reassuranceText, { color: theme.text }]}>
             {t("authCrossDevice")}
           </Text>

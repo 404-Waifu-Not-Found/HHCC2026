@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import { Platform, Pressable, StyleSheet } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, controls, motion, radii } from "../theme/tokens";
@@ -12,7 +12,7 @@ export function IconButton({
   tone = "neutral",
   size = 22,
 }: {
-  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: ComponentProps<typeof VoxelIcon>["name"];
   label: string;
   onPress(): void;
   disabled?: boolean;
@@ -50,7 +50,7 @@ export function IconButton({
         },
       ]}
     >
-      <MaterialCommunityIcons name={icon} size={size} color={foreground} />
+      <VoxelIcon name={icon} size={size} color={foreground} />
     </Pressable>
   );
 }

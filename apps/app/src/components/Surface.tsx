@@ -73,7 +73,8 @@ const styles = StyleSheet.create({
   surface: {
     overflow: "hidden",
     borderWidth: borders.standard,
-    borderRadius: radii.feature,
+    borderBottomWidth: borders.tactileDepth,
+    borderRadius: radii.large,
   },
   padded: {
     padding: spacing[6],

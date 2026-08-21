@@ -81,7 +81,11 @@ export function VoxelIcon({
       accessibilityLabel={decorative ? undefined : accessibleLabel}
       accessibilityElementsHidden={decorative}
       importantForAccessibility={decorative ? "no" : "auto"}
-      style={[styles.icon, { width: renderedSize, height: renderedSize }, style]}
+      style={[
+        styles.icon,
+        { width: renderedSize, height: renderedSize },
+        style,
+      ]}
     />
   );
 }
@@ -99,7 +103,10 @@ export function VoxelIconTile({
 }) {
   return (
     <View style={[styles.tile, { width: size, height: size }, style]}>
-      {children ?? (icon ? <VoxelIcon name={icon} size={Math.max(28, size - 10)} /> : null)}
+      {children ??
+        (icon ? (
+          <VoxelIcon name={icon} size={Math.max(28, size - 10)} />
+        ) : null)}
     </View>
   );
 }

@@ -5,7 +5,7 @@ import {
   type SessionLength,
   type VideoImportResponse,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { Mascot } from "../../src/components/Mascot";
+import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
 import { Screen } from "../../src/components/Screen";
@@ -82,7 +82,7 @@ export default function CreateQuestScreen() {
       <Screen contentWidth="reading" centered>
         <BackButton />
         <Surface tone="error" style={styles.expiredCard}>
-          <Mascot mood="oops" size={96} />
+          <LearningPrism size={96} variant="tile" />
           <Text
             accessibilityRole="alert"
             style={[styles.expiredText, { color: theme.text }]}
@@ -183,11 +183,9 @@ export default function CreateQuestScreen() {
                   },
                 ]}
               >
-                <MaterialCommunityIcons
+                <VoxelIcon
                   name={
-                    video.requiresLocalTranscription
-                      ? "cellphone-sound"
-                      : "subtitles-outline"
+                    video.requiresLocalTranscription ? "processing" : "captions"
                   }
                   size={22}
                   color={
@@ -267,11 +265,7 @@ export default function CreateQuestScreen() {
               <View
                 style={[styles.noticeIcon, { backgroundColor: theme.surface }]}
               >
-                <MaterialCommunityIcons
-                  name="shield-lock-outline"
-                  size={27}
-                  color={theme.primary}
-                />
+                <VoxelIcon name="privacy" size={27} color={theme.primary} />
               </View>
               <View style={styles.noticeCopy}>
                 <Text style={[styles.noticeTitle, { color: theme.text }]}>
@@ -288,11 +282,7 @@ export default function CreateQuestScreen() {
         {tooLong || tooLongForWeb ? (
           <Surface tone="error" style={styles.limitSurface}>
             <View style={styles.noticeRow}>
-              <MaterialCommunityIcons
-                name="alert-circle-outline"
-                size={25}
-                color={theme.error}
-              />
+              <VoxelIcon name="error" size={25} color={theme.error} />
               <Text
                 accessibilityRole="alert"
                 style={[styles.limitText, { color: theme.text }]}
@@ -351,7 +341,7 @@ function BackButton() {
       onPress={() => router.back()}
       style={styles.back}
     >
-      <MaterialCommunityIcons name="arrow-left" size={24} color={theme.text} />
+      <VoxelIcon name="back" size={24} color={theme.text} />
       <Text style={[styles.backText, { color: theme.text }]}>{t("back")}</Text>
     </Pressable>
   );

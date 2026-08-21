@@ -8,7 +8,7 @@ import {
   type LibraryResponse,
   type QuizQuestionType,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
 import { router, useFocusEffect } from "expo-router";
 import {
@@ -29,7 +29,7 @@ import {
 } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { EmptyState } from "../../src/components/EmptyState";
-import { Mascot } from "../../src/components/Mascot";
+import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
 import { Screen } from "../../src/components/Screen";
@@ -194,7 +194,7 @@ export default function HomeScreen() {
             </Text>
           ) : null}
         </View>
-        <Mascot mood="ready" size={narrow ? 62 : compact ? 76 : 90} />
+        <LearningPrism size={narrow ? 62 : compact ? 76 : 90} variant="tile" />
       </View>
 
       <Surface
@@ -206,8 +206,8 @@ export default function HomeScreen() {
         }
       >
         <View style={styles.platforms}>
-          <PlatformBadge icon="youtube" label="YouTube" />
-          <PlatformBadge icon="television-play" label="bilibili" />
+          <PlatformBadge icon="video" label="YouTube" />
+          <PlatformBadge icon="video" label="bilibili" />
         </View>
 
         <View style={styles.questionTypeSetup}>
@@ -230,13 +230,7 @@ export default function HomeScreen() {
           placeholder="https://youtube.com/watch?v=..."
           value={url}
           error={importError}
-          leading={
-            <MaterialCommunityIcons
-              name="link-variant"
-              size={24}
-              color={theme.primary}
-            />
-          }
+          leading={<VoxelIcon name="link" size={24} color={theme.primary} />}
           onChangeText={(value) => {
             const pastedSupportedLink =
               value.length - url.length > 8 &&
@@ -261,11 +255,7 @@ export default function HomeScreen() {
             disabled={!url.trim()}
             loading={importing}
             trailingIcon={
-              <MaterialCommunityIcons
-                name="arrow-right"
-                size={20}
-                color={theme.textOnAction}
-              />
+              <VoxelIcon name="next" size={20} color={theme.textOnAction} />
             }
             onPress={() => void importVideo()}
           >
@@ -320,11 +310,7 @@ export default function HomeScreen() {
                     >
                       {t("library")}
                     </Text>
-                    <MaterialCommunityIcons
-                      name="arrow-right"
-                      color={theme.primary}
-                      size={18}
-                    />
+                    <VoxelIcon name="next" color={theme.primary} size={18} />
                   </Pressable>
                 }
               />
@@ -350,7 +336,7 @@ export default function HomeScreen() {
                   style={styles.emptySurface}
                 >
                   <EmptyState
-                    icon="movie-open-plus-outline"
+                    icon="video"
                     title={t("emptyLibrary")}
                     description={t("tagline")}
                   />
@@ -368,7 +354,7 @@ function PlatformBadge({
   icon,
   label,
 }: {
-  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: ComponentProps<typeof VoxelIcon>["name"];
   label: string;
 }) {
   const { theme } = useSettings();
@@ -382,7 +368,7 @@ function PlatformBadge({
         { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
       ]}
     >
-      <MaterialCommunityIcons name={icon} size={18} color={theme.text} />
+      <VoxelIcon name={icon} size={18} color={theme.text} />
       <Text style={[styles.platformLabel, { color: theme.text }]}>{label}</Text>
     </View>
   );

@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -84,11 +84,7 @@ export default function SignUpScreen() {
         value={username}
         onChangeText={setUsername}
         leading={
-          <MaterialCommunityIcons
-            name="account-outline"
-            size={22}
-            color={theme.textMuted}
-          />
+          <VoxelIcon name="registration" size={22} color={theme.textMuted} />
         }
         autoCapitalize="none"
         autoComplete="username-new"
@@ -100,13 +96,7 @@ export default function SignUpScreen() {
         labelPlacement="inside"
         value={email}
         onChangeText={setEmail}
-        leading={
-          <MaterialCommunityIcons
-            name="email-outline"
-            size={22}
-            color={theme.textMuted}
-          />
-        }
+        leading={<VoxelIcon name="mail" size={22} color={theme.textMuted} />}
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
@@ -118,11 +108,7 @@ export default function SignUpScreen() {
         value={password}
         onChangeText={setPassword}
         leading={
-          <MaterialCommunityIcons
-            name="lock-outline"
-            size={22}
-            color={theme.textMuted}
-          />
+          <VoxelIcon name="password" size={22} color={theme.textMuted} />
         }
         secureTextEntry
         autoComplete="new-password"
@@ -151,8 +137,8 @@ export default function SignUpScreen() {
           loading && styles.disabled,
         ]}
       >
-        <MaterialCommunityIcons
-          name={ageConfirmed ? "checkbox-marked" : "checkbox-blank-outline"}
+        <VoxelIcon
+          name={ageConfirmed ? "selected" : "selected"}
           size={29}
           color={ageConfirmed ? theme.actionPressed : theme.textMuted}
         />
@@ -163,11 +149,7 @@ export default function SignUpScreen() {
       {error ? (
         <Surface tone="error" style={styles.status}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={22}
-              color={theme.error}
-            />
+            <VoxelIcon name="error" size={22} color={theme.error} />
             <Text
               accessibilityRole="alert"
               selectable
@@ -182,11 +164,7 @@ export default function SignUpScreen() {
         loading={loading}
         disabled={!canSubmit}
         leadingIcon={
-          <MaterialCommunityIcons
-            name="account-plus-outline"
-            size={21}
-            color={theme.textOnAction}
-          />
+          <VoxelIcon name="registration" size={21} color={theme.textOnAction} />
         }
         onPress={() => void submit()}
       >

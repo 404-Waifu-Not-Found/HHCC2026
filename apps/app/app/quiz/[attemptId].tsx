@@ -6,7 +6,7 @@ import {
   type MasteryState,
   type PublicQuestion,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,7 +17,7 @@ import { EmptyState } from "../../src/components/EmptyState";
 import { FeedbackPanel } from "../../src/components/FeedbackPanel";
 import { IconButton } from "../../src/components/IconButton";
 import { LessonHeader } from "../../src/components/LessonHeader";
-import { Mascot } from "../../src/components/Mascot";
+import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
@@ -218,19 +218,7 @@ export default function QuizScreen() {
       <Screen contentWidth="lesson" centered>
         <View style={styles.complete}>
           <View style={styles.celebrationArt}>
-            <MaterialCommunityIcons
-              name="star-four-points"
-              size={30}
-              color={theme.warning}
-              style={styles.sparkLeft}
-            />
-            <Mascot mood="happy" size={176} />
-            <MaterialCommunityIcons
-              name="star-four-points"
-              size={24}
-              color={theme.secondary}
-              style={styles.sparkRight}
-            />
+            <LearningPrism size={176} variant="hero" />
           </View>
           <View style={styles.completeCopy}>
             <Text
@@ -249,7 +237,7 @@ export default function QuizScreen() {
               label={t("score")}
               tone={score >= 80 ? "success" : "primary"}
               icon={
-                <MaterialCommunityIcons
+                <VoxelIcon
                   name="target"
                   size={22}
                   color={score >= 80 ? theme.success : theme.primary}
@@ -261,12 +249,8 @@ export default function QuizScreen() {
               label={t("mastery")}
               tone={mastered ? "success" : "secondary"}
               icon={
-                <MaterialCommunityIcons
-                  name={
-                    mastered
-                      ? "check-decagram"
-                      : "chart-timeline-variant-shimmer"
-                  }
+                <VoxelIcon
+                  name={mastered ? "correct" : "progress"}
                   size={22}
                   color={mastered ? theme.success : theme.secondary}
                 />
@@ -277,24 +261,14 @@ export default function QuizScreen() {
                 value={String(completedTotal)}
                 label={t("questions")}
                 tone="warning"
-                icon={
-                  <MaterialCommunityIcons
-                    name="help-circle-outline"
-                    size={22}
-                    color={theme.warning}
-                  />
-                }
+                icon={<VoxelIcon name="help" size={22} color={theme.warning} />}
               />
             ) : null}
           </View>
           <View style={styles.completeButton}>
             <PrimaryButton
               trailingIcon={
-                <MaterialCommunityIcons
-                  name="arrow-right"
-                  size={20}
-                  color={theme.textOnAction}
-                />
+                <VoxelIcon name="next" size={20} color={theme.textOnAction} />
               }
               onPress={() => {
                 void clearAttempt(attemptId);
@@ -313,7 +287,7 @@ export default function QuizScreen() {
     return (
       <Screen contentWidth="reading" centered>
         <EmptyState
-          icon="alert-circle-outline"
+          icon="error"
           title={t("quizResumeFailed")}
           description={error}
           action={
@@ -331,7 +305,7 @@ export default function QuizScreen() {
     return (
       <Screen contentWidth="reading" centered>
         <View style={styles.primerTop}>
-          <Mascot mood="ready" size={132} />
+          <LearningPrism size={132} variant="tile" />
           <View style={styles.primerHeading}>
             <Text style={[styles.eyebrow, { color: theme.primary }]}>
               {t("question")}
@@ -346,11 +320,7 @@ export default function QuizScreen() {
         </View>
         <Surface tone="tinted" style={styles.primerCard}>
           <View style={styles.primerLabel}>
-            <MaterialCommunityIcons
-              name="lightbulb-on-outline"
-              size={22}
-              color={theme.primary}
-            />
+            <VoxelIcon name="idea" size={22} color={theme.primary} />
             <Text style={[styles.primerLabelText, { color: theme.primary }]}>
               {t("primerTitle")}
             </Text>
@@ -426,7 +396,7 @@ export default function QuizScreen() {
                 { backgroundColor: theme.secondarySoft },
               ]}
             >
-              <MaterialCommunityIcons
+              <VoxelIcon
                 name="refresh"
                 size={16}
                 color={theme.secondaryPressed}
@@ -510,11 +480,7 @@ function QuestionInput({
           <AnswerCard
             label={t("true")}
             leading={
-              <MaterialCommunityIcons
-                name="check-circle-outline"
-                size={26}
-                color={theme.success}
-              />
+              <VoxelIcon name="correct" size={26} color={theme.success} />
             }
             state={stateFor(answer === true)}
             onPress={() => setAnswer(true)}
@@ -523,13 +489,7 @@ function QuestionInput({
         <View style={styles.binaryOption}>
           <AnswerCard
             label={t("false")}
-            leading={
-              <MaterialCommunityIcons
-                name="close-circle-outline"
-                size={26}
-                color={theme.error}
-              />
-            }
+            leading={<VoxelIcon name="error" size={26} color={theme.error} />}
             state={stateFor(answer === false)}
             onPress={() => setAnswer(false)}
           />
@@ -574,7 +534,7 @@ function QuestionInput({
             <View style={styles.orderActions}>
               <IconButton
                 label={t("moveUp")}
-                icon="chevron-up"
+                icon="collapse"
                 disabled={disabled || position === 0}
                 onPress={() => {
                   onInteraction();
@@ -583,7 +543,7 @@ function QuestionInput({
               />
               <IconButton
                 label={t("moveDown")}
-                icon="chevron-down"
+                icon="expand"
                 disabled={disabled || position === order.length - 1}
                 onPress={() => {
                   onInteraction();
@@ -795,16 +755,6 @@ const styles = StyleSheet.create({
   },
   celebrationArt: {
     position: "relative",
-  },
-  sparkLeft: {
-    position: "absolute",
-    left: -28,
-    top: 28,
-  },
-  sparkRight: {
-    position: "absolute",
-    right: -22,
-    top: 10,
   },
   completeCopy: {
     maxWidth: 560,

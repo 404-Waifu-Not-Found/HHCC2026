@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../components/VoxelIcon";
 import type { ComponentProps, PropsWithChildren, ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -36,7 +36,7 @@ export function AdminPage({
 }: PropsWithChildren<{
   title: string;
   subtitle: string;
-  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: ComponentProps<typeof VoxelIcon>["name"];
   action?: ReactNode;
 }>) {
   const { theme } = useSettings();
@@ -53,11 +53,7 @@ export function AdminPage({
               },
             ]}
           >
-            <MaterialCommunityIcons
-              name={icon}
-              size={27}
-              color={theme.primary}
-            />
+            <VoxelIcon name={icon} size={27} color={theme.primary} />
           </View>
           <View style={styles.pageHeadingCopy}>
             <Text
@@ -128,11 +124,7 @@ export function AdminToolbar({
             onSubmitEditing={onSubmit}
             returnKeyType="search"
             leading={
-              <MaterialCommunityIcons
-                name="magnify"
-                size={23}
-                color={theme.textMuted}
-              />
+              <VoxelIcon name="search" size={23} color={theme.textMuted} />
             }
           />
         </View>
@@ -259,7 +251,7 @@ export function RecordMeta({
   items: {
     label: string;
     value: string;
-    icon?: ComponentProps<typeof MaterialCommunityIcons>["name"];
+    icon?: ComponentProps<typeof VoxelIcon>["name"];
   }[];
 }) {
   const { theme } = useSettings();
@@ -268,11 +260,7 @@ export function RecordMeta({
       {items.map((item) => (
         <View key={`${item.label}-${item.value}`} style={styles.metaItem}>
           {item.icon ? (
-            <MaterialCommunityIcons
-              name={item.icon}
-              size={17}
-              color={theme.textSubtle}
-            />
+            <VoxelIcon name={item.icon} size={17} color={theme.textSubtle} />
           ) : null}
           <Text style={[styles.metaLabel, { color: theme.textSubtle }]}>
             {item.label}
@@ -309,7 +297,7 @@ export function StatusBadge({
         ? {
             background: theme.warningSoft,
             border: theme.warning,
-            text: theme.text,
+            text: theme.warningText,
           }
         : tone === "error"
           ? {
@@ -371,7 +359,7 @@ export function AdminDataState({
   if (error) {
     return (
       <EmptyState
-        icon="cloud-alert-outline"
+        icon="warning"
         title={copy.loadFailed}
         description={error.message}
         action={
@@ -385,7 +373,7 @@ export function AdminDataState({
   if (empty) {
     return (
       <EmptyState
-        icon="database-search-outline"
+        icon="database"
         title={copy.noResults}
         description={copy.noResultsBody}
       />
@@ -496,11 +484,7 @@ export function ActionDialog({
                 { backgroundColor: theme.primarySoft },
               ]}
             >
-              <MaterialCommunityIcons
-                name="shield-edit-outline"
-                size={27}
-                color={theme.primary}
-              />
+              <VoxelIcon name="privacy" size={27} color={theme.primary} />
             </View>
             <View style={styles.dialogCopy}>
               <Text
@@ -565,8 +549,8 @@ export function Notice({
         accessibilityRole={tone === "error" ? "alert" : undefined}
         style={styles.noticeRow}
       >
-        <MaterialCommunityIcons
-          name={tone === "success" ? "check-circle" : "alert-circle"}
+        <VoxelIcon
+          name={tone === "success" ? "correct" : "error"}
           size={22}
           color={color}
         />

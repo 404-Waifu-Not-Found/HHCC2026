@@ -101,7 +101,7 @@ export default function AdminUsersScreen() {
     <AdminPage
       title={copy.users}
       subtitle="Review accounts and apply reversible, audited moderation actions."
-      icon="account-group-outline"
+      icon="people"
     >
       {notice ? <Notice tone="success" text={notice} /> : null}
       <AdminToolbar
@@ -209,24 +209,24 @@ export default function AdminUsersScreen() {
                 {
                   label: copy.joined,
                   value: formatDate(user.createdAt, locale),
-                  icon: "calendar-outline",
+                  icon: "calendar",
                 },
                 {
                   label: copy.lastSeen,
                   value: user.lastSeenAt
                     ? formatDate(user.lastSeenAt, locale)
                     : copy.never,
-                  icon: "clock-outline",
+                  icon: "time",
                 },
                 {
                   label: copy.lessons,
                   value: String(user.lessonCount),
-                  icon: "book-open-outline",
+                  icon: "lessons",
                 },
                 {
                   label: copy.attempts,
                   value: String(user.attemptCount),
-                  icon: "clipboard-check-outline",
+                  icon: "checklist",
                 },
               ]}
             />

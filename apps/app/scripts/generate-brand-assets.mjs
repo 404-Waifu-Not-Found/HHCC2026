@@ -44,7 +44,11 @@ const pngTargets = [
   ["assets/platform/app-icon-1024.png", 1024, 0.11],
   ["assets/platform/adaptive-icon.png", 1024, 0.2],
   ["assets/platform/splash-icon.png", 1024, 0.22],
-  ["ios/ClipQuest/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png", 1024, 0.11],
+  [
+    "ios/ClipQuest/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
+    1024,
+    0.11,
+  ],
   ["assets/platform/extension/icon-16.png", 16, 0.04],
   ["assets/platform/extension/icon-48.png", 48, 0.08],
   ["assets/platform/extension/icon-128.png", 128, 0.1],
@@ -95,4 +99,6 @@ await writeFile(
   "# Generated ClipQuest platform assets\n\nRun `npm run brand:assets -w @clipquest/app` after changing the canonical learning prism. Do not edit these derivatives by hand.\n",
 );
 
-console.log("Generated ClipQuest platform, PWA, native, and extension artwork.");
+console.log(
+  "Generated ClipQuest platform, PWA, native, and extension artwork.",
+);

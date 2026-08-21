@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -51,11 +51,7 @@ export default function ResetPasswordScreen() {
         value={password}
         onChangeText={setPassword}
         leading={
-          <MaterialCommunityIcons
-            name="lock-reset"
-            size={22}
-            color={theme.textMuted}
-          />
+          <VoxelIcon name="password" size={22} color={theme.textMuted} />
         }
         secureTextEntry
         autoComplete="new-password"
@@ -66,11 +62,7 @@ export default function ResetPasswordScreen() {
       {error ? (
         <Surface tone="error" style={styles.status}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={22}
-              color={theme.error}
-            />
+            <VoxelIcon name="error" size={22} color={theme.error} />
             <Text
               accessibilityRole="alert"
               selectable
@@ -85,11 +77,7 @@ export default function ResetPasswordScreen() {
         loading={loading}
         disabled={password.length < 8 || !token || Boolean(linkError)}
         leadingIcon={
-          <MaterialCommunityIcons
-            name="lock-check-outline"
-            size={21}
-            color={theme.textOnAction}
-          />
+          <VoxelIcon name="password" size={21} color={theme.textOnAction} />
         }
         onPress={() => void submit()}
       >

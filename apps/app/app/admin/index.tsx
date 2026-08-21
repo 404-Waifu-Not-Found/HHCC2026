@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
@@ -29,7 +29,7 @@ export default function AdminOverviewScreen() {
     <AdminPage
       title={copy.overview}
       subtitle={copy.operationsSubtitle}
-      icon="view-dashboard-outline"
+      icon="operations"
     >
       <AdminDataState
         loading={loading}
@@ -44,11 +44,7 @@ export default function AdminOverviewScreen() {
                 value={data.totals.users.toLocaleString(locale)}
                 label={copy.totalUsers}
                 icon={
-                  <MaterialCommunityIcons
-                    name="account-group"
-                    size={23}
-                    color={theme.primary}
-                  />
+                  <VoxelIcon name="people" size={23} color={theme.primary} />
                 }
               />
               <StatTile
@@ -56,11 +52,7 @@ export default function AdminOverviewScreen() {
                 label={copy.totalLessons}
                 tone="success"
                 icon={
-                  <MaterialCommunityIcons
-                    name="book-open-variant"
-                    size={23}
-                    color={theme.success}
-                  />
+                  <VoxelIcon name="lessons" size={23} color={theme.success} />
                 }
               />
               <StatTile
@@ -68,8 +60,8 @@ export default function AdminOverviewScreen() {
                 label={copy.activeJobs}
                 tone="secondary"
                 icon={
-                  <MaterialCommunityIcons
-                    name="progress-clock"
+                  <VoxelIcon
+                    name="processing"
                     size={23}
                     color={theme.secondary}
                   />
@@ -80,11 +72,7 @@ export default function AdminOverviewScreen() {
                 label={copy.failedJobs}
                 tone="warning"
                 icon={
-                  <MaterialCommunityIcons
-                    name="alert-circle-outline"
-                    size={23}
-                    color={theme.warning}
-                  />
+                  <VoxelIcon name="error" size={23} color={theme.warning} />
                 }
               />
             </View>
@@ -111,7 +99,7 @@ export default function AdminOverviewScreen() {
                               {
                                 label: "Code",
                                 value: failure.errorCode ?? "unknown",
-                                icon: "code-tags",
+                                icon: "model",
                               },
                               {
                                 label: copy.updated,
@@ -119,7 +107,7 @@ export default function AdminOverviewScreen() {
                                   dateStyle: "medium",
                                   timeStyle: "short",
                                 }).format(new Date(failure.updatedAt)),
-                                icon: "clock-outline",
+                                icon: "time",
                               },
                             ]}
                           />
@@ -139,8 +127,8 @@ export default function AdminOverviewScreen() {
                   ) : (
                     <Surface tone="success">
                       <View style={styles.emptySuccess}>
-                        <MaterialCommunityIcons
-                          name="check-decagram"
+                        <VoxelIcon
+                          name="correct"
                           size={28}
                           color={theme.success}
                         />
@@ -178,8 +166,8 @@ export default function AdminOverviewScreen() {
                 </AdminSection>
                 <Surface tone="warning">
                   <View style={styles.protectedHeading}>
-                    <MaterialCommunityIcons
-                      name="lock-check-outline"
+                    <VoxelIcon
+                      name="password"
                       size={24}
                       color={theme.warning}
                     />

@@ -3,7 +3,7 @@ import {
   type LibraryCard,
   type LibraryResponse,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -112,11 +112,7 @@ export default function LibraryScreen() {
           placeholder={t("search")}
           value={query}
           leading={
-            <MaterialCommunityIcons
-              name="magnify"
-              size={22}
-              color={theme.textMuted}
-            />
+            <VoxelIcon name="search" size={22} color={theme.textMuted} />
           }
           onChangeText={setQuery}
         />
@@ -174,7 +170,7 @@ export default function LibraryScreen() {
       ) : (
         <Surface padded={false} tone="sunken" style={styles.emptySurface}>
           <EmptyState
-            icon={normalizedQuery ? "magnify" : "bookshelf"}
+            icon={normalizedQuery ? "search" : "library"}
             title={t("emptyLibrary")}
             description={
               normalizedQuery ? t("searchSavedQuests") : t("tagline")

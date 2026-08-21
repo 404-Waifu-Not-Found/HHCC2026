@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Redirect, Tabs } from "expo-router";
 import type { ComponentProps } from "react";
 import {
@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { authClient } from "../../src/lib/auth-client";
+import { LearningPrism } from "../../src/components/LearningPrism";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import {
   borders,
@@ -60,11 +61,7 @@ export default function TabLayout() {
         options={{
           title: t("home"),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="home-variant"
-              color={color}
-              size={size}
-            />
+            <VoxelIcon name="home" color={color} size={size} />
           ),
         }}
       />
@@ -73,11 +70,7 @@ export default function TabLayout() {
         options={{
           title: t("library"),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="bookshelf"
-              color={color}
-              size={size}
-            />
+            <VoxelIcon name="library" color={color} size={size} />
           ),
         }}
       />
@@ -86,7 +79,7 @@ export default function TabLayout() {
         options={{
           title: t("settings"),
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={size} />
+            <VoxelIcon name="settings" color={color} size={size} />
           ),
         }}
       />
@@ -142,11 +135,7 @@ function LearningTabBar({
               },
             ]}
           >
-            <MaterialCommunityIcons
-              name="movie-open-play"
-              size={25}
-              color={theme.primary}
-            />
+            <LearningPrism size={40} variant="tile" />
           </View>
           <Text style={[styles.brandName, { color: theme.text }]}>
             ClipQuest

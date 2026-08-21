@@ -2,7 +2,7 @@ import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   type QuizQuestionType,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, spacing, typography } from "../theme/tokens";
@@ -58,12 +58,8 @@ export function QuestionTypeSelector({
               pressed && styles.pressed,
             ]}
           >
-            <MaterialCommunityIcons
-              name={
-                active
-                  ? "checkbox-marked-circle"
-                  : "checkbox-blank-circle-outline"
-              }
+            <VoxelIcon
+              name={active ? "selected" : "selected"}
               size={21}
               color={active ? theme.primary : theme.textMuted}
             />
@@ -80,13 +76,13 @@ export function QuestionTypeSelector({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   choice: {
-    minHeight: 44,
+    minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
     borderWidth: borders.standard,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing[3],
+    borderRadius: radii.medium,
+    paddingHorizontal: spacing[4],
   },
   pressed: { opacity: 0.72 },
   label: {

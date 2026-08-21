@@ -7,10 +7,7 @@ import sharp from "sharp";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputRoot = resolve(root, "dist");
 const extensionOutput = resolve(outputRoot, "clipquest-captions-extension");
-const appIcon = resolve(
-  root,
-  "../app/assets/brand/learning-prism.png",
-);
+const appIcon = resolve(root, "../app/assets/brand/learning-prism.png");
 const generatedIconRoot = resolve(root, "../app/assets/platform/extension");
 
 rmSync(outputRoot, { recursive: true, force: true });

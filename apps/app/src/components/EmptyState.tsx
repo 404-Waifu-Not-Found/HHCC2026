@@ -1,16 +1,16 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import type { ComponentProps, ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, spacing, typography } from "../theme/tokens";
 
 export function EmptyState({
-  icon = "movie-open-outline",
+  icon = "video",
   title,
   description,
   action,
 }: {
-  icon?: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon?: ComponentProps<typeof VoxelIcon>["name"];
   title: string;
   description: string;
   action?: ReactNode;
@@ -24,7 +24,7 @@ export function EmptyState({
           { backgroundColor: theme.primarySoft, borderColor: theme.primary },
         ]}
       >
-        <MaterialCommunityIcons name={icon} size={34} color={theme.primary} />
+        <VoxelIcon name={icon} size={34} color={theme.primary} />
       </View>
       <Text
         accessibilityRole="header"

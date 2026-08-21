@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -67,11 +67,7 @@ export default function SignInScreen() {
         value={identifier}
         onChangeText={setIdentifier}
         leading={
-          <MaterialCommunityIcons
-            name="account-outline"
-            size={22}
-            color={theme.textMuted}
-          />
+          <VoxelIcon name="registration" size={22} color={theme.textMuted} />
         }
         autoCapitalize="none"
         autoComplete="username"
@@ -84,11 +80,7 @@ export default function SignInScreen() {
         value={password}
         onChangeText={setPassword}
         leading={
-          <MaterialCommunityIcons
-            name="lock-outline"
-            size={22}
-            color={theme.textMuted}
-          />
+          <VoxelIcon name="password" size={22} color={theme.textMuted} />
         }
         secureTextEntry
         autoComplete="current-password"
@@ -99,11 +91,7 @@ export default function SignInScreen() {
       {error ? (
         <Surface tone="error" style={styles.status}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={22}
-              color={theme.error}
-            />
+            <VoxelIcon name="error" size={22} color={theme.error} />
             <Text
               accessibilityRole="alert"
               selectable
@@ -122,11 +110,7 @@ export default function SignInScreen() {
           { backgroundColor: pressed ? theme.surfaceTint : "transparent" },
         ]}
       >
-        <MaterialCommunityIcons
-          name="help-circle-outline"
-          size={19}
-          color={theme.primary}
-        />
+        <VoxelIcon name="help" size={19} color={theme.primary} />
         <Text style={[styles.link, { color: theme.primary }]}>
           {t("forgotPassword")}
         </Text>
@@ -135,11 +119,7 @@ export default function SignInScreen() {
         loading={loading}
         disabled={!canSubmit}
         leadingIcon={
-          <MaterialCommunityIcons
-            name="login"
-            size={21}
-            color={theme.textOnAction}
-          />
+          <VoxelIcon name="sign-in" size={21} color={theme.textOnAction} />
         }
         onPress={() => void submit()}
       >

@@ -12,16 +12,17 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, shrink-to-fit=no"
         />
         <meta name="color-scheme" content="light dark" />
-        <meta name="theme-color" content="#F6F8FC" />
+        <meta name="theme-color" content="#247D49" />
         <script src="/theme-preflight.js" />
         <style>{`
-          html, body { background: #F6F8FC; }
-          html[data-cq-theme="dark"], html[data-cq-theme="dark"] body { background: #080F25; }
+          html, body { background: #F7F9F4; }
+          html[data-cq-theme="dark"], html[data-cq-theme="dark"] body { background: #101B15; }
           @media (prefers-color-scheme: dark) {
-            html:not([data-cq-theme]), html:not([data-cq-theme]) body { background: #080F25; }
+            html:not([data-cq-theme]), html:not([data-cq-theme]) body { background: #101B15; }
           }
         `}</style>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
         <title>ClipQuest — Paste a video, build mastery</title>
         <meta

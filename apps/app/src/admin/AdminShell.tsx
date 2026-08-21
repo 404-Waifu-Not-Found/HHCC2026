@@ -1,5 +1,5 @@
 import type { AdminMeResponse } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../components/VoxelIcon";
 import { Redirect, Slot, router, usePathname } from "expo-router";
 import {
   createContext,
@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { EmptyState } from "../components/EmptyState";
+import { LearningPrism } from "../components/LearningPrism";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
 import { useAppSession } from "../lib/auth-client";
@@ -42,20 +43,20 @@ import { useAdminCopy } from "./copy";
 const AdminContext = createContext<AdminMeResponse | null>(null);
 
 const navigation = [
-  { href: "/admin", label: "overview", icon: "view-dashboard-outline" },
-  { href: "/admin/users", label: "users", icon: "account-group-outline" },
-  { href: "/admin/jobs", label: "jobs", icon: "progress-clock" },
+  { href: "/admin", label: "overview", icon: "operations" },
+  { href: "/admin/users", label: "users", icon: "people" },
+  { href: "/admin/jobs", label: "jobs", icon: "processing" },
   {
     href: "/admin/lessons",
     label: "lessons",
-    icon: "book-open-page-variant-outline",
+    icon: "lessons",
   },
   {
     href: "/admin/audit",
     label: "audit",
-    icon: "clipboard-text-clock-outline",
+    icon: "audit",
   },
-  { href: "/admin/system", label: "system", icon: "server-outline" },
+  { href: "/admin/system", label: "system", icon: "system" },
 ] as const;
 
 export function useAdminSession(): AdminMeResponse {
@@ -98,7 +99,7 @@ export function AdminShell() {
     return (
       <Screen contentWidth="reading" centered>
         <EmptyState
-          icon={denied ? "shield-lock-outline" : "cloud-alert-outline"}
+          icon={denied ? "privacy" : "warning"}
           title={denied ? copy.accessDenied : copy.loadFailed}
           description={
             denied ? copy.accessDeniedBody : (error?.message ?? copy.loadFailed)
@@ -233,7 +234,7 @@ function AdminMobileHeader({ me }: { me: AdminMeResponse }) {
             pressed && styles.exitPressed,
           ]}
         >
-          <MaterialCommunityIcons name="close" size={23} color={theme.text} />
+          <VoxelIcon name="close" size={23} color={theme.text} />
         </Pressable>
       </View>
       <ScrollView
@@ -266,11 +267,7 @@ function BrandBlock({ compact = false }: { compact?: boolean }) {
           },
         ]}
       >
-        <MaterialCommunityIcons
-          name="shield-star-outline"
-          size={compact ? 22 : 26}
-          color={theme.text}
-        />
+        <LearningPrism size={compact ? 36 : 40} variant="tile" />
       </View>
       <View style={styles.brandCopy}>
         <Text style={[styles.brandName, { color: theme.text }]}>ClipQuest</Text>
@@ -290,7 +287,7 @@ function AdminNavItem({
 }: {
   href: string;
   label: keyof ReturnType<typeof useAdminCopy>;
-  icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  icon: ComponentProps<typeof VoxelIcon>["name"];
   compact?: boolean;
 }) {
   const pathname = usePathname();
@@ -320,7 +317,7 @@ function AdminNavItem({
         },
       ]}
     >
-      <MaterialCommunityIcons
+      <VoxelIcon
         name={icon}
         size={compact ? 20 : 23}
         color={selected ? theme.primary : theme.textMuted}

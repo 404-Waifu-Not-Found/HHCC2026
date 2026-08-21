@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import type { PropsWithChildren, ReactNode } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
@@ -37,11 +37,7 @@ export function FeedbackPanel({
     : isIncorrect
       ? theme.errorSoft
       : theme.surface;
-  const icon = isCorrect
-    ? "check-circle"
-    : isIncorrect
-      ? "alert-circle"
-      : "lightbulb-on";
+  const icon = isCorrect ? "correct" : isIncorrect ? "error" : "idea";
 
   return (
     <View
@@ -54,7 +50,7 @@ export function FeedbackPanel({
     >
       <View style={[styles.inner, compact && styles.innerCompact]}>
         <View style={[styles.icon, { borderColor: color }]}>
-          <MaterialCommunityIcons name={icon} color={color} size={28} />
+          <VoxelIcon name={icon} color={color} size={28} />
         </View>
         <View style={styles.copy}>
           <Text accessibilityRole="header" style={[styles.title, { color }]}>

@@ -39,7 +39,7 @@ export default function AdminAuditScreen() {
     <AdminPage
       title={copy.audit}
       subtitle="Immutable accountability for privileged management actions."
-      icon="clipboard-text-clock-outline"
+      icon="audit"
     >
       <AdminToolbar
         search={draftSearch}
@@ -96,12 +96,12 @@ export default function AdminAuditScreen() {
                 {
                   label: copy.reason,
                   value: entry.reason ?? "No reason recorded",
-                  icon: "text-box-outline",
+                  icon: "captions",
                 },
                 {
                   label: copy.updated,
                   value: formatDate(entry.createdAt, locale),
-                  icon: "clock-outline",
+                  icon: "time",
                 },
               ]}
             />

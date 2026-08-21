@@ -54,9 +54,12 @@ const config: ExpoConfig = {
     typedRoutes: true,
   },
   extra: {
-    apiOrigin: process.env.EXPO_PUBLIC_API_ORIGIN ?? "https://clipquest.ccwu.cc",
+    apiOrigin:
+      process.env.EXPO_PUBLIC_API_ORIGIN ?? "https://clipquest.ccwu.cc",
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? "00000000-0000-0000-0000-000000000000",
+      projectId:
+        process.env.EXPO_PUBLIC_EAS_PROJECT_ID ??
+        "00000000-0000-0000-0000-000000000000",
     },
   },
 };

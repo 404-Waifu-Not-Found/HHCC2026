@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
@@ -45,13 +45,7 @@ export default function ForgotPasswordScreen() {
         label={t("email")}
         value={email}
         onChangeText={setEmail}
-        leading={
-          <MaterialCommunityIcons
-            name="email-outline"
-            size={22}
-            color={theme.textMuted}
-          />
-        }
+        leading={<VoxelIcon name="mail" size={22} color={theme.textMuted} />}
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
@@ -62,11 +56,7 @@ export default function ForgotPasswordScreen() {
       {message ? (
         <Surface tone="success" style={styles.status}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="check-circle-outline"
-              size={22}
-              color={theme.success}
-            />
+            <VoxelIcon name="correct" size={22} color={theme.success} />
             <Text
               accessibilityLiveRegion="polite"
               style={[styles.statusText, { color: theme.text }]}
@@ -79,11 +69,7 @@ export default function ForgotPasswordScreen() {
       {error ? (
         <Surface tone="error" style={styles.status}>
           <View style={styles.statusRow}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={22}
-              color={theme.error}
-            />
+            <VoxelIcon name="error" size={22} color={theme.error} />
             <Text
               accessibilityRole="alert"
               selectable
@@ -98,11 +84,7 @@ export default function ForgotPasswordScreen() {
         loading={loading}
         disabled={!email.includes("@")}
         leadingIcon={
-          <MaterialCommunityIcons
-            name="email-fast-outline"
-            size={21}
-            color={theme.textOnAction}
-          />
+          <VoxelIcon name="mail" size={21} color={theme.textOnAction} />
         }
         onPress={() => void submit()}
       >

@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import {
   useCallback,
   useEffect,
@@ -96,11 +96,7 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
               <View
                 style={[styles.icon, { backgroundColor: theme.primarySoft }]}
               >
-                <MaterialCommunityIcons
-                  name="subtitles-outline"
-                  size={30}
-                  color={theme.primary}
-                />
+                <VoxelIcon name="captions" size={30} color={theme.primary} />
               </View>
               <View style={styles.headingCopy}>
                 <Text
@@ -130,8 +126,8 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
                 },
               ]}
             >
-              <MaterialCommunityIcons
-                name="shield-check-outline"
+              <VoxelIcon
+                name="privacy"
                 size={21}
                 color={theme.successPressed}
               />
@@ -144,7 +140,7 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
               <PrimaryButton
                 testID="download-caption-extension"
                 leadingIcon={
-                  <MaterialCommunityIcons
+                  <VoxelIcon
                     name="download"
                     size={20}
                     color={theme.textOnAction}
@@ -161,11 +157,7 @@ export function ExtensionInstallGate({ children }: PropsWithChildren) {
                 variant="ghost"
                 loading={checking}
                 leadingIcon={
-                  <MaterialCommunityIcons
-                    name="refresh"
-                    size={20}
-                    color={theme.text}
-                  />
+                  <VoxelIcon name="refresh" size={20} color={theme.text} />
                 }
                 onPress={() => void check()}
               >

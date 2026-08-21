@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import { StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, spacing, typography } from "../theme/tokens";
@@ -28,12 +28,12 @@ export function ProcessingSteps({
                 : theme.borderStrong;
         const icon =
           step.state === "complete"
-            ? "check"
+            ? "correct"
             : step.state === "error"
-              ? "alert"
+              ? "error"
               : step.state === "active"
-                ? "dots-horizontal"
-                : "circle-small";
+                ? "processing"
+                : "progress";
         return (
           <View key={`${step.label}-${index}`} style={styles.row}>
             <View style={styles.rail}>
@@ -47,7 +47,7 @@ export function ProcessingSteps({
                   },
                 ]}
               >
-                <MaterialCommunityIcons
+                <VoxelIcon
                   name={icon}
                   size={18}
                   color={

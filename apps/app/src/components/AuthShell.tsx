@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "./VoxelIcon";
 import type { PropsWithChildren, ReactNode } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
@@ -9,7 +9,7 @@ import {
   spacing,
   typography,
 } from "../theme/tokens";
-import { Mascot } from "./Mascot";
+import { LearningPrism } from "./LearningPrism";
 import { Screen } from "./Screen";
 
 export function AuthShell({
@@ -38,15 +38,11 @@ export function AuthShell({
           ]}
         >
           <View style={styles.artRow}>
-            <Mascot mood="ready" size={desktop ? 230 : 116} />
+            <LearningPrism size={desktop ? 230 : 116} variant="hero" />
           </View>
           <View style={styles.brandCopy}>
             <View style={styles.kickerRow}>
-              <MaterialCommunityIcons
-                name="play-box-multiple"
-                size={20}
-                color={theme.primary}
-              />
+              <VoxelIcon name="video" size={20} color={theme.primary} />
               <Text style={[styles.kicker, { color: theme.primary }]}>
                 {t("appName")}
               </Text>

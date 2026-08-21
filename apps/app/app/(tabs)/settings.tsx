@@ -2,7 +2,7 @@ import {
   PushRegisterRequestSchema,
   type AppLanguage,
 } from "@clipquest/contracts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { VoxelIcon } from "../../src/components/VoxelIcon";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import { router } from "expo-router";
@@ -163,11 +163,7 @@ export default function SettingsScreen() {
         <View
           style={[styles.headingIcon, { backgroundColor: theme.primarySoft }]}
         >
-          <MaterialCommunityIcons
-            name="cog-outline"
-            size={28}
-            color={theme.primary}
-          />
+          <VoxelIcon name="settings" size={28} color={theme.primary} />
         </View>
         <View style={styles.headingCopy}>
           <Text
@@ -184,18 +180,18 @@ export default function SettingsScreen() {
 
       {message ? (
         <Surface tone="success" style={styles.notice}>
-          <Notice icon="check-circle" color={theme.success} text={message} />
+          <Notice icon="correct" color={theme.success} text={message} />
         </Surface>
       ) : null}
       {error ? (
         <Surface tone="error" style={styles.notice}>
-          <Notice icon="alert-circle" color={theme.error} text={error} alert />
+          <Notice icon="error" color={theme.error} text={error} alert />
         </Surface>
       ) : null}
 
       <View style={[styles.grid, desktop && styles.gridDesktop]}>
         <View style={styles.column}>
-          <SettingsSection title={t("account")} icon="account-circle-outline">
+          <SettingsSection title={t("account")} icon="people">
             <View style={styles.accountRow}>
               <View
                 style={[styles.avatar, { backgroundColor: theme.actionSoft }]}
@@ -280,7 +276,7 @@ export default function SettingsScreen() {
             )}
           </SettingsSection>
 
-          <SettingsSection title={t("notifications")} icon="bell-outline">
+          <SettingsSection title={t("notifications")} icon="notifications">
             <Text style={[styles.help, { color: theme.textMuted }]}>
               {t("remindersHelp")}
             </Text>
@@ -295,7 +291,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.column}>
-          <SettingsSection title={t("appearance")} icon="palette-outline">
+          <SettingsSection title={t("appearance")} icon="appearance">
             <FieldLabel>{t("theme")}</FieldLabel>
             <SegmentedControl
               label={t("theme")}
@@ -328,21 +324,14 @@ export default function SettingsScreen() {
             />
           </SettingsSection>
 
-          <SettingsSection
-            title={t("privacyStorage")}
-            icon="shield-lock-outline"
-          >
+          <SettingsSection title={t("privacyStorage")} icon="privacy">
             <View
               style={[
                 styles.authNotice,
                 { backgroundColor: theme.primarySoft },
               ]}
             >
-              <MaterialCommunityIcons
-                name="shield-check-outline"
-                size={24}
-                color={theme.primary}
-              />
+              <VoxelIcon name="privacy" size={24} color={theme.primary} />
               <Text style={[styles.authNoticeText, { color: theme.text }]}>
                 {t("youtubeAuthNotRequired")}
               </Text>
@@ -358,8 +347,8 @@ export default function SettingsScreen() {
                     : t("modelNotDownloaded")}
                 </Text>
               </View>
-              <MaterialCommunityIcons
-                name={model.cached ? "check-circle" : "cloud-download-outline"}
+              <VoxelIcon
+                name={model.cached ? "correct" : "download"}
                 size={28}
                 color={model.cached ? theme.success : theme.textMuted}
               />
@@ -388,11 +377,7 @@ function SettingsSection({
   children,
 }: {
   title: string;
-  icon:
-    | "account-circle-outline"
-    | "palette-outline"
-    | "shield-lock-outline"
-    | "bell-outline";
+  icon: "people" | "appearance" | "privacy" | "notifications";
   children: ReactNode;
 }) {
   const { theme } = useSettings();
@@ -404,7 +389,7 @@ function SettingsSection({
         <View
           style={[styles.sectionIcon, { backgroundColor: theme.surfaceTint }]}
         >
-          <MaterialCommunityIcons name={icon} size={22} color={theme.primary} />
+          <VoxelIcon name={icon} size={22} color={theme.primary} />
         </View>
         <Text
           accessibilityRole="header"
@@ -458,14 +443,14 @@ function Notice({
   text,
   alert = false,
 }: {
-  icon: "check-circle" | "alert-circle";
+  icon: "correct" | "error";
   color: string;
   text: string;
   alert?: boolean;
 }) {
   return (
     <View style={styles.noticeRow}>
-      <MaterialCommunityIcons name={icon} size={22} color={color} />
+      <VoxelIcon name={icon} size={22} color={color} />
       <Text
         accessibilityRole={alert ? "alert" : undefined}
         accessibilityLiveRegion="polite"
