@@ -46,7 +46,9 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === "web" && typeof document !== "undefined") document.title = SITE_TITLE;
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    const frame = requestAnimationFrame(() => { document.title = SITE_TITLE; });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   if (!loaded) return null;

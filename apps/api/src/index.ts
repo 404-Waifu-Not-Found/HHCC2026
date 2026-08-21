@@ -53,7 +53,13 @@ app.use("*", async (c, next) => {
   }
   await next();
   const headers = corsHeaders(origin);
-  headers.forEach((value, key) => c.res.headers.set(key, value));
+  const response = new Response(c.res.body, {
+    status: c.res.status,
+    statusText: c.res.statusText,
+    headers: c.res.headers,
+  });
+  headers.forEach((value, key) => response.headers.set(key, value));
+  c.res = response;
 });
 
 app.get("/health", (c) =>
@@ -133,4 +139,3 @@ const worker = {
 } satisfies ExportedHandler<AppEnv, GenerationQueueMessage>;
 
 export default worker;
-
