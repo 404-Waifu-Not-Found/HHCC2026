@@ -1513,6 +1513,9 @@ describe("protocol-9 concept-first call lifecycles", () => {
     ["rubric_invalid", "content_repair"],
     ["question_tautology_invalid", "content_repair"],
     ["quiz_language_mismatch", "content_repair"],
+    ["source_grounding_invalid", "content_repair"],
+    ["retry_question_invalid", "content_repair"],
+    ["true_false_compound_claim", "content_repair"],
     ["answer_mapping_invalid", "answer_repair"],
     ["mc_evidence_span_invalid", "answer_repair"],
     ["mc_distractor_duplicate", "answer_repair"],
@@ -2093,6 +2096,94 @@ describe("protocol-9 concept-first call lifecycles", () => {
 });
 
 describe("protocol-10 prompt-first call lifecycles", () => {
+  it.each([
+    "empty_content",
+    "truncated_json",
+    "schema_invalid",
+    "type_or_order_mismatch",
+    "choice_structure_invalid",
+    "polarity_mismatch",
+    "formula_structure_invalid",
+    "append_conflict",
+    "duplicate_question",
+    "source_framing_invalid",
+    "course_logistics_invalid",
+    "low_pedagogical_value",
+    "rubric_invalid",
+    "question_tautology_invalid",
+    "quiz_language_mismatch",
+    "source_grounding_invalid",
+    "retry_question_invalid",
+    "true_false_compound_claim",
+    "question_answer_kind_mismatch",
+    "answer_fragment_invalid",
+    "unsupported_absolute_claim",
+  ] as const)("accepts %s as an automatic structural repair", (outcome) => {
+    expect(retryKindMatchesGenerationOutcome("structural", outcome)).toBe(true);
+  });
+
+  it("recovers a malformed adaptive prompt without learner input", async () => {
+    const db = createPromptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, promptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, promptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          promptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          promptFirstLifecycleEvent("completed", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "retry_question_invalid",
+            retryDelayMs: 200,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+
+    const snapshot = await readProgressiveGenerationSnapshot(
+      db as unknown as D1Database,
+      QUIZ_ID,
+    );
+    expect(snapshot.nextRetryKind).toBe("structural");
+    expect(snapshot.nextOrdinalAttempt).toBe(2);
+
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          promptFirstLifecycleEvent("started", {
+            callIndex: 2,
+            startIndex: 1,
+            ordinalAttempt: 2,
+            acceptedCount: 0,
+            classification: "automatic_retry",
+            retryKind: "structural",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+  });
+
   it("accepts structural retries while preserving lifecycle sequencing", async () => {
     const db = createPromptFirstDatabase();
     const { app, env } = testApp(db);

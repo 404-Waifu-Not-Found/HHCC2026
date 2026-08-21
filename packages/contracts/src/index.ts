@@ -495,6 +495,9 @@ export const GenerationFailureCodeSchema = z.enum([
   "answer_fragment_invalid",
   "unsupported_absolute_claim",
   "quiz_language_mismatch",
+  "source_grounding_invalid",
+  "retry_question_invalid",
+  "true_false_compound_claim",
   "call_dispatch_timeout",
   "stream_idle_timeout",
 ]);
