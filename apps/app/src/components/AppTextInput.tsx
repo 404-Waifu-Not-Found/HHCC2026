@@ -163,8 +163,9 @@ const styles = StyleSheet.create({
     fontSize: typography.size.bodyLarge,
   },
   adornment: {
-    minWidth: controls.iconTarget,
+    width: controls.iconTarget,
     minHeight: controls.iconTarget,
+    flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
   },

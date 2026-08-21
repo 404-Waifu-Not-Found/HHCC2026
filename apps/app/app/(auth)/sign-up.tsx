@@ -8,7 +8,13 @@ import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { borders, radii, spacing, typography } from "../../src/theme/tokens";
+import {
+  borders,
+  controls,
+  radii,
+  spacing,
+  typography,
+} from "../../src/theme/tokens";
 
 export default function SignUpScreen() {
   const { t, theme } = useSettings();
@@ -137,11 +143,12 @@ export default function SignUpScreen() {
           loading && styles.disabled,
         ]}
       >
-        <VoxelIcon
-          name={ageConfirmed ? "selected" : "selected"}
-          size={29}
-          color={ageConfirmed ? theme.actionPressed : theme.textMuted}
-        />
+        <View style={styles.checkboxSlot}>
+          <VoxelIcon
+            name={ageConfirmed ? "checkbox-checked" : "checkbox-unchecked"}
+            size={32}
+          />
+        </View>
         <Text style={[styles.checkboxText, { color: theme.text }]}>
           {t("ageConfirmation")}
         </Text>
@@ -163,9 +170,6 @@ export default function SignUpScreen() {
       <PrimaryButton
         loading={loading}
         disabled={!canSubmit}
-        leadingIcon={
-          <VoxelIcon name="registration" size={21} color={theme.textOnAction} />
-        }
         onPress={() => void submit()}
       >
         {t("signUp")}
@@ -176,20 +180,25 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   checkboxRow: {
-    minHeight: 64,
+    minHeight: controls.inputHeight,
     borderWidth: borders.standard,
-    borderRadius: radii.large,
+    borderRadius: radii.medium,
     paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing[3],
+  },
+  checkboxSlot: {
+    width: controls.iconTarget,
+    minHeight: controls.iconTarget,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkboxText: {
     flex: 1,
     fontFamily: typography.bodyMedium,
-    fontSize: typography.size.label,
-    lineHeight: typography.lineHeight.label,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
   },
   disabled: { opacity: 0.6 },
   status: { padding: spacing[4] },

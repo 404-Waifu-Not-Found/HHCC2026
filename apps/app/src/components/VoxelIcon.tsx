@@ -17,6 +17,8 @@ export const voxelIconRegistry = {
   back: require("../../assets/icons/voxel/back.png"),
   calendar: require("../../assets/icons/voxel/calendar.png"),
   captions: require("../../assets/icons/voxel/captions.png"),
+  "checkbox-checked": require("../../assets/icons/voxel/checkbox-checked.png"),
+  "checkbox-unchecked": require("../../assets/icons/voxel/checkbox-unchecked.png"),
   checklist: require("../../assets/icons/voxel/checklist.png"),
   close: require("../../assets/icons/voxel/close.png"),
   collapse: require("../../assets/icons/voxel/collapse.png"),

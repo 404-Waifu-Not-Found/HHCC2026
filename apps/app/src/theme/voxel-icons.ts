@@ -4,6 +4,8 @@ export const voxelIconNames = [
   "back",
   "calendar",
   "captions",
+  "checkbox-checked",
+  "checkbox-unchecked",
   "checklist",
   "close",
   "collapse",
