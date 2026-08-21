@@ -3,6 +3,7 @@ import {
   openClipQuestExtensionSettings,
   requestExtensionLocalQuiz,
   requestExtensionLocalCheatSheet,
+  requestExtensionLocalAnswerGrade,
   subscribeToClipQuestExtension,
 } from "../transcription/clipquest-extension";
 import type {
@@ -25,6 +26,13 @@ export async function requestLocalCheatSheet(
   signal?: AbortSignal,
 ): Promise<import("@clipquest/contracts").CheatSheetDocument> {
   return requestExtensionLocalCheatSheet(context, signal);
+}
+
+export async function requestLocalAnswerGrade(
+  request: import("@clipquest/contracts").LocalAnswerGradeRequest,
+  signal?: AbortSignal,
+): Promise<import("@clipquest/contracts").LocalAnswerGrade> {
+  return requestExtensionLocalAnswerGrade(request, signal);
 }
 
 export const flushLocalGenerationOutbox: FlushLocalGenerationOutbox = async (

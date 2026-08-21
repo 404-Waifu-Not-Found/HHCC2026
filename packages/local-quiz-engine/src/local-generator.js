@@ -5312,6 +5312,7 @@ function validateQuiz(quiz, input) {
       );
     }
     if (
+      !input.promptFirstV512Mode &&
       prompts.some(
         (prompt) => promptSimilarity(prompt, question.question) >= 0.9,
       )
@@ -5721,6 +5722,73 @@ function promptFirstV512ExactlyDuplicatesAccepted(question, acceptedQuestions) {
   });
 }
 
+function promptFirstLearnerQualityFailure(
+  question,
+  focusExcerpt,
+  primaryClaim,
+) {
+  const prompt = normalize(question.question ?? "");
+  const rawTarget = String(promptFirstGradingTarget(question) ?? "");
+  const target = normalize(rawTarget);
+  const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
+  if (!prompt || !target) return null;
+
+  // Repeated concepts are acceptable, but a false item may not simply restate
+  // the supported true claim with a false polarity. Require a real contrast.
+  if (
+    question.type === "true_false" &&
+    question.answer === false &&
+    (prompt === normalize(primaryClaim ?? "") ||
+      (evidence.includes(prompt) && prompt.length > 35))
+  ) {
+    return "polarity_mismatch";
+  }
+
+  if (question.type === "short_answer") {
+    const formulaLike = /[=+*/^]/u.test(rawTarget);
+    if (
+      (!formulaLike &&
+        /(?:\b(?:and|or|because|which|that|such as|of|to|a|an|the))$/u.test(
+          target,
+        )) ||
+      (!formulaLike &&
+        /\b(?:something|certain things|another effect|a third consequence|the most severe)\b/u.test(
+          target,
+        ))
+    ) {
+      return "answer_fragment_invalid";
+    }
+    if (
+      /^(?:under what condition|when|why|how)\b/u.test(prompt) &&
+      target.split(/\s+/u).length < 3
+    ) {
+      return "question_answer_kind_mismatch";
+    }
+    if (
+      /^(?:under what condition|when)\b/u.test(prompt) &&
+      !/\b(?:when|if|unless|only when|provided that)\b/u.test(target)
+    ) {
+      return "question_answer_kind_mismatch";
+    }
+    if (
+      /^(?:why|how)\b/u.test(prompt) &&
+      (target.split(/\s+/u).length < 3 || target === prompt)
+    ) {
+      return "question_answer_kind_mismatch";
+    }
+  }
+
+  const absolute = /\b(?:always|never|only way|all|none|every|must)\b/gu;
+  const absoluteWords = `${prompt} ${target}`.match(absolute) ?? [];
+  if (absoluteWords.length > 0) {
+    const unsupported = absoluteWords.some(
+      (word) => !evidence.includes(word.toLocaleLowerCase("en-US")),
+    );
+    if (unsupported) return "unsupported_absolute_claim";
+  }
+  return null;
+}
+
 export function promptFirstV512RepeatsAcceptedFamily(
   question,
   acceptedQuestions,
@@ -5823,6 +5891,18 @@ function validatePromptFirstQuiz(quiz, input) {
     validationFailure(
       "The grading target repeats an already accepted objective.",
       "schema_invalid",
+    );
+  }
+  const qualityFailure = promptFirstLearnerQualityFailure(
+    question,
+    input.focusExcerpt,
+    input.promptFirstPrimaryClaim,
+  );
+  if (qualityFailure) {
+    validationFailure(
+      "The learner-facing question and answer are not complete and well-supported.",
+      qualityFailure,
+      repairContextForCandidate(question, qualityFailure),
     );
   }
   if (question.type === "multiple_choice") {
@@ -8067,6 +8147,8 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "short_enumeration_invalid",
       "short_formula_invalid",
       "question_answer_kind_mismatch",
+      "answer_fragment_invalid",
+      "unsupported_absolute_claim",
     ].includes(reasonCode)
   ) {
     return "answer_repair";
@@ -8163,6 +8245,10 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
       "Replace the candidate with a question that requires understanding; the answer must not merely repeat a phrase already supplied in the stem.",
     question_answer_kind_mismatch:
       "Rewrite the question and answer so the answer supplies the requested factor, cause, condition, mechanism, process, method, term, concept, or quantity. For a How-can question, return the actual cause, condition, or mechanism; a concessive phrase such as 'even without ...' merely repeats the stem and is not an answer. For How-does/How-do contribution, effect, relationship, dependency, or security questions, state the actual outcome or mechanism rather than only naming components or copying a descriptive fragment.",
+    answer_fragment_invalid:
+      "Return a complete learner-facing answer. Do not end with a dangling conjunction or use placeholders such as 'another effect' or 'something'. Keep the answer concise but grammatically complete.",
+    unsupported_absolute_claim:
+      "Remove absolute wording such as always, never, all, none, every, or must unless the assigned evidence explicitly supports that exact absolute claim. Keep the wording evidence-bounded and softer.",
     quiz_language_mismatch:
       "Keep the supported objective and private evidence fields, but rewrite every learner-visible field entirely in the selected quiz language. For multiple choice, translate answerText and all distractors; keep evidenceQuote and answerSpan as exact private source evidence.",
   };
@@ -8320,6 +8406,160 @@ export async function generateLocalCheatSheet(
   if (!bounded.summary)
     throw new Error("DeepSeek returned an empty cheat sheet.");
   return bounded;
+}
+
+const LOCAL_ANSWER_GRADING_TOOL = {
+  type: "function",
+  function: {
+    name: "grade_answer",
+    description:
+      "Return the final learner-answer decision after considering the whole question and the learner response.",
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      required: ["is_correct", "confidence", "matched_ideas"],
+      properties: {
+        is_correct: { type: "boolean" },
+        confidence: { enum: ["high", "medium", "low"] },
+        matched_ideas: {
+          type: "array",
+          maxItems: 6,
+          items: { type: "string", maxLength: 240 },
+        },
+      },
+    },
+  },
+};
+
+function parseLocalAnswerGradeToolCall(message) {
+  const toolCall = Array.isArray(message?.tool_calls)
+    ? message.tool_calls.find(
+        (entry) => entry?.function?.name === "grade_answer",
+      )
+    : null;
+  if (!toolCall?.function?.arguments) return null;
+  try {
+    const parsed = JSON.parse(toolCall.function.arguments);
+    if (
+      typeof parsed?.is_correct !== "boolean" ||
+      !["high", "medium", "low"].includes(parsed?.confidence) ||
+      !Array.isArray(parsed?.matched_ideas)
+    ) {
+      return null;
+    }
+    return {
+      correct: parsed.is_correct,
+      confidence: parsed.confidence,
+      matchedIdeas: parsed.matched_ideas
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 240),
+        )
+        .filter(Boolean)
+        .slice(0, 6),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function gradeLocalAnswerWithDeepSeek(
+  input,
+  apiKey,
+  signal,
+  adapters = {},
+) {
+  const question = String(input?.question ?? "")
+    .trim()
+    .slice(0, 1_000);
+  const response = String(input?.response ?? "")
+    .trim()
+    .slice(0, 2_000);
+  const questionType = String(input?.questionType ?? "").trim();
+  const options = Array.isArray(input?.options)
+    ? input.options
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .slice(0, 500),
+        )
+        .filter(Boolean)
+        .slice(0, 4)
+    : undefined;
+  if (!question || !response) {
+    throw new Error("A question and learner response are required.");
+  }
+  if (
+    !["multiple_choice", "true_false", "short_answer"].includes(questionType)
+  ) {
+    throw new Error("The answer grading question type is invalid.");
+  }
+  const fetchImpl = adapters.fetch ?? globalThis.fetch.bind(globalThis);
+  const envelopeResponse = await fetchImpl(
+    "https://api.deepseek.com/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        thinking: { type: "disabled" },
+        temperature: 0.1,
+        max_tokens: 1_200,
+        tools: [LOCAL_ANSWER_GRADING_TOOL],
+        tool_choice: {
+          type: "function",
+          function: { name: "grade_answer" },
+        },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are ClipQuest's gentle answer grader. Grade the learner response against the question itself. Accept concise, grammatical fragments and natural paraphrases when they communicate the central answer. Do not require the learner to repeat the reference wording. For true/false, judge the statement's actual factual polarity rather than trusting a requested label. For multiple choice, judge the selected option against the question. For short answers, prefer meaning over exact wording, but do not accept a response that only repeats the question, is unrelated, or reverses the core relationship. First write one short, learner-friendly reason in assistant text. Then call grade_answer with the final decision. The tool call is authoritative.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              question,
+              questionType,
+              ...(options ? { options } : {}),
+              learnerResponse: response,
+            }),
+          },
+        ],
+      }),
+      signal,
+    },
+  );
+  if (!envelopeResponse.ok) {
+    throw new Error(
+      `DeepSeek answer grading request failed (${envelopeResponse.status}).`,
+    );
+  }
+  const envelope = await envelopeResponse.json();
+  const message = envelope?.choices?.[0]?.message;
+  const decision = parseLocalAnswerGradeToolCall(message);
+  if (!decision) {
+    throw new Error(
+      "DeepSeek did not return a valid answer grading tool call.",
+    );
+  }
+  const reason = String(message?.content ?? "")
+    .replace(/<think>[\s\S]*?<\/think>/giu, "")
+    .trim()
+    .slice(0, 1_000);
+  return {
+    ...decision,
+    reason:
+      reason ||
+      (decision.correct
+        ? "Your answer matches the core idea."
+        : "Your answer misses the core idea."),
+    source: "deepseek_local",
+  };
 }
 
 function boundedTextArray(value, maxItems, maxLength) {

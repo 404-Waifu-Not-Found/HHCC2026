@@ -2,6 +2,7 @@ import { captionsToPlainText } from "./caption-text.js";
 import {
   generateLocalQuiz,
   generateLocalCheatSheet,
+  gradeLocalAnswerWithDeepSeek,
   generateQuizFromPlainText,
   testDeepSeekKey,
 } from "./local-generator.js";
@@ -386,6 +387,29 @@ async function downloadPlainTextCaptions(request) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "clipquest.answer.grade.v1") {
+    if (!senderAllowed(sender)) return false;
+    void chrome.storage.local
+      .get(API_KEY_STORAGE_KEY)
+      .then(async (stored) => {
+        const apiKey = stored[API_KEY_STORAGE_KEY];
+        if (typeof apiKey !== "string") {
+          throw new Error(
+            "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+          );
+        }
+        return gradeLocalAnswerWithDeepSeek(message.request, apiKey);
+      })
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) =>
+        sendResponse({
+          ok: false,
+          error:
+            error instanceof Error ? error.message : "Answer grading failed.",
+        }),
+      );
+    return true;
+  }
   if (message?.type === "clipquest.captions.download-text.v1") {
     if (!extensionPageSender(sender)) {
       sendResponse({

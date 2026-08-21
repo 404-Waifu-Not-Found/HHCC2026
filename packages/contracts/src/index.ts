@@ -411,6 +411,26 @@ export const LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
 export const LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v7" as const;
 export const LOCAL_CHEAT_SHEET_CAPABILITY = "cheat-sheet-v1" as const;
+export const LOCAL_ANSWER_GRADING_CAPABILITY = "answer-grading-v1" as const;
+
+export const LocalAnswerGradeRequestSchema = z.object({
+  question: z.string().trim().min(1).max(1_000),
+  response: z.string().trim().min(1).max(2_000),
+  questionType: QuizQuestionTypeSchema,
+  options: z.array(z.string().trim().min(1).max(500)).max(4).optional(),
+});
+export type LocalAnswerGradeRequest = z.infer<
+  typeof LocalAnswerGradeRequestSchema
+>;
+
+export const LocalAnswerGradeSchema = z.object({
+  correct: z.boolean(),
+  confidence: z.enum(["high", "medium", "low"]),
+  reason: z.string().trim().min(1).max(1_000),
+  matchedIdeas: z.array(z.string().trim().min(1).max(240)).max(6),
+  source: z.literal("deepseek_local"),
+});
+export type LocalAnswerGrade = z.infer<typeof LocalAnswerGradeSchema>;
 export const CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v6" as const;
 export const GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =

@@ -1,15 +1,15 @@
 import type {
   AutomaticRetryKind,
+  CheatSheetContext,
+  CheatSheetDocument,
   GenerationFailureCode,
   GenerationStage,
+  LocalAnswerGrade,
+  LocalAnswerGradeRequest,
   LocalConceptQuizGenerationResult,
   LocalConceptQuizQuestionChunk,
   LocalGenerationCallEvent,
   LocalQuizContext,
-} from "@clipquest/contracts";
-import type {
-  CheatSheetContext,
-  CheatSheetDocument,
 } from "@clipquest/contracts";
 
 export type LocalGenerationProgress = {
@@ -50,6 +50,11 @@ export type LocalCheatSheetRequest = (
   context: CheatSheetContext,
   signal?: AbortSignal,
 ) => Promise<CheatSheetDocument>;
+
+export type LocalAnswerGradeRequestFn = (
+  request: LocalAnswerGradeRequest,
+  signal?: AbortSignal,
+) => Promise<LocalAnswerGrade>;
 
 export type LocalGenerationOutboxReplay = {
   questions: number;

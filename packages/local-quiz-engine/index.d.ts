@@ -6,6 +6,8 @@ import type {
   LocalConceptQuizQuestionChunk,
   LocalGenerationCallEvent,
   LocalQuizContext,
+  LocalAnswerGrade,
+  LocalAnswerGradeRequest,
 } from "@clipquest/contracts";
 
 export type LocalEngineProgress = {
@@ -63,3 +65,9 @@ export function generateLocalCheatSheet(
   formulas: string[];
   rememberThis: string[];
 }>;
+export function gradeLocalAnswerWithDeepSeek(
+  input: LocalAnswerGradeRequest,
+  apiKey: string,
+  signal?: AbortSignal,
+  adapters?: LocalQuizEngineAdapters,
+): Promise<LocalAnswerGrade>;

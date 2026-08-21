@@ -14,6 +14,8 @@ import {
   LocalQuizContextSchema,
   CheatSheetContextSchema,
   CheatSheetDocumentSchema,
+  LocalAnswerGradeSchema,
+  LocalAnswerGradeRequestSchema,
   MAX_COMPLETE_TRANSCRIPT_SEGMENTS,
   TranscriptSegmentSchema,
   type GenerationStage,
@@ -835,6 +837,78 @@ export async function requestExtensionLocalCheatSheet(
     window.addEventListener("message", receive);
     signal?.addEventListener("abort", abort, { once: true });
     post({ type: "generate", kind: "cheat-sheet", requestId: id, context });
+  });
+}
+
+export async function requestExtensionLocalAnswerGrade(
+  rawRequest: import("@clipquest/contracts").LocalAnswerGradeRequest,
+  signal?: AbortSignal,
+): Promise<import("@clipquest/contracts").LocalAnswerGrade> {
+  const request = LocalAnswerGradeRequestSchema.parse(rawRequest);
+  const extension = await detectClipQuestExtension();
+  if (!extension.available || !extension.configured)
+    throw new Error(
+      "Open ClipQuest Local AI from the Chrome toolbar and add your DeepSeek API key.",
+    );
+  if (!extension.capabilities.includes("answer-grading-v1")) {
+    throw new Error(
+      "Update ClipQuest Local AI to enable softer answer grading.",
+    );
+  }
+  const id = requestId();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
+      window.removeEventListener("message", receive);
+      callback();
+    };
+    const abort = () =>
+      finish(() =>
+        reject(
+          signal?.reason ??
+            new DOMException("The request was cancelled.", "AbortError"),
+        ),
+      );
+    const receive = (event: MessageEvent<unknown>) => {
+      const data =
+        event.data && typeof event.data === "object"
+          ? (event.data as Record<string, unknown>)
+          : null;
+      if (
+        event.source !== window ||
+        event.origin !== window.location.origin ||
+        data?.channel !== CHANNEL ||
+        data?.source !== EXTENSION_SOURCE ||
+        data?.type !== "answer-grade-result" ||
+        data?.requestId !== id
+      )
+        return;
+      const response = data.response as
+        { ok?: boolean; error?: string; result?: unknown } | undefined;
+      if (!response?.ok) {
+        return finish(() =>
+          reject(new Error(response?.error ?? "Answer grading failed.")),
+        );
+      }
+      const parsed = LocalAnswerGradeSchema.safeParse(response.result);
+      if (!parsed.success) {
+        return finish(() =>
+          reject(new Error("The extension returned an invalid answer grade.")),
+        );
+      }
+      finish(() => resolve(parsed.data));
+    };
+    const timeout = setTimeout(
+      () => finish(() => reject(new Error("Answer grading timed out."))),
+      45_000,
+    );
+    window.addEventListener("message", receive);
+    signal?.addEventListener("abort", abort, { once: true });
+    post({ type: "grade-answer", requestId: id, request });
   });
 }
 

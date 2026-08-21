@@ -36,6 +36,7 @@
           "question-stream-v6",
           "question-stream-v7",
           "cheat-sheet-v1",
+          "answer-grading-v1",
           "ensure-source-ready-v1",
         ],
       });
@@ -98,6 +99,40 @@
     }
     if (message.type === "open-settings") {
       void chrome.runtime.sendMessage({ type: "clipquest.settings.open.v1" });
+      return;
+    }
+    if (
+      message.type === "grade-answer" &&
+      typeof message.requestId === "string" &&
+      message.request &&
+      typeof message.request === "object"
+    ) {
+      void chrome.runtime
+        .sendMessage({
+          type: "clipquest.answer.grade.v1",
+          requestId: message.requestId,
+          request: message.request,
+        })
+        .then((response) =>
+          post({
+            type: "answer-grade-result",
+            requestId: message.requestId,
+            response,
+          }),
+        )
+        .catch((error) =>
+          post({
+            type: "answer-grade-result",
+            requestId: message.requestId,
+            response: {
+              ok: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "The ClipQuest extension stopped responding.",
+            },
+          }),
+        );
       return;
     }
     if (

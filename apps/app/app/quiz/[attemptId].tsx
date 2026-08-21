@@ -59,7 +59,10 @@ import {
   subscribeToAttemptGeneration,
 } from "../../src/generation/progressive-coordinator";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { subscribeToLocalGenerationClient } from "../../src/generation/local-generation-client";
+import {
+  requestLocalAnswerGrade,
+  subscribeToLocalGenerationClient,
+} from "../../src/generation/local-generation-client";
 import {
   FeedbackMotion,
   MotionSkeleton,
@@ -96,6 +99,8 @@ export default function QuizScreen() {
   const [answer, setAnswer] = useState<Answer>();
   const [orderingTouched, setOrderingTouched] = useState(false);
   const [feedback, setFeedback] = useState<AttemptAnswerResponse>();
+  const [localGrade, setLocalGrade] =
+    useState<import("@clipquest/contracts").LocalAnswerGrade>();
   const [score, setScore] = useState<number>();
   const [mastery, setMastery] = useState<MasteryState>();
   const [showCompletion, setShowCompletion] = useState(false);
@@ -162,6 +167,7 @@ export default function QuizScreen() {
     );
     setOrderingTouched(false);
     setFeedback(undefined);
+    setLocalGrade(undefined);
     setError(undefined);
     setWaitingForQuestions(false);
   }, []);
@@ -447,6 +453,34 @@ export default function QuizScreen() {
           : answer;
       if (submittedAnswer === undefined) {
         throw new Error(t("answerRequired"));
+      }
+      if (question.type !== "ordering") {
+        const responseText =
+          question.type === "multiple_choice" &&
+          typeof submittedAnswer === "number"
+            ? (question.options?.[submittedAnswer] ?? String(submittedAnswer))
+            : question.type === "true_false"
+              ? submittedAnswer
+                ? "True"
+                : "False"
+              : String(submittedAnswer);
+        const localGradePromise = Promise.race([
+          requestLocalAnswerGrade({
+            question: presentQuizPrompt(question.prompt),
+            response: responseText,
+            questionType: question.type,
+            ...(question.options ? { options: question.options } : {}),
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Local grading timed out.")),
+              12_000,
+            ),
+          ),
+        ]);
+        void localGradePromise
+          .then((grade) => setLocalGrade(grade))
+          .catch(() => undefined);
       }
       const result = await apiRequest(
         `/api/attempts/${attemptId}/answer`,
@@ -803,7 +837,11 @@ export default function QuizScreen() {
     <FeedbackPanel
       status={feedback.correct ? "correct" : "incorrect"}
       title={feedback.correct ? t("correct") : t("incorrect")}
-      detail={presentQuizText(feedback.explanation)}
+      detail={presentQuizText(
+        localGrade
+          ? `${localGrade.reason}\n\n${feedback.explanation}`
+          : feedback.explanation,
+      )}
       action={
         <PrimaryButton onPress={next}>
           {feedback.completed ? t("finish") : t("next")}
