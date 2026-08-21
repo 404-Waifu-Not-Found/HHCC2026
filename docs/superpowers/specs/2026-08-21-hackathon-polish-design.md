@@ -130,3 +130,31 @@ the same commands run in CI on Ubuntu.
   installed so the tracked release asset stays byte-identical.
 - The Playwright `seed` helper needs a loaded app page before it can touch
   `localStorage`; the recap journey navigates to `/welcome` first.
+
+## Review follow-ups (same day)
+
+An independent code review of the branch produced 19 findings; the ones that
+changed behaviour:
+
+- Recap entries now persist in the stored attempt record
+  (`apps/app/src/state/attempt.ts`), so a reload or app resume mid-quest keeps
+  earlier answers; a partial recap never claims a perfect run.
+- The recap line labelled "Reason" shows the same text the feedback panel
+  showed: the device-local grade's reason when it agreed with the server
+  verdict, otherwise the stored explanation (`attachLocalReason`).
+- Recap answer lines render through top-level `MathText` so formula answers
+  typeset and native `MathText` is never nested inside `Text`.
+- The answer route returns the rubric's model answer as `correctAnswer` for
+  short-answer questions, so the recap and feedback can show it.
+- `prepare-web-runtime.mjs` no longer overwrites the tracked release archive
+  when the Node ZIP fallback produced the build; `build.mjs` records the
+  packager in `dist/build-info.json`, falls back on any `zip` failure, and
+  cleans its staging directory in `finally`.
+- The Playwright answer mock returns a type-correct `correctAnswer`, a
+  coherent score, and the recap journey now reloads the page mid-quest.
+- Docs corrected: grading copy no longer claims "no second model call"; CI runs
+  on pull requests and pushes to `main`; the journey count is 24.
+
+Accepted as-is: contracts build twice in the CI quality job (root scripts own
+that), the `responseText` duplication in the quiz screen (pre-existing), and the
+source-reading tests' raw `readFileSync` (covered by the LF policy).

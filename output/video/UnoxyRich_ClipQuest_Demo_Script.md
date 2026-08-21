@@ -50,7 +50,7 @@
 **Visual (live):** Answer a multiple-choice question correctly → green panel with "Why". Answer a true/false question **wrong on purpose** → red panel shows "Reason", the **correct answer**, and "Marked incorrect". Press Next; a few questions later the same concept returns reworded with the retry badge; answer it correctly. Answer a short-answer question in your own words and show it graded.
 
 **Narration — Justin-Yonardo:**
-"Every answer is graded immediately with the reasoning, not just right or wrong. When I miss this one, ClipQuest shows me the correct answer and the why — and brings the concept back later in the session, worded differently, so I get a second retrieval attempt. Short answers are graded deterministically on the server against a rubric, so the learner's text never goes to a second model."
+"Every answer is graded immediately with the reasoning, not just right or wrong. When I miss this one, ClipQuest shows me the correct answer and the why — and brings the concept back later in the session, worded differently, so I get a second retrieval attempt. Short answers are graded deterministically on the server against the stored rubric; the learner's own device-local key can add reasoning, but it never changes the verdict."
 
 ### 2:40–3:20 — Completion: what to review, mastery, cheat sheet
 
