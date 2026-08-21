@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  AdminGenerationSchema,
+  AdminGenerationsResponseSchema,
   AdminMeResponseSchema,
   AdminSystemResponseSchema,
   AttemptGenerationAvailabilitySchema,
@@ -44,8 +46,28 @@ describe("admin contracts", () => {
         model: "deepseek-v4-flash",
         jobs: { queued: 1, running: 2, complete: 3, failed: 4 },
         database: {
-          migration: "0007_admin_audit_retention",
+          migration: "0016_progressive_quiz_streaming.sql",
           auditEnabled: true,
+        },
+        generation: {
+          mode: "extension_local",
+          backendEnabled: false,
+          extensionEnabled: true,
+          extensionRequired: true,
+          model: "deepseek-v4-flash",
+          pipelineVersion: 9,
+          promptVersion: "quiz-local-json-stream-v5.1",
+          validatorVersion: "validator-local-progressive-v4.0",
+          states: {
+            generating: 1,
+            retrying: 2,
+            retryRequired: 3,
+            ready: 4,
+          },
+        },
+        worker: {
+          versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",
+          versionTag: "release-sha",
         },
       }).configuration,
     ).toEqual({
@@ -55,6 +77,47 @@ describe("admin contracts", () => {
       youtubeEncryption: true,
       youtubeDemoHistory: false,
     });
+  });
+
+  it("models read-only progressive generation metadata without accepting private fields", () => {
+    const generation = {
+      quizId: "33333333-3333-4333-8333-333333333333",
+      state: "retry_required",
+      acceptedQuestions: 3,
+      plannedQuestions: 10,
+      progress: 0.3,
+      requestedQuestionTypes: ["multiple_choice", "short_answer"],
+      aiCalls: 2,
+      retryCount: 1,
+      elapsedMs: 18_000,
+      reasonCode: "automatic_retries_exhausted",
+      stalled: false,
+      lastProgressAt: "2026-08-10T04:00:00.000Z",
+      createdAt: "2026-08-10T03:59:00.000Z",
+      owner: {
+        id: "user-1",
+        name: "Learner",
+        email: "learner@example.com",
+      },
+      video: {
+        id: "video-1",
+        title: "Limits",
+        source: "youtube",
+      },
+    } as const;
+    expect(AdminGenerationSchema.parse(generation)).toEqual(generation);
+    expect(
+      AdminGenerationsResponseSchema.parse({
+        generations: [generation],
+        pagination: { page: 1, pageSize: 20, total: 1 },
+      }).generations,
+    ).toHaveLength(1);
+    expect(
+      AdminGenerationSchema.safeParse({
+        ...generation,
+        transcript: "private captions",
+      }).success,
+    ).toBe(false);
   });
 });
 

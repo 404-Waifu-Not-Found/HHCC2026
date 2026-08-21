@@ -1,5 +1,6 @@
 import {
   AdminAuditResponseSchema,
+  AdminGenerationsResponseSchema,
   AdminJobsResponseSchema,
   AdminLessonsResponseSchema,
   AdminMeResponseSchema,
@@ -8,6 +9,7 @@ import {
   AdminSystemResponseSchema,
   AdminUsersResponseSchema,
   type AdminAuditResponse,
+  type AdminGenerationsResponse,
   type AdminJobsResponse,
   type AdminLessonsResponse,
   type AdminMeResponse,
@@ -53,6 +55,16 @@ export function getAdminJobs(
     `/api/admin/jobs${query(filters)}`,
     {},
     AdminJobsResponseSchema,
+  );
+}
+
+export function getAdminGenerations(
+  filters: AdminListFilters,
+): Promise<AdminGenerationsResponse> {
+  return apiRequest(
+    `/api/admin/generations${query(filters)}`,
+    {},
+    AdminGenerationsResponseSchema,
   );
 }
 

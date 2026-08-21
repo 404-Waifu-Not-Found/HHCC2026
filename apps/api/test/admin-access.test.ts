@@ -9,10 +9,14 @@ describe("admin permissions", () => {
 
   it("lets operators moderate without changing roles", () => {
     expect(hasAdminPermission("admin", "users:moderate")).toBe(true);
+    expect(hasAdminPermission("admin", "jobs:read")).toBe(true);
+    expect(hasAdminPermission("admin", "jobs:manage")).toBe(false);
     expect(hasAdminPermission("admin", "users:set-role")).toBe(false);
   });
 
   it("reserves role changes for owners", () => {
     expect(hasAdminPermission("owner", "users:set-role")).toBe(true);
+    expect(hasAdminPermission("owner", "jobs:read")).toBe(true);
+    expect(hasAdminPermission("owner", "jobs:manage")).toBe(false);
   });
 });

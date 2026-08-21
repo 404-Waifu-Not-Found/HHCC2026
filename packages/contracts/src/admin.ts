@@ -118,6 +118,63 @@ export const AdminJobsResponseSchema = z.object({
 });
 export type AdminJobsResponse = z.infer<typeof AdminJobsResponseSchema>;
 
+export const AdminGenerationStateSchema = z.enum([
+  "generating",
+  "retrying",
+  "retry_required",
+  "ready",
+]);
+export type AdminGenerationState = z.infer<typeof AdminGenerationStateSchema>;
+
+export const AdminGenerationSchema = z
+  .object({
+    quizId: z.string().uuid(),
+    state: AdminGenerationStateSchema,
+    acceptedQuestions: z.number().int().min(1).max(15),
+    plannedQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    progress: z.number().min(0).max(1),
+    requestedQuestionTypes: z
+      .array(z.enum(["multiple_choice", "true_false", "short_answer"]))
+      .min(1)
+      .max(3),
+    aiCalls: z.number().int().nonnegative(),
+    retryCount: z.number().int().nonnegative(),
+    elapsedMs: z.number().int().positive(),
+    reasonCode: z
+      .string()
+      .regex(/^[a-z0-9_]{1,64}$/)
+      .nullable(),
+    stalled: z.boolean(),
+    lastProgressAt: z.string().datetime(),
+    createdAt: z.string().datetime(),
+    owner: z
+      .object({
+        id: z.string(),
+        name: z.string(),
+        email: z.string().email(),
+      })
+      .strict(),
+    video: z
+      .object({
+        id: z.string(),
+        title: z.string(),
+        source: z.literal("youtube"),
+      })
+      .strict(),
+  })
+  .strict();
+export type AdminGeneration = z.infer<typeof AdminGenerationSchema>;
+
+export const AdminGenerationsResponseSchema = z
+  .object({
+    generations: z.array(AdminGenerationSchema),
+    pagination: PaginationSchema,
+  })
+  .strict();
+export type AdminGenerationsResponse = z.infer<
+  typeof AdminGenerationsResponseSchema
+>;
+
 export const AdminLessonSchema = z.object({
   id: z.string(),
   language: z.string(),
@@ -179,6 +236,30 @@ export const AdminSystemResponseSchema = z.object({
   model: z.string(),
   jobs: z.record(AdminJobStateSchema, z.number().int().nonnegative()),
   database: z.object({ migration: z.string(), auditEnabled: z.literal(true) }),
+  generation: z
+    .object({
+      mode: z.literal("extension_local"),
+      backendEnabled: z.literal(false),
+      extensionEnabled: z.literal(true),
+      extensionRequired: z.literal(true),
+      model: z.string(),
+      pipelineVersion: z.number().int().positive(),
+      promptVersion: z.string(),
+      validatorVersion: z.string(),
+      states: z.object({
+        generating: z.number().int().nonnegative(),
+        retrying: z.number().int().nonnegative(),
+        retryRequired: z.number().int().nonnegative(),
+        ready: z.number().int().nonnegative(),
+      }),
+    })
+    .strict(),
+  worker: z
+    .object({
+      versionId: z.string().min(1).max(128),
+      versionTag: z.string().min(1).max(128).nullable(),
+    })
+    .strict(),
 });
 export type AdminSystemResponse = z.infer<typeof AdminSystemResponseSchema>;
 

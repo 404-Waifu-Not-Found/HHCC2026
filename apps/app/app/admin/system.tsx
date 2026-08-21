@@ -1,4 +1,5 @@
 import { VoxelIcon } from "../../src/components/VoxelIcon";
+import type { VoxelIconName } from "../../src/components/VoxelIcon";
 import { useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
@@ -40,33 +41,83 @@ export default function AdminSystemScreen() {
                 <Surface>
                   <View style={styles.configList}>
                     {Object.entries(data.configuration).map(
-                      ([name, configured]) => (
-                        <View
-                          key={name}
-                          style={[
-                            styles.configRow,
-                            { borderBottomColor: theme.divider },
-                          ]}
-                        >
-                          <VoxelIcon
-                            name={configured ? "correct" : "error"}
-                            size={23}
-                            color={configured ? theme.success : theme.error}
-                          />
-                          <Text
-                            style={[styles.configName, { color: theme.text }]}
+                      ([name, configured]) => {
+                        const optional = isOptionalConfiguration(name);
+                        const available = configured || optional;
+                        return (
+                          <View
+                            key={name}
+                            style={[
+                              styles.configRow,
+                              { borderBottomColor: theme.divider },
+                            ]}
                           >
-                            {formatKey(name)}
-                          </Text>
-                          <StatusBadge
-                            label={
-                              configured ? copy.configured : copy.unavailable
-                            }
-                            tone={configured ? "success" : "error"}
-                          />
-                        </View>
-                      ),
+                            <VoxelIcon
+                              name={
+                                configured
+                                  ? "correct"
+                                  : optional
+                                    ? "system"
+                                    : "error"
+                              }
+                              size={23}
+                              color={
+                                configured
+                                  ? theme.success
+                                  : optional
+                                    ? theme.textMuted
+                                    : theme.error
+                              }
+                            />
+                            <Text
+                              style={[styles.configName, { color: theme.text }]}
+                            >
+                              {formatKey(name)}
+                            </Text>
+                            <StatusBadge
+                              label={
+                                configured
+                                  ? copy.configured
+                                  : optional
+                                    ? copy.disabled
+                                    : copy.unavailable
+                              }
+                              tone={
+                                configured
+                                  ? "success"
+                                  : available
+                                    ? "neutral"
+                                    : "error"
+                              }
+                            />
+                          </View>
+                        );
+                      },
                     )}
+                  </View>
+                </Surface>
+              </AdminSection>
+              <AdminSection title={copy.generationArchitecture}>
+                <Surface>
+                  <View style={styles.configList}>
+                    <ArchitectureRow
+                      label={copy.localAiGeneration}
+                      status={copy.available}
+                      tone="success"
+                      icon="correct"
+                    />
+                    <ArchitectureRow
+                      label={copy.workerGeneration}
+                      status={copy.disabledByDesign}
+                      tone="neutral"
+                      icon="system"
+                    />
+                    <ArchitectureRow
+                      label={copy.extensionRequirement}
+                      status={copy.required}
+                      tone="primary"
+                      icon="processing"
+                    />
                   </View>
                 </Surface>
               </AdminSection>
@@ -75,22 +126,22 @@ export default function AdminSystemScreen() {
               <AdminSection title={copy.queueHealth}>
                 <View style={styles.jobStats}>
                   <StatTile
-                    value={String(data.jobs.queued)}
-                    label={copy.queued}
+                    value={String(data.generation.states.generating)}
+                    label={copy.generating}
                   />
                   <StatTile
-                    value={String(data.jobs.running)}
-                    label={copy.running}
+                    value={String(data.generation.states.retrying)}
+                    label={copy.retrying}
                     tone="secondary"
                   />
                   <StatTile
-                    value={String(data.jobs.complete)}
-                    label={copy.complete}
+                    value={String(data.generation.states.ready)}
+                    label={copy.ready}
                     tone="success"
                   />
                   <StatTile
-                    value={String(data.jobs.failed)}
-                    label={copy.failed}
+                    value={String(data.generation.states.retryRequired)}
+                    label={copy.retryRequired}
                     tone="warning"
                   />
                 </View>
@@ -100,7 +151,31 @@ export default function AdminSystemScreen() {
                   <SystemDetail
                     icon="model"
                     label={copy.model}
-                    value={data.model}
+                    value={data.generation.model}
+                  />
+                  <SystemDetail
+                    icon="processing"
+                    label={copy.pipeline}
+                    value={String(data.generation.pipelineVersion)}
+                  />
+                  <SystemDetail
+                    icon="model"
+                    label={copy.promptVersion}
+                    value={data.generation.promptVersion}
+                  />
+                  <SystemDetail
+                    icon="checklist"
+                    label={copy.validatorVersion}
+                    value={data.generation.validatorVersion}
+                  />
+                  <SystemDetail
+                    icon="system"
+                    label={copy.workerVersion}
+                    value={
+                      data.worker.versionTag
+                        ? `${data.worker.versionId} · ${data.worker.versionTag}`
+                        : data.worker.versionId
+                    }
                   />
                   <SystemDetail
                     icon="database"
@@ -127,7 +202,7 @@ function SystemDetail({
   label,
   value,
 }: {
-  icon: "model" | "database" | "checklist";
+  icon: VoxelIconName;
   label: string;
   value: string;
 }) {
@@ -145,6 +220,31 @@ function SystemDetail({
       </View>
     </View>
   );
+}
+
+function ArchitectureRow({
+  label,
+  status,
+  tone,
+  icon,
+}: {
+  label: string;
+  status: string;
+  tone: "neutral" | "primary" | "success";
+  icon: VoxelIconName;
+}) {
+  const { theme } = useSettings();
+  return (
+    <View style={[styles.configRow, { borderBottomColor: theme.divider }]}>
+      <VoxelIcon name={icon} size={23} color={theme.primary} />
+      <Text style={[styles.configName, { color: theme.text }]}>{label}</Text>
+      <StatusBadge label={status} tone={tone} />
+    </View>
+  );
+}
+
+function isOptionalConfiguration(name: string): boolean {
+  return name === "youtubeEncryption" || name === "youtubeDemoHistory";
 }
 
 function formatKey(value: string): string {

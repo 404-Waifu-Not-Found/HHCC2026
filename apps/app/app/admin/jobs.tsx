@@ -1,48 +1,39 @@
-import type { AdminJob } from "@clipquest/contracts";
+import type {
+  AdminGeneration,
+  AdminGenerationState,
+} from "@clipquest/contracts";
 import { useCallback, useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import {
-  ActionDialog,
   AdminDataState,
   AdminPage,
   AdminRecord,
   AdminToolbar,
   FilterChips,
-  InlineActions,
-  Notice,
   Pagination,
   RecordHeading,
   RecordMeta,
   StatusBadge,
 } from "../../src/admin/AdminUI";
-import { adminMutation, getAdminJobs } from "../../src/admin/api";
+import { getAdminGenerations } from "../../src/admin/api";
 import { useAdminCopy } from "../../src/admin/copy";
 import { useAdminData } from "../../src/admin/useAdminData";
-import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { ProgressBar } from "../../src/components/ProgressBar";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { spacing, typography } from "../../src/theme/tokens";
 
-type JobState = "all" | "queued" | "running" | "complete" | "failed";
+type GenerationFilter = "all" | AdminGenerationState;
 
 export default function AdminJobsScreen() {
   const copy = useAdminCopy();
   const { locale, theme } = useSettings();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [state, setState] = useState<JobState>("all");
+  const [state, setState] = useState<GenerationFilter>("all");
   const [page, setPage] = useState(1);
-  const [action, setAction] = useState<{
-    type: "retry" | "cancel";
-    job: AdminJob;
-  }>();
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string>();
-  const [notice, setNotice] = useState<string>();
   const loader = useCallback(
     () =>
-      getAdminJobs({
+      getAdminGenerations({
         page,
         pageSize: 20,
         search,
@@ -52,33 +43,12 @@ export default function AdminJobsScreen() {
   );
   const { data, error, loading, refresh } = useAdminData(loader);
 
-  const submitAction = async () => {
-    if (!action || reason.trim().length < 3 || busy) return;
-    setBusy(true);
-    setActionError(undefined);
-    try {
-      await adminMutation(`/api/admin/jobs/${action.job.id}/${action.type}`, {
-        reason: reason.trim(),
-      });
-      setAction(undefined);
-      setNotice(copy.actionSucceeded);
-      await refresh();
-    } catch (cause) {
-      setActionError(
-        cause instanceof Error ? cause.message : copy.actionFailed,
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <AdminPage
       title={copy.jobs}
-      subtitle="Inspect durable generation work and recover stalled learning journeys."
+      subtitle={copy.generationStreamsSubtitle}
       icon="processing"
     >
-      {notice ? <Notice tone="success" text={notice} /> : null}
       <AdminToolbar
         search={draftSearch}
         onSearchChange={setDraftSearch}
@@ -88,7 +58,7 @@ export default function AdminJobsScreen() {
         }}
       >
         <FilterChips
-          label="Job state"
+          label={copy.generationState}
           value={state}
           onChange={(value) => {
             setPage(1);
@@ -96,135 +66,111 @@ export default function AdminJobsScreen() {
           }}
           options={[
             { value: "all", label: copy.all },
-            { value: "queued", label: copy.queued },
-            { value: "running", label: copy.running },
-            { value: "complete", label: copy.complete },
-            { value: "failed", label: copy.failed },
+            { value: "generating", label: copy.generating },
+            { value: "retrying", label: copy.retrying },
+            { value: "retry_required", label: copy.retryRequired },
+            { value: "ready", label: copy.ready },
           ]}
         />
       </AdminToolbar>
       <AdminDataState
         loading={loading}
         error={error}
-        empty={!data?.jobs.length}
+        empty={!data?.generations.length}
         onRetry={() => void refresh()}
       >
-        {data?.jobs.map((job) => (
+        {data?.generations.map((generation) => (
           <AdminRecord
-            key={job.id}
-            tone={job.state === "failed" ? "error" : undefined}
+            key={generation.quizId}
+            tone={generation.state === "retry_required" ? "error" : undefined}
           >
             <RecordHeading
-              title={job.video.title}
-              subtitle={`${job.owner.name} · ${job.owner.email}`}
+              title={generation.video.title}
+              subtitle={`${generation.owner.name} · ${generation.owner.email}`}
               badge={
                 <StatusBadge
-                  label={copy[job.state]}
-                  tone={jobTone(job.state)}
+                  label={generationStateLabel(generation.state, copy)}
+                  tone={generationTone(generation.state)}
                 />
-              }
-              actions={
-                job.state === "complete" ? null : (
-                  <InlineActions>
-                    {!job.cancelRequested ? (
-                      <PrimaryButton
-                        compact
-                        variant="secondary"
-                        disabled={job.state === "running"}
-                        onPress={() => {
-                          setAction({ type: "retry", job });
-                          setReason("");
-                          setActionError(undefined);
-                        }}
-                      >
-                        {copy.retryJob}
-                      </PrimaryButton>
-                    ) : null}
-                    {job.state !== "failed" ? (
-                      <PrimaryButton
-                        compact
-                        variant="danger"
-                        onPress={() => {
-                          setAction({ type: "cancel", job });
-                          setReason("");
-                          setActionError(undefined);
-                        }}
-                      >
-                        {copy.cancelJob}
-                      </PrimaryButton>
-                    ) : null}
-                  </InlineActions>
-                )
               }
             />
             <ProgressBar
-              progress={job.progress}
-              accessibilityLabel={`${copy.progress} ${Math.round(job.progress * 100)}%`}
+              progress={generation.progress}
+              accessibilityLabel={`${generation.acceptedQuestions}/${generation.plannedQuestions} ${copy.questionsReady}`}
             />
             <RecordMeta
               items={[
                 {
-                  label: "Platform",
-                  value: "YouTube",
-                  icon: "video",
+                  label: copy.questionsReady,
+                  value: `${generation.acceptedQuestions} / ${generation.plannedQuestions}`,
+                  icon: "checklist",
                 },
                 {
-                  label: "Stage",
-                  value: job.stage.replaceAll("_", " "),
+                  label: copy.questionTypes,
+                  value: generation.requestedQuestionTypes
+                    .map(formatQuestionType)
+                    .join(", "),
+                  icon: "model",
+                },
+                {
+                  label: copy.aiCalls,
+                  value: String(generation.aiCalls),
                   icon: "processing",
                 },
                 {
-                  label: copy.updated,
-                  value: formatDate(job.updatedAt, locale),
+                  label: copy.retries,
+                  value: String(generation.retryCount),
                   icon: "time",
                 },
-                { label: "Job ID", value: job.id, icon: "database" },
+                {
+                  label: copy.updated,
+                  value: formatDate(generation.lastProgressAt, locale),
+                  icon: "time",
+                },
+                {
+                  label: "Quiz ID",
+                  value: generation.quizId,
+                  icon: "database",
+                },
               ]}
             />
-            {job.errorMessage ? (
-              <Text
-                accessibilityRole="alert"
-                style={[styles.errorMessage, { color: theme.error }]}
-              >
-                {job.errorCode ?? "generation_failed"}: {job.errorMessage}
+            {generation.state === "retry_required" ? (
+              <Text style={[styles.note, { color: theme.textMuted }]}>
+                {copy.learnerContinuationRequired}
+                {generation.reasonCode
+                  ? ` · ${generation.reasonCode.replaceAll("_", " ")}`
+                  : ""}
               </Text>
             ) : null}
           </AdminRecord>
         ))}
       </AdminDataState>
       {data ? <Pagination {...data.pagination} onChange={setPage} /> : null}
-      <ActionDialog
-        visible={Boolean(action)}
-        title={action?.type === "cancel" ? copy.cancelJob : copy.retryJob}
-        description={
-          action
-            ? `${action.job.video.title} · ${action.job.owner.email}`
-            : copy.operationsSubtitle
-        }
-        confirmLabel={
-          action?.type === "cancel" ? copy.cancelJob : copy.retryJob
-        }
-        confirmVariant={action?.type === "cancel" ? "danger" : "secondary"}
-        reason={reason}
-        onReasonChange={setReason}
-        onClose={() => {
-          if (!busy) setAction(undefined);
-        }}
-        onConfirm={() => void submitAction()}
-        busy={busy}
-        error={actionError}
-      />
     </AdminPage>
   );
 }
 
-function jobTone(
-  state: AdminJob["state"],
+function generationStateLabel(
+  state: AdminGenerationState,
+  copy: ReturnType<typeof useAdminCopy>,
+): string {
+  if (state === "generating") return copy.generating;
+  if (state === "retrying") return copy.retrying;
+  if (state === "retry_required") return copy.retryRequired;
+  return copy.ready;
+}
+
+function generationTone(
+  state: AdminGeneration["state"],
 ): "neutral" | "primary" | "success" | "error" {
-  if (state === "complete") return "success";
-  if (state === "failed") return "error";
-  if (state === "running") return "primary";
-  return "neutral";
+  if (state === "ready") return "success";
+  if (state === "retry_required") return "error";
+  if (state === "retrying") return "neutral";
+  return "primary";
+}
+
+function formatQuestionType(value: string): string {
+  return value.replaceAll("_", " ");
 }
 
 function formatDate(value: string, locale: string): string {
@@ -235,7 +181,7 @@ function formatDate(value: string, locale: string): string {
 }
 
 const styles = StyleSheet.create({
-  errorMessage: {
+  note: {
     fontFamily: typography.bodyMedium,
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,

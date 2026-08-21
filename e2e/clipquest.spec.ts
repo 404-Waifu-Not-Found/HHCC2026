@@ -1329,11 +1329,28 @@ test("admin operations console is responsive and uses real management contracts"
     page.getByText("Action completed and added to the audit log."),
   ).toBeVisible();
 
-  await page.getByRole("tab", { name: "Processing" }).click();
+  await page.getByRole("tab", { name: "Generation streams" }).click();
   await expect(
     page.getByText("How memory really works: retrieval, spacing, and sleep"),
   ).toBeVisible();
   await capture(page, "admin-processing-desktop-1440");
+
+  await page.getByRole("tab", { name: "Lessons" }).click();
+  await expect(page.getByRole("heading", { name: "Lessons" })).toBeVisible();
+  await expect(
+    page.getByText("How memory really works: retrieval, spacing, and sleep"),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Audit log" }).click();
+  await expect(page.getByRole("heading", { name: "Audit log" })).toBeVisible();
+  await expect(page.getByText("Generation retry")).toBeVisible();
+
+  await page.getByRole("tab", { name: "System" }).click();
+  await expect(page.getByRole("heading", { name: "System" })).toBeVisible();
+  await expect(page.getByText("Disabled by design")).toBeVisible();
+  await expect(
+    page.getByText("0016_progressive_quiz_streaming.sql"),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/users");
@@ -1453,7 +1470,6 @@ async function installMocks(page: Page): Promise<Scenario> {
           "users:moderate",
           "users:set-role",
           "jobs:read",
-          "jobs:manage",
           "lessons:read",
           "audit:read",
           "system:read",
@@ -1470,9 +1486,8 @@ async function installMocks(page: Page): Promise<Scenario> {
             id: JOB_ID,
             videoTitle: "Neural networks explained visually",
             ownerEmail: "learner@example.com",
-            errorCode: "generation_failed",
-            errorMessage:
-              "The question provider returned an incomplete response.",
+            errorCode: "automatic_retries_exhausted",
+            errorMessage: null,
             updatedAt: "2026-07-31T09:40:00.000Z",
           },
         ],
@@ -1519,18 +1534,32 @@ async function installMocks(page: Page): Promise<Scenario> {
     }
     if (path === "/api/admin/jobs" && request.method() === "GET") {
       await json(route, {
-        jobs: [
+        jobs: [],
+        pagination: { page: 1, pageSize: 20, total: 0 },
+      });
+      return;
+    }
+    if (path === "/api/admin/generations" && request.method() === "GET") {
+      await json(route, {
+        generations: [
           {
-            id: JOB_ID,
-            state: "failed",
-            stage: "creating_questions",
-            progress: 0.58,
-            errorCode: "generation_failed",
-            errorMessage:
-              "The transcript could not create trustworthy questions.",
-            cancelRequested: false,
+            quizId: QUIZ_ID,
+            state: "retry_required",
+            acceptedQuestions: 6,
+            plannedQuestions: 10,
+            progress: 0.6,
+            requestedQuestionTypes: [
+              "multiple_choice",
+              "true_false",
+              "short_answer",
+            ],
+            aiCalls: 3,
+            retryCount: 2,
+            elapsedMs: 36_000,
+            reasonCode: "automatic_retries_exhausted",
+            stalled: false,
+            lastProgressAt: "2026-07-31T09:40:00.000Z",
             createdAt: "2026-07-31T09:30:00.000Z",
-            updatedAt: "2026-07-31T09:40:00.000Z",
             owner: {
               id: ADMIN_USER_ID,
               name: "Morgan Operator",
@@ -1609,8 +1638,28 @@ async function installMocks(page: Page): Promise<Scenario> {
         model: "deepseek-v4-flash",
         jobs: { queued: 4, running: 3, complete: 3755, failed: 3 },
         database: {
-          migration: "0007_admin_audit_retention",
+          migration: "0016_progressive_quiz_streaming.sql",
           auditEnabled: true,
+        },
+        generation: {
+          mode: "extension_local",
+          backendEnabled: false,
+          extensionEnabled: true,
+          extensionRequired: true,
+          model: "deepseek-v4-flash",
+          pipelineVersion: 9,
+          promptVersion: "quiz-local-json-stream-v5.1",
+          validatorVersion: "validator-local-progressive-v4.0",
+          states: {
+            generating: 2,
+            retrying: 1,
+            retryRequired: 3,
+            ready: 3755,
+          },
+        },
+        worker: {
+          versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",
+          versionTag: "e2e",
         },
       });
       return;

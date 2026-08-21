@@ -10,6 +10,7 @@ import { createAuth } from "./auth";
 import { preventStaleAppShell, publicAssetShell } from "./lib/asset-shell";
 import { ApiError, errorResponse } from "./lib/errors";
 import { clearExpiredRateLimits } from "./lib/rate-limit";
+import { publicWorkerVersion } from "./lib/worker-version";
 import { authenticated, type ApiBindings } from "./middleware/authenticated";
 import { adminRouter } from "./routes/admin";
 import { libraryRouter } from "./routes/library";
@@ -122,6 +123,7 @@ app.get("/health", (c) => {
     pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+    worker: publicWorkerVersion(c.env),
     maintenance: false,
     configuration,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",

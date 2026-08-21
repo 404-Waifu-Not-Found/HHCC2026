@@ -35,6 +35,9 @@
     "html_handling": "none",
     "not_found_handling": "404-page",
   },
+  "version_metadata": {
+    "binding": "WORKER_VERSION",
+  },
   "d1_databases": [
     {
       "binding": "DB",
