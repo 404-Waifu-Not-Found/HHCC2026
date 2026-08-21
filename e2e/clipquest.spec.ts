@@ -436,8 +436,9 @@ test("requires the local caption extension and reconnects automatically", async 
   await expect(
     page.getByRole("heading", { name: "Install ClipQuest Local AI" }),
   ).toBeHidden();
+  await expect(page).toHaveURL(/\/sign-in$/);
   await expect(
-    page.getByRole("heading", { name: "Paste a video. Build real mastery." }),
+    page.getByRole("heading", { name: "Welcome back" }),
   ).toBeVisible();
 });
 

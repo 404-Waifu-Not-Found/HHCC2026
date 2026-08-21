@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetVersion": "speech-fixtures-v1",
+  "modelProfileId": "whisper-large-v3-turbo-q4-encoder-q8-decoder-candidate",
+  "modelRevision": "360ebcde2559d60bb474678be3c1de9ef347d01a",
+  "device": "cpu",
+  "numBeams": 1,
+  "modelSource": "verified-local-cache",
+  "startedAt": "2026-08-05T03:58:18.583Z",
+  "completedAt": "2026-08-05T03:59:33.360Z",
+  "passed": true,
+  "results": [
+    {
+      "id": "mandarin",
+      "metric": "cer",
+      "errorRate": 0.0501,
+      "keyTermRecall": 0.96,
+      "missedKeyTermIndexes": [
+        9
+      ],
+      "durationCoverage": 0.9798,
+      "repeatedPhraseMatches": 0,
+      "segmentCount": 57,
+      "inferenceMs": 74715,
+      "passed": true
+    }
+  ]
+}

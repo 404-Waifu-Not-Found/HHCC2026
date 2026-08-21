@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ClipQuest Local AI Harness</title>
+  </head>
+  <body>
+    <h1>ClipQuest Local AI Harness</h1>
+    <p id="status">Waiting for extension…</p>
+    <button id="generate" disabled>Generate 15 questions</button>
+    <pre id="output"></pre>
+    <script type="module">
+      const channel = "clipquest:captions:v1";
+      const status = document.querySelector("#status");
+      const button = document.querySelector("#generate");
+      const output = document.querySelector("#output");
+      let configured = false;
+
+      const post = (message) =>
+        window.postMessage(
+          { channel, source: "clipquest-website", ...message },
+          location.origin,
+        );
+
+      window.addEventListener("message", (event) => {
+        if (
+          event.source !== window ||
+          event.origin !== location.origin ||
+          event.data?.channel !== channel ||
+          event.data?.source !== "clipquest-extension"
+        ) {
+          return;
+        }
+        if (event.data.type === "ready") {
+          configured = event.data.configured === true;
+          status.textContent = `Extension ${event.data.version} · key ${configured ? "configured" : "missing"}`;
+          button.disabled = !configured;
+          return;
+        }
+        if (event.data.type === "generation-progress") {
+          status.textContent = `${event.data.stage} · ${Math.round(event.data.progress * 100)}%`;
+          return;
+        }
+        if (event.data.type === "generation-result") {
+          const response = event.data.response;
+          status.textContent = response?.ok ? "complete" : response?.error;
+          output.textContent = response?.ok
+            ? JSON.stringify(response.result, null, 2)
+            : "";
+          button.disabled = false;
+        }
+      });
+
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        output.textContent = "";
+        status.textContent = "Loading local caption fixture…";
+        const transcript = await fetch(
+          "/qa-results/SVb9OV0bLzI-captions-extension.json",
+        ).then((response) => response.json());
+        post({
+          type: "generate",
+          requestId: crypto.randomUUID(),
+          context: {
+            protocolVersion: 1,
+            jobId: crypto.randomUUID(),
+            videoId: "11111111-1111-4111-8111-111111111111",
+            title: "AP Calculus AB/BC Unit 1 FULL REVIEW: Limits and Continuity",
+            quizLanguage: "en",
+            questionTypes: ["multiple_choice"],
+            questionCount: 15,
+            transcriptFingerprint: transcript.completeness.textFingerprint,
+            transcriptLanguage: transcript.language,
+            segments: transcript.segments,
+          },
+        });
+      });
+
+      post({ type: "ping" });
+    </script>
+  </body>
+</html>
