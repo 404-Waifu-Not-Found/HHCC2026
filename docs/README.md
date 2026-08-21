@@ -4,6 +4,7 @@ This index separates current operating guidance from dated design and QA evidenc
 
 ## Current state
 
+- [HHCC 2026 judge brief](./HACKATHON.md): the learning problem, how each feature maps to learning science, what is built and verified, how to try it in two minutes, architecture, honest status, and team roles. Start here if you are evaluating the hackathon submission.
 - [Repository README and release status](../README.md#release-status): product architecture, current source contracts, verified production snapshot, development, verification, and privacy boundary.
 - [Production release](./PRODUCTION-RELEASE.md): migration, version upload, override smoke, promotion, rollback, and post-release generation-profile checks.
 - [Android private beta](./ANDROID-BETA.md): native architecture, SecureStore, caption-only generation, Sharesheet/App Links, EAS packaging, and device acceptance.

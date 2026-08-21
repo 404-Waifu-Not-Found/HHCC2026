@@ -56,6 +56,21 @@
   <a href="./docs/duolingo-ui-research.md">UI research</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/404-Waifu-Not-Found/HHCC2026/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/404-Waifu-Not-Found/HHCC2026/actions/workflows/ci.yml/badge.svg" /></a>
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-2F9859" />
+</p>
+
+> [!TIP]
+> **HHCC 2026 judges — start here.** ClipQuest is the education-track entry from team
+> `@404-Waifu-Not-Found/cos`. The five-minute version — the learning problem, how each
+> feature maps to learning science (retrieval practice, immediate corrective feedback,
+> adaptive retries, a missed-concept recap, spaced review with mastery states, a
+> consolidation cheat sheet), what is verified in production, and how to try it in two
+> minutes — is in **[docs/HACKATHON.md](./docs/HACKATHON.md)**. The demo-video script is
+> in [`output/video/`](./output/video/UnoxyRich_ClipQuest_Demo_Script.md). Everything
+> below is the full engineering reference.
+
 ---
 
 <a id="overview"></a>
