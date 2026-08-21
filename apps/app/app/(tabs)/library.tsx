@@ -28,11 +28,11 @@ export default function LibraryScreen() {
       setCards([...unique.values()]);
       setError(undefined);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load your library.");
+      setError(cause instanceof Error ? cause.message : t("libraryLoadFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   const filtered = useMemo(() => {
@@ -45,7 +45,7 @@ export default function LibraryScreen() {
       <Text accessibilityRole="header" style={[styles.title, { color: theme.text }]}>{t("library")}</Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>{t("tagline")}</Text>
       <View style={styles.search}>
-        <AppTextInput label={t("savedVideos")} accessibilityLabel="Search saved video quests" placeholder="Search" value={query} onChangeText={setQuery} />
+        <AppTextInput label={t("savedVideos")} accessibilityLabel={t("searchSavedQuests")} placeholder={t("search")} value={query} onChangeText={setQuery} />
       </View>
       {error || openError ? <Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{error ?? openError}</Text> : null}
       {loading ? (

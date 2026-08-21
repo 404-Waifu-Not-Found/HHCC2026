@@ -26,9 +26,9 @@ export default function CreateQuestScreen() {
     if (!videoId) return;
     void loadImportedVideo(videoId).then((value) => {
       if (value) setVideo(value);
-      else setError("This video setup expired. Paste its link again from Home.");
+      else setError(t("videoSetupExpired"));
     });
-  }, [videoId]);
+  }, [t, videoId]);
 
   if (!video && !error) {
     return <Screen scroll={false}><View style={styles.center}><ActivityIndicator color={theme.secondary} /></View></Screen>;

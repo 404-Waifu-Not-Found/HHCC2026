@@ -6,15 +6,15 @@ import { useSettings } from "../providers/SettingsProvider";
 import { typography } from "../theme/tokens";
 
 export function AuthShell({ title, subtitle, children, footer }: PropsWithChildren<{ title: string; subtitle?: string; footer?: ReactNode }>) {
-  const { theme } = useSettings();
+  const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   return (
     <Screen>
       <View style={[styles.page, width >= 900 && styles.pageWide]}>
         <View style={styles.intro}>
           <Mascot mood="ready" size={110} />
-          <Text style={[styles.brand, { color: theme.text }]}>ClipQuest</Text>
-          <Text style={[styles.tagline, { color: theme.textMuted }]}>Paste a video → quiz → build mastery</Text>
+          <Text style={[styles.brand, { color: theme.text }]}>{t("appName")}</Text>
+          <Text style={[styles.tagline, { color: theme.textMuted }]}>{t("authShellTagline")}</Text>
         </View>
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text accessibilityRole="header" style={[styles.title, { color: theme.text }]}>

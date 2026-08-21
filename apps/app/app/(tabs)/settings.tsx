@@ -60,13 +60,13 @@ export default function SettingsScreen() {
           return;
         }
         if (status.state === "failed" || status.state === "expired") {
-          setError(status.message ?? "YouTube authorization expired.");
+          setError(status.message ?? t("youtubeAuthorizationExpired"));
           setFlow(undefined);
           return;
         }
       } catch (cause) {
         if (!active) return;
-        setError(cause instanceof Error ? cause.message : "Could not check YouTube authorization.");
+        setError(cause instanceof Error ? cause.message : t("youtubeAuthorizationCheckFailed"));
         setFlow(undefined);
       }
       if (active) timer = setTimeout(check, Math.max(2, flow.intervalSeconds) * 1_000);
@@ -81,7 +81,7 @@ export default function SettingsScreen() {
       const removed = await removeLocalModel();
       setModel({ cached: false, sizeBytes: model.sizeBytes });
       setMessage(removed ? t("removeModelConfirm") : t("modelNotDownloaded"));
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not remove the model."); }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t("removeModelFailed")); }
     finally { setBusy(undefined); }
   };
 
@@ -89,17 +89,17 @@ export default function SettingsScreen() {
     setBusy("push"); setError(undefined);
     try {
       const Notifications = await import("expo-notifications");
-      if (Platform.OS !== "web" && !Device.isDevice) throw new Error("Push reminders require a physical device.");
+      if (Platform.OS !== "web" && !Device.isDevice) throw new Error(t("pushPhysicalDevice"));
       const permission = await Notifications.requestPermissionsAsync();
-      if (!permission.granted) throw new Error("Notification permission was not granted.");
-      if (Platform.OS === "android") await Notifications.setNotificationChannelAsync("study-reviews", { name: "Study reviews", importance: Notifications.AndroidImportance.DEFAULT });
+      if (!permission.granted) throw new Error(t("notificationPermissionDenied"));
+      if (Platform.OS === "android") await Notifications.setNotificationChannelAsync("study-reviews", { name: t("notifications"), importance: Notifications.AndroidImportance.DEFAULT });
       const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-      if (!projectId || projectId.startsWith("00000000")) throw new Error("Push reminders will be available after the EAS project is linked.");
+      if (!projectId || projectId.startsWith("00000000")) throw new Error(t("pushNeedsEas"));
       const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
       const platform = Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web";
       await apiRequest("/api/push/register", { method: "POST", body: jsonBody(PushRegisterRequestSchema.parse({ token, platform, locale })) });
-      setMessage("Review reminders enabled.");
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not enable reminders."); }
+      setMessage(t("remindersEnabled"));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t("remindersFailed")); }
     finally { setBusy(undefined); }
   };
 
@@ -111,7 +111,7 @@ export default function SettingsScreen() {
       await Clipboard.setStringAsync(started.userCode);
       await Linking.openURL(started.verificationUrl);
     } catch (cause) {
-      const next = cause instanceof Error ? cause.message : "YouTube demo history is unavailable.";
+      const next = cause instanceof Error ? cause.message : t("youtubeUnavailable");
       setError(next);
       if (next.toLowerCase().includes("not enabled") || next.toLowerCase().includes("hidden")) setYoutubeAvailable(false);
     } finally { setBusy(undefined); }
@@ -122,7 +122,7 @@ export default function SettingsScreen() {
     try {
       await apiRequest("/api/youtube/connection", { method: "DELETE" });
       setYoutubeConnected(false); setFlow(undefined); setMessage(t("youtubeDisconnected"));
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not disconnect YouTube."); }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t("youtubeDisconnectFailed")); }
     finally { setBusy(undefined); }
   };
 
@@ -131,10 +131,10 @@ export default function SettingsScreen() {
     setBusy("signout"); setError(undefined);
     try {
       const result = await authClient.signOut();
-      if (result.error) throw new Error(result.error.message ?? "Could not sign out.");
+      if (result.error) throw new Error(result.error.message ?? t("signOutFailed"));
       router.replace("/(auth)/welcome");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not sign out.");
+      setError(cause instanceof Error ? cause.message : t("signOutFailed"));
     } finally {
       setBusy(undefined);
     }
@@ -208,7 +208,7 @@ export default function SettingsScreen() {
       </SettingsSection>
 
       <SettingsSection title={t("notifications")} icon="bell-outline">
-        <Text style={[styles.help, { color: theme.textMuted }]}>ClipQuest only sends reminders when a mastery review is due.</Text>
+        <Text style={[styles.help, { color: theme.textMuted }]}>{t("remindersHelp")}</Text>
         <PrimaryButton variant="secondary" loading={busy === "push"} onPress={() => void registerPush()}>{t("enableNotifications")}</PrimaryButton>
       </SettingsSection>
 
@@ -218,7 +218,7 @@ export default function SettingsScreen() {
           {flow ? (
             <View style={[styles.codeCard, { backgroundColor: theme.elevated, borderColor: theme.border }]}>
               <Text style={[styles.help, { color: theme.textMuted }]}>{t("youtubeCode")}</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Copy YouTube device code" onPress={() => void Clipboard.setStringAsync(flow.userCode)} style={styles.codeRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("copyYoutubeCode")} onPress={() => void Clipboard.setStringAsync(flow.userCode)} style={styles.codeRow}>
                 <Text style={[styles.code, { color: theme.text }]}>{flow.userCode}</Text>
                 <MaterialCommunityIcons name="content-copy" size={22} color={theme.text} />
               </Pressable>

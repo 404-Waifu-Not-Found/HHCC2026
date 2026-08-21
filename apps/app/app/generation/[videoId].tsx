@@ -50,7 +50,7 @@ export default function GenerationScreen() {
 
   const execute = useCallback(async (signal: AbortSignal, retryExisting: boolean) => {
     const imported = await loadImportedVideo(params.videoId);
-    if (!imported) throw new Error("This generation setup expired. Paste the video again.");
+    if (!imported) throw new Error(t("generationSetupExpired"));
     let storedGeneration = await loadGenerationState(imported.video.id);
     if (!storedGeneration) {
       storedGeneration = { idempotencyKey: Crypto.randomUUID() };
@@ -267,7 +267,7 @@ async function pollGeneration(
     const status = await apiRequest(`/api/generation/${jobId}`, { signal }, GenerationStatusSchema);
     onProgress(Math.max(0.05, status.progress));
     if (status.stage === "complete" && status.quizId) return status.quizId;
-    if (status.stage === "failed") throw new Error(status.error?.message ?? "Couldn’t create a trustworthy quiz.");
+    if (status.stage === "failed") throw new Error(status.error?.message ?? timeoutMessage);
     await wait(1_500, signal);
   }
   throw new TranscriptionPausedError();

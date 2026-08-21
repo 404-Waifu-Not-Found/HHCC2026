@@ -48,12 +48,12 @@ export default function QuizScreen() {
       setMastery(resumed.mastery ?? "learning");
       return;
     }
-    if (!resumed.question) throw new Error("The current quiz question is missing.");
+    if (!resumed.question) throw new Error(t("quizResumeMissing"));
     setQuestion(resumed.question);
     setScore(undefined);
     setMastery(undefined);
     await saveAttemptQuestion(attemptId, resumed.question);
-  }, [attemptId]);
+  }, [attemptId, t]);
 
   const resume = useCallback(async () => {
     const resumed = await apiRequest(`/api/attempts/${attemptId}/resume`, {}, AttemptResumeResponseSchema);
@@ -73,7 +73,7 @@ export default function QuizScreen() {
       try {
         await resume();
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : "Could not resume this quiz.");
+        if (active) setError(cause instanceof Error ? cause.message : t("quizResumeFailed"));
       } finally {
         if (active) setLoading(false);
       }
@@ -121,10 +121,10 @@ export default function QuizScreen() {
           await resume();
           setError(t("quizResynced"));
         } catch (resumeCause) {
-          setError(resumeCause instanceof Error ? resumeCause.message : "Could not resume this quiz.");
+          setError(resumeCause instanceof Error ? resumeCause.message : t("quizResumeFailed"));
         }
       } else {
-        setError(cause instanceof Error ? cause.message : "Could not check that answer.");
+        setError(cause instanceof Error ? cause.message : t("answerCheckFailed"));
       }
     } finally {
       setSubmitting(false);

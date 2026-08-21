@@ -39,11 +39,11 @@ export default function HomeScreen() {
       const response = await apiRequest("/api/library", {}, LibraryResponseSchema);
       setLibrary(response);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load your library.");
+      setError(cause instanceof Error ? cause.message : t("libraryLoadFailed"));
     } finally {
       setLoadingLibrary(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
@@ -65,7 +65,7 @@ export default function HomeScreen() {
       setUrl("");
       router.push({ pathname: "/create/[videoId]", params: { videoId: imported.video.id } });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not get that video.");
+      setError(cause instanceof Error ? cause.message : t("videoImportFailed"));
     } finally {
       setImporting(false);
     }
