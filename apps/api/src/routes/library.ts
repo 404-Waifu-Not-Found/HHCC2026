@@ -5,6 +5,7 @@ import type { ApiBindings } from "../middleware/authenticated";
 
 const LibraryRowSchema = z.object({
   video_id: z.string().uuid(),
+  original_url: z.string().url(),
   source: SourceSchema,
   title: z.string(),
   quiz_id: z.string().uuid().nullable(),
@@ -24,6 +25,7 @@ libraryRouter.get("/", async (c) => {
       v.id AS video_id,
       v.source,
       v.title,
+      v.original_url,
       v.origin,
       (SELECT qb.id FROM quiz_banks qb WHERE qb.video_id = v.id AND qb.user_id = v.owner_id ORDER BY qb.created_at DESC LIMIT 1) AS quiz_id,
       m.best_score,
@@ -50,6 +52,8 @@ libraryRouter.get("/", async (c) => {
     return {
       videoId: row.video_id,
       quizId: row.quiz_id,
+      attemptId: row.active_attempt_id,
+      originalUrl: row.original_url,
       source: row.source,
       title: row.title,
       thumbnailUrl: `${c.env.APP_ORIGIN}/api/videos/${row.video_id}/thumbnail`,
@@ -68,4 +72,3 @@ libraryRouter.get("/", async (c) => {
     }),
   );
 });
-

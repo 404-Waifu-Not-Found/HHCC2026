@@ -1,0 +1,24 @@
+{
+  "name": "@clipquest/local-audio-decoder",
+  "version": "0.1.0",
+  "description": "ClipQuest local 16 kHz audio decoder for iOS and Android",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "src",
+    "ios",
+    "android",
+    "expo-module.config.json",
+    "ClipQuestLocalAudioDecoder.podspec"
+  ],
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "dependencies": {
+    "expo-modules-core": "*"
+  }
+}
+

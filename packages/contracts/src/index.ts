@@ -247,6 +247,8 @@ export type AttemptResumeResponse = z.infer<typeof AttemptResumeResponseSchema>;
 export const LibraryCardSchema = z.object({
   videoId: z.string().uuid(),
   quizId: z.string().uuid().nullable(),
+  attemptId: z.string().uuid().nullable(),
+  originalUrl: httpUrl,
   source: SourceSchema,
   title: z.string(),
   thumbnailUrl: z.string().url(),
@@ -301,4 +303,3 @@ export function identifyVideoSource(rawUrl: string): VideoSource | null {
 export function questionLimitForSession(length: SessionLength): number {
   return length === "short" ? 5 : length === "medium" ? 10 : 15;
 }
-

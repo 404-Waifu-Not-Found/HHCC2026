@@ -13,7 +13,7 @@ apps/app/android/
 apps/app/ios/
 apps/app/.expo/
 apps/app/expo-env.d.ts
+apps/app/public/runtime/
 apps/api/worker-configuration.d.ts
 *.apk
 *.ipa
-
