@@ -7,20 +7,28 @@ import {
   ExtensionQuizImportResponseSchema,
   ExtensionQuizProgressiveImportRequestSchema,
   ExtensionQuizProgressiveImportResponseSchema,
+  AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
+  LOCAL_QUIZ_PROMPT_VERSION,
   LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION,
   LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
+  LOCAL_QUIZ_VALIDATOR_VERSION,
   type ExtensionQuizImportRequest,
   type ExtensionQuizProgressiveImportRequest,
   type LocalGenerationCallEvent,
   type LocalGenerationCallEventV3,
+  type LocalGenerationCallEventV4,
+  type LocalGenerationCallEventV5,
+  type LegacyAutomaticRecoveryCallEvent,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
 import { ApiError } from "../lib/errors";
-import { quizGenerationProfile } from "../lib/generation-rollout";
+import { generationProfileAllowsNewBank } from "../lib/generation-rollout";
 import { createId, now } from "../lib/ids";
 import { requireIdempotencyKey } from "../lib/idempotency";
 import { enforceRateLimit } from "../lib/rate-limit";
@@ -29,6 +37,7 @@ import {
   acceptedQuestionSummary,
   assertProgressiveChunkMetadata,
   readProgressiveGenerationSnapshot,
+  retryKindMatchesGenerationOutcome,
   tryProgressiveQuizSummary,
   type ProgressiveQuizSummary,
 } from "../lib/progressive-quiz";
@@ -38,9 +47,67 @@ import type { ApiBindings } from "../middleware/authenticated";
 const QUIZ_IMPORT_VERSION = "extension-quiz-import-v3" as const;
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
-const MAX_AUTOMATIC_RETRIES = 12;
+const MAX_V5_3_AUTOMATIC_RETRIES = 12;
+const MAX_V5_4_AUTOMATIC_RETRIES = 48;
+const MAX_V5_6_AUTOMATIC_RETRIES = 12;
+
+type AutomaticGenerationCallEvent =
+  | LegacyAutomaticRecoveryCallEvent
+  | LocalGenerationCallEventV3
+  | LocalGenerationCallEventV4
+  | LocalGenerationCallEventV5;
+
+function isAutomaticGenerationProfile(
+  profile: ProgressiveQuizSummary["generationProfile"],
+): boolean {
+  return (
+    profile === "stable_auto_recovery_v5_3" ||
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
+  );
+}
+
+function expectedAutomaticProtocol(
+  profile: ProgressiveQuizSummary["generationProfile"],
+): number | null {
+  if (profile === "stable_auto_recovery_v5_3") {
+    return AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
+  }
+  if (profile === "evidence_grounded_auto_v5_4") {
+    return 8;
+  }
+  if (profile === "concept_first_auto_v5_8") {
+    return LOCAL_QUIZ_RESULT_PROTOCOL_VERSION;
+  }
+  return null;
+}
 
 export const quizImportsRouter = new Hono<ApiBindings>();
+
+export function currentGroundedNewBankMetadataMatches(
+  chunk: Pick<
+    LocalConceptQuizQuestionChunk,
+    | "generationProfile"
+    | "model"
+    | "pipelineVersion"
+    | "promptVersion"
+    | "validatorVersion"
+    | "protocolVersion"
+    | "importVersion"
+  >,
+): boolean {
+  if (chunk.generationProfile !== "concept_first_auto_v5_8") {
+    return true;
+  }
+  return (
+    chunk.model === LOCAL_QUIZ_MODEL &&
+    chunk.pipelineVersion === LOCAL_QUIZ_PIPELINE_VERSION &&
+    chunk.promptVersion === LOCAL_QUIZ_PROMPT_VERSION &&
+    chunk.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
+    chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    chunk.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
+  );
+}
 
 quizImportsRouter.post("/progressive", async (c) => {
   const user = c.get("user");
@@ -65,16 +132,24 @@ quizImportsRouter.post("/progressive", async (c) => {
     windowSeconds: 60,
   });
   const input = await parseJson(c, ExtensionQuizProgressiveImportRequestSchema);
-  const enabledProfile = quizGenerationProfile(c.env, user.id);
   if (
-    input.chunk.generationProfile &&
-    input.chunk.generationProfile !== "legacy_reasoning_v5_1" &&
-    input.chunk.generationProfile !== enabledProfile.generationProfile
+    !generationProfileAllowsNewBank(
+      c.env,
+      user.id,
+      input.chunk.generationProfile ?? "legacy_reasoning_v5_1",
+    )
   ) {
     throw new ApiError(
       403,
       "quiz_generation_profile_disabled",
       "The stable generation profile is not enabled for this account yet.",
+    );
+  }
+  if (!currentGroundedNewBankMetadataMatches(input.chunk)) {
+    throw new ApiError(
+      403,
+      "quiz_generation_profile_disabled",
+      "Install the current ClipQuest Local AI release before creating a new grounded quiz.",
     );
   }
   if (input.chunk.startIndex !== 0) {
@@ -202,6 +277,15 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
       "The streamed question duplicates an accepted prompt.",
     );
   }
+  if (
+    summary.generationProfile === "evidence_grounded_auto_v5_4" ||
+    summary.generationProfile === "concept_first_auto_v5_8"
+  ) {
+    assertGroundedQuestionIdentity(
+      input.chunk.question,
+      summary.acceptedQuestionSummaries,
+    );
+  }
 
   const nextCount = input.chunk.startIndex + 1;
   const qualityFlags = questionQualityFlags(
@@ -219,6 +303,9 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     ordinalAttempt: undefined,
     retryKind: undefined,
     retryDelayMs: undefined,
+    nextRecoveryAt: undefined,
+    recoveryPhase: complete ? "complete" : undefined,
+    activeCallIndex: undefined,
     generatedQuestionTypes: [
       ...summary.generatedQuestionTypes,
       input.chunk.question.type,
@@ -324,6 +411,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     importKey,
     timestamp,
     summary.generationProfile,
+    snapshot.claimRecoverySessionId ?? undefined,
   );
   return c.json(
     ExtensionQuizProgressiveImportResponseSchema.parse(
@@ -380,10 +468,17 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     );
   }
   const automaticEvent = isAutomaticCallEvent(input);
-  if (
-    automaticEvent !==
-    (snapshot.summary.generationProfile === "stable_auto_recovery_v5_3")
-  ) {
+  const expectedProtocol = expectedAutomaticProtocol(
+    snapshot.summary.generationProfile,
+  );
+  const legacyAutomaticRecovery = isLegacyAutomaticRecoveryCallEvent(input);
+  const protocolMatches =
+    snapshot.summary.generationProfile === "legacy_reasoning_v5_1"
+      ? !automaticEvent || legacyAutomaticRecovery
+      : expectedProtocol === null
+        ? !automaticEvent
+        : automaticEvent && input.protocolVersion === expectedProtocol;
+  if (!protocolMatches) {
     throw new ApiError(
       409,
       "generation_call_protocol_mismatch",
@@ -398,6 +493,73 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     input.callIndex,
   );
   if (replay) {
+    if (
+      isLifecycleCallEvent(input) &&
+      (replay.lifecycle_state ?? "completed") === "started" &&
+      input.lifecycleState !== "started"
+    ) {
+      if (!lifecycleIdentityMatches(replay, input)) {
+        throw new ApiError(
+          409,
+          "generation_call_conflict",
+          "That generation call lifecycle has different immutable metadata.",
+        );
+      }
+      const completedAt = now();
+      const finalized = await c.env.DB.prepare(
+        `UPDATE quiz_generation_call_events
+         SET accepted_count = ?, outcome_code = ?, retry_delay_ms = ?, elapsed_ms = ?, input_tokens = ?, output_tokens = ?, reasoning_tokens = ?, usage_complete = ?, lifecycle_state = ?, completed_at = ?, last_stream_activity_at = ?
+         WHERE quiz_id = ? AND generation_session_id = ? AND call_index = ? AND lifecycle_state = 'started'`,
+      )
+        .bind(
+          input.acceptedCount,
+          input.outcome,
+          input.retryDelayMs,
+          input.elapsedMs,
+          input.inputTokens ?? null,
+          input.outputTokens ?? null,
+          input.reasoningTokens ?? null,
+          input.usageComplete ? 1 : 0,
+          input.lifecycleState,
+          completedAt,
+          input.lastStreamActivityElapsedMs === undefined
+            ? null
+            : Number(replay.dispatched_at ?? completedAt) +
+                input.lastStreamActivityElapsedMs,
+          bank.id,
+          input.generationSessionId,
+          input.callIndex,
+        )
+        .run();
+      if (finalized.meta.changes !== 1) {
+        throw new ApiError(
+          409,
+          "generation_call_conflict",
+          "That generation call lifecycle changed before finalization.",
+        );
+      }
+      await renewGenerationClaim(
+        c.env.DB,
+        bank.id,
+        importKey,
+        completedAt,
+        snapshot.summary.generationProfile,
+        input.recoverySessionId,
+      );
+      await materializeGenerationTelemetry(
+        c.env.DB,
+        bank.id,
+        user.id,
+        importKey,
+        input,
+      );
+      return c.json(
+        ExtensionQuizGenerationCallEventResponseSchema.parse({
+          quizId: bank.id,
+          recorded: true,
+        }),
+      );
+    }
     if (!callEventsMatch(replay, input)) {
       throw new ApiError(
         409,
@@ -405,6 +567,13 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
         "That generation call was already recorded with different data.",
       );
     }
+    await materializeGenerationTelemetry(
+      c.env.DB,
+      bank.id,
+      user.id,
+      importKey,
+      input,
+    );
     return c.json(
       ExtensionQuizGenerationCallEventResponseSchema.parse({
         quizId: bank.id,
@@ -413,13 +582,44 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     );
   }
 
+  if (isLifecycleCallEvent(input) && input.lifecycleState !== "started") {
+    throw new ApiError(
+      409,
+      "generation_call_lifecycle_missing",
+      "A terminal call event requires its recorded dispatch lifecycle.",
+    );
+  }
+
+  if (input.classification === "manual_continuation") {
+    throw new ApiError(
+      422,
+      "manual_generation_continuation_removed",
+      "New continuation calls must be recorded as automatic recovery.",
+    );
+  }
+
   if (input.classification === "automatic_retry") {
     const existingRetry = await c.env.DB.prepare(
-      "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND classification = 'automatic_retry'",
+      legacyAutomaticRecovery
+        ? "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND classification IN ('automatic_retry', 'manual_continuation')"
+        : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND classification = 'automatic_retry'",
     )
-      .bind(bank.id, input.generationSessionId)
+      .bind(
+        ...(legacyAutomaticRecovery
+          ? [bank.id]
+          : [bank.id, input.generationSessionId]),
+      )
       .first<{ count: number }>();
-    const retryLimit = automaticEvent ? MAX_AUTOMATIC_RETRIES : 1;
+    const retryLimit = automaticEvent
+      ? legacyAutomaticRecovery ||
+        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.8" ||
+        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.7" ||
+        snapshot.summary.promptVersion === "quiz-local-json-stream-v5.6"
+        ? MAX_V5_6_AUTOMATIC_RETRIES
+        : snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4"
+          ? MAX_V5_4_AUTOMATIC_RETRIES
+          : MAX_V5_3_AUTOMATIC_RETRIES
+      : 1;
     if (Number(existingRetry?.count ?? 0) >= retryLimit) {
       throw new ApiError(
         409,
@@ -430,16 +630,10 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       );
     }
     if (automaticEvent) {
-      const ordinalRetries = await c.env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND start_ordinal = ? AND classification = 'automatic_retry' AND retry_kind = ?",
-      )
-        .bind(
-          bank.id,
-          input.generationSessionId,
-          input.startIndex,
-          input.retryKind,
-        )
-        .first<{ count: number }>();
+      const grounded =
+        legacyAutomaticRecovery ||
+        snapshot.summary.generationProfile === "evidence_grounded_auto_v5_4" ||
+        snapshot.summary.generationProfile === "concept_first_auto_v5_8";
       const contentRetry = new Set([
         "empty_content",
         "truncated_output",
@@ -447,6 +641,40 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
         "duplicate_repair",
         "answer_repair",
       ]).has(input.retryKind!);
+      const ordinalRetries = await c.env.DB.prepare(
+        grounded
+          ? `SELECT COUNT(*) AS count
+             FROM quiz_generation_call_events
+             WHERE quiz_id = ?
+               AND generation_session_id = ?
+               AND recovery_session_id = ?
+               AND start_ordinal = ?
+               AND classification = 'automatic_retry'
+               AND (
+                 (? = 1 AND retry_kind IN ('empty_content', 'truncated_output', 'content_repair', 'duplicate_repair', 'answer_repair'))
+                 OR
+                 (? = 0 AND retry_kind IN ('transport', 'automatic_resume'))
+               )`
+          : "SELECT COUNT(*) AS count FROM quiz_generation_call_events WHERE quiz_id = ? AND generation_session_id = ? AND start_ordinal = ? AND classification = 'automatic_retry' AND retry_kind = ?",
+      )
+        .bind(
+          ...(grounded
+            ? [
+                bank.id,
+                input.generationSessionId,
+                input.recoverySessionId,
+                input.startIndex,
+                contentRetry ? 1 : 0,
+                contentRetry ? 1 : 0,
+              ]
+            : [
+                bank.id,
+                input.generationSessionId,
+                input.startIndex,
+                input.retryKind,
+              ]),
+        )
+        .first<{ count: number }>();
       const perOrdinalLimit = contentRetry ? 2 : 4;
       if (Number(ordinalRetries?.count ?? 0) >= perOrdinalLimit) {
         throw new ApiError(
@@ -469,8 +697,8 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
   const timestamp = now();
   const result = await c.env.DB.prepare(
     `INSERT INTO quiz_generation_call_events
-     (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at, protocol_version, retry_kind, ordinal_attempt, recovery_session_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at, protocol_version, retry_kind, ordinal_attempt, recovery_session_id, purpose, lifecycle_state, dispatched_at, completed_at, last_stream_activity_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       bank.id,
@@ -480,9 +708,11 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       input.requestedCount,
       input.acceptedCount,
       input.classification,
-      input.outcome,
+      isLifecycleCallEvent(input) && input.lifecycleState === "started"
+        ? "call_started"
+        : input.outcome,
       input.retryDelayMs,
-      input.elapsedMs,
+      input.elapsedMs ?? 0,
       input.inputTokens ?? null,
       input.outputTokens ?? null,
       input.reasoningTokens ?? null,
@@ -492,6 +722,18 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
       automaticEvent ? (input.retryKind ?? null) : null,
       automaticEvent ? input.ordinalAttempt : null,
       automaticEvent ? input.recoverySessionId : null,
+      isGroundedCallEvent(input) ? input.purpose : null,
+      isLifecycleCallEvent(input) ? input.lifecycleState : "completed",
+      timestamp,
+      isLifecycleCallEvent(input) && input.lifecycleState === "started"
+        ? null
+        : timestamp,
+      isLifecycleCallEvent(input) &&
+        input.lastStreamActivityElapsedMs !== undefined
+        ? timestamp + input.lastStreamActivityElapsedMs
+        : isLifecycleCallEvent(input) && input.lifecycleState === "started"
+          ? timestamp
+          : null,
     )
     .run();
   if (result.meta.changes !== 1) {
@@ -508,6 +750,13 @@ quizImportsRouter.put("/:quizId/calls/:sessionId/:callIndex", async (c) => {
     timestamp,
     snapshot.summary.generationProfile,
     isAutomaticCallEvent(input) ? input.recoverySessionId : undefined,
+  );
+  await materializeGenerationTelemetry(
+    c.env.DB,
+    bank.id,
+    user.id,
+    importKey,
+    input,
   );
   return c.json(
     ExtensionQuizGenerationCallEventResponseSchema.parse({
@@ -542,7 +791,7 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
       );
     }
     if (
-      summary.generationProfile === "stable_auto_recovery_v5_3" &&
+      isAutomaticGenerationProfile(summary.generationProfile) &&
       input.state === "retry_required"
     ) {
       throw new ApiError(
@@ -552,7 +801,7 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
       );
     }
     if (
-      summary.generationProfile === "stable_auto_recovery_v5_3" &&
+      isAutomaticGenerationProfile(summary.generationProfile) &&
       input.state === "retrying" &&
       (!input.retryOrdinal ||
         !input.ordinalAttempt ||
@@ -575,7 +824,15 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
         input.state === "retrying" ? input.ordinalAttempt : undefined,
       retryKind: input.state === "retrying" ? input.retryKind : undefined,
       retryDelayMs: input.state === "retrying" ? input.retryDelayMs : undefined,
-      recoverySessionId: input.recoverySessionId ?? summary.recoverySessionId,
+      nextRecoveryAt:
+        input.state === "cooldown" && input.nextRecoveryAt
+          ? Date.parse(input.nextRecoveryAt)
+          : undefined,
+      recoveryPhase: input.recoveryPhase,
+      activeCallIndex: input.activeCallIndex,
+      recoverySessionId: isAutomaticGenerationProfile(summary.generationProfile)
+        ? (input.recoverySessionId ?? summary.recoverySessionId)
+        : summary.recoverySessionId,
       stateChangedAt:
         summary.generationState === input.state
           ? summary.stateChangedAt
@@ -593,6 +850,7 @@ quizImportsRouter.patch("/:quizId/progress", async (c) => {
     );
     if (
       input.state === "retry_required" ||
+      input.state === "cooldown" ||
       input.state === "action_required" ||
       input.state === "generation_failed"
     ) {
@@ -696,16 +954,29 @@ async function persistProgressiveQuiz(input: {
   const timestamp = now();
   const chunk = input.input.chunk;
   const question = chunk.question;
+  if (
+    chunk.generationProfile === "evidence_grounded_auto_v5_4" ||
+    chunk.generationProfile === "concept_first_auto_v5_8"
+  ) {
+    assertGroundedQuestionIdentity(question, []);
+  }
   const qualityFlags = questionQualityFlags(question, []);
   const summary = ProgressiveQuizSummarySchema.parse({
     source: "extension-local-json-stream",
     importVersion:
       chunk.importVersion ??
-      (chunk.promptVersion === "quiz-local-json-stream-v5.3"
+      (chunk.promptVersion === "quiz-local-json-stream-v5.8"
         ? LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION
-        : chunk.promptVersion === "quiz-local-json-stream-v5.2"
-          ? "extension-progressive-import-v4"
-          : "extension-progressive-import-v3"),
+        : chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
+            chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+            chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+            chunk.promptVersion === "quiz-local-json-stream-v5.4"
+          ? "extension-progressive-import-v6"
+          : chunk.promptVersion === "quiz-local-json-stream-v5.3"
+            ? "extension-progressive-import-v5"
+            : chunk.promptVersion === "quiz-local-json-stream-v5.2"
+              ? "extension-progressive-import-v4"
+              : "extension-progressive-import-v3"),
     resultProtocolVersion: chunk.protocolVersion,
     pipelineVersion: chunk.pipelineVersion,
     model: chunk.model,
@@ -717,6 +988,7 @@ async function persistProgressiveQuiz(input: {
     generationSessionId: chunk.generationSessionId,
     recoverySessionId: chunk.recoverySessionId,
     questionPlanSeed: chunk.questionPlan?.seed,
+    promptFingerprint: chunk.promptFingerprint,
     generationState: "generating",
     requestedQuestionTypes: input.input.questionTypes,
     plannedQuestionTypes: chunk.questionPlan?.types,
@@ -728,7 +1000,13 @@ async function persistProgressiveQuiz(input: {
     stateChangedAt: timestamp,
     telemetryAvailable:
       chunk.promptVersion === "quiz-local-json-stream-v5.2" ||
-      chunk.promptVersion === "quiz-local-json-stream-v5.3",
+      chunk.promptVersion === "quiz-local-json-stream-v5.3" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.4" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.5" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.6" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.7" ||
+      chunk.promptVersion === "quiz-local-json-stream-v5.8",
+    sourceSelection: chunk.metrics.sourceSelection,
     qualityFlags: qualityFlags.length
       ? [{ ordinal: 0, codes: qualityFlags }]
       : [],
@@ -781,7 +1059,9 @@ async function persistProgressiveQuiz(input: {
       .bind(input.userId, input.input.videoId, timestamp),
   ];
   if (
-    chunk.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    isAutomaticGenerationProfile(summary.generationProfile) &&
+    chunk.protocolVersion ===
+      expectedAutomaticProtocol(summary.generationProfile) &&
     chunk.generationSessionId &&
     chunk.recoverySessionId
   ) {
@@ -902,12 +1182,20 @@ async function storedQuestionMatches(
     }>();
   if (!stored) return false;
   const expected = storedQuestionFields(question);
-  let concept: unknown;
+  let metadata: {
+    concept?: unknown;
+    claimKey?: unknown;
+    conceptCluster?: unknown;
+  };
   try {
-    concept = z
-      .object({ concept: z.string() })
+    metadata = z
+      .object({
+        concept: z.string(),
+        claimKey: z.string().optional(),
+        conceptCluster: z.string().optional(),
+      })
       .passthrough()
-      .parse(JSON.parse(stored.generation_metadata_json)).concept;
+      .parse(JSON.parse(stored.generation_metadata_json));
   } catch {
     return false;
   }
@@ -919,7 +1207,9 @@ async function storedQuestionMatches(
     stored.correct_answer_json === expected.correctAnswerJson &&
     stored.rubric_json === expected.rubricJson &&
     stored.explanation === expected.explanation &&
-    concept === question.concept
+    metadata.concept === question.concept &&
+    metadata.claimKey === question.claimKey &&
+    metadata.conceptCluster === question.conceptCluster
   );
 }
 
@@ -942,7 +1232,7 @@ type StoredCallEvent = {
   requested_count: number;
   accepted_count: number;
   classification: LocalGenerationCallEvent["classification"];
-  outcome_code: LocalGenerationCallEvent["outcome"];
+  outcome_code: string;
   retry_delay_ms: number;
   elapsed_ms: number;
   input_tokens: number | null;
@@ -953,14 +1243,53 @@ type StoredCallEvent = {
   retry_kind: string | null;
   ordinal_attempt: number | null;
   recovery_session_id: string | null;
+  purpose: string | null;
+  lifecycle_state: "started" | "completed" | "abandoned" | null;
+  dispatched_at: number | null;
+  completed_at: number | null;
+  last_stream_activity_at: number | null;
 };
 
 function isAutomaticCallEvent(
   event: LocalGenerationCallEvent,
-): event is LocalGenerationCallEventV3 {
+): event is AutomaticGenerationCallEvent {
   return (
     "protocolVersion" in event &&
-    event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION
+    (event.protocolVersion === 5 ||
+      event.protocolVersion === AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
+  );
+}
+
+function isLegacyAutomaticRecoveryCallEvent(
+  event: LocalGenerationCallEvent,
+): event is LegacyAutomaticRecoveryCallEvent {
+  return (
+    "protocolVersion" in event &&
+    event.protocolVersion === 5 &&
+    "purpose" in event &&
+    event.purpose === "automatic_recovery"
+  );
+}
+
+function isGroundedCallEvent(
+  event: LocalGenerationCallEvent,
+): event is LocalGenerationCallEventV4 | LocalGenerationCallEventV5 {
+  return (
+    "protocolVersion" in event &&
+    (event.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION ||
+      event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION)
+  );
+}
+
+function isLifecycleCallEvent(
+  event: LocalGenerationCallEvent,
+): event is LocalGenerationCallEventV5 {
+  return (
+    "protocolVersion" in event &&
+    event.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+    "lifecycleState" in event
   );
 }
 
@@ -972,7 +1301,7 @@ async function storedCallEvent(
 ): Promise<StoredCallEvent | null> {
   return db
     .prepare(
-      `SELECT generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, protocol_version, retry_kind, ordinal_attempt, recovery_session_id
+      `SELECT generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, protocol_version, retry_kind, ordinal_attempt, recovery_session_id, purpose, lifecycle_state, dispatched_at, completed_at, last_stream_activity_at
        FROM quiz_generation_call_events
        WHERE quiz_id = ? AND generation_session_id = ? AND call_index = ?`,
     )
@@ -991,9 +1320,12 @@ function callEventsMatch(
     Number(stored.requested_count) === event.requestedCount &&
     Number(stored.accepted_count) === event.acceptedCount &&
     stored.classification === event.classification &&
-    stored.outcome_code === event.outcome &&
+    stored.outcome_code ===
+      (isLifecycleCallEvent(event) && event.lifecycleState === "started"
+        ? "call_started"
+        : event.outcome) &&
     Number(stored.retry_delay_ms) === event.retryDelayMs &&
-    Number(stored.elapsed_ms) === event.elapsedMs &&
+    Number(stored.elapsed_ms) === (event.elapsedMs ?? 0) &&
     nullableNumber(stored.input_tokens) === (event.inputTokens ?? null) &&
     nullableNumber(stored.output_tokens) === (event.outputTokens ?? null) &&
     nullableNumber(stored.reasoning_tokens) ===
@@ -1006,7 +1338,28 @@ function callEventsMatch(
     nullableNumber(stored.ordinal_attempt) ===
       (isAutomaticCallEvent(event) ? event.ordinalAttempt : null) &&
     stored.recovery_session_id ===
-      (isAutomaticCallEvent(event) ? event.recoverySessionId : null)
+      (isAutomaticCallEvent(event) ? event.recoverySessionId : null) &&
+    stored.purpose === (isGroundedCallEvent(event) ? event.purpose : null) &&
+    (stored.lifecycle_state ?? "completed") ===
+      (isLifecycleCallEvent(event) ? event.lifecycleState : "completed")
+  );
+}
+
+function lifecycleIdentityMatches(
+  stored: StoredCallEvent,
+  event: LocalGenerationCallEventV5,
+): boolean {
+  return (
+    stored.generation_session_id === event.generationSessionId &&
+    Number(stored.call_index) === event.callIndex &&
+    Number(stored.start_ordinal) === event.startIndex &&
+    Number(stored.requested_count) === event.requestedCount &&
+    stored.classification === event.classification &&
+    Number(stored.protocol_version) === event.protocolVersion &&
+    stored.retry_kind === (event.retryKind ?? null) &&
+    nullableNumber(stored.ordinal_attempt) === event.ordinalAttempt &&
+    stored.recovery_session_id === event.recoverySessionId &&
+    stored.purpose === event.purpose
   );
 }
 
@@ -1021,6 +1374,16 @@ async function assertGenerationCallSequence(
   acceptedQuestionCount: number,
   event: LocalGenerationCallEvent,
 ): Promise<void> {
+  if (isLegacyAutomaticRecoveryCallEvent(event)) {
+    await assertLegacyAutomaticRecoveryCallSequence(
+      db,
+      quizId,
+      importKey,
+      acceptedQuestionCount,
+      event,
+    );
+    return;
+  }
   if (isAutomaticCallEvent(event)) {
     await assertAutomaticGenerationCallSequence(
       db,
@@ -1117,6 +1480,7 @@ async function assertGenerationCallSequence(
       "timeout",
     ]);
     if (
+      !previous.outcome_code ||
       !retryableOutcomes.has(previous.outcome_code) ||
       Number(previous.retry_delay_ms) <= 0 ||
       event.requestedCount !== 1
@@ -1149,12 +1513,151 @@ async function assertGenerationCallSequence(
   }
 }
 
+async function assertLegacyAutomaticRecoveryCallSequence(
+  db: D1Database,
+  quizId: string,
+  importKey: string,
+  acceptedQuestionCount: number,
+  event: LegacyAutomaticRecoveryCallEvent,
+): Promise<void> {
+  const eventFrontier = event.startIndex + event.acceptedCount;
+  if (
+    event.startIndex !== acceptedQuestionCount &&
+    eventFrontier !== acceptedQuestionCount
+  ) {
+    throw new ApiError(
+      409,
+      "generation_call_progress_conflict",
+      "The recovery event does not match the stored question frontier.",
+    );
+  }
+
+  const claim = await db
+    .prepare(
+      "SELECT generation_session_id, recovery_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
+    )
+    .bind(quizId)
+    .first<{
+      generation_session_id: string;
+      recovery_session_id: string | null;
+      claim_key: string;
+      lease_expires_at: number;
+    }>();
+  if (
+    claim?.generation_session_id !== event.generationSessionId ||
+    claim.recovery_session_id !== event.recoverySessionId ||
+    claim.claim_key !== importKey ||
+    Number(claim.lease_expires_at) <= now()
+  ) {
+    throw new ApiError(
+      409,
+      "generation_recovery_lease_conflict",
+      "This tab no longer owns the legacy automatic-recovery lease.",
+    );
+  }
+
+  if (event.callIndex > 0) {
+    const previous = await storedCallEvent(
+      db,
+      quizId,
+      event.generationSessionId,
+      event.callIndex - 1,
+    );
+    if (!previous) {
+      throw new ApiError(
+        409,
+        "generation_call_sequence_conflict",
+        "Legacy recovery call events must remain consecutive.",
+      );
+    }
+  }
+
+  const history = await db
+    .prepare(
+      `SELECT
+         COUNT(*) AS attempts,
+         COALESCE(MAX(COALESCE(ordinal_attempt, 1)), 1) AS latest_attempt,
+         (
+           SELECT covering.outcome_code
+           FROM quiz_generation_call_events covering
+           WHERE covering.quiz_id = ?
+             AND covering.start_ordinal <= ?
+             AND covering.start_ordinal + covering.requested_count > ?
+             AND (
+               covering.outcome_code <> 'complete'
+               OR covering.accepted_count < covering.requested_count
+             )
+           ORDER BY covering.created_at DESC, covering.call_index DESC
+           LIMIT 1
+         ) AS latest_outcome
+       FROM quiz_generation_call_events attempted
+       WHERE attempted.quiz_id = ?
+         AND attempted.start_ordinal <= ?
+         AND attempted.start_ordinal + attempted.requested_count > ?
+         AND (
+           attempted.outcome_code <> 'complete'
+           OR attempted.accepted_count < attempted.requested_count
+         )`,
+    )
+    .bind(
+      quizId,
+      event.startIndex,
+      event.startIndex,
+      quizId,
+      event.startIndex,
+      event.startIndex,
+    )
+    .first<{
+      attempts: number;
+      latest_attempt: number;
+      latest_outcome: string | null;
+    }>();
+  const previouslyAttempted = Number(history?.attempts ?? 0) > 0;
+  const expectedClassification = previouslyAttempted
+    ? "automatic_retry"
+    : "primary";
+  if (event.classification !== expectedClassification) {
+    throw new ApiError(
+      409,
+      "generation_call_classification_conflict",
+      previouslyAttempted
+        ? "A previously failed ordinal must be recorded as an automatic retry."
+        : "A never-attempted ordinal must be recorded as a primary call.",
+    );
+  }
+  if (previouslyAttempted) {
+    const expectedAttempt = Math.min(
+      24,
+      Math.max(2, Number(history?.latest_attempt ?? 1) + 1),
+    );
+    if (
+      event.ordinalAttempt !== expectedAttempt ||
+      !retryKindMatchesGenerationOutcome(
+        event.retryKind,
+        history?.latest_outcome ?? "local_state_conflict",
+      )
+    ) {
+      throw new ApiError(
+        409,
+        "generation_call_retry_conflict",
+        "The retry metadata does not match the failed ordinal history.",
+      );
+    }
+  } else if (event.ordinalAttempt !== 1 || event.retryKind !== undefined) {
+    throw new ApiError(
+      409,
+      "generation_call_sequence_conflict",
+      "A new ordinal must begin with primary attempt one.",
+    );
+  }
+}
+
 async function assertAutomaticGenerationCallSequence(
   db: D1Database,
   quizId: string,
   importKey: string,
   acceptedQuestionCount: number,
-  event: LocalGenerationCallEventV3,
+  event: AutomaticGenerationCallEvent,
 ): Promise<void> {
   const eventFrontier = event.startIndex + event.acceptedCount;
   const bufferedFailedFirstCall =
@@ -1215,7 +1718,10 @@ async function assertAutomaticGenerationCallSequence(
     event.generationSessionId,
     event.callIndex - 1,
   );
-  if (!previous || Number(previous.protocol_version) !== 7) {
+  if (
+    !previous ||
+    Number(previous.protocol_version) !== event.protocolVersion
+  ) {
     throw new ApiError(
       409,
       "generation_call_sequence_conflict",
@@ -1245,7 +1751,8 @@ async function assertAutomaticGenerationCallSequence(
     previous.outcome_code === "complete" ||
     event.startIndex !== Number(previous.start_ordinal) ||
     event.ordinalAttempt !== expectedAttempt ||
-    !retryKindMatchesOutcome(event.retryKind, previous.outcome_code)
+    !previous.outcome_code ||
+    !retryKindMatchesGenerationOutcome(event.retryKind, previous.outcome_code)
   ) {
     throw new ApiError(
       409,
@@ -1253,26 +1760,6 @@ async function assertAutomaticGenerationCallSequence(
       "An automatic retry must repair the immediately preceding failed singleton call.",
     );
   }
-}
-
-function retryKindMatchesOutcome(
-  retryKind: LocalGenerationCallEventV3["retryKind"],
-  outcome: string,
-): boolean {
-  const outcomesByKind: Record<string, Set<string>> = {
-    transport: new Set(["transient_http", "network_interrupted", "timeout"]),
-    empty_content: new Set(["empty_content"]),
-    truncated_output: new Set(["truncated_json", "finish_length"]),
-    duplicate_repair: new Set(["duplicate_question"]),
-    answer_repair: new Set(["answer_mapping_invalid"]),
-    content_repair: new Set(["schema_invalid", "type_or_order_mismatch"]),
-    automatic_resume: new Set([
-      "local_state_conflict",
-      "append_conflict",
-      "network_interrupted",
-    ]),
-  };
-  return retryKind ? (outcomesByKind[retryKind]?.has(outcome) ?? false) : false;
 }
 
 async function renewGenerationClaim(
@@ -1284,7 +1771,7 @@ async function renewGenerationClaim(
   recoverySessionId?: string,
 ): Promise<void> {
   const leaseMs =
-    profile === "stable_auto_recovery_v5_3"
+    recoverySessionId || isAutomaticGenerationProfile(profile)
       ? AUTOMATIC_GENERATION_CLAIM_LEASE_MS
       : LEGACY_GENERATION_CLAIM_LEASE_MS;
   await db
@@ -1301,6 +1788,63 @@ async function renewGenerationClaim(
       recoverySessionId ?? null,
     )
     .run();
+}
+
+async function materializeGenerationTelemetry(
+  db: D1Database,
+  quizId: string,
+  userId: string,
+  importKey: string,
+  callEvent?: LocalGenerationCallEvent,
+): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const snapshot = await readProgressiveGenerationSnapshot(db, quizId);
+    const summary = snapshot.summary;
+    if (!summary?.telemetryAvailable) return;
+
+    const nextSummary = ProgressiveQuizSummarySchema.parse({
+      ...summary,
+      aiCalls: snapshot.telemetry.callCount,
+      retryCount: snapshot.telemetry.automaticRetries,
+      inputTokens: snapshot.telemetry.inputTokens,
+      outputTokens: snapshot.telemetry.outputTokens,
+      reasoningTokens: snapshot.telemetry.reasoningTokens,
+      elapsedMs: Math.max(1, snapshot.telemetry.elapsedMs),
+      ...(callEvent && isLifecycleCallEvent(callEvent)
+        ? callEvent.lifecycleState === "started"
+          ? {
+              recoveryPhase: "dispatched" as const,
+              activeCallIndex: callEvent.callIndex,
+            }
+          : summary.activeCallIndex === callEvent.callIndex
+            ? { recoveryPhase: undefined, activeCallIndex: undefined }
+            : {}
+        : {}),
+    });
+    const serialized = JSON.stringify(nextSummary);
+    if (serialized === snapshot.qualitySummaryJson) return;
+
+    const result = await db
+      .prepare(
+        "UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ? AND user_id = ? AND import_key = ? AND pipeline_version = ? AND quality_summary_json = ?",
+      )
+      .bind(
+        serialized,
+        quizId,
+        userId,
+        importKey,
+        LOCAL_QUIZ_PIPELINE_VERSION,
+        snapshot.qualitySummaryJson,
+      )
+      .run();
+    if (result.meta.changes === 1) return;
+  }
+
+  throw new ApiError(
+    409,
+    "generation_telemetry_state_conflict",
+    "Generation telemetry changed before it could be materialized.",
+  );
 }
 
 async function persistImportedQuiz(input: {
@@ -1435,6 +1979,10 @@ function questionInsert(
         source: "extension-local-tool",
         blueprintSlot: question.id,
         concept: question.concept,
+        ...(question.claimKey ? { claimKey: question.claimKey } : {}),
+        ...(question.conceptCluster
+          ? { conceptCluster: question.conceptCluster }
+          : {}),
         questionType: question.type,
         pipelineVersion: metadata.pipelineVersion,
         model: metadata.model,
@@ -1478,9 +2026,49 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
     rubricJson: JSON.stringify({
       requiredIdeas: question.rubricIdeas,
       acceptableAlternatives: [question.answer, ...question.acceptableAnswers],
+      ...(question.rubricV2 ? { v2: question.rubricV2 } : {}),
     }),
     explanation: question.explanation,
   };
+}
+
+function assertGroundedQuestionIdentity(
+  question: LocalConceptQuizQuestion,
+  accepted: Array<{ claimKey?: string }>,
+): void {
+  const claimKey = question.claimKey
+    ?.normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  const conceptCluster = question.conceptCluster
+    ?.normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!claimKey || !conceptCluster) {
+    throw new ApiError(
+      422,
+      "quiz_question_grounding_missing",
+      "Grounded questions require a bounded claim identity.",
+    );
+  }
+  if (
+    accepted.some(
+      (candidate) =>
+        candidate.claimKey
+          ?.normalize("NFKC")
+          .toLocaleLowerCase()
+          .replace(/\s+/g, " ")
+          .trim() === claimKey,
+    )
+  ) {
+    throw new ApiError(
+      422,
+      "quiz_question_duplicate_claim",
+      "The streamed question repeats an accepted instructional claim.",
+    );
+  }
 }
 
 export function structuralDifficulty(

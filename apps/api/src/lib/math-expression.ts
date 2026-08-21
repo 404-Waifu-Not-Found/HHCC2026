@@ -21,6 +21,7 @@ type MathNode =
   | { kind: "add"; terms: Array<{ sign: 1 | -1; value: MathNode }> }
   | { kind: "multiply"; factors: MathNode[] }
   | { kind: "divide"; numerator: MathNode; denominator: MathNode }
+  | { kind: "call"; callee: MathNode; argument: MathNode }
   | { kind: "power"; base: MathNode; exponent: MathNode };
 
 type FormulaCandidate = {
@@ -333,15 +334,12 @@ class MathParser {
         derivativeOrder += 1;
         this.consume();
       }
-      const value: MathNode = {
+      let value: MathNode = {
         kind: "atom",
         value: derivativeOrder
           ? `derivative:${derivativeOrder}:${token.value}`
           : `identifier:${token.value}`,
       };
-      // Function arguments identify the point of evaluation, but the generated
-      // canonical answers use u/v as the function symbols. Consuming the
-      // argument makes u(x), u'(x), and u/u' compare consistently.
       while (this.peek("left") && this.tokens[this.index]?.attached === true) {
         this.consume();
         const argument = this.parseAdd();
@@ -349,6 +347,11 @@ class MathParser {
           throw new Error("Invalid function argument");
         }
         this.consume();
+        // `u(x)` and `u'(x)` are notation variants of u/u', but evaluation
+        // points such as f(a) and f(b) are grading-significant.
+        if (!isIgnorableFunctionArgument(argument)) {
+          value = { kind: "call", callee: value, argument };
+        }
       }
       return value;
     }
@@ -385,6 +388,10 @@ function normalizeNumber(value: string): string {
   return Number.isFinite(number) ? String(number) : value;
 }
 
+function isIgnorableFunctionArgument(node: MathNode): boolean {
+  return node.kind === "atom" && node.value === "identifier:x";
+}
+
 function formulaComplexity(node: MathNode): number {
   switch (node.kind) {
     case "atom": {
@@ -400,6 +407,10 @@ function formulaComplexity(node: MathNode): number {
     }
     case "negate":
       return 3 + formulaComplexity(node.value);
+    case "call":
+      return (
+        6 + formulaComplexity(node.callee) + formulaComplexity(node.argument)
+      );
     case "add":
       return (
         10 * (node.terms.length - 1) +
@@ -436,11 +447,16 @@ function isMathIdentifier(value: string): boolean {
 }
 
 function canonicalExpression(node: MathNode): string {
-  const terms = flattenSignedTerms(node, 1).map((term) => {
+  let terms = flattenSignedTerms(node, 1).map((term) => {
     const normalized = canonicalSigned(term.value);
     const sign = term.sign * normalized.sign;
     return { sign, key: normalized.key };
   });
+  // Additive zero is an identity, so `f(x)` and `f(x) + 0` must never be
+  // accepted as distinct multiple-choice options or graded differently. Keep
+  // one zero only when the entire expression is zero.
+  const significantTerms = terms.filter((term) => term.key !== "atom(0)");
+  if (significantTerms.length > 0) terms = significantTerms;
   terms.sort((left, right) =>
     left.key === right.key
       ? left.sign - right.sign
@@ -470,6 +486,14 @@ function canonicalSigned(node: MathNode): { sign: 1 | -1; key: string } {
     return { sign: nested.sign === 1 ? -1 : 1, key: nested.key };
   }
   if (node.kind === "atom") return { sign: 1, key: `atom(${node.value})` };
+  if (node.kind === "call") {
+    const callee = canonicalSigned(node.callee);
+    const argument = canonicalSigned(node.argument);
+    return {
+      sign: callee.sign,
+      key: `call(${callee.key}|${argument.sign === 1 ? "+" : "-"}${argument.key})`,
+    };
+  }
   if (node.kind === "add") {
     return { sign: 1, key: canonicalExpression(node) };
   }

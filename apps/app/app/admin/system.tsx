@@ -140,6 +140,11 @@ export default function AdminSystemScreen() {
                     tone="secondary"
                   />
                   <StatTile
+                    value={String(data.generation.states.cooldown)}
+                    label={copy.cooldown}
+                    tone="secondary"
+                  />
+                  <StatTile
                     value={String(data.generation.states.ready)}
                     label={copy.ready}
                     tone="success"
@@ -187,6 +192,21 @@ export default function AdminSystemScreen() {
                     icon="processing"
                     label={copy.generationRollout}
                     value={data.generation.rolloutMode}
+                  />
+                  <SystemDetail
+                    icon="model"
+                    label={copy.supportedGenerationProfile}
+                    value={`${data.generation.supportedProfile} · ${data.generation.supportedPromptVersion} · ${data.generation.supportedValidatorVersion}`}
+                  />
+                  <SystemDetail
+                    icon="processing"
+                    label={copy.effectiveDefaultProfile}
+                    value={data.generation.effectiveDefaultProfile}
+                  />
+                  <SystemDetail
+                    icon="system"
+                    label={copy.groundedExtensionRequirement}
+                    value={`${data.generation.requiredExtensionVersion} · ${data.generation.requiredCapability}`}
                   />
                   <SystemDetail
                     icon="system"

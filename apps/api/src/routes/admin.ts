@@ -15,6 +15,7 @@ import {
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
   LOCAL_QUIZ_PROMPT_VERSION,
+  LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_VALIDATOR_VERSION,
   type AdminRole,
 } from "@clipquest/contracts";
@@ -29,7 +30,10 @@ import {
   readRecentGenerationFailures,
 } from "../admin/generations";
 import { ApiError } from "../lib/errors";
-import { quizGenerationRolloutMode } from "../lib/generation-rollout";
+import {
+  quizGenerationProfile,
+  quizGenerationRolloutMode,
+} from "../lib/generation-rollout";
 import { now } from "../lib/ids";
 import { parseJson } from "../lib/validation";
 import { publicWorkerVersion } from "../lib/worker-version";
@@ -139,7 +143,8 @@ adminRouter.get(
           activeJobs:
             generationCounts.generating +
             generationCounts.retrying +
-            generationCounts.recovering,
+            generationCounts.recovering +
+            generationCounts.cooldown,
           failedJobs:
             generationCounts.retryRequired +
             generationCounts.actionRequired +
@@ -475,13 +480,19 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
     running:
       generationCounts.generating +
       generationCounts.retrying +
-      generationCounts.recovering,
+      generationCounts.recovering +
+      generationCounts.cooldown,
     complete: generationCounts.ready,
     failed:
       generationCounts.retryRequired +
       generationCounts.actionRequired +
       generationCounts.generationFailed,
   };
+  const rolloutMode = quizGenerationRolloutMode(c.env);
+  const effectiveDefaultProfile = quizGenerationProfile(
+    c.env,
+    "__clipquest_default_profile__",
+  );
   return c.json(
     AdminSystemResponseSchema.parse({
       configuration: {
@@ -506,7 +517,13 @@ adminRouter.get("/system", requireAdminPermission("system:read"), async (c) => {
         pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
         promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
         validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
-        rolloutMode: quizGenerationRolloutMode(c.env),
+        rolloutMode,
+        supportedProfile: "concept_first_auto_v5_8",
+        supportedPromptVersion: LOCAL_QUIZ_PROMPT_VERSION,
+        supportedValidatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+        effectiveDefaultProfile: effectiveDefaultProfile.generationProfile,
+        requiredExtensionVersion: "0.8.8",
+        requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         states: generationCounts,
       },
       worker: publicWorkerVersion(c.env),

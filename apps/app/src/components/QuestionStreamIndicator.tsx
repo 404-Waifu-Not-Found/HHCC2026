@@ -84,14 +84,46 @@ function generationLabel(
   if (generation.state === "retrying") {
     const ordinal =
       generation.retryOrdinal ?? generation.availableQuestions + 1;
+    if (generation.recoveryPhase === "preparing") {
+      const delaySeconds = generation.retryDelayMs
+        ? Math.max(1, Math.ceil(generation.retryDelayMs / 1_000))
+        : undefined;
+      if (delaySeconds) {
+        return chinese
+          ? `第 ${ordinal} 题将在 ${delaySeconds} 秒后自动重试 · 已就绪 ${count}`
+          : `Retrying question ${ordinal} in ${delaySeconds} seconds · ${count} ready`;
+      }
+      return chinese
+        ? `正在准备自动修复第 ${ordinal} 题 · 已就绪 ${count}`
+        : `Preparing automatic repair for question ${ordinal} · ${count} ready`;
+    }
     return chinese
       ? `正在自动修复第 ${ordinal} 题 · 已就绪 ${count}`
       : `Automatically repairing question ${ordinal} · ${count} ready`;
   }
   if (generation.state === "recovering") {
+    if (generation.recoveryPhase === "preparing") {
+      return chinese
+        ? `正在准备自动恢复 · 已就绪 ${count}`
+        : `Preparing automatic recovery · ${count} ready`;
+    }
+    if (
+      generation.recoveryPhase === "dispatched" ||
+      generation.recoveryPhase === "streaming"
+    ) {
+      const ordinal = generation.availableQuestions + 1;
+      return chinese
+        ? `正在恢复第 ${ordinal} 题 · 已就绪 ${count}`
+        : `Recovering question ${ordinal} · ${count} ready`;
+    }
     return chinese
       ? `正在此标签页恢复 · 已就绪 ${count}`
       : `Recovering this quiz in this tab · ${count} ready`;
+  }
+  if (generation.state === "cooldown") {
+    return chinese
+      ? `自动修复正在冷却 · 已就绪 ${count}`
+      : `Automatic repair is cooling down · ${count} ready`;
   }
   if (generation.state === "action_required") {
     return chinese

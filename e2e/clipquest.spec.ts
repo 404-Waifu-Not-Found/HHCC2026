@@ -44,6 +44,7 @@ type Scenario = {
     | "generating"
     | "retrying"
     | "recovering"
+    | "cooldown"
     | "retry_required"
     | "action_required"
     | "generation_failed"
@@ -195,7 +196,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.3",
+            version: outdated ? "0.7.9" : "0.8.8",
             configured: true,
             capabilities: outdated
               ? []
@@ -203,6 +204,9 @@ test.beforeEach(async ({ page }) => {
                   "question-stream-v1",
                   "question-stream-v2",
                   "question-stream-v3",
+                  "question-stream-v4",
+                  "question-stream-v5",
+                  "question-stream-v6",
                   "ensure-source-ready-v1",
                 ],
           },
@@ -210,11 +214,18 @@ test.beforeEach(async ({ page }) => {
         );
       }
       if (event.data.type === "generate") {
+        const conceptFirst =
+          event.data.context?.generationProfile === "concept_first_auto_v5_8";
         const automatic =
-          event.data.context?.generationProfile === "stable_auto_recovery_v5_3";
+          conceptFirst ||
+          event.data.context?.generationProfile ===
+            "evidence_grounded_auto_v5_4";
         const questionCount = event.data.context?.questionCount ?? 10;
         const generatedStartIndex =
           event.data.context?.continuation?.startIndex ?? 0;
+        const legacyAutomaticRecovery =
+          event.data.context?.continuation?.resultProtocolVersion === 5 &&
+          generatedStartIndex > 0;
         const selectedTypes = event.data.context?.questionTypes ?? [
           "multiple_choice",
           "true_false",
@@ -235,6 +246,12 @@ test.beforeEach(async ({ page }) => {
             concept: `Concept ${index + 1}`,
             question: `How does concept ${index + 1} apply?`,
             explanation: `Concept ${index + 1} supports this answer.`,
+            ...(automatic
+              ? {
+                  claimKey: `concept ${index + 1} supports answer ${index + 1}`,
+                  conceptCluster: `concept ${index + 1}`,
+                }
+              : {}),
           };
           if (type === "true_false") {
             const answer = trueFalseIndex % 2 === 0;
@@ -268,35 +285,94 @@ test.beforeEach(async ({ page }) => {
             answer: `Correct ${index + 1}`,
           };
         });
-        const metadata = automatic
+        const metadata = conceptFirst
           ? {
-              protocolVersion: 7,
+              protocolVersion: 9,
               pipelineVersion: 9,
               model: "deepseek-v4-flash",
               reasoningEffort: "none",
-              promptVersion: "quiz-local-json-stream-v5.3",
-              validatorVersion: "validator-local-progressive-v4.2",
-              importVersion: "extension-progressive-import-v5",
-              generationProfile: "stable_auto_recovery_v5_3",
+              promptVersion: "quiz-local-json-stream-v5.8",
+              validatorVersion: "validator-local-progressive-v4.7",
+              importVersion: "extension-progressive-import-v7",
+              generationProfile: "concept_first_auto_v5_8",
               generationId: event.data.context.generationId,
               generationSessionId: event.data.context.generationSessionId,
               recoverySessionId: event.data.context.recoverySessionId,
               questionPlan,
+              promptFingerprint: "a".repeat(64),
             }
-          : {
-              protocolVersion: 5,
-              pipelineVersion: 9,
-              model: "deepseek-v4-flash",
-              reasoningEffort: "high",
-              promptVersion: "quiz-local-json-stream-v5.0",
-              validatorVersion: "validator-local-progressive-v4.0",
-            };
+          : automatic
+            ? {
+                protocolVersion: 8,
+                pipelineVersion: 9,
+                model: "deepseek-v4-flash",
+                reasoningEffort: "none",
+                promptVersion: "quiz-local-json-stream-v5.7",
+                validatorVersion: "validator-local-progressive-v4.6",
+                importVersion: "extension-progressive-import-v6",
+                generationProfile: "evidence_grounded_auto_v5_4",
+                generationId: event.data.context.generationId,
+                generationSessionId: event.data.context.generationSessionId,
+                recoverySessionId: event.data.context.recoverySessionId,
+                questionPlan,
+              }
+            : {
+                protocolVersion: 5,
+                pipelineVersion: 9,
+                model: "deepseek-v4-flash",
+                reasoningEffort: "high",
+                promptVersion: "quiz-local-json-stream-v5.0",
+                validatorVersion: "validator-local-progressive-v4.0",
+              };
         const initialCallIndex =
           event.data.context?.continuation?.nextCallIndex ?? 0;
         const postQuestion = (
           question: (typeof questions)[number],
           index: number,
         ) => {
+          const relativeCallIndex = index - generatedStartIndex;
+          const firstRecoveryAttempt =
+            relativeCallIndex === 0
+              ? (event.data.context?.continuation?.nextOrdinalAttempt ?? 1)
+              : 1;
+          const callEventBase = {
+            protocolVersion: conceptFirst ? 9 : automatic ? 8 : 5,
+            purpose:
+              automatic || conceptFirst ? "generation" : "automatic_recovery",
+            generationSessionId: event.data.context.generationSessionId,
+            recoverySessionId: event.data.context.recoverySessionId,
+            callIndex: initialCallIndex + relativeCallIndex,
+            startIndex: index,
+            ordinalAttempt: firstRecoveryAttempt,
+            requestedCount: 1,
+            classification:
+              firstRecoveryAttempt > 1 ? "automatic_retry" : "primary",
+            ...(firstRecoveryAttempt > 1
+              ? {
+                  retryKind:
+                    event.data.context?.continuation?.retryKind ??
+                    "automatic_resume",
+                }
+              : {}),
+            retryDelayMs: 0,
+            usageComplete: false,
+          };
+          if (conceptFirst) {
+            window.postMessage(
+              {
+                channel: "clipquest:captions:v1",
+                source: "clipquest-extension",
+                type: "generation-call",
+                requestId: event.data.requestId,
+                event: {
+                  ...callEventBase,
+                  lifecycleState: "started",
+                  acceptedCount: 0,
+                },
+              },
+              window.location.origin,
+            );
+          }
           window.postMessage(
             {
               channel: "clipquest:captions:v1",
@@ -321,12 +397,7 @@ test.beforeEach(async ({ page }) => {
             },
             window.location.origin,
           );
-          const relativeCallIndex = index - generatedStartIndex;
-          const firstRecoveryAttempt =
-            relativeCallIndex === 0
-              ? (event.data.context?.continuation?.nextOrdinalAttempt ?? 1)
-              : 1;
-          if (automatic) {
+          if (automatic || legacyAutomaticRecovery) {
             window.postMessage(
               {
                 channel: "clipquest:captions:v1",
@@ -334,27 +405,12 @@ test.beforeEach(async ({ page }) => {
                 type: "generation-call",
                 requestId: event.data.requestId,
                 event: {
-                  protocolVersion: 7,
-                  generationSessionId: event.data.context.generationSessionId,
-                  recoverySessionId: event.data.context.recoverySessionId,
-                  callIndex: initialCallIndex + relativeCallIndex,
-                  startIndex: index,
-                  ordinalAttempt: firstRecoveryAttempt,
-                  requestedCount: 1,
+                  ...callEventBase,
+                  ...(conceptFirst ? { lifecycleState: "completed" } : {}),
                   acceptedCount: 1,
-                  classification:
-                    firstRecoveryAttempt > 1 ? "automatic_retry" : "primary",
-                  ...(firstRecoveryAttempt > 1
-                    ? {
-                        retryKind:
-                          event.data.context?.continuation?.retryKind ??
-                          "automatic_resume",
-                      }
-                    : {}),
                   outcome: "complete",
-                  retryDelayMs: 0,
                   elapsedMs: 10,
-                  usageComplete: false,
+                  ...(conceptFirst ? { lastStreamActivityElapsedMs: 8 } : {}),
                 },
               },
               window.location.origin,
@@ -401,7 +457,7 @@ test.beforeEach(async ({ page }) => {
                     retryCount: 0,
                     inputTokens: 100,
                     outputTokens: 200,
-                    reasoningTokens: 50,
+                    reasoningTokens: 0,
                     elapsedMs: 1000,
                   },
                 },
@@ -665,7 +721,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.3 or newer", { exact: false }),
+    page.getByText("0.8.8 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -1520,7 +1576,7 @@ test("admin operations console is responsive and uses real management contracts"
   await expect(page.getByRole("heading", { name: "System" })).toBeVisible();
   await expect(page.getByText("Disabled by design")).toBeVisible();
   await expect(
-    page.getByText("0018_automatic_generation_recovery.sql"),
+    page.getByText("0020_generation_call_lifecycle.sql"),
   ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1833,7 +1889,7 @@ async function installMocks(page: Page): Promise<Scenario> {
         model: "deepseek-v4-flash",
         jobs: { queued: 4, running: 3, complete: 3755, failed: 3 },
         database: {
-          migration: "0018_automatic_generation_recovery.sql",
+          migration: "0020_generation_call_lifecycle.sql",
           auditEnabled: true,
         },
         generation: {
@@ -1843,13 +1899,20 @@ async function installMocks(page: Page): Promise<Scenario> {
           extensionRequired: true,
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
-          promptVersion: "quiz-local-json-stream-v5.3",
-          validatorVersion: "validator-local-progressive-v4.2",
+          promptVersion: "quiz-local-json-stream-v5.8",
+          validatorVersion: "validator-local-progressive-v4.7",
           rolloutMode: "disabled",
+          supportedProfile: "concept_first_auto_v5_8",
+          supportedPromptVersion: "quiz-local-json-stream-v5.8",
+          supportedValidatorVersion: "validator-local-progressive-v4.7",
+          effectiveDefaultProfile: "legacy_reasoning_v5_1",
+          requiredExtensionVersion: "0.8.8",
+          requiredCapability: "question-stream-v6",
           states: {
             generating: 2,
             retrying: 1,
             recovering: 0,
+            cooldown: 0,
             retryRequired: 3,
             actionRequired: 0,
             generationFailed: 0,
@@ -1938,10 +2001,17 @@ async function installMocks(page: Page): Promise<Scenario> {
     }
     if (path === "/api/local-ai/profile" && request.method() === "GET") {
       await json(route, {
-        generationProfile: "stable_auto_recovery_v5_3",
-        minimumExtensionVersion: "0.8.3",
-        requiredCapability: "question-stream-v3",
+        generationProfile: "concept_first_auto_v5_8",
+        minimumExtensionVersion: "0.8.8",
+        requiredCapability: "question-stream-v6",
       });
+      return;
+    }
+    if (
+      path === `/api/videos/${VIDEO_ID}/source-metadata` &&
+      request.method() === "PATCH"
+    ) {
+      await json(route, { videoId: VIDEO_ID, verified: true });
       return;
     }
     if (
@@ -2097,6 +2167,11 @@ async function installMocks(page: Page): Promise<Scenario> {
                 importVersion: "extension-progressive-import-v3",
                 generationProfile: "legacy_reasoning_v5_1",
                 generationId: GENERATION_ID,
+                generationSessionId: GENERATION_SESSION_ID,
+                nextCallIndex: 0,
+                automaticRetryCount: 0,
+                retryBudgetUsedCount: 0,
+                automaticRecoveryCount: 0,
                 claim: {
                   state:
                     scenario.progressiveState === "retry_required"

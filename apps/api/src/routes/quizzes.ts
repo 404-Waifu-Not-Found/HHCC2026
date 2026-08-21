@@ -9,6 +9,7 @@ import {
   GenerationClaimRequestSchema,
   GenerationClaimResponseSchema,
   LOCAL_QUIZ_PIPELINE_VERSION,
+  LocalShortAnswerRubricV2Schema,
   MasteryStateSchema,
   PublicQuestionSchema,
   QuizStartRequestSchema,
@@ -30,8 +31,9 @@ import { requireIdempotencyKey } from "../lib/idempotency";
 import { calculateMastery } from "../lib/mastery";
 import {
   ProgressiveQuizSummarySchema,
-  gradeProgressiveShortAnswer,
+  gradeProgressiveShortAnswerDecision,
   readProgressiveGenerationSnapshot,
+  type ProgressiveShortAnswerGradingPath,
   type ProgressiveGenerationSnapshot,
 } from "../lib/progressive-quiz";
 import { enforceRateLimit } from "../lib/rate-limit";
@@ -47,6 +49,66 @@ const QuestionTypeSchema = z.enum([
 ]);
 const AUTOMATIC_GENERATION_CLAIM_LEASE_MS = 30 * 1_000;
 const LEGACY_GENERATION_CLAIM_LEASE_MS = 15 * 60 * 1_000;
+const AUTOMATIC_RECOVERY_RETRY_LIMIT = 12;
+const AUTOMATIC_RECOVERY_CYCLE_LIMIT = 3;
+const AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS = 15 * 60 * 1_000;
+
+function isAutomaticGenerationProfile(profile: string | undefined): boolean {
+  return (
+    profile === "stable_auto_recovery_v5_3" ||
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
+  );
+}
+
+function supportsAutomaticRecovery(
+  snapshot: ProgressiveGenerationSnapshot,
+): boolean {
+  return (
+    isAutomaticGenerationProfile(snapshot.summary?.generationProfile) ||
+    snapshot.summary?.resultProtocolVersion === 5
+  );
+}
+
+function recoverableFailureReason(reasonCode: string | undefined): boolean {
+  return !new Set([
+    "credential_required",
+    "credential_invalid",
+    "credential_missing",
+    "billing_required",
+    "source_unavailable",
+    "recovery_budget_exhausted",
+    "cost_limit_reached",
+  ]).has(reasonCode ?? "");
+}
+
+function hasAutomaticRecoveryBudget(
+  snapshot: ProgressiveGenerationSnapshot,
+): boolean {
+  const retryBudgetUsed =
+    snapshot.telemetry.automaticRetries +
+    (snapshot.summary?.resultProtocolVersion === 5
+      ? snapshot.telemetry.manualContinuations
+      : 0);
+  return (
+    retryBudgetUsed < AUTOMATIC_RECOVERY_RETRY_LIMIT &&
+    snapshot.telemetry.automaticRecoveries < AUTOMATIC_RECOVERY_CYCLE_LIMIT &&
+    snapshot.telemetry.elapsedMs < AUTOMATIC_RECOVERY_ACTIVE_LIMIT_MS
+  );
+}
+
+function recoverableStoppedGeneration(
+  snapshot: ProgressiveGenerationSnapshot,
+): boolean {
+  return Boolean(
+    supportsAutomaticRecovery(snapshot) &&
+    snapshot.availability?.state === "generation_failed" &&
+    recoverableFailureReason(
+      snapshot.availability.reasonCode ?? snapshot.summary?.reasonCode,
+    ) &&
+    hasAutomaticRecoveryBudget(snapshot),
+  );
+}
 const QuestionRowSchema = z.object({
   id: z.string().uuid(),
   quiz_id: z.string().uuid(),
@@ -99,6 +161,7 @@ const MasteryRowSchema = z.object({
 const RubricSchema = z.object({
   requiredIdeas: z.array(z.string()).min(1),
   acceptableAlternatives: z.array(z.string()),
+  v2: LocalShortAnswerRubricV2Schema.optional(),
 });
 
 const QUIZ_STARTS_PER_MINUTE = 8;
@@ -438,6 +501,18 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   let reservationCommitted = false;
   try {
     const grade = await gradeAnswer(c.env, attempt, question, input.answer);
+    if (grade.gradingPath) {
+      console.info(
+        JSON.stringify({
+          scope: "quiz_grading",
+          event: "short_answer.graded",
+          quizId: attempt.quiz_id,
+          attemptId: attempt.id,
+          questionId: question.id,
+          gradingPath: grade.gradingPath,
+        }),
+      );
+    }
     // Freeze one coherent generation snapshot before any answer write. A
     // concurrent append may become visible on the next poll, but can never turn
     // this committed answer into a generation-state error response.
@@ -699,13 +774,28 @@ quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
               importVersion: summary.importVersion,
               generationProfile: summary.generationProfile,
               generationId: summary.generationId,
-              generationSessionId: summary.generationSessionId,
+              generationSessionId:
+                generationState.snapshot.latestGenerationSessionId ??
+                summary.generationSessionId,
               recoverySessionId: summary.recoverySessionId,
-              nextCallIndex: generationState.snapshot.telemetry.callCount,
+              nextCallIndex: generationState.snapshot.nextCallIndex,
+              ...(generationState.snapshot.activeCall
+                ? { activeCall: generationState.snapshot.activeCall }
+                : {}),
               nextOrdinalAttempt: generationState.snapshot.nextOrdinalAttempt,
               retryKind: generationState.snapshot.nextRetryKind ?? undefined,
               automaticRetryCount:
                 generationState.snapshot.telemetry.automaticRetries,
+              retryBudgetUsedCount:
+                summary.resultProtocolVersion === 5
+                  ? generationState.snapshot.telemetry.automaticRetries +
+                    generationState.snapshot.telemetry.manualContinuations
+                  : generationState.snapshot.telemetry.automaticRetries,
+              automaticRecoveryCount:
+                generationState.snapshot.telemetry.automaticRecoveries,
+              retryOrdinals: generationState.snapshot.retryOrdinals,
+              previousOutcome:
+                generationState.snapshot.previousOutcome ?? undefined,
               ...(summary.questionPlanSeed
                 ? {
                     questionPlan: {
@@ -729,12 +819,17 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
   const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
   const generationState = await attemptGenerationState(c.env.DB, attempt);
   const summary = generationState.snapshot.summary;
-  const automatic = summary?.generationProfile === "stable_auto_recovery_v5_3";
+  const automatic = supportsAutomaticRecovery(generationState.snapshot);
+  const recoverableStopped = recoverableStoppedGeneration(
+    generationState.snapshot,
+  );
+  const timestamp = now();
   if (
     !summary ||
     generationState.snapshot.qualityStatus !== "generating" ||
     generationState.generation.state === "ready" ||
-    generationState.generation.state === "generation_failed" ||
+    (generationState.generation.state === "generation_failed" &&
+      !recoverableStopped) ||
     (!automatic && generationState.generation.state !== "retry_required")
   ) {
     throw new ApiError(
@@ -745,8 +840,24 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
   }
   if (
     automatic &&
+    generationState.generation.state === "cooldown" &&
+    summary.nextRecoveryAt &&
+    summary.nextRecoveryAt > timestamp
+  ) {
+    throw new ApiError(
+      409,
+      "generation_cooldown_active",
+      "Automatic generation is cooling down before its next recovery cycle.",
+    );
+  }
+  if (
+    automatic &&
     (!input.recoverySessionId ||
-      input.generationSessionId !== summary.generationSessionId)
+      (generationState.snapshot.latestGenerationSessionId
+        ? input.generationSessionId !==
+          generationState.snapshot.latestGenerationSessionId
+        : Boolean(summary.generationSessionId) &&
+          input.generationSessionId !== summary.generationSessionId))
   ) {
     throw new ApiError(
       409,
@@ -755,7 +866,6 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
     );
   }
 
-  const timestamp = now();
   const existing = await c.env.DB.prepare(
     "SELECT generation_session_id, recovery_session_id, claim_key, lease_expires_at FROM quiz_generation_claims WHERE quiz_id = ?",
   )
@@ -791,17 +901,22 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       : (generationState.generation.reasonCode ??
         summary.reasonCode ??
         "local_state_conflict"),
-    recoverySessionId: input.recoverySessionId ?? summary.recoverySessionId,
+    recoverySessionId: isAutomaticGenerationProfile(summary.generationProfile)
+      ? (input.recoverySessionId ?? summary.recoverySessionId)
+      : summary.recoverySessionId,
     retryOrdinal: undefined,
     ordinalAttempt: undefined,
     retryKind: undefined,
     retryDelayMs: undefined,
+    recoveryPhase: undefined,
+    activeCallIndex: undefined,
+    nextRecoveryAt: undefined,
     stateChangedAt:
       summary.generationState === (automatic ? "recovering" : "retry_required")
         ? summary.stateChangedAt
         : timestamp,
   });
-  const results = await c.env.DB.batch([
+  const statements = [
     c.env.DB.prepare(
       `INSERT INTO quiz_generation_claims
          (quiz_id, generation_session_id, claim_key, lease_expires_at, updated_at, recovery_session_id, heartbeat_at)
@@ -828,6 +943,28 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       input.claimKey,
       input.recoverySessionId ?? null,
     ),
+    ...(generationState.snapshot.activeCall
+      ? [
+          c.env.DB.prepare(
+            `UPDATE quiz_generation_call_events
+               SET lifecycle_state = 'abandoned',
+                   outcome_code = 'network_interrupted',
+                   completed_at = ?,
+                   last_stream_activity_at = COALESCE(last_stream_activity_at, dispatched_at, created_at),
+                   elapsed_ms = MIN(120000, MAX(elapsed_ms, MAX(0, ? - COALESCE(dispatched_at, created_at))))
+             WHERE quiz_id = ?
+               AND generation_session_id = ?
+               AND call_index = ?
+               AND lifecycle_state = 'started'`,
+          ).bind(
+            timestamp,
+            timestamp,
+            attempt.quiz_id,
+            input.generationSessionId,
+            generationState.snapshot.activeCall.callIndex,
+          ),
+        ]
+      : []),
     c.env.DB.prepare(
       `UPDATE quiz_banks SET import_key = ?, quality_summary_json = ?
          WHERE id = ? AND user_id = ? AND pipeline_version = ? AND quality_status = 'generating'
@@ -852,8 +989,17 @@ quizzesRouter.post("/attempts/:attemptId/generation/claim", async (c) => {
       input.recoverySessionId ?? null,
       timestamp,
     ),
-  ]);
-  if (results[0]?.meta.changes !== 1 || results[1]?.meta.changes !== 1) {
+  ];
+  const results = await c.env.DB.batch(statements);
+  const bankResult = results.at(-1);
+  const lifecycleResult = generationState.snapshot.activeCall
+    ? results[1]
+    : undefined;
+  if (
+    results[0]?.meta.changes !== 1 ||
+    bankResult?.meta.changes !== 1 ||
+    (generationState.snapshot.activeCall && lifecycleResult?.meta.changes !== 1)
+  ) {
     throw new ApiError(
       409,
       "generation_claim_conflict",
@@ -969,11 +1115,12 @@ function readyGeneration(total: number): AttemptGenerationAvailability {
 }
 
 function claimForSnapshot(snapshot: ProgressiveGenerationSnapshot) {
-  const automatic =
-    snapshot.summary?.generationProfile === "stable_auto_recovery_v5_3";
+  const automatic = supportsAutomaticRecovery(snapshot);
+  const recoverableStopped = recoverableStoppedGeneration(snapshot);
   if (
     snapshot.availability?.state === "ready" ||
-    snapshot.availability?.state === "generation_failed" ||
+    (snapshot.availability?.state === "generation_failed" &&
+      !recoverableStopped) ||
     (!automatic && snapshot.availability?.state !== "retry_required")
   ) {
     return { state: "not_required" as const, leaseExpiresAt: null };
@@ -1280,7 +1427,11 @@ async function gradeAnswer(
   attempt: AttemptRow,
   question: QuestionRow,
   answer: z.infer<typeof AnswerValueSchema>,
-): Promise<{ correct: boolean; feedback: string }> {
+): Promise<{
+  correct: boolean;
+  feedback: string;
+  gradingPath?: ProgressiveShortAnswerGradingPath;
+}> {
   if (question.type === "short_answer") {
     if (typeof answer !== "string") {
       throw new ApiError(
@@ -1295,13 +1446,16 @@ async function gradeAnswer(
       "short-answer rubric",
     );
     if (attempt.quiz_pipeline_version === LOCAL_QUIZ_PIPELINE_VERSION) {
+      const decision = gradeProgressiveShortAnswerDecision({
+        answer,
+        requiredIdeas: rubric.requiredIdeas,
+        acceptableAlternatives: rubric.acceptableAlternatives,
+        rubricV2: rubric.v2,
+      });
       return {
-        correct: gradeProgressiveShortAnswer({
-          answer,
-          requiredIdeas: rubric.requiredIdeas,
-          acceptableAlternatives: rubric.acceptableAlternatives,
-        }),
+        correct: decision.correct,
         feedback: question.explanation,
+        gradingPath: decision.path,
       };
     }
     const evidenceIds = new Set(parseQuestionEvidence(question));

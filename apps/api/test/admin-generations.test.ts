@@ -159,6 +159,11 @@ function createDatabase(): SqliteD1Adapter {
       retry_kind TEXT,
       ordinal_attempt INTEGER,
       recovery_session_id TEXT,
+      purpose TEXT,
+      lifecycle_state TEXT NOT NULL DEFAULT 'completed',
+      dispatched_at INTEGER,
+      completed_at INTEGER,
+      last_stream_activity_at INTEGER,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (
@@ -197,6 +202,11 @@ function createDatabase(): SqliteD1Adapter {
   sqlite
     .prepare(
       "INSERT INTO d1_migrations VALUES (18, '0018_automatic_generation_recovery.sql', '2026-08-10')",
+    )
+    .run();
+  sqlite
+    .prepare(
+      "INSERT INTO d1_migrations VALUES (19, '0019_grounded_generation_telemetry.sql', '2026-08-11')",
     )
     .run();
 
@@ -344,13 +354,11 @@ describe("admin progressive generation visibility", () => {
         pagination: { total: number };
       };
       expect(response.status).toBe(200);
-      expect(body.pagination.total).toBe(2);
-      expect(body.generations).toHaveLength(2);
+      expect(body.pagination.total).toBe(1);
+      expect(body.generations).toHaveLength(1);
       expect(body.generations.map((item) => item.state)).toEqual([
         "retry_required",
-        "retry_required",
       ]);
-      expect(body.generations.some((item) => item.stalled === true)).toBe(true);
       const authoritative = body.generations.find(
         (item) => item.quizId === "33333333-3333-4333-8333-333333333332",
       );
@@ -373,6 +381,23 @@ describe("admin progressive generation visibility", () => {
       expect(JSON.stringify(body)).not.toMatch(
         /transcript|prompt|answer|rubric|api.?key|errorMessage/i,
       );
+
+      const recoveringResponse = await app.request(
+        "/generations?state=recovering&page=1&pageSize=20",
+        {},
+        env,
+      );
+      expect(recoveringResponse.status).toBe(200);
+      expect(await recoveringResponse.json()).toMatchObject({
+        generations: [
+          {
+            quizId: "33333333-3333-4333-8333-333333333333",
+            state: "recovering",
+            stalled: true,
+          },
+        ],
+        pagination: { total: 1 },
+      });
     },
   );
 
@@ -409,15 +434,15 @@ describe("admin progressive generation visibility", () => {
       states: {
         generating: 1,
         retrying: 0,
-        recovering: 0,
-        retryRequired: 2,
+        recovering: 1,
+        retryRequired: 1,
         actionRequired: 0,
         generationFailed: 0,
         ready: 1,
       },
     });
     expect(body.database.migration).toBe(
-      "0018_automatic_generation_recovery.sql",
+      "0019_grounded_generation_telemetry.sql",
     );
     expect(body.worker).toEqual({
       versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",
@@ -430,8 +455,8 @@ describe("admin progressive generation visibility", () => {
     const response = await app.request("/overview", {}, env);
     const body = (await response.json()) as Record<string, any>;
     expect(response.status).toBe(200);
-    expect(body.totals).toMatchObject({ activeJobs: 1, failedJobs: 2 });
-    expect(body.recentFailures).toHaveLength(2);
+    expect(body.totals).toMatchObject({ activeJobs: 2, failedJobs: 1 });
+    expect(body.recentFailures).toHaveLength(1);
     expect(body.recentFailures[0].errorMessage).toBeNull();
     expect(JSON.stringify(body.recentFailures)).not.toMatch(
       /caption|transcript|prompt|answer|rubric|api.?key/i,

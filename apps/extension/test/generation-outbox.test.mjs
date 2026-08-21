@@ -75,6 +75,41 @@ function callEntry(sequence, callIndex, startIndex, outcome = "complete") {
   };
 }
 
+function lifecycleEntry(
+  sequence,
+  lifecycleState,
+  callIndex,
+  startIndex,
+  overrides = {},
+) {
+  const terminal = lifecycleState !== "started";
+  return {
+    sequence,
+    message: {
+      type: "call",
+      requestId: "old-request",
+      event: {
+        protocolVersion: 9,
+        purpose: "generation",
+        lifecycleState,
+        generationSessionId: "44444444-4444-4444-8444-444444444444",
+        recoverySessionId: OLD_RECOVERY,
+        callIndex,
+        startIndex,
+        ordinalAttempt: 2,
+        requestedCount: 1,
+        acceptedCount: terminal ? 1 : 0,
+        classification: "automatic_retry",
+        retryKind: "duplicate_repair",
+        retryDelayMs: 0,
+        usageComplete: false,
+        ...(terminal ? { outcome: "complete", elapsedMs: 20 } : {}),
+        ...overrides,
+      },
+    },
+  };
+}
+
 test("outbox replay drops stored prefixes and resumes the exact missing frontier", () => {
   const posted = [];
   const replay = replayGenerationOutboxEntries(
@@ -125,6 +160,89 @@ test("a disconnected failed call becomes one truthful automatic-resume retry", (
   assert.equal(replay.context.continuation.nextOrdinalAttempt, 2);
   assert.equal(replay.context.continuation.retryKind, "automatic_resume");
   assert.equal(replay.context.continuation.automaticRetryCount, 0);
+});
+
+test("protocol-9 replay rebases a buffered lifecycle on the authoritative failed call", () => {
+  const posted = [];
+  const replay = replayGenerationOutboxEntries(
+    context({
+      nextCallIndex: 2,
+      nextOrdinalAttempt: 2,
+      retryKind: "transport",
+      previousOutcome: "network_interrupted",
+      retryOrdinals: [2],
+    }),
+    [
+      lifecycleEntry(0, "started", 2, 1),
+      questionEntry(1, 1),
+      lifecycleEntry(2, "completed", 2, 1),
+    ],
+    "new-request",
+    (message) => posted.push(message),
+  );
+
+  assert.deepEqual(
+    posted.map((message) =>
+      message.type === "question"
+        ? "question"
+        : `${message.event.lifecycleState}:${message.event.retryKind}`,
+    ),
+    ["started:transport", "question", "completed:transport"],
+  );
+  assert.equal(replay.context.continuation.startIndex, 2);
+  assert.equal(replay.context.continuation.nextCallIndex, 3);
+  assert.equal(replay.context.continuation.nextOrdinalAttempt, 1);
+  assert.equal(replay.context.continuation.retryKind, undefined);
+  assert.equal(replay.context.continuation.automaticRetryCount, 1);
+  assert.ok(
+    posted.every(
+      (message) =>
+        (message.result ?? message.event).recoverySessionId === NEW_RECOVERY,
+    ),
+  );
+});
+
+test("protocol-9 replay abandons a started-only call before continuing", () => {
+  const posted = [];
+  const replay = replayGenerationOutboxEntries(
+    context({
+      nextCallIndex: 2,
+      nextOrdinalAttempt: 2,
+      retryKind: "transport",
+      previousOutcome: "network_interrupted",
+      retryOrdinals: [2],
+    }),
+    [lifecycleEntry(0, "started", 2, 1)],
+    "new-request",
+    (message) => posted.push(message),
+  );
+
+  assert.deepEqual(
+    posted.map((message) => ({
+      lifecycleState: message.event.lifecycleState,
+      outcome: message.event.outcome,
+      retryKind: message.event.retryKind,
+      acceptedCount: message.event.acceptedCount,
+    })),
+    [
+      {
+        lifecycleState: "started",
+        outcome: undefined,
+        retryKind: "transport",
+        acceptedCount: 0,
+      },
+      {
+        lifecycleState: "abandoned",
+        outcome: "network_interrupted",
+        retryKind: "transport",
+        acceptedCount: 0,
+      },
+    ],
+  );
+  assert.equal(replay.context.continuation.nextCallIndex, 3);
+  assert.equal(replay.context.continuation.nextOrdinalAttempt, 3);
+  assert.equal(replay.context.continuation.retryKind, "automatic_resume");
+  assert.equal(replay.context.continuation.automaticRetryCount, 1);
 });
 
 test("a complete buffered suffix replays its result only after every question and call", () => {

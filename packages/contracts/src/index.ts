@@ -226,6 +226,42 @@ export const VideoImportRequestSchema = z.object({
 });
 export type VideoImportRequest = z.infer<typeof VideoImportRequestSchema>;
 
+export const CaptionSourceCategorySchema = z.enum([
+  "manual",
+  "automatic",
+  "local_transcription",
+  "unknown",
+]);
+export type CaptionSourceCategory = z.infer<typeof CaptionSourceCategorySchema>;
+
+export const VerifiedVideoMetadataRequestSchema = z
+  .object({
+    durationSeconds: z.number().int().min(1).max(86_400),
+    sourceLanguage: z
+      .string()
+      .trim()
+      .min(2)
+      .max(35)
+      .regex(/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/u),
+    captionSourceCategory: CaptionSourceCategorySchema,
+    captionSegmentCount: z.number().int().min(1).max(100_000),
+    captionWordCount: z.number().int().min(1).max(5_000_000),
+  })
+  .strict();
+export type VerifiedVideoMetadataRequest = z.infer<
+  typeof VerifiedVideoMetadataRequestSchema
+>;
+
+export const VerifiedVideoMetadataResponseSchema = z
+  .object({
+    videoId: z.string().uuid(),
+    verified: z.literal(true),
+  })
+  .strict();
+export type VerifiedVideoMetadataResponse = z.infer<
+  typeof VerifiedVideoMetadataResponseSchema
+>;
+
 export const VideoImportResponseSchema = z
   .object({
     video: z.object({
@@ -307,7 +343,9 @@ export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 export const LOCAL_QUIZ_PROTOCOL_VERSION = 1 as const;
 export const LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 5 as const;
 export const STABLE_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 6 as const;
-export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 7 as const;
+export const AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 7 as const;
+export const GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 8 as const;
+export const LOCAL_QUIZ_RESULT_PROTOCOL_VERSION = 9 as const;
 export const LOCAL_QUIZ_PIPELINE_VERSION = 9 as const;
 export const LOCAL_QUIZ_MODEL = "deepseek-v4-flash" as const;
 export const LocalQuizPromptVersionSchema = z.enum([
@@ -315,34 +353,52 @@ export const LocalQuizPromptVersionSchema = z.enum([
   "quiz-local-json-stream-v5.1",
   "quiz-local-json-stream-v5.2",
   "quiz-local-json-stream-v5.3",
+  "quiz-local-json-stream-v5.4",
+  "quiz-local-json-stream-v5.5",
+  "quiz-local-json-stream-v5.6",
+  "quiz-local-json-stream-v5.7",
+  "quiz-local-json-stream-v5.8",
 ]);
 export type LocalQuizPromptVersion = z.infer<
   typeof LocalQuizPromptVersionSchema
 >;
-export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.3" as const;
+export const LOCAL_QUIZ_PROMPT_VERSION = "quiz-local-json-stream-v5.8" as const;
 export const LocalQuizValidatorVersionSchema = z.enum([
   "validator-local-progressive-v4.0",
   "validator-local-progressive-v4.1",
   "validator-local-progressive-v4.2",
+  "validator-local-progressive-v4.3",
+  "validator-local-progressive-v4.4",
+  "validator-local-progressive-v4.5",
+  "validator-local-progressive-v4.6",
+  "validator-local-progressive-v4.7",
 ]);
 export type LocalQuizValidatorVersion = z.infer<
   typeof LocalQuizValidatorVersionSchema
 >;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
-  "validator-local-progressive-v4.2" as const;
+  "validator-local-progressive-v4.7" as const;
 export const LocalQuizProgressiveImportVersionSchema = z.enum([
   "extension-progressive-import-v3",
   "extension-progressive-import-v4",
   "extension-progressive-import-v5",
+  "extension-progressive-import-v6",
+  "extension-progressive-import-v7",
 ]);
 export type LocalQuizProgressiveImportVersion = z.infer<
   typeof LocalQuizProgressiveImportVersionSchema
 >;
 export const LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION =
-  "extension-progressive-import-v5" as const;
+  "extension-progressive-import-v7" as const;
 export const LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v1" as const;
 export const LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
+  "question-stream-v6" as const;
+export const GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
+  "question-stream-v5" as const;
+export const GROUNDED_V4_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
+  "question-stream-v4" as const;
+export const AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v3" as const;
 export const STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
   "question-stream-v2" as const;
@@ -350,6 +406,8 @@ export const STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY =
 export const LocalQuizResultProtocolVersionSchema = z.union([
   z.literal(LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
   z.literal(STABLE_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+  z.literal(AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+  z.literal(GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
   z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
 ]);
 export type LocalQuizResultProtocolVersion = z.infer<
@@ -373,6 +431,26 @@ export const GenerationFailureCodeSchema = z.enum([
   "append_conflict",
   "source_unavailable",
   "recovery_budget_exhausted",
+  "source_framing_invalid",
+  "course_logistics_invalid",
+  "low_pedagogical_value",
+  "rubric_invalid",
+  "non_instructional_source",
+  "mc_evidence_span_invalid",
+  "mc_distractor_duplicate",
+  "mc_distractor_equivalent",
+  "mc_answer_kind_mismatch",
+  "true_false_fact_invalid",
+  "true_false_mutation_unavailable",
+  "short_atomic_invalid",
+  "short_proposition_invalid",
+  "short_enumeration_invalid",
+  "short_formula_invalid",
+  "question_tautology_invalid",
+  "question_answer_kind_mismatch",
+  "quiz_language_mismatch",
+  "call_dispatch_timeout",
+  "stream_idle_timeout",
 ]);
 export const LocalGenerationFailureCodeSchema = GenerationFailureCodeSchema;
 export type GenerationFailureCode = z.infer<typeof GenerationFailureCodeSchema>;
@@ -436,6 +514,8 @@ export const LocalGenerationProfileSchema = z.enum([
   "legacy_reasoning_v5_1",
   "stable_non_thinking_v5_2",
   "stable_auto_recovery_v5_3",
+  "evidence_grounded_auto_v5_4",
+  "concept_first_auto_v5_8",
 ]);
 export type LocalGenerationProfile = z.infer<
   typeof LocalGenerationProfileSchema
@@ -453,21 +533,37 @@ export type QuizGenerationRolloutMode = z.infer<
 export const QuizGenerationProfileResponseSchema = z
   .object({
     generationProfile: LocalGenerationProfileSchema,
-    minimumExtensionVersion: z.enum(["0.8.0", "0.8.2", "0.8.3"]),
+    minimumExtensionVersion: z.enum([
+      "0.8.0",
+      "0.8.2",
+      "0.8.3",
+      "0.8.4",
+      "0.8.5",
+      "0.8.6",
+      "0.8.7",
+      "0.8.8",
+    ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      GROUNDED_V4_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+      GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
     ]),
   })
   .strict()
   .superRefine((value, context) => {
     const expected =
-      value.generationProfile === "stable_auto_recovery_v5_3"
-        ? ["0.8.3", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-        : value.generationProfile === "stable_non_thinking_v5_2"
-          ? ["0.8.2", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-          : ["0.8.0", LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY];
+      value.generationProfile === "concept_first_auto_v5_8"
+        ? ["0.8.8", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        : value.generationProfile === "evidence_grounded_auto_v5_4"
+          ? ["0.8.7", GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+          : value.generationProfile === "stable_auto_recovery_v5_3"
+            ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+            : value.generationProfile === "stable_non_thinking_v5_2"
+              ? ["0.8.2", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+              : ["0.8.0", LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY];
     if (
       value.minimumExtensionVersion !== expected[0] ||
       value.requiredCapability !== expected[1]
@@ -490,6 +586,8 @@ export const LocalAcceptedQuestionSummarySchema = z
     type: z.enum(["multiple_choice", "true_false", "short_answer"]),
     concept: z.string().trim().min(1).max(200),
     question: z.string().trim().min(1).max(700),
+    claimKey: z.string().trim().min(1).max(300).optional(),
+    conceptCluster: z.string().trim().min(1).max(200).optional(),
   })
   .strict();
 export type LocalAcceptedQuestionSummary = z.infer<
@@ -515,6 +613,28 @@ export const AutomaticRetryKindSchema = z.enum([
   "automatic_resume",
 ]);
 export type AutomaticRetryKind = z.infer<typeof AutomaticRetryKindSchema>;
+
+export const GenerationRecoveryPhaseSchema = z.enum([
+  "preparing",
+  "dispatched",
+  "streaming",
+  "repairing",
+  "cooldown",
+  "complete",
+  "failed",
+]);
+export type GenerationRecoveryPhase = z.infer<
+  typeof GenerationRecoveryPhaseSchema
+>;
+
+export const LocalGenerationCallLifecycleSchema = z.enum([
+  "started",
+  "completed",
+  "abandoned",
+]);
+export type LocalGenerationCallLifecycle = z.infer<
+  typeof LocalGenerationCallLifecycleSchema
+>;
 
 export const LocalGenerationCallOutcomeSchema = z.union([
   z.enum(["complete", "partial_accepted"]),
@@ -592,9 +712,72 @@ export const LegacyLocalGenerationCallEventSchema = z
       });
     }
   });
+
+export const LegacyAutomaticRecoveryCallEventSchema = z
+  .object({
+    protocolVersion: z.literal(LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+    purpose: z.literal("automatic_recovery"),
+    generationSessionId: z.string().uuid(),
+    recoverySessionId: z.string().uuid(),
+    callIndex: z.number().int().min(0).max(127),
+    startIndex: z.number().int().min(0).max(14),
+    ordinalAttempt: z.number().int().min(1).max(24),
+    requestedCount: z.literal(1),
+    acceptedCount: z.union([z.literal(0), z.literal(1)]),
+    classification: z.enum(["primary", "automatic_retry"]),
+    retryKind: AutomaticRetryKindSchema.optional(),
+    outcome: LocalGenerationCallOutcomeSchema,
+    retryDelayMs: z.number().int().min(0).max(300_000).default(0),
+    elapsedMs: z.number().int().min(0).max(900_000),
+    inputTokens: z.number().int().min(0).max(20_000_000).optional(),
+    outputTokens: z.number().int().min(0).max(2_000_000).optional(),
+    reasoningTokens: z.number().int().min(0).max(2_000_000).optional(),
+    usageComplete: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      (value.classification === "automatic_retry") !==
+      (value.retryKind !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message: "Only automatic retries require a retry kind.",
+      });
+    }
+    if (
+      (value.outcome === "complete" && value.acceptedCount !== 1) ||
+      value.outcome === "partial_accepted"
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message: "Legacy automatic recovery uses singleton calls.",
+      });
+    }
+    const usageFields = [
+      value.inputTokens,
+      value.outputTokens,
+      value.reasoningTokens,
+    ];
+    if (
+      value.usageComplete &&
+      usageFields.some((field) => field === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["usageComplete"],
+        message: "Complete usage requires all token counters.",
+      });
+    }
+  });
+export type LegacyAutomaticRecoveryCallEvent = z.infer<
+  typeof LegacyAutomaticRecoveryCallEventSchema
+>;
 export const LocalGenerationCallEventV3Schema = z
   .object({
-    protocolVersion: z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+    protocolVersion: z.literal(AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
     generationSessionId: z.string().uuid(),
     recoverySessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(127),
@@ -654,13 +837,198 @@ export type LocalGenerationCallEventV3 = z.infer<
   typeof LocalGenerationCallEventV3Schema
 >;
 
+export const LocalGenerationCallEventV4Schema = z
+  .object({
+    protocolVersion: z.literal(GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+    purpose: z.literal("generation"),
+    generationSessionId: z.string().uuid(),
+    recoverySessionId: z.string().uuid(),
+    callIndex: z.number().int().min(0).max(127),
+    startIndex: z.number().int().min(0).max(14),
+    ordinalAttempt: z.number().int().min(1).max(24),
+    requestedCount: z.literal(1),
+    acceptedCount: z.union([z.literal(0), z.literal(1)]),
+    classification: z.enum(["primary", "automatic_retry"]),
+    retryKind: AutomaticRetryKindSchema.optional(),
+    outcome: LocalGenerationCallOutcomeSchema,
+    retryDelayMs: z.number().int().min(0).max(300_000).default(0),
+    elapsedMs: z.number().int().min(0).max(900_000),
+    inputTokens: z.number().int().min(0).max(20_000_000).optional(),
+    outputTokens: z.number().int().min(0).max(2_000_000).optional(),
+    reasoningTokens: z.number().int().min(0).max(2_000_000).optional(),
+    usageComplete: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      (value.classification === "automatic_retry") !==
+      (value.retryKind !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message: "Only automatic retries require a retry kind.",
+      });
+    }
+    if (
+      (value.outcome === "complete" && value.acceptedCount !== 1) ||
+      value.outcome === "partial_accepted"
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message: "Grounded singleton calls are either complete or failed.",
+      });
+    }
+    const usageFields = [
+      value.inputTokens,
+      value.outputTokens,
+      value.reasoningTokens,
+    ];
+    if (
+      value.usageComplete &&
+      usageFields.some((field) => field === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["usageComplete"],
+        message: "Complete usage requires all token counters.",
+      });
+    }
+  });
+export type LocalGenerationCallEventV4 = z.infer<
+  typeof LocalGenerationCallEventV4Schema
+>;
+
+export const LocalGenerationCallEventV5Schema = z
+  .object({
+    protocolVersion: z.literal(LOCAL_QUIZ_RESULT_PROTOCOL_VERSION),
+    purpose: z.literal("generation"),
+    lifecycleState: LocalGenerationCallLifecycleSchema,
+    generationSessionId: z.string().uuid(),
+    recoverySessionId: z.string().uuid(),
+    callIndex: z.number().int().min(0).max(255),
+    startIndex: z.number().int().min(0).max(14),
+    ordinalAttempt: z.number().int().min(1).max(24),
+    requestedCount: z.literal(1),
+    acceptedCount: z.union([z.literal(0), z.literal(1)]).default(0),
+    classification: z.enum(["primary", "automatic_retry"]),
+    retryKind: AutomaticRetryKindSchema.optional(),
+    outcome: LocalGenerationCallOutcomeSchema.optional(),
+    retryDelayMs: z.number().int().min(0).max(300_000).default(0),
+    elapsedMs: z.number().int().min(0).max(900_000).optional(),
+    lastStreamActivityElapsedMs: z
+      .number()
+      .int()
+      .min(0)
+      .max(900_000)
+      .optional(),
+    inputTokens: z.number().int().min(0).max(20_000_000).optional(),
+    outputTokens: z.number().int().min(0).max(2_000_000).optional(),
+    reasoningTokens: z.number().int().min(0).max(2_000_000).optional(),
+    usageComplete: z.boolean().default(false),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      (value.classification === "automatic_retry") !==
+      (value.retryKind !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message: "Only automatic retries require a retry kind.",
+      });
+    }
+    if (value.lifecycleState === "started") {
+      if (
+        value.outcome !== undefined ||
+        value.elapsedMs !== undefined ||
+        value.acceptedCount !== 0 ||
+        value.usageComplete ||
+        value.inputTokens !== undefined ||
+        value.outputTokens !== undefined ||
+        value.reasoningTokens !== undefined
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["lifecycleState"],
+          message: "A started call cannot contain terminal result data.",
+        });
+      }
+      return;
+    }
+    if (!value.outcome || value.elapsedMs === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message:
+          "A terminal call lifecycle requires an outcome and elapsed time.",
+      });
+    }
+    if (
+      value.lifecycleState === "completed" &&
+      value.outcome === "complete" &&
+      value.acceptedCount !== 1
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["acceptedCount"],
+        message: "A completed successful singleton call accepts one question.",
+      });
+    }
+    if (value.outcome === "partial_accepted") {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message: "Concept-first calls are strict singletons.",
+      });
+    }
+    const usageFields = [
+      value.inputTokens,
+      value.outputTokens,
+      value.reasoningTokens,
+    ];
+    if (
+      value.usageComplete &&
+      usageFields.some((field) => field === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["usageComplete"],
+        message: "Complete usage requires all token counters.",
+      });
+    }
+  });
+export type LocalGenerationCallEventV5 = z.infer<
+  typeof LocalGenerationCallEventV5Schema
+>;
+
 export const LocalGenerationCallEventSchema = z.union([
+  LegacyAutomaticRecoveryCallEventSchema,
   LegacyLocalGenerationCallEventSchema,
   LocalGenerationCallEventV3Schema,
+  LocalGenerationCallEventV4Schema,
+  LocalGenerationCallEventV5Schema,
 ]);
 export type LocalGenerationCallEvent = z.infer<
   typeof LocalGenerationCallEventSchema
 >;
+
+const RetryOrdinalsSchema = z
+  .array(z.number().int().min(1).max(15))
+  .max(15)
+  .superRefine((value, context) => {
+    for (let index = 0; index < value.length; index += 1) {
+      if (index > 0 && value[index]! <= value[index - 1]!) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "Retry ordinals must be unique and strictly increasing.",
+        });
+      }
+    }
+  });
 
 export const GenerationRecordV2Schema = z
   .object({
@@ -847,9 +1215,143 @@ export const GenerationRecordV3Schema = z
     }
   });
 export type GenerationRecordV3 = z.infer<typeof GenerationRecordV3Schema>;
+
+export const GenerationRecordV4Schema = z
+  .object({
+    version: z.literal(4),
+    generationId: z.string().uuid(),
+    generationSessionId: z.string().uuid(),
+    recoverySessionId: z.string().uuid(),
+    idempotencyKey: z.string().uuid(),
+    ownerUserId: z.string().min(1).max(200),
+    videoId: z.string().uuid(),
+    quizLanguage: LanguageSchema,
+    questionTypes: QuizQuestionTypesSchema,
+    sessionLength: SessionLengthSchema,
+    watched: z.boolean(),
+    questionPlan: LocalQuestionPlanSchema,
+    generationProfile: z.enum([
+      "evidence_grounded_auto_v5_4",
+      "concept_first_auto_v5_8",
+    ]),
+    quizId: z.string().uuid().optional(),
+    attemptId: z.string().uuid().optional(),
+    acceptedCount: z.number().int().min(0).max(15),
+    plannedCount: PlannedQuestionCountSchema,
+    state: z.enum([
+      "pending",
+      "generating",
+      "retrying",
+      "recovering",
+      "cooldown",
+      "action_required",
+      "generation_failed",
+      "ready",
+    ]),
+    reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
+    retryOrdinal: z.number().int().min(1).max(15).optional(),
+    ordinalAttempt: z.number().int().min(1).max(24).optional(),
+    retryKind: AutomaticRetryKindSchema.optional(),
+    retryDelayMs: z.number().int().min(0).max(300_000).optional(),
+    nextRecoveryAt: z.number().int().positive().optional(),
+    recoveryPhase: GenerationRecoveryPhaseSchema.optional(),
+    activeCallIndex: z.number().int().min(0).max(255).optional(),
+    recoveryCycle: z.number().int().min(0).max(24).default(0),
+    nextCallIndex: z.number().int().min(0).max(256),
+    ordinalAttempts: z
+      .record(
+        z.string().regex(/^(?:[1-9]|1[0-5])$/),
+        z.number().int().min(0).max(24),
+      )
+      .default({}),
+    automaticRetryCount: z.number().int().min(0).max(48).default(0),
+    activeRecoveryStartedAt: z.number().int().positive().optional(),
+    sourceReadyAt: z.number().int().positive().optional(),
+    preworkStatus: z
+      .enum(["running", "ready", "unavailable", "failed"])
+      .optional(),
+    createdAt: z.number().int().positive(),
+    updatedAt: z.number().int().positive(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.acceptedCount > value.plannedCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["acceptedCount"],
+        message: "Accepted questions cannot exceed the planned total.",
+      });
+    }
+    if (
+      (value.state === "ready") !==
+      (value.acceptedCount === value.plannedCount)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["state"],
+        message: "Only a fully accepted generation record may be ready.",
+      });
+    }
+    if (value.questionPlan.types.length !== value.plannedCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["questionPlan", "types"],
+        message: "The saved question plan must match the planned total.",
+      });
+    }
+    if (
+      value.state === "action_required" ||
+      value.state === "generation_failed"
+    ) {
+      if (!value.reasonCode) {
+        context.addIssue({
+          code: "custom",
+          path: ["reasonCode"],
+          message: "Stopped recovery states require a bounded reason code.",
+        });
+      }
+    } else if (value.reasonCode && value.state !== "cooldown") {
+      context.addIssue({
+        code: "custom",
+        path: ["reasonCode"],
+        message: "Only cooldown or stopped states may contain a reason code.",
+      });
+    }
+    if ((value.state === "cooldown") !== (value.nextRecoveryAt !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["nextRecoveryAt"],
+        message: "Cooldown records require exactly one recovery time.",
+      });
+    }
+    const hasRetryMetadata =
+      value.retryOrdinal !== undefined ||
+      value.ordinalAttempt !== undefined ||
+      value.retryKind !== undefined ||
+      value.retryDelayMs !== undefined;
+    if (
+      value.state === "retrying" &&
+      (!value.retryOrdinal || !value.ordinalAttempt || !value.retryKind)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message: "Retrying records require bounded ordinal metadata.",
+      });
+    }
+    if (value.state !== "retrying" && hasRetryMetadata) {
+      context.addIssue({
+        code: "custom",
+        path: ["retryKind"],
+        message: "Only retrying records may contain retry metadata.",
+      });
+    }
+  });
+export type GenerationRecordV4 = z.infer<typeof GenerationRecordV4Schema>;
 export const GenerationRecordSchema = z.union([
   GenerationRecordV2Schema,
   GenerationRecordV3Schema,
+  GenerationRecordV4Schema,
 ]);
 export type GenerationRecord = z.infer<typeof GenerationRecordSchema>;
 
@@ -909,13 +1411,21 @@ export const LocalQuizContextSchema = z
         resultProtocolVersion: LocalQuizResultProtocolVersionSchema.optional(),
         promptVersion: LocalQuizPromptVersionSchema.optional(),
         validatorVersion: LocalQuizValidatorVersionSchema.optional(),
+        promptFingerprint: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
         generationProfile: LocalGenerationProfileSchema.optional(),
         questionPlan: LocalQuestionPlanSchema.optional(),
         claim: GenerationClaimSchema.optional(),
-        nextCallIndex: z.number().int().min(0).max(128).optional(),
-        nextOrdinalAttempt: z.number().int().min(1).max(12).optional(),
+        nextCallIndex: z.number().int().min(0).max(256).optional(),
+        nextOrdinalAttempt: z.number().int().min(1).max(24).optional(),
         retryKind: AutomaticRetryKindSchema.optional(),
-        automaticRetryCount: z.number().int().min(0).max(12).optional(),
+        automaticRetryCount: z.number().int().min(0).max(48).optional(),
+        retryBudgetUsedCount: z.number().int().min(0).max(48).optional(),
+        automaticRecoveryCount: z.number().int().min(0).max(24).optional(),
+        retryOrdinals: RetryOrdinalsSchema.optional(),
+        previousOutcome: LocalGenerationCallOutcomeSchema.optional(),
         acceptedQuestions: z
           .array(LocalAcceptedQuestionSummarySchema)
           .min(1)
@@ -928,7 +1438,9 @@ export const LocalQuizContextSchema = z
   .superRefine((value, context) => {
     if (
       (value.generationProfile === "stable_non_thinking_v5_2" ||
-        value.generationProfile === "stable_auto_recovery_v5_3") &&
+        value.generationProfile === "stable_auto_recovery_v5_3" ||
+        value.generationProfile === "evidence_grounded_auto_v5_4" ||
+        value.generationProfile === "concept_first_auto_v5_8") &&
       (!value.generationId || !value.generationSessionId)
     ) {
       context.addIssue({
@@ -960,6 +1472,17 @@ export const LocalQuizContextSchema = z
         message: "Continuation must begin at the first missing question.",
       });
       return;
+    }
+    if (
+      value.continuation.retryOrdinals?.some(
+        (ordinal) => ordinal <= value.continuation!.startIndex,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation", "retryOrdinals"],
+        message: "Retry ordinals must belong to the missing suffix.",
+      });
     }
     const typePlan =
       value.continuation.questionPlan?.types ??
@@ -1000,6 +1523,8 @@ const LocalQuestionBaseSchema = z
     concept: z.string().trim().min(1).max(200),
     question: z.string().trim().min(1).max(700),
     explanation: z.string().trim().min(1).max(1_500),
+    claimKey: z.string().trim().min(1).max(300).optional(),
+    conceptCluster: z.string().trim().min(1).max(200).optional(),
   })
   .strict();
 
@@ -1043,12 +1568,105 @@ export const LocalTrueFalseQuestionSchema = LocalQuestionBaseSchema.extend({
   correction: z.string().trim().min(1).max(700),
 }).strict();
 
+export const LocalShortAnswerModeSchema = z.enum([
+  "atomic_term",
+  "proposition",
+  "enumeration",
+  "formula",
+]);
+export type LocalShortAnswerMode = z.infer<typeof LocalShortAnswerModeSchema>;
+
+const LocalAtomicShortAnswerRubricV2Schema = z
+  .object({
+    version: z.literal(2),
+    mode: z.literal("atomic_term"),
+    canonicalAnswer: z.string().trim().min(1).max(500),
+    aliases: z.array(z.string().trim().min(1).max(500)).max(8),
+  })
+  .strict();
+
+const LocalPropositionShortAnswerRubricV2Schema = z
+  .object({
+    version: z.literal(2),
+    mode: z.literal("proposition"),
+    requiredIdeas: z.array(z.string().trim().min(1).max(500)).min(1).max(3),
+    acceptableAnswers: z.array(z.string().trim().min(1).max(1_000)).max(8),
+  })
+  .strict();
+
+const LocalEnumerationShortAnswerRubricV2Schema = z
+  .object({
+    version: z.literal(2),
+    mode: z.literal("enumeration"),
+    requiredItems: z.array(z.string().trim().min(1).max(300)).min(2).max(8),
+    requiredCardinality: z.number().int().min(2).max(8),
+    aliasesByItem: z
+      .array(z.array(z.string().trim().min(1).max(300)).max(6))
+      .min(2)
+      .max(8),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.requiredItems.length !== value.requiredCardinality ||
+      value.aliasesByItem.length !== value.requiredItems.length
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["requiredCardinality"],
+        message:
+          "Enumeration cardinality and alias groups must match the required items.",
+      });
+    }
+  });
+
+const LocalFormulaShortAnswerRubricV2Schema = z
+  .object({
+    version: z.literal(2),
+    mode: z.literal("formula"),
+    canonicalFormula: z.string().trim().min(1).max(1_000),
+    acceptableFormulas: z.array(z.string().trim().min(1).max(1_000)).max(8),
+  })
+  .strict();
+
+export const LocalShortAnswerRubricV2Schema = z.discriminatedUnion("mode", [
+  LocalAtomicShortAnswerRubricV2Schema,
+  LocalPropositionShortAnswerRubricV2Schema,
+  LocalEnumerationShortAnswerRubricV2Schema,
+  LocalFormulaShortAnswerRubricV2Schema,
+]);
+export type LocalShortAnswerRubricV2 = z.infer<
+  typeof LocalShortAnswerRubricV2Schema
+>;
+
 export const LocalShortAnswerQuestionSchema = LocalQuestionBaseSchema.extend({
   type: z.literal("short_answer"),
   answer: z.string().trim().min(1).max(1_000),
   rubricIdeas: z.array(z.string().trim().min(1).max(500)).min(1).max(6),
   acceptableAnswers: z.array(z.string().trim().min(1).max(1_000)).max(8),
-}).strict();
+  shortAnswerMode: LocalShortAnswerModeSchema.optional(),
+  rubricV2: LocalShortAnswerRubricV2Schema.optional(),
+})
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      (value.shortAnswerMode === undefined) !==
+      (value.rubricV2 === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["rubricV2"],
+        message: "Versioned short-answer mode and rubric must appear together.",
+      });
+    }
+    if (value.rubricV2 && value.shortAnswerMode !== value.rubricV2.mode) {
+      context.addIssue({
+        code: "custom",
+        path: ["shortAnswerMode"],
+        message: "The short-answer mode must match its versioned rubric.",
+      });
+    }
+  });
 
 export const LocalConceptQuizQuestionSchema = z.discriminatedUnion("type", [
   LocalMultipleChoiceQuestionSchema,
@@ -1095,15 +1713,29 @@ export const LocalConceptQuizSchema = z
   });
 export type LocalConceptQuiz = z.infer<typeof LocalConceptQuizSchema>;
 
+export const LocalSourceSelectionMetricsSchema = z
+  .object({
+    sentenceCount: z.number().int().min(1).max(100_000),
+    excludedSentenceCount: z.number().int().min(0).max(100_000),
+    candidateWindowCount: z.number().int().min(1).max(10_000),
+    selectedWindowCount: z.number().int().min(1).max(100),
+    focusWordCount: z.number().int().min(1).max(20_000),
+  })
+  .strict();
+export type LocalSourceSelectionMetrics = z.infer<
+  typeof LocalSourceSelectionMetricsSchema
+>;
+
 function localQuizMetricsSchema(minimumAiCalls: 0 | 1) {
   return z
     .object({
-      aiCalls: z.number().int().min(minimumAiCalls).max(45),
-      retryCount: z.number().int().min(0).max(30),
+      aiCalls: z.number().int().min(minimumAiCalls).max(96),
+      retryCount: z.number().int().min(0).max(48),
       inputTokens: z.number().int().nonnegative(),
       outputTokens: z.number().int().nonnegative(),
       reasoningTokens: z.number().int().nonnegative(),
       elapsedMs: z.number().int().positive(),
+      sourceSelection: LocalSourceSelectionMetricsSchema.optional(),
     })
     .strict();
 }
@@ -1112,7 +1744,7 @@ const LocalQuizMetricsSchema = localQuizMetricsSchema(1);
 const LocalQuizChunkMetricsSchema = localQuizMetricsSchema(0);
 
 type LocalGenerationMetadata = {
-  protocolVersion: 5 | 6 | 7;
+  protocolVersion: 5 | 6 | 7 | 8 | 9;
   reasoningEffort: "high" | "none";
   promptVersion: LocalQuizPromptVersion;
   validatorVersion: LocalQuizValidatorVersion;
@@ -1122,40 +1754,78 @@ type LocalGenerationMetadata = {
   generationSessionId?: string;
   recoverySessionId?: string;
   questionPlan?: LocalQuestionPlan;
+  promptFingerprint?: string;
 };
 
 function validateLocalGenerationMetadata(
   value: LocalGenerationMetadata,
   context: z.RefinementCtx,
 ): void {
+  const conceptFirstV58 = value.promptVersion === "quiz-local-json-stream-v5.8";
+  const groundedV57 = value.promptVersion === "quiz-local-json-stream-v5.7";
+  const groundedV56 = value.promptVersion === "quiz-local-json-stream-v5.6";
+  const groundedV55 = value.promptVersion === "quiz-local-json-stream-v5.5";
+  const groundedV54 = value.promptVersion === "quiz-local-json-stream-v5.4";
+  const grounded = groundedV57 || groundedV56 || groundedV55 || groundedV54;
   const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
   const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
-  const valid = automatic
+  const valid = conceptFirstV58
     ? value.protocolVersion === LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
       value.reasoningEffort === "none" &&
       value.validatorVersion === LOCAL_QUIZ_VALIDATOR_VERSION &&
       value.importVersion === LOCAL_QUIZ_PROGRESSIVE_IMPORT_VERSION &&
-      value.generationProfile === "stable_auto_recovery_v5_3" &&
+      value.generationProfile === "concept_first_auto_v5_8" &&
       Boolean(value.generationId) &&
       Boolean(value.generationSessionId) &&
       Boolean(value.recoverySessionId) &&
-      Boolean(value.questionPlan)
-    : stable
-      ? value.protocolVersion === STABLE_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+      Boolean(value.questionPlan) &&
+      Boolean(value.promptFingerprint?.match(/^[a-f0-9]{64}$/))
+    : grounded
+      ? value.protocolVersion === GROUNDED_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.1" &&
-        value.importVersion === "extension-progressive-import-v4" &&
-        value.generationProfile === "stable_non_thinking_v5_2" &&
+        value.validatorVersion ===
+          (groundedV57
+            ? "validator-local-progressive-v4.6"
+            : groundedV56
+              ? "validator-local-progressive-v4.5"
+              : groundedV55
+                ? "validator-local-progressive-v4.4"
+                : "validator-local-progressive-v4.3") &&
+        value.importVersion === "extension-progressive-import-v6" &&
+        value.generationProfile === "evidence_grounded_auto_v5_4" &&
         Boolean(value.generationId) &&
+        Boolean(value.generationSessionId) &&
+        Boolean(value.recoverySessionId) &&
         Boolean(value.questionPlan)
-      : value.protocolVersion === LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
-        value.reasoningEffort === "high" &&
-        value.validatorVersion === "validator-local-progressive-v4.0" &&
-        (value.importVersion === undefined ||
-          value.importVersion === "extension-progressive-import-v3") &&
-        (value.generationProfile === undefined ||
-          value.generationProfile === "legacy_reasoning_v5_1") &&
-        value.questionPlan === undefined;
+      : automatic
+        ? value.protocolVersion ===
+            AUTOMATIC_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+          value.reasoningEffort === "none" &&
+          value.validatorVersion === "validator-local-progressive-v4.2" &&
+          value.importVersion === "extension-progressive-import-v5" &&
+          value.generationProfile === "stable_auto_recovery_v5_3" &&
+          Boolean(value.generationId) &&
+          Boolean(value.generationSessionId) &&
+          Boolean(value.recoverySessionId) &&
+          Boolean(value.questionPlan)
+        : stable
+          ? value.protocolVersion ===
+              STABLE_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+            value.reasoningEffort === "none" &&
+            value.validatorVersion === "validator-local-progressive-v4.1" &&
+            value.importVersion === "extension-progressive-import-v4" &&
+            value.generationProfile === "stable_non_thinking_v5_2" &&
+            Boolean(value.generationId) &&
+            Boolean(value.questionPlan)
+          : value.protocolVersion ===
+              LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION &&
+            value.reasoningEffort === "high" &&
+            value.validatorVersion === "validator-local-progressive-v4.0" &&
+            (value.importVersion === undefined ||
+              value.importVersion === "extension-progressive-import-v3") &&
+            (value.generationProfile === undefined ||
+              value.generationProfile === "legacy_reasoning_v5_1") &&
+            value.questionPlan === undefined;
   if (!valid) {
     context.addIssue({
       code: "custom",
@@ -1180,6 +1850,10 @@ export const LocalConceptQuizResultSchema = z
     generationSessionId: z.string().uuid().optional(),
     recoverySessionId: z.string().uuid().optional(),
     questionPlan: LocalQuestionPlanSchema.optional(),
+    promptFingerprint: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     quiz: LocalConceptQuizSchema,
     metrics: LocalQuizMetricsSchema,
   })
@@ -1205,6 +1879,10 @@ export const LocalConceptQuizContinuationResultSchema = z
     generationSessionId: z.string().uuid().optional(),
     recoverySessionId: z.string().uuid().optional(),
     questionPlan: LocalQuestionPlanSchema.optional(),
+    promptFingerprint: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     title: z.string().trim().min(1).max(300),
     generatedStartIndex: z.number().int().min(1).max(14),
     totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
@@ -1236,6 +1914,10 @@ export const LocalConceptQuizQuestionChunkSchema = z
     generationSessionId: z.string().uuid().optional(),
     recoverySessionId: z.string().uuid().optional(),
     questionPlan: LocalQuestionPlanSchema.optional(),
+    promptFingerprint: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     title: z.string().trim().min(1).max(300),
     startIndex: z.number().int().min(0).max(14),
     totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
@@ -1358,6 +2040,7 @@ export const AttemptGenerationAvailabilitySchema = z
       "generating",
       "retrying",
       "recovering",
+      "cooldown",
       "retry_required",
       "action_required",
       "generation_failed",
@@ -1371,6 +2054,9 @@ export const AttemptGenerationAvailabilitySchema = z
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
     recoverySessionId: z.string().uuid().optional(),
+    nextRecoveryAt: z.string().datetime().optional(),
+    recoveryPhase: GenerationRecoveryPhaseSchema.optional(),
+    activeCallIndex: z.number().int().min(0).max(255).optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -1394,6 +2080,7 @@ export const AttemptGenerationAvailabilitySchema = z
     if (
       value.reasonCode &&
       value.state !== "retry_required" &&
+      value.state !== "cooldown" &&
       value.state !== "action_required" &&
       value.state !== "generation_failed"
     ) {
@@ -1401,6 +2088,13 @@ export const AttemptGenerationAvailabilitySchema = z
         code: "custom",
         path: ["reasonCode"],
         message: "Only a stopped generation state may include a reason code.",
+      });
+    }
+    if ((value.state === "cooldown") !== (value.nextRecoveryAt !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["nextRecoveryAt"],
+        message: "Cooldown availability requires exactly one recovery time.",
       });
     }
     if (
@@ -1437,22 +2131,27 @@ export const ExtensionQuizGenerationProgressRequestSchema = z
       "generating",
       "retrying",
       "recovering",
+      "cooldown",
       "retry_required",
       "action_required",
       "generation_failed",
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
     retryOrdinal: z.number().int().min(1).max(15).optional(),
-    ordinalAttempt: z.number().int().min(1).max(12).optional(),
+    ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
     recoverySessionId: z.string().uuid().optional(),
+    nextRecoveryAt: z.string().datetime().optional(),
+    recoveryPhase: GenerationRecoveryPhaseSchema.optional(),
+    activeCallIndex: z.number().int().min(0).max(255).optional(),
   })
   .strict()
   .superRefine((value, context) => {
     if (
       value.reasonCode &&
       value.state !== "retry_required" &&
+      value.state !== "cooldown" &&
       value.state !== "action_required" &&
       value.state !== "generation_failed"
     ) {
@@ -1460,6 +2159,13 @@ export const ExtensionQuizGenerationProgressRequestSchema = z
         code: "custom",
         path: ["reasonCode"],
         message: "Only a stopped generation state may include a reason code.",
+      });
+    }
+    if ((value.state === "cooldown") !== (value.nextRecoveryAt !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["nextRecoveryAt"],
+        message: "Cooldown progress requires exactly one recovery time.",
       });
     }
     if (
@@ -1499,15 +2205,32 @@ export const AttemptGenerationResponseSchema = z
         reasoningEffort: z.enum(["high", "none"]),
         promptVersion: LocalQuizPromptVersionSchema,
         validatorVersion: LocalQuizValidatorVersionSchema,
+        promptFingerprint: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
         importVersion: LocalQuizProgressiveImportVersionSchema,
         generationProfile: LocalGenerationProfileSchema,
         generationId: z.string().uuid().optional(),
         generationSessionId: z.string().uuid().optional(),
         recoverySessionId: z.string().uuid().optional(),
-        nextCallIndex: z.number().int().min(0).max(128).optional(),
-        nextOrdinalAttempt: z.number().int().min(1).max(12).optional(),
+        nextCallIndex: z.number().int().min(0).max(256).optional(),
+        nextOrdinalAttempt: z.number().int().min(1).max(24).optional(),
         retryKind: AutomaticRetryKindSchema.optional(),
-        automaticRetryCount: z.number().int().min(0).max(12).optional(),
+        automaticRetryCount: z.number().int().min(0).max(48).optional(),
+        retryBudgetUsedCount: z.number().int().min(0).max(48).optional(),
+        automaticRecoveryCount: z.number().int().min(0).max(24).optional(),
+        retryOrdinals: RetryOrdinalsSchema.optional(),
+        previousOutcome: LocalGenerationCallOutcomeSchema.optional(),
+        activeCall: z
+          .object({
+            lifecycleState: z.literal("started"),
+            callIndex: z.number().int().min(0).max(255),
+            startIndex: z.number().int().min(0).max(14),
+            ordinalAttempt: z.number().int().min(1).max(24),
+          })
+          .strict()
+          .optional(),
         questionPlan: LocalQuestionPlanSchema.optional(),
         claim: GenerationClaimSchema,
         acceptedQuestions: z
@@ -1535,6 +2258,31 @@ export const AttemptGenerationResponseSchema = z
         message: "Continuation must describe the authoritative missing suffix.",
       });
       return;
+    }
+    if (
+      value.continuation.retryOrdinals?.some(
+        (ordinal) => ordinal <= value.continuation!.startIndex,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation", "retryOrdinals"],
+        message: "Retry ordinals must belong to the missing suffix.",
+      });
+    }
+    if (
+      value.continuation.activeCall &&
+      (value.continuation.activeCall.startIndex !==
+        value.continuation.startIndex ||
+        value.continuation.nextCallIndex !==
+          value.continuation.activeCall.callIndex + 1)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation", "activeCall"],
+        message:
+          "An active lifecycle must describe the authoritative missing ordinal and next call index.",
+      });
     }
     const typePlan =
       value.continuation.questionPlan?.types ??

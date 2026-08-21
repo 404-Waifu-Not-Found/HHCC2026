@@ -4,6 +4,8 @@ import {
   ExtensionQuizProgressiveImportResponseSchema,
   GenerationClaimResponseSchema,
   MediaResolveResponseSchema,
+  VideoImportResponseSchema,
+  VerifiedVideoMetadataResponseSchema,
   createTranscriptCompleteness,
   type AutomaticRetryKind,
   type GenerationFailureCode,
@@ -15,6 +17,7 @@ import {
 } from "@clipquest/contracts";
 import * as Crypto from "expo-crypto";
 import { apiRequest, ClientApiError, jsonBody } from "../lib/api";
+import { countCaptionWords } from "./eta";
 import {
   authClient,
   type AppSession as AuthAppSession,
@@ -24,6 +27,7 @@ import {
   loadGenerationRecordForAttempt,
   loadImportedVideo,
   clearGenerationRecord,
+  saveImportedVideo,
   saveGenerationRecord,
   startGenerationRecordHeartbeat,
   updateGenerationRecord,
@@ -39,8 +43,20 @@ import {
   getOrStartProgressiveRecoveryTask,
   publishAttemptGeneration,
 } from "./progressive-coordinator";
+import {
+  groundedRecoveryCooldownMs,
+  groundedRecoveryIsExhausted,
+} from "./automatic-recovery-policy";
 
 const RECOVERY_HEARTBEAT_MS = 10_000;
+
+function automaticProfile(profile: string | undefined): boolean {
+  return (
+    profile === "stable_auto_recovery_v5_3" ||
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
+  );
+}
 
 export function ensureProgressiveAttemptRecovery(
   attemptId: string,
@@ -55,28 +71,37 @@ async function runAutomaticRecovery(
   signal: AbortSignal,
 ): Promise<void> {
   const status = await readStatus(attemptId, signal);
-  if (
-    status.generation.state === "ready" ||
-    status.generation.state === "generation_failed" ||
-    !status.continuation
-  ) {
+  if (status.generation.state === "ready" || !status.continuation) {
     return;
   }
   const continuation = status.continuation;
-  const automatic =
-    continuation.generationProfile === "stable_auto_recovery_v5_3";
-  if (status.generation.state === "action_required" && !automatic) return;
-  if (status.generation.state === "retry_required" && automatic) {
-    throw new Error("Automatic banks cannot enter manual continuation state.");
+  const profileAutomatic = automaticProfile(continuation.generationProfile);
+  const legacyAutomaticRecovery = continuation.resultProtocolVersion === 5;
+  const automatic = profileAutomatic || legacyAutomaticRecovery;
+  const grounded =
+    continuation.generationProfile === "evidence_grounded_auto_v5_4" ||
+    continuation.generationProfile === "concept_first_auto_v5_8";
+  if (
+    status.generation.state === "cooldown" &&
+    status.generation.nextRecoveryAt &&
+    Date.parse(status.generation.nextRecoveryAt) > Date.now()
+  ) {
+    return;
   }
-
+  if (
+    status.generation.state === "action_required" ||
+    (status.generation.state === "generation_failed" &&
+      status.continuation.claim.state !== "available")
+  ) {
+    return;
+  }
   const sessionResult = await authClient.getSession();
   const session = sessionResult.data as AuthAppSession | null;
   if (!session?.user.id) return;
   const claimKey = Crypto.randomUUID();
-  const generationSessionId = automatic
-    ? continuation.generationSessionId
-    : Crypto.randomUUID();
+  const generationSessionId =
+    continuation.generationSessionId ??
+    (legacyAutomaticRecovery ? Crypto.randomUUID() : undefined);
   if (!generationSessionId) {
     throw new Error("The generation session metadata is missing.");
   }
@@ -102,16 +127,44 @@ async function runAutomaticRecovery(
     throw error;
   }
 
-  const imported = await loadImportedVideo(continuation.videoId);
+  if (automatic && recoverySessionId) {
+    const preparing = await updateProgress(status.quizId, claimKey, {
+      state: "recovering",
+      recoverySessionId,
+      recoveryPhase: "preparing",
+    });
+    publishAttemptGeneration(attemptId, status.quizId, preparing.generation);
+  }
+
+  let imported = await loadImportedVideo(continuation.videoId);
   if (!imported) {
-    const failed = await stopGeneration(status.quizId, claimKey, {
-      state: "generation_failed",
-      reasonCode: "source_unavailable",
-    }).catch(() => undefined);
-    if (failed) {
-      publishAttemptGeneration(attemptId, status.quizId, failed.generation);
+    try {
+      imported = await apiRequest(
+        `/api/videos/${encodeURIComponent(continuation.videoId)}/recovery`,
+        { signal },
+        VideoImportResponseSchema,
+      );
+      await saveImportedVideo(imported);
+    } catch (error) {
+      const terminal =
+        error instanceof ClientApiError && error.code === "video_not_found";
+      const state = automatic && !terminal ? "cooldown" : "generation_failed";
+      const nextRecoveryAt =
+        state === "cooldown"
+          ? Date.now() + groundedRecoveryCooldownMs(0)
+          : undefined;
+      const stopped = await stopGeneration(status.quizId, claimKey, {
+        state,
+        reasonCode: "source_unavailable",
+        ...(nextRecoveryAt
+          ? { nextRecoveryAt: new Date(nextRecoveryAt).toISOString() }
+          : {}),
+      }).catch(() => undefined);
+      if (stopped) {
+        publishAttemptGeneration(attemptId, status.quizId, stopped.generation);
+      }
+      return;
     }
-    return;
   }
 
   const generationId = continuation.generationId ?? Crypto.randomUUID();
@@ -125,7 +178,7 @@ async function runAutomaticRecovery(
       stored = candidate;
     }
   }
-  if (automatic && (!continuation.questionPlan || !recoverySessionId)) {
+  if (profileAutomatic && (!continuation.questionPlan || !recoverySessionId)) {
     throw new Error("The automatic question plan is missing.");
   }
   const stopLeaseHeartbeat =
@@ -140,20 +193,39 @@ async function runAutomaticRecovery(
       : () => undefined;
   let transcript;
   try {
-    transcript = await acquireContinuationTranscript(imported, signal);
+    transcript = await acquireContinuationTranscript(
+      imported,
+      signal,
+      continuation.quizLanguage,
+    );
   } catch (error) {
     stopLeaseHeartbeat();
     throw error;
   }
+  const captionWordCount = countCaptionWords(transcript.segments);
+  await apiRequest(
+    `/api/videos/${encodeURIComponent(imported.video.id)}/source-metadata`,
+    {
+      method: "PATCH",
+      body: jsonBody({
+        durationSeconds: transcript.verifiedDurationSeconds,
+        sourceLanguage: transcript.language || "und",
+        captionSourceCategory: transcript.captionSourceCategory,
+        captionSegmentCount: transcript.segments.length,
+        captionWordCount,
+      }),
+      signal,
+    },
+    VerifiedVideoMetadataResponseSchema,
+  );
 
   const timestamp = Date.now();
   try {
-    if (automatic) {
+    if (profileAutomatic) {
       if (!continuation.questionPlan || !recoverySessionId) {
         throw new Error("The automatic question plan is missing.");
       }
-      stored = await saveGenerationRecord({
-        version: 3,
+      const commonRecord = {
         generationId,
         generationSessionId,
         recoverySessionId,
@@ -165,12 +237,11 @@ async function runAutomaticRecovery(
         sessionLength: continuation.sessionLength,
         watched: continuation.watched,
         questionPlan: continuation.questionPlan,
-        generationProfile: "stable_auto_recovery_v5_3",
         quizId: status.quizId,
         attemptId,
         acceptedCount: status.generation.availableQuestions,
         plannedCount: status.generation.totalQuestions,
-        state: "recovering",
+        state: "recovering" as const,
         nextCallIndex: continuation.nextCallIndex ?? 0,
         ordinalAttempts: {
           [String(status.generation.availableQuestions + 1)]:
@@ -180,7 +251,23 @@ async function runAutomaticRecovery(
         activeRecoveryStartedAt: timestamp,
         createdAt: stored?.createdAt ?? timestamp,
         updatedAt: timestamp,
-      });
+      };
+      stored = grounded
+        ? await saveGenerationRecord({
+            ...commonRecord,
+            version: 4,
+            generationProfile: continuation.generationProfile as
+              "evidence_grounded_auto_v5_4" | "concept_first_auto_v5_8",
+            recoveryCycle:
+              stored?.version === 4
+                ? Math.min(24, stored.recoveryCycle + 1)
+                : 1,
+          })
+        : await saveGenerationRecord({
+            ...commonRecord,
+            version: 3,
+            generationProfile: "stable_auto_recovery_v5_3",
+          });
     } else {
       stored = await saveGenerationRecord({
         version: 2,
@@ -200,7 +287,7 @@ async function runAutomaticRecovery(
         acceptedCount: status.generation.availableQuestions,
         plannedCount: status.generation.totalQuestions,
         state: "retrying",
-        nextCallIndex: 0,
+        nextCallIndex: continuation.nextCallIndex ?? 0,
         createdAt: stored?.createdAt ?? timestamp,
         updatedAt: timestamp,
       });
@@ -214,6 +301,7 @@ async function runAutomaticRecovery(
     ...status.generation,
     state: automatic ? "recovering" : "retrying",
     ...(recoverySessionId ? { recoverySessionId } : {}),
+    ...(automatic ? { recoveryPhase: "preparing" as const } : {}),
   });
 
   const context: LocalQuizContext = {
@@ -240,10 +328,27 @@ async function runAutomaticRecovery(
       questionPlan: continuation.questionPlan,
       claim: claim.claim,
       nextCallIndex: automatic ? continuation.nextCallIndex : 0,
-      nextOrdinalAttempt: continuation.nextOrdinalAttempt,
-      retryKind: continuation.retryKind,
+      nextOrdinalAttempt: continuation.activeCall
+        ? Math.min(24, continuation.activeCall.ordinalAttempt + 1)
+        : continuation.nextOrdinalAttempt,
+      retryKind: continuation.activeCall
+        ? "automatic_resume"
+        : continuation.retryKind,
       automaticRetryCount: continuation.automaticRetryCount,
+      retryBudgetUsedCount: continuation.retryBudgetUsedCount,
+      retryOrdinals: continuation.activeCall
+        ? [
+            ...new Set([
+              ...(continuation.retryOrdinals ?? []),
+              continuation.activeCall.startIndex + 1,
+            ]),
+          ].sort((left, right) => left - right)
+        : continuation.retryOrdinals,
+      previousOutcome: continuation.activeCall
+        ? "network_interrupted"
+        : continuation.previousOutcome,
       acceptedQuestions: continuation.acceptedQuestions,
+      promptFingerprint: continuation.promptFingerprint,
     },
   };
 
@@ -251,7 +356,12 @@ async function runAutomaticRecovery(
   let ingestion = Promise.resolve();
   let lastProgressState = "recovering";
   let automaticRetryCount =
-    stored?.version === 3 ? stored.automaticRetryCount : 0;
+    stored?.version === 3 || stored?.version === 4
+      ? stored.automaticRetryCount
+      : (continuation.automaticRetryCount ?? 0);
+  let retryBudgetUsedCount =
+    continuation.retryBudgetUsedCount ?? automaticRetryCount;
+  let latestOrdinalAttempt = continuation.nextOrdinalAttempt ?? 1;
   const stopLocalHeartbeat = startGenerationRecordHeartbeat(generationId);
 
   const enqueueCall = (event: LocalGenerationCallEvent) => {
@@ -266,15 +376,44 @@ async function runAutomaticRecovery(
         },
         ExtensionQuizGenerationCallEventResponseSchema,
       );
-      if (event.classification === "automatic_retry") {
-        automaticRetryCount = Math.min(12, automaticRetryCount + 1);
+      if ("lifecycleState" in event) {
+        latest = {
+          ...latest,
+          recoveryPhase:
+            event.lifecycleState === "started" ? "dispatched" : undefined,
+          activeCallIndex:
+            event.lifecycleState === "started" ? event.callIndex : undefined,
+        };
+        publishAttemptGeneration(attemptId, status.quizId, latest);
       }
-      await updateGenerationRecord(generationId, {
-        nextCallIndex: event.callIndex + 1,
-        ...(event.classification === "automatic_retry"
-          ? { automaticRetryCount }
-          : {}),
-      });
+      if (
+        event.classification === "automatic_retry" &&
+        (!("lifecycleState" in event) || event.lifecycleState === "started")
+      ) {
+        automaticRetryCount = Math.min(
+          continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
+            continuation.promptVersion === "quiz-local-json-stream-v5.6" ||
+            legacyAutomaticRecovery
+            ? 12
+            : grounded
+              ? 48
+              : 12,
+          automaticRetryCount + 1,
+        );
+        retryBudgetUsedCount = Math.min(48, retryBudgetUsedCount + 1);
+      }
+      await updateGenerationRecord(
+        generationId,
+        stored?.version === 3 || stored?.version === 4
+          ? {
+              nextCallIndex: event.callIndex + 1,
+              ...(event.classification === "automatic_retry"
+                ? { automaticRetryCount }
+                : {}),
+            }
+          : { nextCallIndex: event.callIndex + 1 },
+      );
     });
     void ingestion.catch(() => undefined);
   };
@@ -294,6 +433,9 @@ async function runAutomaticRecovery(
           return;
         }
         lastProgressState = nextState;
+        if (detail.ordinalAttempt) {
+          latestOrdinalAttempt = detail.ordinalAttempt;
+        }
         ingestion = ingestion.then(async () => {
           const response = await updateProgress(
             status.quizId,
@@ -303,22 +445,27 @@ async function runAutomaticRecovery(
           );
           latest = response.generation;
           publishAttemptGeneration(attemptId, status.quizId, latest);
-          await updateGenerationRecord(generationId, {
-            state: nextState,
-            ...(nextState === "retrying"
+          await updateGenerationRecord(
+            generationId,
+            stored?.version === 3 || stored?.version === 4
               ? {
-                  retryOrdinal: detail.retryOrdinal,
-                  ordinalAttempt: detail.ordinalAttempt,
-                  retryKind: detail.retryKind,
-                  retryDelayMs: detail.retryDelayMs,
+                  state: nextState,
+                  ...(nextState === "retrying"
+                    ? {
+                        retryOrdinal: detail.retryOrdinal,
+                        ordinalAttempt: detail.ordinalAttempt,
+                        retryKind: detail.retryKind,
+                        retryDelayMs: detail.retryDelayMs,
+                      }
+                    : {
+                        retryOrdinal: undefined,
+                        ordinalAttempt: undefined,
+                        retryKind: undefined,
+                        retryDelayMs: undefined,
+                      }),
                 }
-              : {
-                  retryOrdinal: undefined,
-                  ordinalAttempt: undefined,
-                  retryKind: undefined,
-                  retryDelayMs: undefined,
-                }),
-          });
+              : { state: nextState },
+          );
         });
         void ingestion.catch(() => undefined);
       },
@@ -338,7 +485,7 @@ async function runAutomaticRecovery(
           publishAttemptGeneration(attemptId, status.quizId, latest);
           await updateGenerationRecord(
             generationId,
-            automatic
+            stored?.version === 3 || stored?.version === 4
               ? {
                   acceptedCount: latest.availableQuestions,
                   state: latest.state,
@@ -369,17 +516,45 @@ async function runAutomaticRecovery(
       error instanceof LocalGenerationRequestError
         ? error.reasonCode
         : "local_state_conflict";
+    const groundedExhausted =
+      grounded &&
+      groundedRecoveryIsExhausted({
+        reasonCode,
+        record: stored,
+        automaticRetryCount,
+        ordinalAttempt: latestOrdinalAttempt,
+        strictBudget:
+          continuation.promptVersion === "quiz-local-json-stream-v5.8" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.7" ||
+          continuation.promptVersion === "quiz-local-json-stream-v5.6",
+      });
+    const compatibilityExhausted =
+      legacyAutomaticRecovery &&
+      (retryBudgetUsedCount >= 12 ||
+        (continuation.automaticRecoveryCount ?? 0) + 1 >= 3);
     const state =
       reasonCode === "credential_required" || reasonCode === "billing_required"
         ? "action_required"
-        : "generation_failed";
+        : automatic && !groundedExhausted && !compatibilityExhausted
+          ? "cooldown"
+          : "generation_failed";
+    const nextRecoveryAt =
+      state === "cooldown"
+        ? Date.now() +
+          groundedRecoveryCooldownMs(
+            stored?.version === 4 ? stored.recoveryCycle : 0,
+          )
+        : undefined;
     const failed = await stopGeneration(status.quizId, claimKey, {
       state,
       reasonCode,
+      ...(nextRecoveryAt
+        ? { nextRecoveryAt: new Date(nextRecoveryAt).toISOString() }
+        : {}),
     }).catch(() => undefined);
     await updateGenerationRecord(
       generationId,
-      automatic
+      stored?.version === 3 || stored?.version === 4
         ? {
             state,
             reasonCode,
@@ -387,6 +562,7 @@ async function runAutomaticRecovery(
             ordinalAttempt: undefined,
             retryKind: undefined,
             retryDelayMs: undefined,
+            ...(nextRecoveryAt ? { nextRecoveryAt } : {}),
           }
         : { state: "retry_required" },
     ).catch(() => undefined);
@@ -414,6 +590,8 @@ function progressPayload(
           ordinalAttempt: detail.ordinalAttempt,
           retryKind: detail.retryKind,
           retryDelayMs: detail.retryDelayMs,
+          reasonCode: detail.reasonCode,
+          recoveryPhase: "preparing" as const,
         }
       : {}),
   };
@@ -472,15 +650,20 @@ async function matchingGenerationRecord(
 async function acquireContinuationTranscript(
   imported: NonNullable<Awaited<ReturnType<typeof loadImportedVideo>>>,
   signal: AbortSignal,
+  preferredLanguage: string,
 ): Promise<{
   segments: TranscriptSegment[];
   completeness: TranscriptCompleteness;
   language: string;
+  verifiedDurationSeconds: number;
+  captionSourceCategory:
+    "manual" | "automatic" | "local_transcription" | "unknown";
 }> {
   const textTranscript = await acquireTextTranscript(
     imported,
     signal,
     () => undefined,
+    preferredLanguage,
   );
   if (textTranscript) return textTranscript;
   const media = await apiRequest(
@@ -504,6 +687,8 @@ async function acquireContinuationTranscript(
   return {
     segments: result.segments,
     language: result.language,
+    verifiedDurationSeconds: imported.video.durationSeconds,
+    captionSourceCategory: "local_transcription",
     completeness: createTranscriptCompleteness(
       result.segments,
       imported.video.durationSeconds,
@@ -519,6 +704,7 @@ function updateProgress(
       | "generating"
       | "retrying"
       | "recovering"
+      | "cooldown"
       | "action_required"
       | "generation_failed";
     reasonCode?: GenerationFailureCode;
@@ -527,6 +713,16 @@ function updateProgress(
     retryKind?: AutomaticRetryKind;
     retryDelayMs?: number;
     recoverySessionId?: string;
+    nextRecoveryAt?: string;
+    recoveryPhase?:
+      | "preparing"
+      | "dispatched"
+      | "streaming"
+      | "repairing"
+      | "cooldown"
+      | "complete"
+      | "failed";
+    activeCallIndex?: number;
   },
   signal?: AbortSignal,
 ) {
@@ -546,8 +742,9 @@ function stopGeneration(
   quizId: string,
   idempotencyKey: string | undefined,
   progress: {
-    state: "action_required" | "generation_failed";
+    state: "action_required" | "generation_failed" | "cooldown";
     reasonCode: GenerationFailureCode;
+    nextRecoveryAt?: string;
   },
 ) {
   if (!idempotencyKey) throw new Error("The generation key is unavailable.");

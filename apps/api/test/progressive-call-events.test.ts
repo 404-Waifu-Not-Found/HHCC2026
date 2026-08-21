@@ -1,7 +1,13 @@
 import { DatabaseSync, type StatementSync } from "node:sqlite";
+import type { LocalGenerationCallOutcome } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { errorResponse } from "../src/lib/errors";
+import {
+  automaticRetryKindForOutcome,
+  readProgressiveGenerationSnapshot,
+  retryKindMatchesGenerationOutcome,
+} from "../src/lib/progressive-quiz";
 import type { ApiBindings } from "../src/middleware/authenticated";
 import { quizImportsRouter } from "../src/routes/quiz-imports";
 import { quizzesRouter } from "../src/routes/quizzes";
@@ -230,6 +236,11 @@ function createDatabase(
       retry_kind TEXT,
       ordinal_attempt INTEGER,
       recovery_session_id TEXT,
+      purpose TEXT,
+      lifecycle_state TEXT NOT NULL DEFAULT 'completed',
+      dispatched_at INTEGER,
+      completed_at INTEGER,
+      last_stream_activity_at INTEGER,
       PRIMARY KEY (quiz_id, generation_session_id, call_index)
     );
     CREATE TABLE quiz_generation_claims (
@@ -293,6 +304,46 @@ function createAutomaticDatabase(
       RECOVERY_SESSION_ID,
       timestamp,
     );
+  return db;
+}
+
+function createGroundedDatabase(timestamp = Date.now()) {
+  const db = createAutomaticDatabase("generating", timestamp);
+  const grounded = {
+    ...automaticSummary("generating", timestamp),
+    importVersion: "extension-progressive-import-v6",
+    resultProtocolVersion: 8,
+    promptVersion: "quiz-local-json-stream-v5.5",
+    validatorVersion: "validator-local-progressive-v4.4",
+    generationProfile: "evidence_grounded_auto_v5_4",
+  };
+  db.sqlite
+    .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+    .run(JSON.stringify(grounded), QUIZ_ID);
+  return db;
+}
+
+function createConceptFirstDatabase(timestamp = Date.now()) {
+  const db = createAutomaticDatabase("generating", timestamp);
+  const conceptFirst = {
+    ...automaticSummary("generating", timestamp),
+    importVersion: "extension-progressive-import-v7",
+    resultProtocolVersion: 9,
+    promptVersion: "quiz-local-json-stream-v5.8",
+    validatorVersion: "validator-local-progressive-v4.7",
+    generationProfile: "concept_first_auto_v5_8",
+    promptFingerprint: "e".repeat(64),
+    sourceSelection: {
+      sentenceCount: 10,
+      excludedSentenceCount: 1,
+      candidateWindowCount: 6,
+      selectedWindowCount: 5,
+      focusWordCount: 120,
+    },
+  };
+  db.sqlite
+    .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+    .run(JSON.stringify(conceptFirst), QUIZ_ID);
   return db;
 }
 
@@ -364,12 +415,7 @@ function automaticCallEvent(
       | "duplicate_repair"
       | "answer_repair"
       | "automatic_resume";
-    outcome:
-      | "complete"
-      | "transient_http"
-      | "network_interrupted"
-      | "schema_invalid"
-      | "empty_content";
+    outcome: LocalGenerationCallOutcome;
     retryDelayMs: number;
     recoverySessionId: string;
   }> = {},
@@ -395,6 +441,230 @@ function automaticCallEvent(
   };
 }
 
+function groundedCallEvent(
+  overrides: Parameters<typeof automaticCallEvent>[0] = {},
+) {
+  return {
+    ...automaticCallEvent(overrides),
+    protocolVersion: 8 as const,
+    purpose: "generation" as const,
+  };
+}
+
+function conceptFirstLifecycleEvent(
+  lifecycleState: "started" | "completed" | "abandoned",
+  overrides: Partial<{
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+    acceptedCount: 0 | 1;
+    classification: "primary" | "automatic_retry";
+    retryKind:
+      | "transport"
+      | "empty_content"
+      | "truncated_output"
+      | "content_repair"
+      | "duplicate_repair"
+      | "answer_repair"
+      | "automatic_resume";
+    outcome: LocalGenerationCallOutcome;
+    retryDelayMs: number;
+    elapsedMs: number;
+  }> = {},
+) {
+  const terminal = lifecycleState !== "started";
+  return {
+    protocolVersion: 9 as const,
+    purpose: "generation" as const,
+    lifecycleState,
+    generationSessionId: SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    callIndex: 0,
+    startIndex: 0,
+    ordinalAttempt: 1,
+    requestedCount: 1 as const,
+    acceptedCount: terminal ? (1 as const) : (0 as const),
+    classification: "primary" as const,
+    retryDelayMs: 0,
+    usageComplete: false,
+    ...(terminal ? { outcome: "complete" as const, elapsedMs: 2_000 } : {}),
+    ...overrides,
+  };
+}
+
+function legacyAutomaticRecoveryCallEvent(
+  overrides: Partial<{
+    generationSessionId: string;
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+    acceptedCount: 0 | 1;
+    classification: "primary" | "automatic_retry";
+    retryKind:
+      | "transport"
+      | "empty_content"
+      | "truncated_output"
+      | "content_repair"
+      | "duplicate_repair"
+      | "answer_repair"
+      | "automatic_resume";
+    outcome:
+      | "complete"
+      | "transient_http"
+      | "network_interrupted"
+      | "schema_invalid"
+      | "empty_content";
+    retryDelayMs: number;
+  }> = {},
+) {
+  const event = {
+    protocolVersion: 5 as const,
+    purpose: "automatic_recovery" as const,
+    generationSessionId: SECOND_SESSION_ID,
+    recoverySessionId: RECOVERY_SESSION_ID,
+    callIndex: 7,
+    startIndex: 11,
+    ordinalAttempt: 2,
+    requestedCount: 1 as const,
+    acceptedCount: 1 as 0 | 1,
+    classification: "automatic_retry" as const,
+    retryKind: "content_repair" as const,
+    outcome: "complete" as const,
+    retryDelayMs: 0,
+    elapsedMs: 2_000,
+    inputTokens: 100,
+    outputTokens: 20,
+    reasoningTokens: 0,
+    usageComplete: true,
+    ...overrides,
+  };
+  if (event.classification === "primary" && !("retryKind" in overrides)) {
+    delete (event as { retryKind?: string }).retryKind;
+  }
+  return event;
+}
+
+function legacyRun8Summary(
+  acceptedCount: number,
+  state: "generation_failed" | "recovering" | "generating" | "ready",
+  timestamp = Date.now(),
+) {
+  return {
+    source: "extension-local-json-stream",
+    importVersion: "extension-progressive-import-v3",
+    resultProtocolVersion: 5,
+    pipelineVersion: 9,
+    model: "deepseek-v4-flash",
+    reasoningEffort: "high",
+    promptVersion: "quiz-local-json-stream-v5.1",
+    validatorVersion: "validator-local-progressive-v4.0",
+    generationProfile: "legacy_reasoning_v5_1",
+    generationState: state,
+    ...(state === "generation_failed" ? { reasonCode: "schema_invalid" } : {}),
+    requestedQuestionTypes: ["multiple_choice"],
+    plannedQuestionTypes: Array(15).fill("multiple_choice"),
+    generatedQuestionTypes: Array(acceptedCount).fill("multiple_choice"),
+    plannedCount: 15,
+    acceptedCount,
+    lastProgressAt: timestamp,
+    lastQuestionAt: timestamp,
+    stateChangedAt: timestamp,
+    telemetryAvailable: true,
+    acceptedQuestionSummaries: Array.from(
+      { length: acceptedCount },
+      (_, index) => ({
+        id: `q${index + 1}`,
+        type: "multiple_choice",
+        concept: `Supported concept ${index + 1}`,
+        question: `Which result is supported in case ${index + 1}?`,
+      }),
+    ),
+    transcriptStored: false,
+    aiCalls: 7,
+    retryCount: 0,
+    inputTokens: 700,
+    outputTokens: 140,
+    reasoningTokens: 0,
+    elapsedMs: 14_000,
+  };
+}
+
+function createLegacyRun8Database(timestamp = Date.now() - 60_000) {
+  const db = createDatabase("generating", timestamp);
+  for (let ordinal = 2; ordinal <= 11; ordinal += 1) {
+    db.sqlite
+      .prepare("INSERT INTO questions VALUES (?, ?)")
+      .run(
+        `00000000-0000-4000-8000-${String(ordinal).padStart(12, "0")}`,
+        QUIZ_ID,
+      );
+  }
+  db.sqlite
+    .prepare("UPDATE attempts SET item_count = 15 WHERE id = ?")
+    .run(ATTEMPT_ID);
+  db.sqlite
+    .prepare(
+      "UPDATE quiz_banks SET session_length = 'long', quality_summary_json = ? WHERE id = ?",
+    )
+    .run(
+      JSON.stringify(legacyRun8Summary(11, "generation_failed", timestamp)),
+      QUIZ_ID,
+    );
+  db.sqlite
+    .prepare(
+      `INSERT INTO quiz_generation_call_events
+       (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at)
+       VALUES (?, ?, 6, 11, 2, 0, 'primary', 'schema_invalid', 0, 2000, 100, 20, 0, 1, ?)`,
+    )
+    .run(QUIZ_ID, SESSION_ID, timestamp + 1_000);
+  db.sqlite
+    .prepare(
+      `INSERT INTO quiz_generation_call_events
+       (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at)
+       VALUES (?, ?, 0, 11, 1, 0, 'manual_continuation', 'schema_invalid', 0, 2000, 100, 20, 0, 1, ?)`,
+    )
+    .run(QUIZ_ID, SECOND_SESSION_ID, timestamp + 2_000);
+  return db;
+}
+
+function advanceLegacyRun8Frontier(db: SqliteD1Adapter, acceptedCount: number) {
+  db.sqlite
+    .prepare("INSERT INTO questions VALUES (?, ?)")
+    .run(
+      `00000000-0000-4000-8000-${String(acceptedCount).padStart(12, "0")}`,
+      QUIZ_ID,
+    );
+  const stored = db.sqlite
+    .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+    .get(QUIZ_ID) as { quality_summary_json: string };
+  const current = JSON.parse(stored.quality_summary_json) as Record<
+    string,
+    unknown
+  >;
+  const next = legacyRun8Summary(
+    acceptedCount,
+    acceptedCount === 15 ? "ready" : "generating",
+  );
+  db.sqlite
+    .prepare(
+      "UPDATE quiz_banks SET quality_status = ?, quality_summary_json = ? WHERE id = ?",
+    )
+    .run(
+      acceptedCount === 15 ? "passed" : "generating",
+      JSON.stringify({
+        ...current,
+        ...next,
+        aiCalls: current.aiCalls,
+        retryCount: current.retryCount,
+        inputTokens: current.inputTokens,
+        outputTokens: current.outputTokens,
+        reasoningTokens: current.reasoningTokens,
+        elapsedMs: current.elapsedMs,
+      }),
+      QUIZ_ID,
+    );
+}
+
 function putCall<T extends { generationSessionId: string; callIndex: number }>(
   app: Hono<ApiBindings>,
   env: ApiBindings["Bindings"],
@@ -414,6 +684,183 @@ function putCall<T extends { generationSessionId: string; callIndex: number }>(
     env,
   );
 }
+
+describe("protocol-5 automatic compatibility recovery", () => {
+  it("recovers the Run 8 q1-q11 prefix and classifies only attempted ordinals as retries", async () => {
+    const db = createLegacyRun8Database();
+    const { app, env } = testApp(db);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      quizId: QUIZ_ID,
+      generation: {
+        state: "generation_failed",
+        availableQuestions: 11,
+        totalQuestions: 15,
+      },
+      continuation: {
+        startIndex: 11,
+        generationSessionId: SECOND_SESSION_ID,
+        nextCallIndex: 1,
+        automaticRetryCount: 0,
+        retryBudgetUsedCount: 1,
+        retryOrdinals: [12, 13],
+        previousOutcome: "schema_invalid",
+        claim: { state: "available" },
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SECOND_SESSION_ID,
+          recoverySessionId: RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+
+    for (const event of [
+      legacyAutomaticRecoveryCallEvent({ callIndex: 1 }),
+      legacyAutomaticRecoveryCallEvent({ callIndex: 2, startIndex: 12 }),
+      legacyAutomaticRecoveryCallEvent({
+        callIndex: 3,
+        startIndex: 13,
+        ordinalAttempt: 1,
+        classification: "primary",
+      }),
+      legacyAutomaticRecoveryCallEvent({
+        callIndex: 4,
+        startIndex: 14,
+        ordinalAttempt: 1,
+        classification: "primary",
+      }),
+    ]) {
+      const response = await putCall(app, env, event, CLAIM_KEY);
+      expect(response.status).toBe(201);
+      advanceLegacyRun8Frontier(db, event.startIndex + 1);
+    }
+
+    expect(
+      db.sqlite
+        .prepare(
+          `SELECT call_index, start_ordinal, requested_count, classification, protocol_version, retry_kind, recovery_session_id
+           FROM quiz_generation_call_events
+           WHERE generation_session_id = ? AND call_index >= 1
+           ORDER BY call_index`,
+        )
+        .all(SECOND_SESSION_ID),
+    ).toEqual([
+      {
+        call_index: 1,
+        start_ordinal: 11,
+        requested_count: 1,
+        classification: "automatic_retry",
+        protocol_version: 5,
+        retry_kind: "content_repair",
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+      {
+        call_index: 2,
+        start_ordinal: 12,
+        requested_count: 1,
+        classification: "automatic_retry",
+        protocol_version: 5,
+        retry_kind: "content_repair",
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+      {
+        call_index: 3,
+        start_ordinal: 13,
+        requested_count: 1,
+        classification: "primary",
+        protocol_version: 5,
+        retry_kind: null,
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+      {
+        call_index: 4,
+        start_ordinal: 14,
+        requested_count: 1,
+        classification: "primary",
+        protocol_version: 5,
+        retry_kind: null,
+        recovery_session_id: RECOVERY_SESSION_ID,
+      },
+    ]);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT quality_status, quality_summary_json FROM quiz_banks WHERE id = ?",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({ quality_status: "passed" });
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
+        .get(QUIZ_ID),
+    ).toMatchObject({ count: 15 });
+  });
+
+  it("replays historical manual rows exactly but rejects every new insertion", async () => {
+    const db = createDatabase("retry_required");
+    const { app, env } = testApp(db);
+    const historical = callEvent({
+      generationSessionId: SECOND_SESSION_ID,
+      acceptedCount: 0,
+      classification: "manual_continuation",
+      outcome: "schema_invalid",
+    });
+    db.sqlite
+      .prepare(
+        `INSERT INTO quiz_generation_call_events
+         (quiz_id, generation_session_id, call_index, start_ordinal, requested_count, accepted_count, classification, outcome_code, retry_delay_ms, elapsed_ms, input_tokens, output_tokens, reasoning_tokens, usage_complete, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        QUIZ_ID,
+        historical.generationSessionId,
+        historical.callIndex,
+        historical.startIndex,
+        historical.requestedCount,
+        historical.acceptedCount,
+        historical.classification,
+        historical.outcome,
+        historical.retryDelayMs,
+        historical.elapsedMs,
+        historical.inputTokens,
+        historical.outputTokens,
+        historical.reasoningTokens,
+        historical.usageComplete ? 1 : 0,
+        Date.now(),
+      );
+
+    expect((await putCall(app, env, historical)).status).toBe(200);
+    const fresh = await putCall(app, env, {
+      ...historical,
+      callIndex: 1,
+    });
+    expect(fresh.status).toBe(422);
+    expect(await fresh.json()).toMatchObject({
+      error: { code: "manual_generation_continuation_removed" },
+    });
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM quiz_generation_call_events")
+        .get(),
+    ).toMatchObject({ count: 1 });
+  });
+});
 
 describe("protocol-7 automatic recovery call events", () => {
   it("accepts exactly two content repairs and rejects manual classifications", async () => {
@@ -605,6 +1052,127 @@ describe("protocol-7 automatic recovery call events", () => {
   });
 });
 
+describe("protocol-8 evidence-grounded call events", () => {
+  it("keeps v5.3 isolated, stores purpose, and materializes authoritative totals", async () => {
+    const db = createGroundedDatabase();
+    const { app, env } = testApp(db);
+    expect((await putCall(app, env, groundedCallEvent())).status).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          groundedCallEvent({
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "schema_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    for (const [callIndex, ordinalAttempt] of [
+      [2, 2],
+      [3, 3],
+    ] as const) {
+      expect(
+        (
+          await putCall(
+            app,
+            env,
+            groundedCallEvent({
+              callIndex,
+              startIndex: 1,
+              ordinalAttempt,
+              acceptedCount: 0,
+              classification: "automatic_retry",
+              retryKind: "content_repair",
+              outcome: "schema_invalid",
+            }),
+          )
+        ).status,
+      ).toBe(201);
+    }
+
+    const exhausted = await putCall(
+      app,
+      env,
+      groundedCallEvent({
+        callIndex: 4,
+        startIndex: 1,
+        ordinalAttempt: 4,
+        acceptedCount: 0,
+        classification: "automatic_retry",
+        retryKind: "content_repair",
+        outcome: "schema_invalid",
+      }),
+    );
+    expect(exhausted.status).toBe(409);
+    expect(await exhausted.json()).toMatchObject({
+      error: { code: "automatic_retry_ordinal_budget_exceeded" },
+    });
+
+    const events = db.sqlite
+      .prepare(
+        "SELECT protocol_version, purpose FROM quiz_generation_call_events ORDER BY call_index",
+      )
+      .all() as Array<{ protocol_version: number; purpose: string }>;
+    expect(events).toHaveLength(4);
+    expect(events.every((event) => event.protocol_version === 8)).toBe(true);
+    expect(events.every((event) => event.purpose === "generation")).toBe(true);
+    const stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      aiCalls: 4,
+      retryCount: 2,
+      inputTokens: 400,
+      outputTokens: 80,
+      elapsedMs: 8_000,
+    });
+  });
+
+  it("stores a bounded cooldown and releases the recovery lease", async () => {
+    const db = createGroundedDatabase();
+    const { app, env } = testApp(db);
+    const nextRecoveryAt = new Date(Date.now() + 30_000).toISOString();
+    const response = await app.request(
+      `/imports/${QUIZ_ID}/progress`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": IMPORT_KEY,
+        },
+        body: JSON.stringify({
+          state: "cooldown",
+          reasonCode: "schema_invalid",
+          recoverySessionId: RECOVERY_SESSION_ID,
+          nextRecoveryAt,
+        }),
+      },
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      generation: { state: "cooldown", nextRecoveryAt },
+    });
+    const stored = db.sqlite
+      .prepare(
+        "SELECT quality_summary_json, lease_expires_at FROM quiz_banks JOIN quiz_generation_claims ON quiz_generation_claims.quiz_id = quiz_banks.id WHERE quiz_banks.id = ?",
+      )
+      .get(QUIZ_ID) as {
+      quality_summary_json: string;
+      lease_expires_at: number;
+    };
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      generationState: "cooldown",
+      nextRecoveryAt: Date.parse(nextRecoveryAt),
+    });
+    expect(stored.lease_expires_at).toBeLessThanOrEqual(Date.now());
+  });
+});
+
 describe("authoritative progressive call events", () => {
   it("records exact events idempotently and rejects conflicting replays", async () => {
     const db = createDatabase();
@@ -739,6 +1307,569 @@ describe("authoritative progressive call events", () => {
     expect(stored.generationState).toBe("retry_required");
     expect(stored.stateChangedAt).toBeGreaterThan(timestamp);
     expect(row.lease_expires_at).toBeLessThanOrEqual(Date.now());
+  });
+});
+
+describe("protocol-9 concept-first call lifecycles", () => {
+  it.each([
+    ["transient_http", "transport"],
+    ["network_interrupted", "transport"],
+    ["timeout", "transport"],
+    ["call_dispatch_timeout", "transport"],
+    ["stream_idle_timeout", "transport"],
+    ["empty_content", "empty_content"],
+    ["truncated_json", "truncated_output"],
+    ["finish_length", "truncated_output"],
+    ["duplicate_question", "duplicate_repair"],
+    ["schema_invalid", "content_repair"],
+    ["type_or_order_mismatch", "content_repair"],
+    ["source_framing_invalid", "content_repair"],
+    ["course_logistics_invalid", "content_repair"],
+    ["low_pedagogical_value", "content_repair"],
+    ["rubric_invalid", "content_repair"],
+    ["question_tautology_invalid", "content_repair"],
+    ["quiz_language_mismatch", "content_repair"],
+    ["answer_mapping_invalid", "answer_repair"],
+    ["mc_evidence_span_invalid", "answer_repair"],
+    ["mc_distractor_duplicate", "answer_repair"],
+    ["mc_distractor_equivalent", "answer_repair"],
+    ["mc_answer_kind_mismatch", "answer_repair"],
+    ["true_false_fact_invalid", "answer_repair"],
+    ["true_false_mutation_unavailable", "answer_repair"],
+    ["short_atomic_invalid", "answer_repair"],
+    ["short_proposition_invalid", "answer_repair"],
+    ["short_enumeration_invalid", "answer_repair"],
+    ["short_formula_invalid", "answer_repair"],
+    ["question_answer_kind_mismatch", "answer_repair"],
+    ["local_state_conflict", "automatic_resume"],
+    ["append_conflict", "automatic_resume"],
+  ] as const)("maps %s to the truthful %s retry kind", (outcome, kind) => {
+    expect(automaticRetryKindForOutcome(outcome)).toBe(kind);
+    expect(retryKindMatchesGenerationOutcome(kind, outcome)).toBe(true);
+  });
+
+  it.each([
+    "complete",
+    "partial_accepted",
+    "credential_required",
+    "billing_required",
+    "source_unavailable",
+    "recovery_budget_exhausted",
+    "non_instructional_source",
+  ] as const)("does not retry terminal outcome %s", (outcome) => {
+    expect(automaticRetryKindForOutcome(outcome)).toBeNull();
+  });
+
+  it("accepts an answer-repair lifecycle after a precise v5.8 MC failure", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("completed", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+            outcome: "mc_evidence_span_invalid",
+          }),
+        )
+      ).status,
+    ).toBe(200);
+
+    const snapshot = await readProgressiveGenerationSnapshot(
+      db as unknown as D1Database,
+      QUIZ_ID,
+    );
+    expect(snapshot.nextRetryKind).toBe("answer_repair");
+    expect(snapshot.nextOrdinalAttempt).toBe(2);
+
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 2,
+            startIndex: 1,
+            ordinalAttempt: 2,
+            acceptedCount: 0,
+            classification: "automatic_retry",
+            retryKind: "answer_repair",
+          }),
+        )
+      ).status,
+    ).toBe(201);
+  });
+
+  it("records one dispatched request and finalizes the same row exactly once", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    const started = conceptFirstLifecycleEvent("started");
+    const completed = conceptFirstLifecycleEvent("completed");
+
+    expect((await putCall(app, env, started)).status).toBe(201);
+    expect((await putCall(app, env, started)).status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT COUNT(*) AS count, lifecycle_state, outcome_code FROM quiz_generation_call_events",
+        )
+        .get(),
+    ).toMatchObject({
+      count: 1,
+      lifecycle_state: "started",
+      outcome_code: "call_started",
+    });
+    let stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(stored.quality_summary_json)).toMatchObject({
+      aiCalls: 1,
+      recoveryPhase: "dispatched",
+      activeCallIndex: 0,
+    });
+
+    const activeSnapshot = await readProgressiveGenerationSnapshot(
+      db as unknown as D1Database,
+      QUIZ_ID,
+    );
+    expect(activeSnapshot.previousOutcome).toBeNull();
+    expect(activeSnapshot.retryOrdinals).toEqual([]);
+    expect(activeSnapshot.activeCall).toEqual({
+      lifecycleState: "started",
+      callIndex: 0,
+      startIndex: 0,
+      ordinalAttempt: 1,
+    });
+
+    expect((await putCall(app, env, completed)).status).toBe(200);
+    expect((await putCall(app, env, completed)).status).toBe(200);
+    const row = db.sqlite
+      .prepare(
+        `SELECT COUNT(*) AS count, lifecycle_state, outcome_code, accepted_count,
+                dispatched_at, completed_at, protocol_version
+         FROM quiz_generation_call_events`,
+      )
+      .get() as Record<string, unknown>;
+    expect(row).toMatchObject({
+      count: 1,
+      lifecycle_state: "completed",
+      outcome_code: "complete",
+      accepted_count: 1,
+      protocol_version: 9,
+    });
+    expect(Number(row.completed_at)).toBeGreaterThanOrEqual(
+      Number(row.dispatched_at),
+    );
+    stored = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    const summary = JSON.parse(stored.quality_summary_json) as Record<
+      string,
+      unknown
+    >;
+    expect(summary).toMatchObject({ aiCalls: 1, retryCount: 0 });
+    expect(summary).not.toHaveProperty("activeCallIndex");
+    expect(summary).not.toHaveProperty("recoveryPhase");
+
+    const conflict = await putCall(app, env, {
+      ...completed,
+      outcome: "schema_invalid" as const,
+      acceptedCount: 0 as const,
+    });
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toMatchObject({
+      error: { code: "generation_call_conflict" },
+    });
+  });
+
+  it("abandons a stale dispatched call and permits one truthful automatic retry", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    const startedSecond = conceptFirstLifecycleEvent("started", {
+      callIndex: 1,
+      startIndex: 1,
+      acceptedCount: 0,
+    });
+    expect((await putCall(app, env, startedSecond)).status).toBe(201);
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_call_events SET dispatched_at = ? WHERE quiz_id = ? AND call_index = 1",
+      )
+      .run(Date.now() - 16 * 60_000, QUIZ_ID);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      continuation: {
+        nextCallIndex: 2,
+        activeCall: {
+          lifecycleState: "started",
+          callIndex: 1,
+          startIndex: 1,
+          ordinalAttempt: 1,
+        },
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT lifecycle_state, outcome_code, elapsed_ms FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({
+      lifecycle_state: "abandoned",
+      outcome_code: "network_interrupted",
+      elapsed_ms: 120_000,
+    });
+
+    const retry = conceptFirstLifecycleEvent("started", {
+      callIndex: 2,
+      startIndex: 1,
+      ordinalAttempt: 2,
+      acceptedCount: 0,
+      classification: "automatic_retry",
+      retryKind: "transport",
+    });
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          { ...retry, recoverySessionId: SECOND_RECOVERY_SESSION_ID },
+          CLAIM_KEY,
+        )
+      ).status,
+    ).toBe(201);
+  });
+
+  it("reclaims a failed bank whose historical abandoned call exceeded the active watchdog", async () => {
+    const timestamp = Date.now();
+    const db = createConceptFirstDatabase(timestamp);
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+
+    db.sqlite
+      .prepare(
+        `UPDATE quiz_generation_call_events
+         SET lifecycle_state = 'abandoned', outcome_code = 'network_interrupted',
+             completed_at = ?, elapsed_ms = 900000
+         WHERE quiz_id = ? AND call_index = 1`,
+      )
+      .run(timestamp, QUIZ_ID);
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "local_state_conflict",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(timestamp - 1, QUIZ_ID);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      generation: {
+        state: "generation_failed",
+        availableQuestions: 1,
+        totalQuestions: 5,
+      },
+      continuation: {
+        claim: { state: "available" },
+        nextCallIndex: 2,
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
+        .get(QUIZ_ID),
+    ).toMatchObject({ count: 1 });
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT elapsed_ms FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({ elapsed_ms: 900_000 });
+    const reclaimed = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(reclaimed.quality_summary_json)).toMatchObject({
+      acceptedCount: 1,
+      generationState: "recovering",
+      recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+    });
+  });
+
+  it("reclaims a recoverable protocol-9 failed bank without replacing its accepted prefix", async () => {
+    const timestamp = Date.now();
+    const db = createConceptFirstDatabase(timestamp);
+    const { app, env } = testApp(db);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("started"))).status,
+    ).toBe(201);
+    expect(
+      (await putCall(app, env, conceptFirstLifecycleEvent("completed"))).status,
+    ).toBe(200);
+    expect(
+      (
+        await putCall(
+          app,
+          env,
+          conceptFirstLifecycleEvent("started", {
+            callIndex: 1,
+            startIndex: 1,
+            acceptedCount: 0,
+          }),
+        )
+      ).status,
+    ).toBe(201);
+
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "local_state_conflict",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      generation: {
+        state: "generation_failed",
+        availableQuestions: 1,
+        totalQuestions: 5,
+      },
+      continuation: {
+        claim: { state: "available" },
+        activeCall: { callIndex: 1, startIndex: 1 },
+      },
+    });
+
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(200);
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
+        .get(QUIZ_ID),
+    ).toMatchObject({ count: 1 });
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT lifecycle_state, outcome_code FROM quiz_generation_call_events WHERE quiz_id = ? AND call_index = 1",
+        )
+        .get(QUIZ_ID),
+    ).toMatchObject({
+      lifecycle_state: "abandoned",
+      outcome_code: "network_interrupted",
+    });
+    const reclaimed = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    expect(JSON.parse(reclaimed.quality_summary_json)).toMatchObject({
+      acceptedCount: 1,
+      generationState: "recovering",
+      recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+    });
+  });
+
+  it("keeps terminal protocol-9 failures unclaimable", async () => {
+    const db = createConceptFirstDatabase();
+    const bank = db.sqlite
+      .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
+      .get(QUIZ_ID) as { quality_summary_json: string };
+    db.sqlite
+      .prepare("UPDATE quiz_banks SET quality_summary_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...(JSON.parse(bank.quality_summary_json) as Record<string, unknown>),
+          generationState: "generation_failed",
+          reasonCode: "recovery_budget_exhausted",
+        }),
+        QUIZ_ID,
+      );
+    db.sqlite
+      .prepare(
+        "UPDATE quiz_generation_claims SET lease_expires_at = ? WHERE quiz_id = ?",
+      )
+      .run(Date.now() - 1, QUIZ_ID);
+    const { app, env } = testApp(db);
+
+    const status = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation`,
+      undefined,
+      env,
+    );
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      continuation: { claim: { state: "not_required" } },
+    });
+    const claim = await app.request(
+      `/attempts/${ATTEMPT_ID}/generation/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claimKey: CLAIM_KEY,
+          generationSessionId: SESSION_ID,
+          recoverySessionId: SECOND_RECOVERY_SESSION_ID,
+        }),
+      },
+      env,
+    );
+    expect(claim.status).toBe(409);
+    expect(await claim.json()).toMatchObject({
+      error: { code: "generation_claim_not_available" },
+    });
+  });
+
+  it("rejects a terminal lifecycle that was never dispatched", async () => {
+    const db = createConceptFirstDatabase();
+    const { app, env } = testApp(db);
+    const response = await putCall(
+      app,
+      env,
+      conceptFirstLifecycleEvent("abandoned", {
+        acceptedCount: 0,
+        outcome: "network_interrupted",
+      }),
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      error: { code: "generation_call_lifecycle_missing" },
+    });
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM quiz_generation_call_events")
+        .get(),
+    ).toMatchObject({ count: 0 });
   });
 });
 

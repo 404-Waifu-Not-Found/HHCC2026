@@ -1,5 +1,7 @@
 import {
   CaptionResolveResponseSchema,
+  VerifiedVideoMetadataRequestSchema,
+  VerifiedVideoMetadataResponseSchema,
   VideoImportRequestSchema,
   VideoImportResponseSchema,
   type VideoSource,
@@ -33,6 +35,91 @@ type VideoRow = {
 
 export const videosRouter = new Hono<ApiBindings>();
 export const thumbnailRouter = new Hono<ApiBindings>();
+
+videosRouter.patch("/:videoId/source-metadata", async (c) => {
+  const user = c.get("user");
+  await enforceRateLimit(c.env.DB, {
+    namespace: "video-source-metadata",
+    identifier: user.id,
+    maximum: 30,
+    windowSeconds: 60,
+  });
+  const input = await parseJson(c, VerifiedVideoMetadataRequestSchema);
+  const videoId = c.req.param("videoId");
+  const timestamp = now();
+  const result = await c.env.DB.prepare(
+    `UPDATE videos
+     SET duration_seconds = ?, source_language = ?, caption_source_category = ?, caption_segment_count = ?, caption_word_count = ?, source_metadata_verified_at = ?, updated_at = ?
+     WHERE id = ? AND owner_id = ?`,
+  )
+    .bind(
+      input.durationSeconds,
+      input.sourceLanguage.toLocaleLowerCase("en-US"),
+      input.captionSourceCategory,
+      input.captionSegmentCount,
+      input.captionWordCount,
+      timestamp,
+      timestamp,
+      videoId,
+      user.id,
+    )
+    .run();
+  if (result.meta.changes !== 1) {
+    throw new ApiError(404, "video_not_found", "Video not found.");
+  }
+  c.header("Cache-Control", "no-store");
+  return c.json(
+    VerifiedVideoMetadataResponseSchema.parse({ videoId, verified: true }),
+  );
+});
+
+videosRouter.get("/:videoId/recovery", async (c) => {
+  const user = c.get("user");
+  const videoId = c.req.param("videoId");
+  const video = await c.env.DB.prepare(
+    "SELECT id, source, source_video_id, title, duration_seconds, source_language FROM videos WHERE id = ? AND owner_id = ?",
+  )
+    .bind(videoId, user.id)
+    .first<
+      Pick<
+        VideoRow,
+        | "id"
+        | "source"
+        | "source_video_id"
+        | "title"
+        | "duration_seconds"
+        | "source_language"
+      >
+    >();
+  if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
+
+  c.header("Cache-Control", "no-store");
+  return c.json(
+    VideoImportResponseSchema.parse({
+      video: {
+        id: video.id,
+        source: video.source,
+        sourceVideoId: video.source_video_id,
+        title: video.title,
+        thumbnailUrl: `${c.env.APP_ORIGIN}/api/videos/${video.id}/thumbnail`,
+        durationSeconds: video.duration_seconds,
+        sourceLanguage: video.source_language,
+      },
+      captions: {
+        available: true,
+        tracks: [],
+        browserSourceAvailable: false,
+        browserLookupAvailable: true,
+      },
+      transcriptionMode: "captions",
+      capture: {
+        expectedDurationSeconds: video.duration_seconds,
+        requiresUserGesture: false,
+      },
+      requiresLocalTranscription: false,
+    }),
+  );
+});
 
 videosRouter.post("/import", async (c) => {
   const importStartedAt = Date.now();

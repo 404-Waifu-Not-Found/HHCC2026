@@ -6,10 +6,12 @@ import {
   assertProgressiveChunkMetadata,
   generationAvailability,
   gradeProgressiveShortAnswer,
+  gradeProgressiveShortAnswerDecision,
   parseProgressiveQuizSummary,
   readProgressiveGenerationSnapshot,
   tryProgressiveQuizSummary,
 } from "../src/lib/progressive-quiz";
+import { formulaFingerprint } from "../src/lib/math-expression";
 
 const questionTypes = [
   "multiple_choice",
@@ -225,6 +227,25 @@ describe("progressive quiz storage state", () => {
 });
 
 describe("progressive short-answer grading", () => {
+  it("accepts an exact atomic alternative before the two-anchor prose rule", () => {
+    const rubric = {
+      requiredIdeas: [
+        "Earth is surrounded by a jacket of gases",
+        "the jacket of gases is called the atmosphere",
+      ],
+      acceptableAlternatives: ["the atmosphere"],
+    };
+    for (const answer of ["atmosphere", "the atmosphere", "Atmosphere."]) {
+      expect(gradeProgressiveShortAnswer({ answer, ...rubric })).toBe(true);
+      expect(
+        gradeProgressiveShortAnswerDecision({ answer, ...rubric }).path,
+      ).toBe("atomic_exact");
+    }
+    for (const answer of ["gas", "Earth", "jacket"]) {
+      expect(gradeProgressiveShortAnswer({ answer, ...rubric })).toBe(false);
+    }
+  });
+
   const areaDerivativeRubric = {
     requiredIdeas: [
       "dA/dx is the ratio of a tiny change in area to a tiny change in x",
@@ -271,6 +292,36 @@ describe("progressive short-answer grading", () => {
     );
   });
 
+  it("accepts the observed concise sensory-neuron answer without weakening shallow controls", () => {
+    const rubric = {
+      requiredIdeas: [
+        "sensory neurons are activated when receptors detect external stimuli",
+        "they carry information about those stimuli",
+        "the signal travels toward the central nervous system",
+        "the central nervous system analyzes the information",
+      ],
+      acceptableAlternatives: [
+        "They are activated by external stimuli and carry the resulting signal to the central nervous system for analysis.",
+        "Sensory neurons detect stimuli, relay the signal to the CNS, and the CNS processes it.",
+        "External stimuli activate sensory neurons, which transmit information toward the central nervous system for processing.",
+      ],
+    };
+    expect(
+      gradeProgressiveShortAnswer({
+        answer:
+          "Sensory neurons carry information from external stimuli toward the central nervous system for analysis.",
+        ...rubric,
+      }),
+    ).toBe(true);
+    for (const answer of [
+      "They send signals.",
+      "Sensory neurons are in the PNS.",
+      "CNS",
+    ]) {
+      expect(gradeProgressiveShortAnswer({ answer, ...rubric })).toBe(false);
+    }
+  });
+
   describe("formula-aware grading", () => {
     const quotientRuleRubric = {
       requiredIdeas: [
@@ -302,6 +353,12 @@ describe("progressive short-answer grading", () => {
       expect(
         gradeProgressiveShortAnswer({ answer, ...quotientRuleRubric }),
       ).toBe(false);
+    });
+
+    it("keeps endpoint evaluation order significant", () => {
+      expect(formulaFingerprint("(f(b)-f(a))/(b-a)")).not.toBe(
+        formulaFingerprint("(f(a)-f(b))/(b-a)"),
+      );
     });
 
     it("accepts the equivalent product-of-fractions wording seen in production", () => {

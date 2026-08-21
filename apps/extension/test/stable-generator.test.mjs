@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 import {
   adaptiveChunkQuestionCount,
@@ -30,6 +31,7 @@ function stableInput(
     generationSessionId: IDS.session,
     recoverySessionId: IDS.recovery,
     jobId: IDS.job,
+    generationProfile: "stable_auto_recovery_v5_3",
     transcriptFingerprint: "1234abcd",
     plainText:
       "This complete lesson transcript explains supported concepts, examples, applications, and careful reasoning. ".repeat(
@@ -38,16 +40,423 @@ function stableInput(
   };
 }
 
+const GROUNDED_MECHANISMS = [
+  [
+    "photosynthesis",
+    "electron transport",
+    "convert light energy into chemical energy",
+  ],
+  [
+    "immune signaling",
+    "receptor activation",
+    "trigger a targeted cellular response",
+  ],
+  [
+    "language learning",
+    "pattern consolidation",
+    "stabilize recurring grammatical structures",
+  ],
+  [
+    "public-key encryption",
+    "one-way transformation",
+    "protect a private value",
+  ],
+  [
+    "market coordination",
+    "price signaling",
+    "align buyers with available supply",
+  ],
+  [
+    "catalysis",
+    "activation-barrier reduction",
+    "accelerate a chemical reaction",
+  ],
+  [
+    "constitutional government",
+    "separation of powers",
+    "limit unilateral authority",
+  ],
+  [
+    "wireless communication",
+    "error correction",
+    "reconstruct a damaged signal",
+  ],
+  [
+    "orbital motion",
+    "gravitational transfer",
+    "change kinetic and potential energy",
+  ],
+  ["cellular respiration", "proton gradient", "drive ATP synthesis"],
+  ["feedback control", "negative feedback", "stabilize a changing output"],
+  [
+    "computer networking",
+    "packet routing",
+    "deliver data across connected nodes",
+  ],
+  [
+    "protein synthesis",
+    "ribosomal translation",
+    "assemble an amino-acid sequence",
+  ],
+  [
+    "ecosystem regulation",
+    "predator response",
+    "constrain unchecked population growth",
+  ],
+  [
+    "memory formation",
+    "synaptic strengthening",
+    "preserve a learned association",
+  ],
+  ["heat transfer", "thermal conduction", "move energy through a solid"],
+  [
+    "genetic inheritance",
+    "chromosome segregation",
+    "distribute replicated DNA",
+  ],
+  [
+    "water purification",
+    "membrane filtration",
+    "separate contaminants from water",
+  ],
+  [
+    "sound production",
+    "resonant vibration",
+    "amplify a periodic pressure wave",
+  ],
+  [
+    "battery operation",
+    "ion transport",
+    "sustain charge flow through a circuit",
+  ],
+];
+
+function groundedInput(questionCount = 5, questionTypes = ["multiple_choice"]) {
+  return {
+    ...stableInput(questionCount, questionTypes),
+    generationProfile: "evidence_grounded_auto_v5_4",
+    plainText: Array.from({ length: 20 }, (_, index) => {
+      const [subject, process, effect] = GROUNDED_MECHANISMS[index];
+      return `${subject} uses the ${process} process to ${effect} because each step changes a defined input into a measurable output.`;
+    }).join(" "),
+  };
+}
+
+const CONCEPT_FIRST_OBJECTIVES = [
+  "absorption",
+  "diffusion",
+  "feedback",
+  "conversion",
+  "regulation",
+  "storage",
+  "transport",
+  "detection",
+  "comparison",
+  "sequencing",
+  "inhibition",
+  "amplification",
+  "equilibrium",
+  "adaptation",
+  "prediction",
+  "allocation",
+  "verification",
+  "compression",
+  "replication",
+  "coordination",
+  "mutation",
+  "selection",
+  "classification",
+  "calibration",
+];
+
+function conceptFirstInput(
+  questionCount = 5,
+  questionTypes = ["multiple_choice", "true_false", "short_answer"],
+) {
+  return {
+    ...groundedInput(questionCount, questionTypes),
+    generationProfile: "concept_first_auto_v5_8",
+    plainText: Array.from({ length: 24 }, (_, index) => {
+      const pathway = `pathway${index + 1}`;
+      const value = index + 11;
+      const objective = `objective${CONCEPT_FIRST_OBJECTIVES[index]}`;
+      return [
+        `Catalyst ${index + 1} transfers energy through ${pathway} during ${objective} because the reaction changes by ${value} units under the defined condition.`,
+        `Energy enters ${pathway} during ${objective} before the catalyst produces a ${value}-unit change in the reaction.`,
+        `${pathway} connects the reactants during ${objective}, causing energy transfer to increase by ${value} units.`,
+        `A ${value}-unit reaction shift occurs when ${pathway} carries energy between the defined states during ${objective}.`,
+        `The ${objective} mechanism routes energy along ${pathway}, which changes the reaction by ${value} units.`,
+        `When ${objective} conditions are met, ${pathway} relays energy and the reaction changes by ${value} units.`,
+      ][index % 6];
+    }).join(" "),
+  };
+}
+
+const RECORDED_BENCHMARK_TOPICS = [
+  [
+    "Climate feedback mechanisms",
+    "Carbon dioxide traps outgoing infrared energy through pathway",
+  ],
+  [
+    "Immune response signaling",
+    "An immune receptor transfers a pathogen signal through pathway",
+  ],
+  [
+    "Language acquisition mechanisms",
+    "Repeated meaningful input strengthens a language pattern through pathway",
+  ],
+  [
+    "Public-key cryptography",
+    "A one-way operation protects a private value through pathway",
+  ],
+  [
+    "Supply and demand relationships",
+    "A price signal coordinates buyers and sellers through pathway",
+  ],
+  [
+    "Chemical reaction energy",
+    "A catalyst lowers the activation barrier through pathway",
+  ],
+  [
+    "Institutional checks and balances",
+    "Separated authority limits unilateral power through pathway",
+  ],
+  [
+    "Wireless error correction",
+    "Redundant information repairs a damaged signal through pathway",
+  ],
+  [
+    "Orbital energy transfer",
+    "A gravitational interaction changes orbital energy through pathway",
+  ],
+  [
+    "光合作用中的能量转换",
+    "叶绿体通过 pathway 转换光能 because 电子传递形成可用的化学能",
+  ],
+];
+
+function recordedConceptFirstInput(bankIndex, questionCount, questionTypes) {
+  const [title, sentence] =
+    RECORDED_BENCHMARK_TOPICS[bankIndex % RECORDED_BENCHMARK_TOPICS.length];
+  const uuid = (prefix) =>
+    `${prefix}0000000-0000-4000-8000-${String(bankIndex + 1).padStart(12, "0")}`;
+  return {
+    ...conceptFirstInput(questionCount, questionTypes),
+    title,
+    quizLanguage: bankIndex % 10 === 9 ? "zh-CN" : "en",
+    generationId: uuid("1"),
+    generationSessionId: uuid("2"),
+    recoverySessionId: uuid("3"),
+    jobId: uuid("4"),
+    plainText: Array.from(
+      { length: Math.max(24, questionCount * 2) },
+      (_, index) => {
+        const objectives = [
+          "absorption",
+          "diffusion",
+          "feedback",
+          "conversion",
+          "regulation",
+          "storage",
+          "transport",
+          "detection",
+          "comparison",
+          "sequencing",
+          "inhibition",
+          "amplification",
+          "equilibrium",
+          "adaptation",
+          "prediction",
+          "allocation",
+          "verification",
+          "compression",
+          "replication",
+          "coordination",
+          "mutation",
+          "selection",
+          "classification",
+          "calibration",
+          "recombination",
+          "insulation",
+          "oscillation",
+          "resonance",
+          "transmission",
+          "stabilization",
+        ];
+        const groundedSentence = sentence.replace(
+          "pathway",
+          `pathway${index + 1}`,
+        );
+        return `${groundedSentence} by objective${objectives[index % objectives.length]} because the defined mechanism changes measurable outcome ${index + 11} under condition ${index + 1}.`;
+      },
+    ).join(bankIndex % 10 === 9 ? "。 " : " "),
+  };
+}
+
+function conceptFirstTaskFromRequest(request) {
+  const body = typeof request === "string" ? JSON.parse(request) : request;
+  const task = body.messages.at(-1).content;
+  const slot = task.match(
+    /Create the singleton (multiple_choice|true_false|short_answer) item for q(\d+) of (\d+)/u,
+  );
+  assert.ok(slot, "request contains one concept-first slot");
+  const focusExcerpt = task.match(
+    /Eligible instructional evidence[^:]*:\n([\s\S]*?)\n\nAlready accepted objectives/u,
+  )?.[1];
+  assert.ok(focusExcerpt, "request contains eligible evidence");
+  return {
+    body,
+    task,
+    type: slot[1],
+    ordinal: Number(slot[2]),
+    focusExcerpt,
+    quizLanguage: /Selected quiz language: Simplified Chinese \(zh-CN\)/u.test(
+      task,
+    )
+      ? "zh-CN"
+      : "en",
+  };
+}
+
+function conceptFirstResponse(request, mutate = (value) => value) {
+  const task = conceptFirstTaskFromRequest(request);
+  const evidence = task.focusExcerpt.split(/(?<=[.!?。！？])\s+/u)[0];
+  const pathway = evidence.match(/pathway\d+/u)?.[0];
+  assert.ok(pathway, "eligible evidence contains an atomic mechanism term");
+  const objective =
+    evidence.match(/objective[a-z]+/iu)?.[0] ??
+    evidence.match(/catalyst \d+/iu)?.[0] ??
+    `mechanism ${task.ordinal}`;
+  const isChinese = task.quizLanguage === "zh-CN";
+  const common = {
+    id: `q${task.ordinal}`,
+    type: task.type,
+    concept: isChinese
+      ? `${objective} ${pathway}`
+      : `${objective} energy function`,
+    objectiveCategory: "mechanism",
+    question: isChinese
+      ? [
+          `${objective}过程中哪条路径负责传递能量？`,
+          `${objective}如何通过特定路径完成能量传递？`,
+          `哪种机制在${objective}期间传递能量？`,
+          `请识别${objective}所使用的能量传递路径。`,
+          `${objective}过程依靠哪条路径输送能量？`,
+        ][(task.ordinal - 1) % 5]
+      : [
+          `Which pathway carries energy during ${objective}?`,
+          `What route performs energy transfer for ${objective}?`,
+          `Which route moves energy between states during ${objective}?`,
+          `Identify the pathway responsible for ${objective}.`,
+          `Which mechanism carries energy in the ${objective} process?`,
+        ][(task.ordinal - 1) % 5],
+    explanation: isChinese
+      ? `${pathway}在${objective}过程中传递能量。`
+      : `${pathway} carries energy during ${objective}.`,
+    evidenceQuote: evidence,
+  };
+  if (task.type === "multiple_choice") {
+    return completionResponse(
+      mutate(
+        {
+          questions: [
+            {
+              ...common,
+              answerSpan: pathway,
+              answerText: isChinese ? `能量传递路径${pathway}` : pathway,
+              distractors: [
+                {
+                  text: isChinese
+                    ? `能量储存库${task.ordinal}`
+                    : `reservoir${task.ordinal}`,
+                  whyWrong: isChinese
+                    ? "它储存能量，而不是传递能量。"
+                    : "It stores rather than transfers energy.",
+                },
+                {
+                  text: isChinese
+                    ? `能量屏障${task.ordinal}`
+                    : `barrier${task.ordinal}`,
+                  whyWrong: isChinese
+                    ? "它会阻碍所描述的能量传递。"
+                    : "It blocks the supported transfer.",
+                },
+                {
+                  text: isChinese
+                    ? `能量汇${task.ordinal}`
+                    : `sink${task.ordinal}`,
+                  whyWrong: isChinese
+                    ? "它移除能量，而不是输送能量。"
+                    : "It removes rather than carries energy.",
+                },
+              ],
+            },
+          ],
+        },
+        task,
+      ),
+    );
+  }
+  if (task.type === "true_false") {
+    return completionResponse(
+      mutate(
+        {
+          questions: [
+            {
+              ...common,
+              question: isChinese
+                ? `${pathway}会在反应过程中传递能量。`
+                : `${pathway} transfers energy during the reaction.`,
+              supportedFact: evidence,
+            },
+          ],
+        },
+        task,
+      ),
+    );
+  }
+  return completionResponse(
+    mutate(
+      {
+        questions: [
+          {
+            ...common,
+            question: isChinese
+              ? [
+                  `${objective}的能量传递路径叫什么？`,
+                  `哪个机制术语表示${objective}路径？`,
+                  `请写出执行${objective}的路径名称。`,
+                  `${objective}期间由哪条路径传递能量？`,
+                  `请识别${objective}使用的机制。`,
+                ][(task.ordinal - 1) % 5]
+              : [
+                  `What term names the energy-transfer route for ${objective}?`,
+                  `Which mechanism term identifies the ${objective} route?`,
+                  `Name the pathway that performs ${objective}.`,
+                  `What route carries energy during ${objective}?`,
+                  `Identify the mechanism used for ${objective}.`,
+                ][(task.ordinal - 1) % 5],
+            shortAnswerMode: "atomic_term",
+            answer: pathway,
+            aliases: [],
+          },
+        ],
+      },
+      task,
+    ),
+  );
+}
+
 function taskFromRequest(request) {
   const body = typeof request === "string" ? JSON.parse(request) : request;
   const task = body.messages.at(-1).content;
   const planText = task.match(
-    /Mandatory slot plan:\n([\s\S]*?)\n\nAlready accepted questions/,
+    /Mandatory slot plan:\n([\s\S]*?)\n\n(?:Primary source focus|Eligible instructional evidence|Already accepted questions)/,
   )?.[1];
   assert.ok(planText, "request contains a bounded slot plan");
   const slots = planText.split("\n").map((line) => {
     const match = line.match(
-      /^q(\d+): (multiple_choice|true_false|short_answer)(?:, answer=(true|false))?$/,
+      /^q(\d+): (multiple_choice|true_false|short_answer)(?:, (?:answer|preferred_answer)=(true|false))?$/,
     );
     assert.ok(match, `valid slot line: ${line}`);
     return {
@@ -56,7 +465,77 @@ function taskFromRequest(request) {
       polarity: match[3] === undefined ? undefined : match[3] === "true",
     };
   });
-  return { body, task, slots };
+  const focusExcerpt = task.match(
+    /(?:Primary source focus for this slot; use only instructional claims copied from this excerpt|Eligible instructional evidence; only this excerpt may ground the learner-facing content):\n([\s\S]*?)\n\nAlready accepted questions/,
+  )?.[1];
+  return { body, task, slots, focusExcerpt };
+}
+
+function groundedQuestionForSlot(slot, focusExcerpt) {
+  const evidenceSentences = String(focusExcerpt)
+    .split(/(?<=[.!?])\s+/u)
+    .filter(Boolean);
+  const evidence = evidenceSentences[slot.ordinal % evidenceSentences.length];
+  assert.ok(evidence, "grounded task contains a usable evidence sentence");
+  const subject = evidence.match(/^(.+?) uses the /iu)?.[1];
+  const correctAnswer = evidence.match(/uses the (.+? process) to /iu)?.[1];
+  const effect = evidence.match(/ process to (.+?) because/iu)?.[1];
+  assert.ok(subject, "grounded evidence contains a conceptual subject");
+  assert.ok(correctAnswer, "grounded evidence contains an exact answer phrase");
+  assert.ok(effect, "grounded evidence contains a supported conceptual effect");
+  const prompts = [
+    `Which process enables ${subject} to ${effect}?`,
+    `How does ${subject} ${effect}?`,
+    `What process links the input and output in ${subject}?`,
+    `Which process produces the supported effect in ${subject}?`,
+    `Identify the process used by ${subject}.`,
+  ];
+  const common = {
+    id: `q${slot.ordinal}`,
+    type: slot.type,
+    concept: `${subject} mechanism`,
+    explanation: `${correctAnswer} enables ${subject} to ${effect}.`,
+    sourceEvidence: evidence,
+    claim: {
+      subject,
+      relation: "uses",
+      value: correctAnswer,
+      cluster: `${subject} ${correctAnswer}`,
+    },
+  };
+  if (slot.type === "true_false") {
+    return {
+      ...common,
+      question: evidence,
+      supportedStatement: evidence,
+      mode: "supported",
+      mutation: null,
+    };
+  }
+  if (slot.type === "short_answer") {
+    return {
+      ...common,
+      question: prompts[(slot.ordinal - 1) % prompts.length],
+      answer: correctAnswer,
+      rubricIdeas: [correctAnswer],
+      acceptableAnswers: [
+        correctAnswer,
+        `the ${correctAnswer}`,
+        `${subject} uses the ${correctAnswer}`,
+      ],
+    };
+  }
+  return {
+    ...common,
+    question: prompts[(slot.ordinal - 1) % prompts.length],
+    correctAnswer,
+    distractors: ["storage reserve", "blocking barrier", "signal receptor"].map(
+      (kind) => ({
+        text: `${kind} process`,
+        whyWrong: `This ${kind} process does not perform the supported energy transfer.`,
+      }),
+    ),
+  };
 }
 
 function questionForSlot(slot, automaticMode = true) {
@@ -81,8 +560,8 @@ function questionForSlot(slot, automaticMode = true) {
     id: `q${slot.ordinal}`,
     type: slot.type,
     concept: `Supported ${marker} concept`,
-    question: `In the lesson's ${marker} example, which specific result is supported for case ${slot.ordinal}?`,
-    explanation: `The lesson explicitly supports concept ${slot.ordinal}.`,
+    question: `Which specific ${marker} result is supported for case ${slot.ordinal}?`,
+    explanation: `The stated relationship supports concept ${slot.ordinal}.`,
   };
   if (slot.type === "multiple_choice") {
     if (!automaticMode) {
@@ -109,10 +588,14 @@ function questionForSlot(slot, automaticMode = true) {
     };
   }
   if (slot.type === "true_false") {
+    const answer =
+      typeof slot.polarity === "boolean"
+        ? slot.polarity
+        : slot.ordinal % 2 === 0;
     return {
       ...common,
-      answer: slot.polarity,
-      correction: slot.polarity
+      answer,
+      correction: answer
         ? "The statement is accurate as written."
         : `The corrected statement for concept ${slot.ordinal} is supported.`,
     };
@@ -174,12 +657,17 @@ function responseForRequest(request, mutate = (value) => value) {
   const automaticMode = task.body.messages[0].content.includes(
     "return one correctAnswer",
   );
+  const groundedMode = task.body.messages[0].content.includes(
+    "sourceEvidence copied exactly",
+  );
   return completionResponse(
     mutate(
       {
         title: "A model title that must be ignored",
         questions: task.slots.map((slot) =>
-          questionForSlot(slot, automaticMode),
+          groundedMode
+            ? groundedQuestionForSlot(slot, task.focusExcerpt)
+            : questionForSlot(slot, automaticMode),
         ),
       },
       task,
@@ -388,6 +876,662 @@ test("v5.3 uses singleton primary calls and local answer mapping", async (contex
   );
 });
 
+test("v5.7 streams concept-only grounded singleton calls with protocol 8 telemetry", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => responseForRequest(init.body);
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.protocolVersion, 8);
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.7");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.6");
+  assert.equal(result.importVersion, "extension-progressive-import-v6");
+  assert.equal(result.generationProfile, "evidence_grounded_auto_v5_4");
+  assert.equal(calls.length, 5);
+  assert.ok(
+    calls.every(
+      (event) => event.protocolVersion === 8 && event.purpose === "generation",
+    ),
+  );
+  assert.ok(
+    result.quiz.questions.every(
+      (question) => question.claimKey && question.conceptCluster,
+    ),
+  );
+});
+
+test("v5.8 sends the concept-first singleton contract and truthful call lifecycles", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const fetchCountAtCallEvent = [];
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const parsed = conceptFirstTaskFromRequest(init.body);
+    requests.push(parsed);
+    return conceptFirstResponse(init.body);
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => {
+      calls.push(event);
+      fetchCountAtCallEvent.push(requests.length);
+    },
+  );
+
+  assert.equal(result.protocolVersion, 9);
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.8");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.7");
+  assert.equal(result.importVersion, "extension-progressive-import-v7");
+  assert.equal(result.generationProfile, "concept_first_auto_v5_8");
+  assert.match(result.promptFingerprint, /^[a-f0-9]{64}$/u);
+  assert.equal(requests.length, 5);
+  for (const request of requests) {
+    assert.deepEqual(request.body.thinking, { type: "disabled" });
+    assert.equal(request.body.temperature, 0.2);
+    assert.deepEqual(request.body.response_format, { type: "json_object" });
+    assert.equal(request.body.stream, true);
+    assert.equal(request.body.stream_options.include_usage, true);
+    assert.equal(request.body.messages.length, 3);
+    assert.match(
+      request.body.messages[0].content,
+      /direct assessment generator/u,
+    );
+    assert.match(
+      request.body.messages[0].content,
+      /Never ask learners to recall an estimate/u,
+    );
+    assert.match(
+      request.body.messages[2].content,
+      /estimated annual monetary value of ecosystem services/u,
+    );
+    assert.doesNotMatch(
+      request.body.messages[2].content,
+      /The reference gives a direct relationship/u,
+    );
+    assert.match(
+      request.body.messages[1].content,
+      /Private reference material — never mention this source/u,
+    );
+    assert.match(request.task, /Exact JSON schema/u);
+    assert.doesNotMatch(request.task, /Mandatory slot plan/u);
+  }
+  const sentSystemFingerprints = new Set(
+    requests.map((request) =>
+      createHash("sha256")
+        .update(request.body.messages[0].content)
+        .digest("hex"),
+    ),
+  );
+  assert.deepEqual([...sentSystemFingerprints], [result.promptFingerprint]);
+  assert.deepEqual(
+    [...new Set(requests.map((request) => request.body.messages[1].content))],
+    [requests[0].body.messages[1].content],
+    "the private-reference prefix remains byte-identical for prefix caching",
+  );
+  assert.notEqual(
+    requests[0].body.messages[2].content,
+    requests[1].body.messages[2].content,
+    "only the current singleton task suffix evolves",
+  );
+  assert.equal(calls.length, 10);
+  for (let index = 0; index < calls.length; index += 2) {
+    const started = calls[index];
+    const completed = calls[index + 1];
+    assert.equal(started.lifecycleState, "started");
+    assert.equal(completed.lifecycleState, "completed");
+    assert.equal(started.callIndex, completed.callIndex);
+    assert.equal(started.protocolVersion, 9);
+    assert.equal(completed.outcome, "complete");
+    assert.ok(
+      fetchCountAtCallEvent[index] >= started.callIndex + 1,
+      "started lifecycle is emitted only after fetch dispatch",
+    );
+  }
+  assert.ok(
+    result.quiz.questions.some(
+      (question) =>
+        question.type === "short_answer" &&
+        question.shortAnswerMode === "atomic_term" &&
+        question.rubricV2?.mode === "atomic_term",
+    ),
+  );
+});
+
+test("v5.8 rejects presentation statistics before storage and repairs only that ordinal", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        value.questions[0].concept = "ecosystem services monetary value";
+        value.questions[0].question =
+          "What is the estimated annual monetary value of the services that ecosystems provide for humanity, according to economic calculations?";
+        value.questions[0].answerText = "$46 trillion per year";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(
+    httpCalls,
+    6,
+    JSON.stringify(
+      calls
+        .filter((event) => event.lifecycleState === "completed")
+        .map((event) => ({
+          ordinal: event.startIndex,
+          classification: event.classification,
+          outcome: event.outcome,
+        })),
+    ),
+  );
+  assert.equal(calls[1]?.outcome, "low_pedagogical_value");
+  assert.equal(calls[2]?.classification, "automatic_retry");
+  assert.equal(calls[2]?.retryKind, "content_repair");
+  assert.doesNotMatch(result.quiz.questions[0].question, /monetary value/iu);
+});
+
+test("v5.8 repairs learner-visible source-language leakage before storing a question", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && httpCalls === 1) {
+        value.questions[0].answerText = "وقود أحفوري";
+        value.questions[0].distractors[0].text = "غازات دفيئة";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(httpCalls, 6);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.ok(
+    result.quiz.questions.every((question) =>
+      question.type !== "multiple_choice"
+        ? true
+        : question.choices.every(
+            (choice) => !/[\p{Script=Arabic}\p{Script=Han}]/u.test(choice),
+          ),
+    ),
+  );
+  assert.ok(
+    calls.some(
+      (event) =>
+        event.lifecycleState === "completed" &&
+        event.outcome === "quiz_language_mismatch",
+    ),
+  );
+  assert.equal(
+    calls.filter(
+      (event) =>
+        event.lifecycleState === "started" &&
+        event.classification === "automatic_retry",
+    ).length,
+    1,
+  );
+});
+
+test("v5.8 source-framing repair carries private evidence and explicit deictic guidance", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const tasks = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const parsed = conceptFirstTaskFromRequest(init.body);
+    tasks.push(parsed.task);
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && tasks.length === 1) {
+        value.questions[0].question =
+          "Which method is mentioned for transferring energy?";
+        value.questions[0].explanation =
+          "The reference lists the pathway as the correct mechanism.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.match(tasks[1], /sourceEvidence/u);
+  assert.match(tasks[1], /Do not use the words.*mentioned.*listed.*stated/iu);
+  assert.doesNotMatch(
+    `${result.quiz.questions[0].question} ${result.quiz.questions[0].explanation}`,
+    /mentioned|the reference lists/iu,
+  );
+});
+
+test("v5.8 completes a 100-bank recorded-fixture release benchmark without content retries", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let httpCalls = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    httpCalls += 1;
+    return conceptFirstResponse(init.body);
+  };
+  const typeCombinations = [
+    ["multiple_choice"],
+    ["true_false"],
+    ["short_answer"],
+    ["multiple_choice", "true_false"],
+    ["multiple_choice", "short_answer"],
+    ["true_false", "short_answer"],
+    ["multiple_choice", "true_false", "short_answer"],
+  ];
+  const questionCounts = [5, 10, 15];
+  const durations = [];
+  let expectedHttpCalls = 0;
+
+  for (let bankIndex = 0; bankIndex < 100; bankIndex += 1) {
+    const questionCount = questionCounts[bankIndex % questionCounts.length];
+    const questionTypes = typeCombinations[bankIndex % typeCombinations.length];
+    const callEvents = [];
+    const startedAt = performance.now();
+    let result;
+    try {
+      result = await generateQuizFromPlainText(
+        recordedConceptFirstInput(bankIndex, questionCount, questionTypes),
+        "sk-local-benchmark",
+        () => undefined,
+        undefined,
+        () => undefined,
+        (event) => callEvents.push(event),
+      );
+    } catch (error) {
+      throw new Error(
+        `Recorded benchmark bank ${bankIndex + 1} failed (${questionCount} questions).`,
+        { cause: error },
+      );
+    }
+    durations.push(performance.now() - startedAt);
+    expectedHttpCalls += questionCount;
+
+    assert.equal(result.quiz.questions.length, questionCount);
+    assert.equal(result.metrics.aiCalls, questionCount);
+    assert.equal(result.metrics.retryCount, 0);
+    assert.equal(callEvents.length, questionCount * 2);
+    assert.equal(
+      callEvents.filter((event) => event.lifecycleState === "started").length,
+      questionCount,
+    );
+    assert.ok(
+      callEvents.every(
+        (event) =>
+          event.classification === "primary" &&
+          event.protocolVersion === 9 &&
+          event.recoverySessionId,
+      ),
+    );
+    assert.ok(
+      result.quiz.questions.every(
+        (question) =>
+          !/according to|lesson|transcript|presenter|exam weighting|course logistics/iu.test(
+            `${question.question} ${question.explanation}`,
+          ),
+      ),
+    );
+  }
+
+  assert.equal(httpCalls, expectedHttpCalls);
+  durations.sort((left, right) => left - right);
+  assert.ok(durations[Math.floor(durations.length * 0.95)] < 10_000);
+});
+
+test("v5.5 validates grounded true-false and short-answer singletons", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => responseForRequest(init.body);
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5, ["true_false", "short_answer"]),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    result.quiz.questions
+      .filter((question) => question.type === "true_false")
+      .every(
+        (question) =>
+          question.answer === true &&
+          question.correction === "The statement is accurate as written.",
+      ),
+  );
+  assert.ok(
+    result.quiz.questions
+      .filter((question) => question.type === "short_answer")
+      .every((question) => question.answer.includes("process")),
+  );
+});
+
+test("v5.5 grants content repair budgets independently to each ordinal", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const attempts = new Map();
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = taskFromRequest(init.body);
+    const ordinal = task.slots[0].ordinal;
+    const attempt = (attempts.get(ordinal) ?? 0) + 1;
+    attempts.set(ordinal, attempt);
+    return responseForRequest(init.body, (value) => {
+      if ((ordinal === 1 && attempt <= 2) || (ordinal === 2 && attempt === 1)) {
+        value.questions[0].distractors[0].text =
+          value.questions[0].correctAnswer;
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(attempts.get(1), 3);
+  assert.equal(attempts.get(2), 2);
+  assert.equal(
+    calls.filter((event) => event.classification === "automatic_retry").length,
+    3,
+  );
+  assert.deepEqual(
+    calls
+      .filter((event) => event.classification === "automatic_retry")
+      .map((event) => event.retryKind),
+    ["answer_repair", "answer_repair", "answer_repair"],
+  );
+});
+
+test("v5.7 rejects raw lesson framing and repairs only that singleton", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const focuses = [];
+  let q1Attempts = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) =>
+    responseForRequest(init.body, (value, task) => {
+      focuses.push(task.focusExcerpt);
+      if (task.slots[0].ordinal === 1 && ++q1Attempts === 1) {
+        value.questions[0].question =
+          "According to the lesson, which process enables photosynthesis to convert light energy into chemical energy?";
+        value.questions[0].explanation =
+          "According to the lesson, the route transfer process connects input and output.";
+      }
+      return value;
+    });
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.metrics.aiCalls, calls.length);
+  assert.equal(
+    result.metrics.retryCount,
+    calls.filter((event) => event.classification === "automatic_retry").length,
+  );
+  assert.doesNotMatch(result.quiz.questions[0].question, /according to/iu);
+  assert.equal(
+    result.quiz.questions[0].question,
+    "Which process enables immune signaling to trigger a targeted cellular response?",
+  );
+  assert.equal(calls[0]?.outcome, "source_framing_invalid");
+  assert.equal(calls[1]?.classification, "automatic_retry");
+  assert.equal(calls[1]?.retryKind, "content_repair");
+  assert.equal(calls[0]?.startIndex, 0);
+  assert.equal(calls[1]?.startIndex, 0);
+  assert.equal(focuses[0], focuses[1]);
+});
+
+test("v5.7 uses private-evidence prompt labels and concept-first quality checks", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = taskFromRequest(init.body);
+    requests.push(task.body);
+    return responseForRequest(init.body);
+  };
+
+  await generateQuizFromPlainText(groundedInput(5), "sk-local-test");
+
+  const [systemMessage, referenceMessage, taskMessage] = requests[0].messages;
+  assert.match(systemMessage.content, /direct assessment items/iu);
+  assert.match(
+    systemMessage.content,
+    /remains meaningful without the source/iu,
+  );
+  assert.match(
+    referenceMessage.content,
+    /Topic hint — never test this label/iu,
+  );
+  assert.match(
+    referenceMessage.content,
+    /Private reference material — never mention this source/iu,
+  );
+  assert.doesNotMatch(referenceMessage.content, /Lesson title:/u);
+  assert.doesNotMatch(
+    referenceMessage.content,
+    /Complete plain-text lesson transcript:/u,
+  );
+  assert.match(taskMessage.content, /Eligible instructional evidence/iu);
+  assert.match(taskMessage.content, /structure only/iu);
+  assert.match(systemMessage.content, /Where did Mendeleev apply/iu);
+  assert.match(systemMessage.content, /How do limits determine/iu);
+});
+
+test("v5.7 repairs an overlapping short-answer rubric with its specific outcome", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const requests = [];
+  let q1Attempts = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    requests.push(JSON.parse(init.body));
+    return responseForRequest(init.body, (value, task) => {
+      if (task.slots[0].ordinal === 1 && ++q1Attempts === 1) {
+        const answer = value.questions[0].answer;
+        value.questions[0].rubricIdeas = [answer, `The ${answer}`];
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5, ["short_answer"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(q1Attempts, 2);
+  assert.equal(calls[0]?.outcome, "rubric_invalid");
+  assert.equal(calls[1]?.classification, "automatic_retry");
+  assert.equal(calls[1]?.retryKind, "content_repair");
+  assert.match(
+    requests[1].messages.at(-1).content,
+    /independent indispensable ideas/iu,
+  );
+  assert.match(
+    requests[1].messages.at(-1).content,
+    /shortest full-credit answer first/iu,
+  );
+  assert.match(
+    requests[1].messages.at(-1).content,
+    /Repair context from the rejected model candidate/iu,
+  );
+  assert.match(requests[1].messages.at(-1).content, /"question":/u);
+  assert.equal(
+    taskFromRequest(requests[0]).focusExcerpt,
+    taskFromRequest(requests[1]).focusExcerpt,
+  );
+});
+
+test("v5.7 fails a logistics-only source before any DeepSeek request", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    throw new Error(
+      "DeepSeek must not be called for a non-instructional source",
+    );
+  };
+  const input = {
+    ...groundedInput(5),
+    plainText: [
+      "Welcome to the course and subscribe to the channel.",
+      "Unit 1 weighs 10 percent of the AP Calculus BC exam.",
+      "Late assignments must be submitted through the course website.",
+      "The instructor has taught this course for twelve years.",
+    ]
+      .join(" ")
+      .repeat(3),
+  };
+
+  await assert.rejects(
+    generateQuizFromPlainText(input, "sk-local-test"),
+    (error) => error?.reasonCode === "non_instructional_source",
+  );
+  assert.equal(fetchCount, 0);
+});
+
+test("v5.7 classifies and repairs grounded course trivia before storage", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const attempts = new Map();
+  const calls = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = taskFromRequest(init.body);
+    const ordinal = task.slots[0].ordinal;
+    const attempt = (attempts.get(ordinal) ?? 0) + 1;
+    attempts.set(ordinal, attempt);
+    return responseForRequest(init.body, (value) => {
+      if (ordinal === 1 && attempt === 1) {
+        value.questions[0].concept = "AP Calculus BC exam weighting";
+        value.questions[0].question =
+          "What percentage of the AP Calculus BC exam is Unit 1 worth?";
+        value.questions[0].claim = {
+          subject: "Unit 1",
+          relation: "is worth",
+          value: "10 percent of the AP Calculus BC exam",
+          cluster: "AP exam weighting",
+        };
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    groundedInput(5),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => calls.push(event),
+  );
+
+  assert.equal(attempts.get(1), 2);
+  assert.equal(
+    result.metrics.retryCount,
+    calls.filter((event) => event.classification === "automatic_retry").length,
+  );
+  assert.equal(calls[0]?.outcome, "course_logistics_invalid");
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        !/exam|weight|percentage|unit 1 worth/iu.test(question.question),
+    ),
+  );
+  const retry = calls.find(
+    (event) => event.classification === "automatic_retry",
+  );
+  assert.equal(retry?.retryKind, "content_repair");
+  assert.equal(retry?.startIndex, 0);
+});
+
 test("question one is emitted from one-character SSE before its response resolves", async (context) => {
   const originalFetch = globalThis.fetch;
   let firstStream;
@@ -404,7 +1548,11 @@ test("question one is emitted from one-character SSE before its response resolve
   globalThis.fetch = async (_url, init) => {
     fetchCount += 1;
     const task = taskFromRequest(init.body);
-    const value = { questions: task.slots.map(questionForSlot) };
+    const value = {
+      questions: task.slots.map((slot) =>
+        groundedQuestionForSlot(slot, task.focusExcerpt),
+      ),
+    };
     if (fetchCount === 1) {
       firstStream = oneCharacterSseResponse(value, {
         pauseAfterQuestion: true,
@@ -416,7 +1564,7 @@ test("question one is emitted from one-character SSE before its response resolve
 
   let settled = false;
   const generation = generateQuizFromPlainText(
-    stableInput(5, ["multiple_choice"]),
+    groundedInput(5),
     "sk-local-test",
     () => undefined,
     undefined,
@@ -734,7 +1882,7 @@ test("duplicate content repairs only the first missing singleton", async (contex
     return responseForRequest(init.body, (value) => {
       if (fetchCount === 2) {
         value.questions[0].question =
-          "In the lesson's photosynthesis example, which specific result is supported for case 1?";
+          "Which specific photosynthesis result is supported for case 1?";
       }
       return value;
     });
@@ -947,7 +2095,7 @@ test("stable prompt prefixes are byte-identical while suffix tasks evolve", asyn
   assert.match(requests[1].messages[2].content, /Already accepted questions/);
 });
 
-test("v5.1 continuation remains isolated on its original metadata", async (context) => {
+test("v5.1 continuation uses singleton automatic recovery on original metadata", async (context) => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   const events = [];
@@ -990,8 +2138,81 @@ test("v5.1 continuation remains isolated on its original metadata", async (conte
   assert.equal(result.validatorVersion, "validator-local-progressive-v4.0");
   assert.ok(requests.every((request) => request.thinking.type === "enabled"));
   assert.ok(requests.every((request) => request.reasoning_effort === "high"));
+  assert.ok(events.every((event) => event.classification === "primary"));
+  assert.ok(events.every((event) => event.protocolVersion === 5));
+  assert.ok(events.every((event) => event.purpose === "automatic_recovery"));
+  assert.ok(events.every((event) => event.requestedCount === 1));
+  assert.ok(events.every((event) => event.recoverySessionId === IDS.recovery));
+});
+
+test("Run 8 recovery preserves q1-q11 and classifies only attempted q12-q13 as retries", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const events = [];
+  const chunks = [];
+  const types = Array.from(
+    { length: 15 },
+    (_, index) => ["multiple_choice", "true_false", "short_answer"][index % 3],
+  );
+  const acceptedQuestions = types.slice(0, 11).map((type, index) => ({
+    id: `q${index + 1}`,
+    type,
+    concept: `Immutable accepted concept ${index + 1}`,
+    question: `How does immutable concept ${index + 1} work?`,
+  }));
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => responseForRequest(init.body);
+
+  const result = await generateQuizFromPlainText(
+    {
+      ...stableInput(15),
+      generationProfile: "legacy_reasoning_v5_1",
+      continuation: {
+        startIndex: 11,
+        resultProtocolVersion: 5,
+        promptVersion: "quiz-local-json-stream-v5.1",
+        validatorVersion: "validator-local-progressive-v4.0",
+        generationProfile: "legacy_reasoning_v5_1",
+        nextCallIndex: 7,
+        nextOrdinalAttempt: 2,
+        retryOrdinals: [12, 13],
+        previousOutcome: "schema_invalid",
+        automaticRetryCount: 0,
+        retryBudgetUsedCount: 1,
+        acceptedQuestions,
+      },
+    },
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    (chunk) => chunks.push(chunk),
+    (event) => events.push(event),
+  );
+
+  assert.equal(result.generatedStartIndex, 11);
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.question.id),
+    ["q12", "q13", "q14", "q15"],
+  );
+  assert.deepEqual(
+    events.map((event) => event.classification),
+    ["automatic_retry", "automatic_retry", "primary", "primary"],
+  );
+  assert.deepEqual(
+    events.map((event) => event.callIndex),
+    [7, 8, 9, 10],
+  );
+  assert.deepEqual(
+    events.slice(0, 2).map((event) => event.retryKind),
+    ["content_repair", "content_repair"],
+  );
+  assert.ok(events.every((event) => event.protocolVersion === 5));
+  assert.ok(events.every((event) => event.purpose === "automatic_recovery"));
   assert.ok(
-    events.every((event) => event.classification === "manual_continuation"),
+    acceptedQuestions.every(
+      (question, index) => question.id === `q${index + 1}`,
+    ),
   );
 });
 

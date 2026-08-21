@@ -28,6 +28,10 @@ import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
 import {
+  presentQuizPrompt,
+  presentQuizText,
+} from "../../src/lib/question-presentation";
+import {
   createChoicePresentation,
   createInitialOrdering,
   type ChoicePresentation,
@@ -55,6 +59,7 @@ import {
 import {
   borders,
   breakpoints,
+  motion,
   radii,
   spacing,
   typography,
@@ -82,6 +87,9 @@ export default function QuizScreen() {
     useState<ChoicePresentation>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
+  const [questionActivation, setQuestionActivation] = useState(0);
+  const [questionInteractionReady, setQuestionInteractionReady] =
+    useState(false);
   const recoveryAttemptedRef = useRef(false);
 
   const updateGeneration = useCallback(
@@ -98,6 +106,8 @@ export default function QuizScreen() {
   );
 
   const activateQuestion = useCallback((nextQuestion: PublicQuestion) => {
+    setQuestionInteractionReady(false);
+    setQuestionActivation((current) => current + 1);
     setQuestion(nextQuestion);
     setChoicePresentation(
       nextQuestion.type === "multiple_choice" &&
@@ -115,6 +125,27 @@ export default function QuizScreen() {
     setError(undefined);
     setWaitingForQuestions(false);
   }, []);
+
+  useEffect(() => {
+    if (!question) {
+      setQuestionInteractionReady(false);
+      return;
+    }
+    const controlCount =
+      question.type === "multiple_choice"
+        ? (question.options?.length ?? 0)
+        : question.type === "true_false"
+          ? 2
+          : question.type === "ordering"
+            ? (question.items?.length ?? 0)
+            : 1;
+    const delay =
+      motion.standard +
+      Math.min(Math.max(0, controlCount - 1), 8) * motion.stagger +
+      motion.quick;
+    const timeout = setTimeout(() => setQuestionInteractionReady(true), delay);
+    return () => clearTimeout(timeout);
+  }, [question, questionActivation]);
 
   const applyResume = useCallback(
     async (resumed: AttemptResumeResponse) => {
@@ -245,7 +276,8 @@ export default function QuizScreen() {
           !recoveryAttemptedRef.current &&
           status.generation.state !== "ready" &&
           status.generation.state !== "action_required" &&
-          status.generation.state !== "generation_failed" &&
+          (status.generation.state !== "generation_failed" ||
+            status.continuation?.claim.state === "available") &&
           !hasActiveProgressiveGenerationForAttempt(attemptId)
         ) {
           recoveryAttemptedRef.current = true;
@@ -287,10 +319,11 @@ export default function QuizScreen() {
   }, [attemptId, generation?.state]);
 
   const canSubmit = useMemo(() => {
+    if (!questionInteractionReady) return false;
     if (answer === undefined) return false;
     if (typeof answer === "string") return answer.trim().length > 0;
     return question?.type !== "ordering" || orderingTouched;
-  }, [answer, orderingTouched, question?.type]);
+  }, [answer, orderingTouched, question?.type, questionInteractionReady]);
 
   const streamIndicator = generation ? (
     <QuestionStreamIndicator generation={generation} />
@@ -557,6 +590,8 @@ export default function QuizScreen() {
   }
   if (!question) return null;
 
+  const displayPrompt = presentQuizPrompt(question.prompt);
+
   if (showPrimer && primer) {
     return (
       <Screen contentWidth="reading" centered floating={streamIndicator}>
@@ -607,7 +642,7 @@ export default function QuizScreen() {
     <FeedbackPanel
       status={feedback.correct ? "correct" : "incorrect"}
       title={feedback.correct ? t("correct") : t("incorrect")}
-      detail={feedback.explanation}
+      detail={presentQuizText(feedback.explanation)}
       action={
         <PrimaryButton onPress={next}>
           {feedback.completed ? t("finish") : t("next")}
@@ -648,7 +683,19 @@ export default function QuizScreen() {
         onClose={() => router.replace("/(tabs)")}
       />
       <MotionView
-        key={`${question.position}-${question.prompt}`}
+        key={`${question.position}-${displayPrompt}`}
+        testID={
+          questionInteractionReady ? "clipquest-question-ready" : undefined
+        }
+        accessibilityLabel={
+          questionInteractionReady
+            ? `Interactive question ${question.position} of ${question.total}`
+            : undefined
+        }
+        accessibilityState={{
+          disabled:
+            !questionInteractionReady || Boolean(feedback) || submitting,
+        }}
         preset="from-right"
         style={styles.quizBody}
       >
@@ -682,7 +729,7 @@ export default function QuizScreen() {
             accessibilityRole="header"
             style={[styles.question, { color: theme.text }]}
           >
-            {question.prompt}
+            {displayPrompt}
           </MathText>
         </MotionView>
         <QuestionInput
@@ -692,7 +739,9 @@ export default function QuizScreen() {
           feedback={feedback}
           setAnswer={setAnswer}
           onInteraction={() => setOrderingTouched(true)}
-          disabled={Boolean(feedback) || submitting}
+          disabled={
+            !questionInteractionReady || Boolean(feedback) || submitting
+          }
         />
         {error ? (
           <FeedbackMotion signal={error} kind="error">

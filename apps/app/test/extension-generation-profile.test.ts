@@ -50,9 +50,60 @@ describe("extension generation profile compatibility", () => {
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(false);
-    expect(supportsQuestionStream(["question-stream-v2"])).toBe(false);
     expect(
-      supportsQuestionStream(["question-stream-v2", "question-stream-v3"]),
+      supportsQuestionStream(
+        ["question-stream-v2"],
+        "stable_auto_recovery_v5_3",
+      ),
+    ).toBe(false);
+    expect(
+      supportsQuestionStream(
+        ["question-stream-v2", "question-stream-v3"],
+        "stable_auto_recovery_v5_3",
+      ),
+    ).toBe(true);
+  });
+
+  it("requires v0.8.8 and stream v6 for new concept-first generation", () => {
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.3",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.5",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.6",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.7",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(false);
+    expect(
+      isCompatibleClipQuestExtensionVersion(
+        "0.8.8",
+        MINIMUM_LOCAL_AI_EXTENSION_VERSION,
+      ),
+    ).toBe(true);
+    expect(supportsQuestionStream(["question-stream-v5"])).toBe(false);
+    expect(
+      supportsQuestionStream(["question-stream-v5", "question-stream-v6"]),
+    ).toBe(true);
+    expect(
+      supportsQuestionStream(
+        ["question-stream-v5"],
+        "evidence_grounded_auto_v5_4",
+      ),
     ).toBe(true);
   });
 
@@ -72,5 +123,19 @@ describe("extension generation profile compatibility", () => {
       expect(source).not.toMatch(/onContinue/);
       expect(source).not.toMatch(/continuingGeneration/);
     }
+  });
+
+  it("reacquires safe video metadata when the local import cache is gone", () => {
+    const source = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/generation/progressive-continuation.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain(
+      "/api/videos/${encodeURIComponent(continuation.videoId)}/recovery",
+    );
+    expect(source).toContain("saveImportedVideo(imported)");
   });
 });

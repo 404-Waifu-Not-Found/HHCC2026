@@ -1,12 +1,15 @@
 import {
   AttemptGenerationAvailabilitySchema,
+  GenerationRecoveryPhaseSchema,
   GenerationAvailabilityReasonCodeSchema,
   LEGACY_LOCAL_QUIZ_RESULT_PROTOCOL_VERSION,
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
   LocalAcceptedQuestionSummarySchema,
+  LocalGenerationCallOutcomeSchema,
   LocalGenerationProfileSchema,
   LocalQuestionPlanSchema,
+  LocalSourceSelectionMetricsSchema,
   LocalQuizProgressiveImportVersionSchema,
   LocalQuizPromptVersionSchema,
   LocalQuizResultProtocolVersionSchema,
@@ -14,8 +17,11 @@ import {
   QuizQuestionTypesSchema,
   questionTypePlanForSelection,
   type AttemptGenerationAvailability,
+  type AutomaticRetryKind,
   type LocalConceptQuizQuestion,
   type LocalConceptQuizQuestionChunk,
+  type LocalGenerationCallOutcome,
+  type LocalShortAnswerRubricV2,
 } from "@clipquest/contracts";
 import { z } from "zod";
 import { ApiError } from "./errors";
@@ -46,7 +52,12 @@ const ENGLISH_STOP_WORDS = new Set([
   "or",
   "that",
   "the",
+  "their",
+  "them",
+  "these",
+  "they",
   "this",
+  "those",
   "to",
   "was",
   "what",
@@ -86,6 +97,27 @@ const TOKEN_ALIASES = new Map([
   ["quotient", "ratio"],
   ["smaller", "small"],
   ["tiny", "small"],
+  ["carry", "transfer"],
+  ["carried", "transfer"],
+  ["transmit", "transfer"],
+  ["transmitt", "transfer"],
+  ["relay", "transfer"],
+  ["send", "transfer"],
+  ["sent", "transfer"],
+  ["information", "signal"],
+  ["data", "signal"],
+  ["signal", "signal"],
+  ["analyze", "process"],
+  ["analyse", "process"],
+  ["analyz", "process"],
+  ["analysis", "process"],
+  ["interpret", "process"],
+  ["process", "process"],
+  ["activate", "detect"],
+  ["activat", "detect"],
+  ["detect", "detect"],
+  ["sense", "detect"],
+  ["sens", "detect"],
 ]);
 
 export const ProgressiveQuizSummarySchema = z
@@ -106,10 +138,18 @@ export const ProgressiveQuizSummarySchema = z
       .string()
       .regex(/^[a-f0-9]{64}$/)
       .optional(),
+    promptFingerprint: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+    recoveryPhase: GenerationRecoveryPhaseSchema.optional(),
+    activeCallIndex: z.number().int().min(0).max(255).optional(),
+    sourceSelection: LocalSourceSelectionMetricsSchema.optional(),
     generationState: z.enum([
       "generating",
       "retrying",
       "recovering",
+      "cooldown",
       "retry_required",
       "action_required",
       "generation_failed",
@@ -117,7 +157,7 @@ export const ProgressiveQuizSummarySchema = z
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
     retryOrdinal: z.number().int().min(1).max(15).optional(),
-    ordinalAttempt: z.number().int().min(1).max(12).optional(),
+    ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: z
       .enum([
         "transport",
@@ -130,6 +170,7 @@ export const ProgressiveQuizSummarySchema = z
       ])
       .optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
+    nextRecoveryAt: z.number().int().positive().optional(),
     requestedQuestionTypes: QuizQuestionTypesSchema,
     plannedQuestionTypes: z
       .array(z.enum(["multiple_choice", "true_false", "short_answer"]))
@@ -220,6 +261,7 @@ export const ProgressiveQuizSummarySchema = z
     if (
       value.reasonCode &&
       value.generationState !== "retry_required" &&
+      value.generationState !== "cooldown" &&
       value.generationState !== "action_required" &&
       value.generationState !== "generation_failed"
     ) {
@@ -230,7 +272,9 @@ export const ProgressiveQuizSummarySchema = z
       });
     }
     const automaticProfile =
-      value.generationProfile === "stable_auto_recovery_v5_3";
+      value.generationProfile === "stable_auto_recovery_v5_3" ||
+      value.generationProfile === "evidence_grounded_auto_v5_4" ||
+      value.generationProfile === "concept_first_auto_v5_8";
     if (
       automaticProfile &&
       (value.generationState === "action_required" ||
@@ -272,6 +316,17 @@ export const ProgressiveQuizSummarySchema = z
           "Only retrying automatic summaries may include retry metadata.",
       });
     }
+    if (
+      automaticProfile &&
+      (value.generationState === "cooldown") !==
+        (value.nextRecoveryAt !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["nextRecoveryAt"],
+        message: "Automatic cooldown requires exactly one recovery time.",
+      });
+    }
     if (value.plannedQuestionTypes.length !== value.plannedCount) {
       context.addIssue({
         code: "custom",
@@ -279,33 +334,70 @@ export const ProgressiveQuizSummarySchema = z
         message: "The persisted question plan must match the planned total.",
       });
     }
+    const conceptFirstV58 =
+      value.promptVersion === "quiz-local-json-stream-v5.8";
+    const groundedV57 = value.promptVersion === "quiz-local-json-stream-v5.7";
+    const groundedV56 = value.promptVersion === "quiz-local-json-stream-v5.6";
+    const groundedV55 = value.promptVersion === "quiz-local-json-stream-v5.5";
+    const groundedV54 = value.promptVersion === "quiz-local-json-stream-v5.4";
+    const grounded = groundedV57 || groundedV56 || groundedV55 || groundedV54;
     const automatic = value.promptVersion === "quiz-local-json-stream-v5.3";
     const stable = value.promptVersion === "quiz-local-json-stream-v5.2";
-    const metadataMatches = automatic
-      ? value.resultProtocolVersion === 7 &&
-        value.importVersion === "extension-progressive-import-v5" &&
+    const metadataMatches = conceptFirstV58
+      ? value.resultProtocolVersion === 9 &&
+        value.importVersion === "extension-progressive-import-v7" &&
         value.reasoningEffort === "none" &&
-        value.validatorVersion === "validator-local-progressive-v4.2" &&
-        value.generationProfile === "stable_auto_recovery_v5_3" &&
+        value.validatorVersion === "validator-local-progressive-v4.7" &&
+        value.generationProfile === "concept_first_auto_v5_8" &&
         Boolean(value.generationId) &&
         Boolean(value.generationSessionId) &&
         Boolean(value.recoverySessionId) &&
         Boolean(value.questionPlanSeed) &&
+        Boolean(value.promptFingerprint) &&
         value.telemetryAvailable
-      : stable
-        ? value.resultProtocolVersion === 6 &&
-          value.importVersion === "extension-progressive-import-v4" &&
+      : grounded
+        ? value.resultProtocolVersion === 8 &&
+          value.importVersion === "extension-progressive-import-v6" &&
           value.reasoningEffort === "none" &&
-          value.validatorVersion === "validator-local-progressive-v4.1" &&
-          value.generationProfile === "stable_non_thinking_v5_2" &&
+          value.validatorVersion ===
+            (groundedV57
+              ? "validator-local-progressive-v4.6"
+              : groundedV56
+                ? "validator-local-progressive-v4.5"
+                : groundedV55
+                  ? "validator-local-progressive-v4.4"
+                  : "validator-local-progressive-v4.3") &&
+          value.generationProfile === "evidence_grounded_auto_v5_4" &&
           Boolean(value.generationId) &&
+          Boolean(value.generationSessionId) &&
+          Boolean(value.recoverySessionId) &&
           Boolean(value.questionPlanSeed) &&
           value.telemetryAvailable
-        : value.resultProtocolVersion === 5 &&
-          value.importVersion === "extension-progressive-import-v3" &&
-          value.reasoningEffort === "high" &&
-          value.validatorVersion === "validator-local-progressive-v4.0" &&
-          value.generationProfile === "legacy_reasoning_v5_1";
+        : automatic
+          ? value.resultProtocolVersion === 7 &&
+            value.importVersion === "extension-progressive-import-v5" &&
+            value.reasoningEffort === "none" &&
+            value.validatorVersion === "validator-local-progressive-v4.2" &&
+            value.generationProfile === "stable_auto_recovery_v5_3" &&
+            Boolean(value.generationId) &&
+            Boolean(value.generationSessionId) &&
+            Boolean(value.recoverySessionId) &&
+            Boolean(value.questionPlanSeed) &&
+            value.telemetryAvailable
+          : stable
+            ? value.resultProtocolVersion === 6 &&
+              value.importVersion === "extension-progressive-import-v4" &&
+              value.reasoningEffort === "none" &&
+              value.validatorVersion === "validator-local-progressive-v4.1" &&
+              value.generationProfile === "stable_non_thinking_v5_2" &&
+              Boolean(value.generationId) &&
+              Boolean(value.questionPlanSeed) &&
+              value.telemetryAvailable
+            : value.resultProtocolVersion === 5 &&
+              value.importVersion === "extension-progressive-import-v3" &&
+              value.reasoningEffort === "high" &&
+              value.validatorVersion === "validator-local-progressive-v4.0" &&
+              value.generationProfile === "legacy_reasoning_v5_1";
     if (!metadataMatches) {
       context.addIssue({
         code: "custom",
@@ -351,6 +443,7 @@ export function assertProgressiveChunkMetadata(
         | "generationSessionId"
         | "recoverySessionId"
         | "questionPlan"
+        | "promptFingerprint"
       >
     >,
 ): void {
@@ -372,7 +465,8 @@ export function assertProgressiveChunkMetadata(
     JSON.stringify(
       chunk.questionPlan?.types ?? summary.plannedQuestionTypes,
     ) !== JSON.stringify(summary.plannedQuestionTypes) ||
-    chunk.questionPlan?.seed !== summary.questionPlanSeed
+    chunk.questionPlan?.seed !== summary.questionPlanSeed ||
+    chunk.promptFingerprint !== summary.promptFingerprint
   ) {
     throw new ApiError(
       409,
@@ -420,7 +514,7 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
     .positive()
     .nullable()
     .default(null),
-  next_ordinal_attempt: z.coerce.number().int().min(1).max(12).default(1),
+  next_ordinal_attempt: z.coerce.number().int().min(1).max(24).default(1),
   next_retry_kind: z
     .enum([
       "transport",
@@ -433,10 +527,112 @@ const ProgressiveGenerationSnapshotRowSchema = z.object({
     ])
     .nullable()
     .default(null),
+  latest_generation_session_id: z.string().uuid().nullable().default(null),
+  next_call_index: z.coerce.number().int().min(0).max(128).default(0),
+  active_call_count: z.coerce.number().int().nonnegative().default(0),
+  active_call_index: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(255)
+    .nullable()
+    .default(null),
+  active_call_start_ordinal: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(14)
+    .nullable()
+    .default(null),
+  active_call_ordinal_attempt: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24)
+    .nullable()
+    .default(null),
+  retry_ordinals_json: z.string().default("[]"),
+  previous_outcome: LocalGenerationCallOutcomeSchema.nullable().default(null),
 });
 
 export const PROGRESSIVE_GENERATION_STALE_AFTER_MS = 30 * 60 * 1_000;
 export const AUTOMATIC_GENERATION_STALE_AFTER_MS = 45 * 1_000;
+
+const AUTOMATIC_RETRY_OUTCOMES_BY_KIND = {
+  transport: [
+    "transient_http",
+    "network_interrupted",
+    "timeout",
+    "call_dispatch_timeout",
+    "stream_idle_timeout",
+  ],
+  empty_content: ["empty_content"],
+  truncated_output: ["truncated_json", "finish_length"],
+  content_repair: [
+    "schema_invalid",
+    "type_or_order_mismatch",
+    "source_framing_invalid",
+    "course_logistics_invalid",
+    "low_pedagogical_value",
+    "rubric_invalid",
+    "question_tautology_invalid",
+    "quiz_language_mismatch",
+  ],
+  duplicate_repair: ["duplicate_question"],
+  answer_repair: [
+    "answer_mapping_invalid",
+    "mc_evidence_span_invalid",
+    "mc_distractor_duplicate",
+    "mc_distractor_equivalent",
+    "mc_answer_kind_mismatch",
+    "true_false_fact_invalid",
+    "true_false_mutation_unavailable",
+    "short_atomic_invalid",
+    "short_proposition_invalid",
+    "short_enumeration_invalid",
+    "short_formula_invalid",
+    "question_answer_kind_mismatch",
+  ],
+  automatic_resume: ["local_state_conflict", "append_conflict"],
+} as const satisfies Record<
+  AutomaticRetryKind,
+  readonly LocalGenerationCallOutcome[]
+>;
+
+export function automaticRetryKindForOutcome(
+  outcome: string,
+): AutomaticRetryKind | null {
+  for (const [kind, outcomes] of Object.entries(
+    AUTOMATIC_RETRY_OUTCOMES_BY_KIND,
+  ) as [AutomaticRetryKind, readonly string[]][]) {
+    if (outcomes.includes(outcome)) {
+      return kind;
+    }
+  }
+  return null;
+}
+
+export function retryKindMatchesGenerationOutcome(
+  retryKind: AutomaticRetryKind | undefined,
+  outcome: string,
+): boolean {
+  return retryKind
+    ? AUTOMATIC_RETRY_OUTCOMES_BY_KIND[retryKind].some(
+        (candidate) => candidate === outcome,
+      )
+    : false;
+}
+
+const AUTOMATIC_RETRY_KIND_SQL_CASE = Object.entries(
+  AUTOMATIC_RETRY_OUTCOMES_BY_KIND,
+)
+  .map(
+    ([kind, outcomes]) =>
+      `WHEN event.outcome_code IN (${outcomes
+        .map((outcome) => `'${outcome.replaceAll("'", "''")}'`)
+        .join(", ")}) THEN '${kind}'`,
+  )
+  .join("\n        ");
 
 export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
   SELECT
@@ -464,7 +660,19 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
     ,(
       SELECT CASE
         WHEN COUNT(DISTINCT event.recovery_session_id) > 0
-          THEN COUNT(DISTINCT event.recovery_session_id) - 1
+          THEN MAX(
+            0,
+            COUNT(DISTINCT event.recovery_session_id) - CASE
+              WHEN EXISTS (
+                SELECT 1
+                FROM quiz_generation_call_events initial
+                WHERE initial.quiz_id = qb.id
+                  AND initial.protocol_version IN (7, 8, 9)
+                  AND initial.call_index = 0
+              ) THEN 1
+              ELSE 0
+            END
+          )
         ELSE 0
       END
       FROM quiz_generation_call_events event
@@ -485,7 +693,13 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       WHERE event.quiz_id = qb.id AND event.usage_complete = 1
     ) AS complete_usage_calls
     ,COALESCE((
-      SELECT SUM(event.elapsed_ms + event.retry_delay_ms)
+      SELECT SUM(
+        CASE
+          WHEN COALESCE(event.lifecycle_state, 'completed') = 'abandoned'
+            THEN MIN(event.elapsed_ms, 120000)
+          ELSE event.elapsed_ms
+        END + event.retry_delay_ms
+      )
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
     ), 0) AS total_elapsed_ms
@@ -507,6 +721,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
         SELECT event.outcome_code, COUNT(*) AS outcome_total
         FROM quiz_generation_call_events event
         WHERE event.quiz_id = qb.id
+          AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
         GROUP BY event.outcome_code
       ) outcome_counts
     ), '{}') AS outcome_counts_json
@@ -523,7 +738,7 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
         )
     ) AS first_question_latency_ms
     ,(
-      SELECT MAX(event.created_at) FROM quiz_generation_call_events event
+      SELECT MAX(COALESCE(event.dispatched_at, event.created_at)) FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
     ) AS last_attempt_at
     ,(
@@ -542,26 +757,22 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       SELECT MAX(event.ordinal_attempt) + 1
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
-        AND event.protocol_version = 7
+        AND event.protocol_version IN (7, 8, 9)
+        AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
         AND event.start_ordinal = (
           SELECT COUNT(*) FROM questions stored_question
           WHERE stored_question.quiz_id = qb.id
         )
-    ), 1), 12) AS next_ordinal_attempt
+    ), 1), 24) AS next_ordinal_attempt
     ,(
       SELECT CASE
-        WHEN event.outcome_code IN ('transient_http', 'network_interrupted', 'timeout') THEN 'transport'
-        WHEN event.outcome_code = 'empty_content' THEN 'empty_content'
-        WHEN event.outcome_code IN ('truncated_json', 'finish_length') THEN 'truncated_output'
-        WHEN event.outcome_code = 'duplicate_question' THEN 'duplicate_repair'
-        WHEN event.outcome_code = 'answer_mapping_invalid' THEN 'answer_repair'
-        WHEN event.outcome_code IN ('schema_invalid', 'type_or_order_mismatch') THEN 'content_repair'
-        WHEN event.outcome_code IN ('local_state_conflict', 'append_conflict') THEN 'automatic_resume'
+        ${AUTOMATIC_RETRY_KIND_SQL_CASE}
         ELSE NULL
       END
       FROM quiz_generation_call_events event
       WHERE event.quiz_id = qb.id
-        AND event.protocol_version = 7
+        AND event.protocol_version IN (7, 8, 9)
+        AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
         AND event.start_ordinal = (
           SELECT COUNT(*) FROM questions stored_question
           WHERE stored_question.quiz_id = qb.id
@@ -569,6 +780,92 @@ export const PROGRESSIVE_GENERATION_SNAPSHOT_SQL = `
       ORDER BY event.call_index DESC
       LIMIT 1
     ) AS next_retry_kind
+    ,(
+      SELECT event.generation_session_id
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+      ORDER BY event.created_at DESC, event.call_index DESC
+      LIMIT 1
+    ) AS latest_generation_session_id
+    ,COALESCE((
+      SELECT MAX(event.call_index) + 1
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.generation_session_id = (
+          SELECT latest.generation_session_id
+          FROM quiz_generation_call_events latest
+          WHERE latest.quiz_id = qb.id
+          ORDER BY latest.created_at DESC, latest.call_index DESC
+          LIMIT 1
+        )
+    ), 0) AS next_call_index
+    ,(
+      SELECT COUNT(*)
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+    ) AS active_call_count
+    ,(
+      SELECT event.call_index
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_index
+    ,(
+      SELECT event.start_ordinal
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_start_ordinal
+    ,(
+      SELECT COALESCE(event.ordinal_attempt, 1)
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND event.lifecycle_state = 'started'
+      ORDER BY event.call_index DESC
+      LIMIT 1
+    ) AS active_call_ordinal_attempt
+    ,COALESCE((
+      SELECT json_group_array(attempted.ordinal)
+      FROM (
+        SELECT DISTINCT event.start_ordinal + offsets.offset + 1 AS ordinal
+        FROM quiz_generation_call_events event
+        JOIN (
+          SELECT 0 AS offset UNION ALL SELECT 1 UNION ALL SELECT 2
+        ) offsets ON offsets.offset < event.requested_count
+        WHERE event.quiz_id = qb.id
+          AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
+          AND event.start_ordinal + offsets.offset >= (
+            SELECT COUNT(*) FROM questions stored_question
+            WHERE stored_question.quiz_id = qb.id
+          )
+          AND (
+            event.outcome_code <> 'complete'
+            OR event.accepted_count < event.requested_count
+          )
+        ORDER BY ordinal
+      ) attempted
+    ), '[]') AS retry_ordinals_json
+    ,(
+      SELECT event.outcome_code
+      FROM quiz_generation_call_events event
+      WHERE event.quiz_id = qb.id
+        AND COALESCE(event.lifecycle_state, 'completed') <> 'started'
+        AND event.start_ordinal <= (
+          SELECT COUNT(*) FROM questions stored_question
+          WHERE stored_question.quiz_id = qb.id
+        )
+        AND event.start_ordinal + event.requested_count > (
+          SELECT COUNT(*) FROM questions stored_question
+          WHERE stored_question.quiz_id = qb.id
+        )
+      ORDER BY event.created_at DESC, event.call_index DESC
+      LIMIT 1
+    ) AS previous_outcome
   FROM quiz_banks qb
   WHERE qb.id = ?
   LIMIT 1`;
@@ -613,6 +910,16 @@ export type ProgressiveGenerationSnapshot = {
     | "answer_repair"
     | "automatic_resume"
     | null;
+  latestGenerationSessionId: string | null;
+  nextCallIndex: number;
+  activeCall: {
+    lifecycleState: "started";
+    callIndex: number;
+    startIndex: number;
+    ordinalAttempt: number;
+  } | null;
+  retryOrdinals: number[];
+  previousOutcome: LocalGenerationCallOutcome | null;
 };
 
 /**
@@ -633,6 +940,28 @@ export async function readProgressiveGenerationSnapshot(
   if (!row.success) {
     throw new ApiError(404, "quiz_not_found", "Quiz not found.");
   }
+  if (
+    row.data.active_call_count > 1 ||
+    (row.data.active_call_count === 1 &&
+      (row.data.active_call_index === null ||
+        row.data.active_call_start_ordinal === null ||
+        row.data.active_call_ordinal_attempt === null))
+  ) {
+    throw new ApiError(
+      409,
+      "quiz_generation_state_conflict",
+      "The quiz has conflicting active generation lifecycles.",
+    );
+  }
+  const activeCall =
+    row.data.active_call_count === 1
+      ? {
+          lifecycleState: "started" as const,
+          callIndex: row.data.active_call_index!,
+          startIndex: row.data.active_call_start_ordinal!,
+          ordinalAttempt: row.data.active_call_ordinal_attempt!,
+        }
+      : null;
 
   const summary = tryProgressiveQuizSummary(row.data.quality_summary_json);
   const telemetry = {
@@ -668,6 +997,11 @@ export async function readProgressiveGenerationSnapshot(
       claimHeartbeatAt: row.data.claim_heartbeat_at,
       nextOrdinalAttempt: row.data.next_ordinal_attempt,
       nextRetryKind: row.data.next_retry_kind,
+      latestGenerationSessionId: row.data.latest_generation_session_id,
+      nextCallIndex: row.data.next_call_index,
+      activeCall,
+      retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
+      previousOutcome: row.data.previous_outcome,
     };
   }
 
@@ -676,7 +1010,11 @@ export async function readProgressiveGenerationSnapshot(
     row.data.quality_status,
     row.data.authoritative_count,
   );
-  const automatic = summary.generationProfile === "stable_auto_recovery_v5_3";
+  const automatic =
+    summary.generationProfile === "stable_auto_recovery_v5_3" ||
+    summary.generationProfile === "evidence_grounded_auto_v5_4" ||
+    summary.generationProfile === "concept_first_auto_v5_8" ||
+    summary.resultProtocolVersion === 5;
   const stalled =
     (availability.state === "generating" ||
       availability.state === "retrying" ||
@@ -713,7 +1051,27 @@ export async function readProgressiveGenerationSnapshot(
     claimHeartbeatAt: row.data.claim_heartbeat_at,
     nextOrdinalAttempt: row.data.next_ordinal_attempt,
     nextRetryKind: row.data.next_retry_kind,
+    latestGenerationSessionId: row.data.latest_generation_session_id,
+    nextCallIndex: row.data.next_call_index,
+    activeCall,
+    retryOrdinals: parseRetryOrdinals(row.data.retry_ordinals_json),
+    previousOutcome: row.data.previous_outcome,
   };
+}
+
+function parseRetryOrdinals(value: string): number[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed)]
+      .filter(
+        (ordinal): ordinal is number =>
+          Number.isInteger(ordinal) && ordinal >= 1 && ordinal <= 15,
+      )
+      .sort((left, right) => left - right);
+  } catch {
+    return [];
+  }
 }
 
 function parseOutcomeCounts(value: string): Record<string, number> {
@@ -738,6 +1096,10 @@ export function acceptedQuestionSummary(question: LocalConceptQuizQuestion) {
     type: question.type,
     concept: question.concept,
     question: question.question,
+    ...(question.claimKey ? { claimKey: question.claimKey } : {}),
+    ...(question.conceptCluster
+      ? { conceptCluster: question.conceptCluster }
+      : {}),
   });
 }
 
@@ -805,6 +1167,15 @@ export function generationAvailability(
     ...(!ready && summary.recoverySessionId
       ? { recoverySessionId: summary.recoverySessionId }
       : {}),
+    ...(!ready && summary.nextRecoveryAt
+      ? { nextRecoveryAt: new Date(summary.nextRecoveryAt).toISOString() }
+      : {}),
+    ...(!ready && summary.recoveryPhase
+      ? { recoveryPhase: summary.recoveryPhase }
+      : {}),
+    ...(!ready && summary.activeCallIndex !== undefined
+      ? { activeCallIndex: summary.activeCallIndex }
+      : {}),
   });
 }
 
@@ -815,46 +1186,150 @@ export function generationAvailability(
  * authoritative grader by comparing normalized semantic tokens. Pipeline-7
  * attempts keep their historical grader for compatibility.
  */
+export type ProgressiveShortAnswerGradingPath =
+  | "atomic_exact"
+  | "formula_match"
+  | "formula_mismatch"
+  | "prose_alternative"
+  | "required_ideas"
+  | "required_idea_missing"
+  | "enumeration_match"
+  | "enumeration_mismatch";
+
+export type ProgressiveShortAnswerDecision = {
+  correct: boolean;
+  path: ProgressiveShortAnswerGradingPath;
+};
+
+export function gradeProgressiveShortAnswerDecision(input: {
+  answer: string;
+  requiredIdeas: string[];
+  acceptableAlternatives: string[];
+  rubricV2?: LocalShortAnswerRubricV2;
+}): ProgressiveShortAnswerDecision {
+  if (input.rubricV2?.mode === "atomic_term") {
+    const learner = canonicalExactAlternative(input.answer);
+    const accepted = [
+      input.rubricV2.canonicalAnswer,
+      ...input.rubricV2.aliases,
+    ];
+    return learner &&
+      accepted.some(
+        (candidate) => canonicalExactAlternative(candidate) === learner,
+      )
+      ? { correct: true, path: "atomic_exact" }
+      : { correct: false, path: "required_idea_missing" };
+  }
+  if (input.rubricV2?.mode === "enumeration") {
+    return gradeEnumerationAnswer(input.answer, input.rubricV2);
+  }
+  const formulaAlternatives =
+    input.rubricV2?.mode === "formula"
+      ? [input.rubricV2.canonicalFormula, ...input.rubricV2.acceptableFormulas]
+      : input.acceptableAlternatives;
+  const formulaComparison = compareFormulaAnswer(
+    input.answer,
+    formulaAlternatives,
+  );
+  if (formulaComparison === "match") {
+    return { correct: true, path: "formula_match" };
+  }
+  if (formulaComparison === "mismatch") {
+    return { correct: false, path: "formula_mismatch" };
+  }
+
+  const canonicalAnswer = canonicalExactAlternative(input.answer);
+  if (
+    canonicalAnswer &&
+    input.acceptableAlternatives.some(
+      (alternative) =>
+        canonicalExactAlternative(alternative) === canonicalAnswer,
+    )
+  ) {
+    return { correct: true, path: "atomic_exact" };
+  }
+
+  const requiredIdeas =
+    input.rubricV2?.mode === "proposition"
+      ? input.rubricV2.requiredIdeas
+      : input.requiredIdeas;
+  const acceptableAlternatives =
+    input.rubricV2?.mode === "proposition"
+      ? input.rubricV2.acceptableAnswers
+      : input.acceptableAlternatives;
+  const normalizedAnswer = normalizeRubricText(input.answer);
+  const answerTokens = rubricTokens(input.answer);
+  if (!normalizedAnswer || answerTokens.size < 2) {
+    return { correct: false, path: "required_idea_missing" };
+  }
+
+  const matchesAlternative = acceptableAlternatives.some((alternative) =>
+    tokenCoverage(answerTokens, rubricTokens(alternative), 0.67),
+  );
+  if (matchesAlternative) {
+    return { correct: true, path: "prose_alternative" };
+  }
+
+  const coversRequiredIdeas = requiredIdeas.every((idea) =>
+    tokenCoverage(answerTokens, rubricTokens(idea), 0.5),
+  );
+  return coversRequiredIdeas
+    ? { correct: true, path: "required_ideas" }
+    : { correct: false, path: "required_idea_missing" };
+}
+
 export function gradeProgressiveShortAnswer(input: {
   answer: string;
   requiredIdeas: string[];
   acceptableAlternatives: string[];
+  rubricV2?: LocalShortAnswerRubricV2;
 }): boolean {
-  const formulaComparison = compareFormulaAnswer(
-    input.answer,
-    input.acceptableAlternatives,
-  );
-  if (formulaComparison === "match") return true;
-  if (formulaComparison === "mismatch") return false;
+  return gradeProgressiveShortAnswerDecision(input).correct;
+}
 
-  const normalizedAnswer = normalizeRubricText(input.answer);
-  const answerTokens = rubricTokens(input.answer);
-  if (!normalizedAnswer || answerTokens.size === 0) return false;
-
-  const matchesAlternative = input.acceptableAlternatives.some(
-    (alternative) => {
-      const normalizedAlternative = normalizeRubricText(alternative);
-      if (!normalizedAlternative) return false;
-      if (
-        normalizedAnswer === normalizedAlternative ||
-        normalizedAnswer.includes(normalizedAlternative)
-      ) {
-        return true;
-      }
-      return tokenCoverage(answerTokens, rubricTokens(alternative), 0.67);
-    },
-  );
-  if (matchesAlternative) return true;
-
-  return input.requiredIdeas.every((idea) =>
-    tokenCoverage(answerTokens, rubricTokens(idea), 0.5),
-  );
+function gradeEnumerationAnswer(
+  answer: string,
+  rubric: Extract<LocalShortAnswerRubricV2, { mode: "enumeration" }>,
+): ProgressiveShortAnswerDecision {
+  const segments = normalizeRubricText(answer)
+    .split(/(?:[,;\n]|\band\b|\bor\b|、|，|；|和|以及)+/gu)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length < rubric.requiredCardinality) {
+    return { correct: false, path: "enumeration_mismatch" };
+  }
+  const used = new Set<number>();
+  const matched = rubric.requiredItems.every((item, itemIndex) => {
+    const candidates = [item, ...(rubric.aliasesByItem[itemIndex] ?? [])];
+    const segmentIndex = segments.findIndex(
+      (segment, index) =>
+        !used.has(index) &&
+        candidates.some((candidate) => {
+          const exact = canonicalExactAlternative(candidate);
+          return (
+            (exact && canonicalExactAlternative(segment) === exact) ||
+            tokenCoverage(rubricTokens(segment), rubricTokens(candidate), 1)
+          );
+        }),
+    );
+    if (segmentIndex < 0) return false;
+    used.add(segmentIndex);
+    return true;
+  });
+  return matched && used.size === rubric.requiredCardinality
+    ? { correct: true, path: "enumeration_match" }
+    : { correct: false, path: "enumeration_mismatch" };
 }
 
 function normalizeRubricText(value: string): string {
   return value
     .normalize("NFKC")
     .toLocaleLowerCase("en-US")
+    .replace(/\bcentral nervous system\b/gu, " cns ")
+    .replace(/\bperipheral nervous system\b/gu, " pns ")
+    .replace(/\bdeoxyribonucleic acid\b/gu, " dna ")
+    .replace(/\bribonucleic acid\b/gu, " rna ")
+    .replace(/\bpick(?:s|ed|ing)?\s+up\b/gu, " detect ")
     .replace(/[’']/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
@@ -873,6 +1348,29 @@ function rubricTokens(value: string): Set<string> {
     if (canonical) tokens.add(canonical);
   }
   return tokens;
+}
+
+/**
+ * Canonicalize a complete answer candidate for exact equality. This is
+ * deliberately narrower than fuzzy rubric coverage: articles, harmless
+ * inflection, approved acronyms, and approved aliases may differ, but a
+ * substring or token subset is never accepted.
+ */
+function canonicalExactAlternative(value: string): string {
+  const normalized = normalizeRubricText(value);
+  const canonical: string[] = [];
+  for (const rawToken of normalized.match(/[\p{L}\p{N}]+/gu) ?? []) {
+    if (/[\u3400-\u9fff\uf900-\ufaff]/u.test(rawToken)) {
+      const meaningful = [...rawToken].filter(
+        (character) => !CJK_STOP_CHARACTERS.has(character),
+      );
+      if (meaningful.length) canonical.push(meaningful.join(""));
+      continue;
+    }
+    const token = canonicalEnglishToken(rawToken);
+    if (token) canonical.push(token);
+  }
+  return canonical.join(" ");
 }
 
 function addCjkTokens(tokens: Set<string>, value: string): void {
@@ -919,7 +1417,7 @@ function tokenCoverage(
   for (const token of expectedTokens) {
     if (answerTokens.has(token)) matching += 1;
   }
-  const minimumMatches = expectedTokens.size === 1 ? 1 : 2;
+  const minimumMatches = 2;
   return (
     matching >= minimumMatches &&
     matching / expectedTokens.size >= requiredCoverage

@@ -100,3 +100,43 @@ export function formatMathText(value: string): string {
         .join(""),
     );
 }
+
+export type MathTextSegment = {
+  text: string;
+  mathematical: boolean;
+};
+
+const INLINE_EXPRESSION_PATTERN =
+  /\((?:[^()]|\([^()]*\))+\)\s*\/\s*\((?:[^()]|\([^()]*\))+\)|(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?)\s*(?:=|\+|-|\*|\/|\^|×|÷|≤|≥|≈|->|<=|>=)\s*(?:(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?)(?:\s*(?:=|\+|-|\*|\/|\^|×|÷|≤|≥|≈|->|<=|>=)\s*(?:d\p{L}\s*\/\s*d\p{L}|\p{L}[\p{L}\p{N}_]*'?(?:\([^)]*\))?|\d+(?:\.\d+)?))*)/giu;
+
+/**
+ * Split prose from inline formulas so a formula can use a technical face
+ * without turning the learner's entire question into monospaced text.
+ */
+export function segmentMathText(value: string): MathTextSegment[] {
+  if (!isMathExpressionText(value)) {
+    return [{ text: value, mathematical: false }];
+  }
+  if (isStandaloneMathExpressionText(value)) {
+    return [{ text: formatMathText(value), mathematical: true }];
+  }
+
+  const segments: MathTextSegment[] = [];
+  let cursor = 0;
+  for (const match of value.matchAll(INLINE_EXPRESSION_PATTERN)) {
+    const index = match.index ?? 0;
+    const expression = match[0];
+    if (!expression || !isMathExpressionText(expression)) continue;
+    if (index > cursor) {
+      segments.push({ text: value.slice(cursor, index), mathematical: false });
+    }
+    segments.push({ text: formatMathText(expression), mathematical: true });
+    cursor = index + expression.length;
+  }
+  if (cursor < value.length) {
+    segments.push({ text: value.slice(cursor), mathematical: false });
+  }
+  return segments.length
+    ? segments
+    : [{ text: formatMathText(value), mathematical: false }];
+}

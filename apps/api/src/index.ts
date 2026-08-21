@@ -4,11 +4,15 @@ import {
   LOCAL_QUIZ_MODEL,
   LOCAL_QUIZ_PIPELINE_VERSION,
   LOCAL_QUIZ_PROMPT_VERSION,
+  LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
   LOCAL_QUIZ_VALIDATOR_VERSION,
 } from "@clipquest/contracts";
 import { createAuth } from "./auth";
 import { preventStaleAppShell, publicAssetShell } from "./lib/asset-shell";
-import { quizGenerationRolloutMode } from "./lib/generation-rollout";
+import {
+  quizGenerationProfile,
+  quizGenerationRolloutMode,
+} from "./lib/generation-rollout";
 import { ApiError, errorResponse } from "./lib/errors";
 import { clearExpiredRateLimits } from "./lib/rate-limit";
 import { publicWorkerVersion } from "./lib/worker-version";
@@ -118,6 +122,11 @@ app.get("/health", (c) => {
     youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
     youtubeOpenSourceAcquisition: true,
   };
+  const rolloutMode = quizGenerationRolloutMode(c.env);
+  const effectiveDefaultProfile = quizGenerationProfile(
+    c.env,
+    "__clipquest_default_profile__",
+  );
   return c.json({
     ok: configuration.authentication && configuration.email,
     service: "clipquest",
@@ -126,8 +135,17 @@ app.get("/health", (c) => {
     pipelineVersion: LOCAL_QUIZ_PIPELINE_VERSION,
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
-    generationProfile: "stable_auto_recovery_v5_3",
-    rolloutMode: quizGenerationRolloutMode(c.env),
+    generationProfile: "concept_first_auto_v5_8",
+    rolloutMode,
+    generationSelection: {
+      supportedProfile: "concept_first_auto_v5_8",
+      supportedPromptVersion: LOCAL_QUIZ_PROMPT_VERSION,
+      supportedValidatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
+      rolloutMode,
+      effectiveDefaultProfile: effectiveDefaultProfile.generationProfile,
+      requiredExtensionVersion: "0.8.8",
+      requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+    },
     worker: publicWorkerVersion(c.env),
     versionAffinity: {
       requestKeyPresent: Boolean(

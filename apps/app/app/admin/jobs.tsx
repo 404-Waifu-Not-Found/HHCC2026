@@ -69,6 +69,7 @@ export default function AdminJobsScreen() {
             { value: "generating", label: copy.generating },
             { value: "retrying", label: copy.retrying },
             { value: "recovering", label: copy.recovering },
+            { value: "cooldown", label: copy.cooldown },
             { value: "retry_required", label: copy.retryRequired },
             { value: "action_required", label: copy.actionRequired },
             { value: "generation_failed", label: copy.generationFailed },
@@ -209,6 +210,11 @@ export default function AdminJobsScreen() {
                   : ""}
               </Text>
             ) : null}
+            {generation.manualContinuations > 0 ? (
+              <Text style={[styles.note, { color: theme.textMuted }]}>
+                {copy.legacyManualContinuationsNote}
+              </Text>
+            ) : null}
             {Object.keys(generation.outcomeCounts).length ? (
               <Text style={[styles.note, { color: theme.textMuted }]}>
                 {copy.outcomes}: {formatOutcomeCounts(generation.outcomeCounts)}
@@ -229,6 +235,7 @@ function generationStateLabel(
   if (state === "generating") return copy.generating;
   if (state === "retrying") return copy.retrying;
   if (state === "recovering") return copy.recovering;
+  if (state === "cooldown") return copy.cooldown;
   if (state === "retry_required") return copy.retryRequired;
   if (state === "action_required") return copy.actionRequired;
   if (state === "generation_failed") return copy.generationFailed;
@@ -243,7 +250,8 @@ function generationTone(
     ["retry_required", "action_required", "generation_failed"].includes(state)
   )
     return "error";
-  if (state === "retrying" || state === "recovering") return "neutral";
+  if (state === "retrying" || state === "recovering" || state === "cooldown")
+    return "neutral";
   return "primary";
 }
 
