@@ -60,7 +60,7 @@ describe("YouTube timed text", () => {
         base_url: "https://youtube.com.attacker.example/api/timedtext",
         language_code: "en",
       }),
-    ).rejects.toThrow("untrusted");
+    ).rejects.toThrow("YouTube captions could not be loaded");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

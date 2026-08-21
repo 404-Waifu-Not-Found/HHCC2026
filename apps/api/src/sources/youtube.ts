@@ -20,6 +20,12 @@ type YouTubeTimedTextEvent = {
   segs?: unknown;
 };
 
+class YouTubeCaptionLoadError extends Error {
+  constructor(readonly reason: string) {
+    super("YouTube captions could not be loaded.");
+  }
+}
+
 async function createYouTubeClient(retrievePlayer: boolean): Promise<Innertube> {
   return Innertube.create({
     lang: "en",
@@ -95,31 +101,36 @@ export async function loadYouTubeCaptionSegments(track: YouTubeCaptionTrack): Pr
   try {
     url = new URL(track.base_url);
   } catch {
-    throw new Error("YouTube returned an invalid timed-text URL.");
+    throw new YouTubeCaptionLoadError("invalid_url");
   }
-  if (!isYouTubeTimedTextUrl(url)) throw new Error("YouTube returned an untrusted timed-text URL.");
+  if (!isYouTubeTimedTextUrl(url)) throw new YouTubeCaptionLoadError("untrusted_url");
   url.searchParams.set("fmt", "json3");
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    redirect: "error",
-  });
-  if (!response.ok) throw new Error(`YouTube timed text returned HTTP ${response.status}.`);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      redirect: "error",
+    });
+  } catch {
+    throw new YouTubeCaptionLoadError("fetch_failed");
+  }
+  if (!response.ok) throw new YouTubeCaptionLoadError(`http_${response.status}`);
   const declaredLength = Number.parseInt(response.headers.get("content-length") ?? "", 10);
   if (Number.isFinite(declaredLength) && declaredLength > MAX_TIMED_TEXT_BYTES) {
-    throw new Error("YouTube timed text exceeded the size limit.");
+    throw new YouTubeCaptionLoadError("oversize");
   }
   const body = await response.text();
   if (new TextEncoder().encode(body).byteLength > MAX_TIMED_TEXT_BYTES) {
-    throw new Error("YouTube timed text exceeded the size limit.");
+    throw new YouTubeCaptionLoadError("oversize");
   }
   let payload: unknown;
   try {
     payload = JSON.parse(body);
   } catch {
-    throw new Error("YouTube returned malformed timed text.");
+    throw new YouTubeCaptionLoadError("malformed_json");
   }
   const segments = parseYouTubeTimedText(payload);
-  if (segments.length === 0) throw new Error("YouTube timed text contained no usable segments.");
+  if (segments.length === 0) throw new YouTubeCaptionLoadError("empty_segments");
   return segments;
 }
 
@@ -175,8 +186,11 @@ export class YouTubeAdapter implements SourceAdapter {
       if (preferredTrack) {
         try {
           preferredCaptionSegments = await loadYouTubeCaptionSegments(preferredTrack);
-        } catch {
-          console.warn("YouTube captions were listed but could not be loaded", { sourceVideoId });
+        } catch (error) {
+          console.warn("YouTube captions were listed but could not be loaded", {
+            sourceVideoId,
+            reason: error instanceof YouTubeCaptionLoadError ? error.reason : "unexpected_error",
+          });
         }
       }
 
