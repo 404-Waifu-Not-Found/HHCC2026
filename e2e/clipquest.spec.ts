@@ -11,6 +11,7 @@ const NEXT_QUESTION_ID = "77777777-7777-4777-8777-777777777777";
 const JOB_ID = "88888888-8888-4888-8888-888888888888";
 const THUMBNAIL_URL = `${BASE_URL}/test-thumbnail.svg`;
 const SCREENSHOT_DIR = "docs/screenshots/final";
+const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
 
 type Scenario = {
   answerCorrect: boolean;
@@ -348,6 +349,40 @@ test("processing failure exposes retry and resumes the same durable job", async 
   ).toBeVisible();
 });
 
+test("admin operations console is responsive and uses real management contracts", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  await installMocks(page);
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByText("Protected data boundary")).toBeVisible();
+  await capture(page, "admin-overview-desktop-1440");
+
+  await page.getByRole("tab", { name: "People" }).click();
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await expect(page.getByText("Morgan Operator")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Suspend" })).toBeVisible();
+  await capture(page, "admin-users-desktop-1440");
+
+  await page.getByRole("tab", { name: "Processing" }).click();
+  await expect(
+    page.getByText("How memory really works: retrieval, spacing, and sleep"),
+  ).toBeVisible();
+  await capture(page, "admin-processing-desktop-1440");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/admin/users");
+  await expect(page.getByRole("heading", { name: "People" })).toBeVisible();
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+  await capture(page, "admin-users-mobile-390");
+});
+
 async function installMocks(page: Page): Promise<Scenario> {
   const scenario: Scenario = {
     answerCorrect: true,
@@ -373,6 +408,183 @@ async function installMocks(page: Page): Promise<Scenario> {
 
     if (path === "/api/auth/get-session") {
       await json(route, sessionFixture());
+      return;
+    }
+    if (path === "/api/admin/me") {
+      await json(route, {
+        user: {
+          id: "99999999-9999-4999-8999-999999999999",
+          name: "Avery Learner",
+          email: "avery@example.com",
+          role: "owner",
+        },
+        permissions: [
+          "overview:read",
+          "users:read",
+          "users:moderate",
+          "users:set-role",
+          "jobs:read",
+          "jobs:manage",
+          "lessons:read",
+          "audit:read",
+          "system:read",
+        ],
+      });
+      return;
+    }
+    if (path === "/api/admin/overview") {
+      await json(route, {
+        totals: { users: 1284, lessons: 3762, activeJobs: 7, failedJobs: 3 },
+        activity: { newUsers7d: 86, lessons7d: 412, completedAttempts7d: 1205 },
+        recentFailures: [
+          {
+            id: JOB_ID,
+            videoTitle: "Neural networks explained visually",
+            ownerEmail: "learner@example.com",
+            errorCode: "generation_failed",
+            errorMessage:
+              "The question provider returned an incomplete response.",
+            updatedAt: "2026-07-31T09:40:00.000Z",
+          },
+        ],
+      });
+      return;
+    }
+    if (path === "/api/admin/users" && request.method() === "GET") {
+      await json(route, {
+        users: [
+          {
+            id: ADMIN_USER_ID,
+            name: "Morgan Operator",
+            email: "morgan@example.com",
+            username: "morgan",
+            role: "admin",
+            banned: false,
+            banReason: null,
+            banExpiresAt: null,
+            emailVerified: true,
+            createdAt: "2026-07-12T08:00:00.000Z",
+            lastSeenAt: "2026-07-31T09:45:00.000Z",
+            lessonCount: 18,
+            attemptCount: 42,
+          },
+          {
+            id: "13131313-1313-4131-8131-131313131313",
+            name: "Lin Student",
+            email: "lin@example.com",
+            username: "linlearns",
+            role: "user",
+            banned: true,
+            banReason: "Repeated abuse reports",
+            banExpiresAt: null,
+            emailVerified: true,
+            createdAt: "2026-07-20T08:00:00.000Z",
+            lastSeenAt: "2026-07-29T10:00:00.000Z",
+            lessonCount: 5,
+            attemptCount: 9,
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, total: 2 },
+      });
+      return;
+    }
+    if (path === "/api/admin/jobs" && request.method() === "GET") {
+      await json(route, {
+        jobs: [
+          {
+            id: JOB_ID,
+            state: "failed",
+            stage: "creating_questions",
+            progress: 0.58,
+            errorCode: "generation_failed",
+            errorMessage:
+              "The transcript could not create trustworthy questions.",
+            cancelRequested: false,
+            createdAt: "2026-07-31T09:30:00.000Z",
+            updatedAt: "2026-07-31T09:40:00.000Z",
+            owner: {
+              id: ADMIN_USER_ID,
+              name: "Morgan Operator",
+              email: "morgan@example.com",
+            },
+            video: {
+              id: VIDEO_ID,
+              title: importedVideo.video.title,
+              source: "youtube",
+            },
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, total: 1 },
+      });
+      return;
+    }
+    if (path === "/api/admin/lessons" && request.method() === "GET") {
+      await json(route, {
+        lessons: [
+          {
+            id: QUIZ_ID,
+            language: "en",
+            sessionLength: "medium",
+            watched: true,
+            createdAt: "2026-07-31T08:00:00.000Z",
+            questionCount: 10,
+            attemptCount: 6,
+            owner: {
+              id: ADMIN_USER_ID,
+              name: "Morgan Operator",
+              email: "morgan@example.com",
+            },
+            video: {
+              id: VIDEO_ID,
+              title: importedVideo.video.title,
+              source: "youtube",
+            },
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, total: 1 },
+      });
+      return;
+    }
+    if (path === "/api/admin/audit" && request.method() === "GET") {
+      await json(route, {
+        entries: [
+          {
+            id: "14141414-1414-4141-8141-141414141414",
+            action: "generation.retry",
+            targetType: "generation_job",
+            targetId: JOB_ID,
+            reason: "Provider recovered after a short outage",
+            outcome: "success",
+            metadata: { previousState: "failed" },
+            createdAt: "2026-07-31T09:50:00.000Z",
+            actor: {
+              id: "99999999-9999-4999-8999-999999999999",
+              name: "Avery Learner",
+              email: "avery@example.com",
+            },
+          },
+        ],
+        pagination: { page: 1, pageSize: 25, total: 1 },
+      });
+      return;
+    }
+    if (path === "/api/admin/system") {
+      await json(route, {
+        configuration: {
+          authentication: true,
+          generation: true,
+          email: true,
+          youtubeEncryption: true,
+          youtubeDemoHistory: false,
+        },
+        model: "deepseek-v4-flash",
+        jobs: { queued: 4, running: 3, complete: 3755, failed: 3 },
+        database: { migration: "0006_admin_console", auditEnabled: true },
+      });
+      return;
+    }
+    if (path.startsWith("/api/admin/") && request.method() === "POST") {
+      await json(route, { ok: true });
       return;
     }
     if (path === "/api/library") {
@@ -543,6 +755,8 @@ function sessionFixture() {
       emailVerified: true,
       image: null,
       ageConfirmed: true,
+      role: "user",
+      banned: false,
       createdAt: "2026-07-01T00:00:00.000Z",
       updatedAt: "2026-07-01T00:00:00.000Z",
     },

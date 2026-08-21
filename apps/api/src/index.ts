@@ -112,6 +112,9 @@ app.get("/health", (c) => {
   });
 });
 
+app.all("/api/auth/admin/*", () => {
+  throw new ApiError(404, "not_found", "API endpoint not found.");
+});
 app.on(["GET", "POST"], "/api/auth/*", (c) =>
   createAuth(c.env).handler(c.req.raw),
 );

@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
+import { useAdminCopy } from "../../src/admin/copy";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
@@ -36,6 +37,7 @@ import {
 } from "../../src/theme/tokens";
 
 export default function SettingsScreen() {
+  const adminCopy = useAdminCopy();
   const {
     t,
     theme,
@@ -211,6 +213,15 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
+            {session?.user.role === "admin" ||
+            session?.user.role === "owner" ? (
+              <PrimaryButton
+                variant="secondary"
+                onPress={() => router.push("/admin" as never)}
+              >
+                {adminCopy.openOperations}
+              </PrimaryButton>
+            ) : null}
             <PrimaryButton
               variant="ghost"
               loading={busy === "signout"}

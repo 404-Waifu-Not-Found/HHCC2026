@@ -199,6 +199,19 @@ adminRouter.post(
     const target = await getManagedUser(c.env.DB, c.req.param("userId"));
     const input = await parseJson(c, AdminReasonRequestSchema);
     assertCanModerate(actor.id, actor.role, target);
+    if (target.role === "owner") {
+      const activeOwnerCount = await count(
+        c.env.DB,
+        "SELECT COUNT(*) AS count FROM user WHERE role = 'owner' AND banned = 0",
+      );
+      if (activeOwnerCount <= 1) {
+        throw new ApiError(
+          409,
+          "last_owner_protected",
+          "ClipQuest must always retain at least one active owner.",
+        );
+      }
+    }
     await c.env.DB.batch([
       c.env.DB.prepare(
         "UPDATE user SET banned = 1, ban_reason = ?, ban_expires = NULL, updated_at = ? WHERE id = ?",
@@ -280,7 +293,7 @@ adminRouter.post(
     if (target.role === "owner" && input.role !== "owner") {
       const ownerCount = await count(
         c.env.DB,
-        "SELECT COUNT(*) AS count FROM user WHERE role = 'owner'",
+        "SELECT COUNT(*) AS count FROM user WHERE role = 'owner' AND banned = 0",
       );
       if (ownerCount <= 1) {
         throw new ApiError(
