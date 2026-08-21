@@ -140,9 +140,15 @@ function sentenceUnits(plainText) {
     .map((value) => value.trim())
     .filter(Boolean);
   if (sentences.length <= 1) {
+    // Auto-caption tracks frequently contain no sentence punctuation. A
+    // 700-character fallback unit can combine a strong mechanism with an
+    // unrelated statistic; excluding the statistic then discards the useful
+    // concept as collateral damage. Smaller units are recombined with their
+    // immediate neighbors below, preserving enough evidence context while
+    // allowing low-value spans to fail closed independently.
     return (
       normalized
-        .match(/[\s\S]{1,700}(?:\s|$)/g)
+        .match(/[\s\S]{1,120}(?:\s|$)/g)
         ?.map((value) => value.trim()) ?? [normalized]
     );
   }
@@ -351,7 +357,7 @@ const NON_TRANSFERABLE_QUANTITATIVE_PATTERN =
 const PRESENTATION_STATISTIC_ATTRIBUTION_PATTERN =
   /\baccording to\b.{0,80}\b(?:calculations?|estimates?|statistics?|surveys?|figures?|reported data)\b|(?:根据|按照).{0,30}(?:计算|估算|统计|调查|数据)/iu;
 const ATTRIBUTED_MEASUREMENT_SOURCE_PATTERN =
-  /\baccording to\b.{0,90}\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data|nasa|noaa|who|cdc)\b|\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data)\s+(?:from|by)\s+(?:nasa|noaa|who|cdc|the\s+\p{L}+(?:\s+\p{L}+){0,3})\b|(?:根据|按照).{0,40}(?:研究|报告|记录|测量|观测|数据)/iu;
+  /\baccording to\b.{0,90}\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data|nasa|noaa|who|cdc)\b|\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data)\s+(?:from|by)\s+(?:nasa|noaa|who|cdc|the\s+\p{L}+(?:\s+\p{L}+){0,3})\b|\b(?:reports?|reported|records?|recorded|measures?|measured|observes?|observed|estimates?|estimated)\b.{0,100}\b(?:(?:1[5-9]|20)\d{2}|\d+(?:\.\d+)?\s*(?:%|percent))\b|(?:根据|按照).{0,40}(?:研究|报告|记录|测量|观测|数据)/iu;
 const NON_TRANSFERABLE_DATE_STATISTIC_SOURCE_PATTERN =
   /\b(?:the\s+year|in)\s+(?:1[5-9]|20)\d{2}\b.{0,120}\b(?:warmest|coldest|highest|lowest|largest|smallest|most|least|recorded|reported|observed|measured|record)\b/iu;
 const QUANTITATIVE_ANSWER_PATTERN =

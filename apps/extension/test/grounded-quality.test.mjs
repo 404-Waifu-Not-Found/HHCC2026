@@ -502,6 +502,41 @@ test("v5.8 source selection excludes attributed and statistic-only measurements"
   }
 });
 
+test("v5.8 isolates statistics inside punctuation-free auto captions", () => {
+  const transcript = [
+    "Solar energy reaches Earth and the surface radiates energy back toward space",
+    "naturally occurring greenhouse gases absorb some outgoing infrared energy and slow heat loss",
+    "human activity intensifies this mechanism because burning fossil fuels adds carbon dioxide to the atmosphere",
+    "scientists report that 1998 was the warmest year in measured history with 2005 close behind",
+    "according to NASA studies the extent of Arctic sea ice declined about 10 percent in recent decades",
+    "warming melts land ice and warmer ocean water expands which together raise sea level",
+    "changing temperature and precipitation shift habitat ranges and threaten species that cannot adapt or migrate",
+    "energy efficiency reduces fossil fuel demand by providing the same service with less fuel combustion",
+    "renewable electricity avoids carbon dioxide emissions during operation by replacing fossil fuel generation",
+    "protecting forests keeps stored carbon out of the atmosphere and preserves carbon uptake by living trees",
+  ].join(" ");
+  const options = {
+    conceptFirstV58: true,
+    topicHint: "Global warming and the greenhouse effect",
+  };
+  const selection = buildConceptFirstInstructionalSelection(transcript, {
+    topicHint: options.topicHint,
+  });
+  assert.ok(selection.metrics.selectedWindowCount >= 5);
+  assert.match(
+    selection.excerpts[0] ?? "",
+    /greenhouse gases|infrared energy|carbon dioxide/iu,
+  );
+  assert.doesNotMatch(
+    selection.excerpts.join(" "),
+    /1998|2005|10 percent|according to NASA/iu,
+  );
+  const primaryFocuses = Array.from({ length: 5 }, (_, ordinal) =>
+    focusExcerptForOrdinal(transcript, ordinal, 5, 0, options),
+  );
+  assert.equal(new Set(primaryFocuses).size, 5);
+});
+
 test("v5.8 repair windows do not consume the next ordinal's primary focus", () => {
   const transcript = Array.from(
     { length: 18 },
