@@ -135,6 +135,7 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain('accessibilityRole="button"');
     expect(videoCard).toContain("styles.main");
     expect(videoCard).toContain("styles.actions");
+    expect(videoCard).toContain("paddingRight: spacing[20] + spacing[5]");
     expect(videoCard).toContain("accessibilityLabel={");
     expect(videoCard).toContain("card.cheatSheet.status");
     expect(videoCard).toContain("onGenerateNotes");

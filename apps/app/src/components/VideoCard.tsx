@@ -355,6 +355,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
+    paddingRight: spacing[20] + spacing[5],
   },
   badge: {
     flexDirection: "row",
