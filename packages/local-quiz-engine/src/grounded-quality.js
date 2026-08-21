@@ -321,6 +321,10 @@ const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
   /\b(?:entire\s+)?fabric\s+of\s+(?:the\s+)?(?:reef|ecosystem|community|life|nature)\b/iu,
   /\bjacket\s+of\s+gases\b/iu,
   /\b(?:remove|removes|removed|removing)\s+(?:the\s+)?blocks\b/iu,
+  // A live anesthesia bank described ion-channel blocking as a "chemical
+  // barricade". That metaphor obscures the actual electrical/ion mechanism
+  // and should be regenerated as a direct statement about nerve transmission.
+  /\b(?:chemical|electrical)\s+(?:barricade|wall|shield)\b/iu,
   /(?:编织|织网|织物|线头|解开整张网|生态系统的结构|生态网络|气体外套)/u,
 ];
 

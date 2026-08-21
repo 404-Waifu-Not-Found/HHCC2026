@@ -380,6 +380,16 @@ test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () =
     }),
     null,
   );
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "Is a regional anesthetic a chemical barricade that blocks pain signals?",
+      concept: "regional anesthetic nerve-blocking mechanism",
+      explanation:
+        "Regional anesthetics block ion passage through nerve-membrane proteins.",
+    }),
+    "low_pedagogical_value",
+  );
 });
 
 test("instructional excerpts reject numeric course metadata without losing concepts", () => {
