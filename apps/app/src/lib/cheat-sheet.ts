@@ -70,13 +70,15 @@ export async function renderCheatSheetPdf(
     isBold = false,
     color = rgb(0.12, 0.2, 0.16),
   ) => {
-    for (const line of wrap(text, size, width, isBold ? bold : font)) {
+    const activeFont = isBold ? bold : font;
+    const safeText = toPdfSafeText(text, activeFont);
+    for (const line of wrap(safeText, size, width, activeFont)) {
       if (y < 56) nextPage();
       page.drawText(line, {
         x: margin,
         y,
         size,
-        font: isBold ? bold : font,
+        font: activeFont,
         color,
       });
       y -= size + 6;
@@ -220,6 +222,49 @@ export async function recordCheatSheetFailure(input: {
     method: "POST",
     body: jsonBody({ ...input, promptVersion: "cheat-sheet-v1" }),
   });
+}
+
+const pdfTextReplacements: Record<string, string> = {
+  "\u00a0": " ",
+  "\u00b7": ".",
+  "\u2022": "*",
+  "\u2013": "-",
+  "\u2014": "-",
+  "\u2018": "'",
+  "\u2019": "'",
+  "\u201c": '"',
+  "\u201d": '"',
+  "\u2026": "...",
+  "\u00d7": "x",
+  "\u00f7": "/",
+  "\u2212": "-",
+  "\u2190": "<-",
+  "\u2192": "->",
+  "\u2194": "<->",
+  "\u21d0": "<=",
+  "\u21d2": "=>",
+  "\u21d4": "<=>",
+  "\u2248": "~",
+  "\u2260": "!=",
+  "\u2264": "<=",
+  "\u2265": ">=",
+};
+
+function toPdfSafeText(
+  text: string,
+  font: { encodeText(value: string): unknown },
+): string {
+  let safeText = "";
+  for (const character of text.normalize("NFKC")) {
+    const candidate = pdfTextReplacements[character] ?? character;
+    try {
+      font.encodeText(candidate);
+      safeText += candidate;
+    } catch {
+      safeText += "?";
+    }
+  }
+  return safeText;
 }
 
 function wrap(
