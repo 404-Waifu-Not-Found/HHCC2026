@@ -10,7 +10,7 @@ import {
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import * as Crypto from "expo-crypto";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   useCallback,
   useEffect,
@@ -39,6 +39,10 @@ import { VideoCard } from "../../src/components/VideoCard";
 import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useAppSession } from "../../src/lib/auth-client";
+import {
+  parseQuickOpenRequest,
+  type QuickOpenSearchParams,
+} from "../../src/lib/quick-open";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { preGenerateImportedQuiz } from "../../src/generation/prework";
 import {
@@ -72,8 +76,12 @@ export default function HomeScreen() {
   const compact = width < breakpoints.tablet;
   const narrow = width < breakpoints.compact;
   const desktop = width >= breakpoints.desktop;
+  const params = useLocalSearchParams<QuickOpenSearchParams>();
+  const quickOpen = parseQuickOpenRequest(params);
+  const quickOpenUrl = quickOpen?.url;
   const userEditedUrl = useRef(false);
   const importingRef = useRef(false);
+  const consumedQuickOpenUrl = useRef<string | undefined>(undefined);
   const [url, setUrl] = useState("");
   const [library, setLibrary] = useState<VisibleLibrary>(emptyLibrary);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
@@ -123,57 +131,69 @@ export default function HomeScreen() {
     }, [refresh]),
   );
 
-  const importVideo = async (rawUrl = url) => {
-    if (importingRef.current) return;
-    const trimmed = rawUrl.trim();
-    if (!identifyVideoSource(trimmed)) {
-      setImportError(t("pasteError"));
-      return;
-    }
+  const importVideo = useCallback(
+    async (rawUrl = url) => {
+      if (importingRef.current) return;
+      const trimmed = rawUrl.trim();
+      if (!identifyVideoSource(trimmed)) {
+        setImportError(t("pasteError"));
+        return;
+      }
 
-    importingRef.current = true;
-    setImporting(true);
-    setImportError(undefined);
-    try {
-      const imported = await apiRequest(
-        "/api/videos/import",
-        { method: "POST", body: jsonBody({ url: trimmed }) },
-        VideoImportResponseSchema,
-      );
-      const idempotencyKey = Crypto.randomUUID();
-      await Promise.all([
-        saveImportedVideo(imported),
-        saveQuestPreferences(imported.video.id, {
-          quizLanguage: locale,
-          questionTypes,
-        }),
-        saveGenerationState(imported.video.id, {
+      importingRef.current = true;
+      setImporting(true);
+      setImportError(undefined);
+      try {
+        const imported = await apiRequest(
+          "/api/videos/import",
+          { method: "POST", body: jsonBody({ url: trimmed }) },
+          VideoImportResponseSchema,
+        );
+        const idempotencyKey = Crypto.randomUUID();
+        await Promise.all([
+          saveImportedVideo(imported),
+          saveQuestPreferences(imported.video.id, {
+            quizLanguage: locale,
+            questionTypes,
+          }),
+          saveGenerationState(imported.video.id, {
+            idempotencyKey,
+            quizLanguage: locale,
+            questionTypes,
+            preworkStatus: "running",
+          }),
+        ]);
+        void preGenerateImportedQuiz(imported, {
           idempotencyKey,
           quizLanguage: locale,
           questionTypes,
-          preworkStatus: "running",
-        }),
-      ]);
-      void preGenerateImportedQuiz(imported, {
-        idempotencyKey,
-        quizLanguage: locale,
-        questionTypes,
-      });
-      await AsyncStorage.removeItem(PENDING_URL_KEY);
-      setUrl("");
-      router.push({
-        pathname: "/create/[videoId]",
-        params: { videoId: imported.video.id },
-      });
-    } catch (cause) {
-      setImportError(
-        cause instanceof Error ? cause.message : t("videoImportFailed"),
-      );
-    } finally {
-      importingRef.current = false;
-      setImporting(false);
-    }
-  };
+        });
+        await AsyncStorage.removeItem(PENDING_URL_KEY);
+        setUrl("");
+        router.push({
+          pathname: "/create/[videoId]",
+          params: { videoId: imported.video.id },
+        });
+      } catch (cause) {
+        setImportError(
+          cause instanceof Error ? cause.message : t("videoImportFailed"),
+        );
+      } finally {
+        importingRef.current = false;
+        setImporting(false);
+      }
+    },
+    [locale, questionTypes, t, url],
+  );
+
+  useEffect(() => {
+    if (!quickOpenUrl || consumedQuickOpenUrl.current === quickOpenUrl) return;
+    consumedQuickOpenUrl.current = quickOpenUrl;
+    userEditedUrl.current = true;
+    setUrl(quickOpenUrl);
+    router.setParams({ url: undefined, autostart: undefined });
+    void importVideo(quickOpenUrl);
+  }, [importVideo, quickOpenUrl]);
 
   const accountLabel = session?.user.name ?? session?.user.email;
   const secondaryError = libraryError ?? openError;

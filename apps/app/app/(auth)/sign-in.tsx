@@ -1,5 +1,5 @@
 import { VoxelIcon } from "../../src/components/VoxelIcon";
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
@@ -7,6 +7,10 @@ import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
+import {
+  parseQuickOpenRequest,
+  type QuickOpenSearchParams,
+} from "../../src/lib/quick-open";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { radii, spacing, typography } from "../../src/theme/tokens";
 import {
@@ -17,6 +21,8 @@ import {
 
 export default function SignInScreen() {
   const { t, theme } = useSettings();
+  const params = useLocalSearchParams<QuickOpenSearchParams>();
+  const quickOpen = parseQuickOpenRequest(params);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
@@ -41,7 +47,9 @@ export default function SignInScreen() {
         setError(result.error.message ?? t("signInFailed"));
         return;
       }
-      router.replace("/(tabs)");
+      router.replace(
+        quickOpen ? { pathname: "/(tabs)", params: quickOpen } : "/(tabs)",
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signInFailed"));
     } finally {

@@ -148,7 +148,7 @@ test("release builds preserve the loaded unpacked extension directory", () => {
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.4.3");
+  assert.equal(manifest.version, "0.4.4");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -179,8 +179,9 @@ test("YouTube watch pages embed a quick ClipQuest handoff", () => {
   assert.match(quickOpen, /clipquest-quick-open/);
   assert.match(quickOpen, /Open in ClipQuest/);
   assert.match(quickOpen, /https:\/\/clipquest\.ccwu\.cc/);
-  assert.match(quickOpen, /new URL\("\/welcome"/);
+  assert.match(quickOpen, /new URL\("\/"/);
   assert.match(quickOpen, /searchParams\.set\(\s*"url"/);
+  assert.match(quickOpen, /searchParams\.set\("autostart", "1"\)/);
   assert.match(quickOpen, /chrome\.runtime\.getURL\("icons\/icon-48\.png"\)/);
   assert.match(quickOpen, /ytd-watch-metadata #actions-inner/);
   assert.match(quickOpen, /#menu ytd-menu-renderer/);
@@ -299,11 +300,9 @@ test("the YouTube handoff mounts between Share and flexible actions", () => {
   assert.equal(menu.children[1].id, "clipquest-quick-open");
   assert.equal(menu.children[2], flexible);
   assert.equal(menu.children[1].textContent, "Open in ClipQuest");
-  assert.match(
-    menu.children[1].href,
-    /^https:\/\/clipquest\.ccwu\.cc\/welcome\?/,
-  );
+  assert.match(menu.children[1].href, /^https:\/\/clipquest\.ccwu\.cc\/?\?/);
   assert.match(menu.children[1].href, /url=https%3A%2F%2Fwww\.youtube\.com/);
+  assert.match(menu.children[1].href, /autostart=1/);
 });
 
 test("choice order uses unbiased random shuffling and preserves every answer", () => {

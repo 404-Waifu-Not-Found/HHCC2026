@@ -509,6 +509,20 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
   ).toBeVisible();
 });
 
+test("YouTube quick open lands on Home and starts one import automatically", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  const quickOpenVideo = "https://www.youtube.com/watch?v=SVb9OV0bLzI&t=44s";
+
+  await page.goto(`/?url=${encodeURIComponent(quickOpenVideo)}&autostart=1`);
+
+  await expect(page).toHaveURL(`/create/${VIDEO_ID}`);
+  expect(
+    scenario.requestedPaths.filter((path) => path === "/api/videos/import"),
+  ).toHaveLength(1);
+});
+
 test("desktop learning journey and visual states", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1024 });
   const scenario = await installMocks(page);

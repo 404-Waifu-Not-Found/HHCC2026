@@ -24,11 +24,12 @@
   }
 
   function clipQuestUrl(videoId) {
-    const destination = new URL("/welcome", CLIPQUEST_ORIGIN);
+    const destination = new URL("/", CLIPQUEST_ORIGIN);
     destination.searchParams.set(
       "url",
       `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
     );
+    destination.searchParams.set("autostart", "1");
     return destination.href;
   }
 
