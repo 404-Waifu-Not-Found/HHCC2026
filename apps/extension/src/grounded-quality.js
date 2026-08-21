@@ -660,7 +660,7 @@ export function conceptClusterForCandidate(candidate) {
 export function candidateDuplicatesAccepted(
   candidate,
   accepted,
-  totalQuestions,
+  _totalQuestions,
 ) {
   const claimKey = claimKeyForCandidate(candidate);
   const cluster = conceptClusterForCandidate(candidate);
@@ -675,12 +675,11 @@ export function candidateDuplicatesAccepted(
   ) {
     return true;
   }
-  const clusterMatches = accepted.filter((question) => {
-    const existing = question.conceptCluster ?? question.concept;
-    return conceptSimilarity(existing, cluster) >= 0.58;
-  }).length;
-  const maximumPerCluster = totalQuestions === 15 ? 2 : 1;
-  if (clusterMatches >= maximumPerCluster) return true;
+  // A focused source can legitimately support several distinct objectives in
+  // one broad domain (for example, plate composition, convection, and boundary
+  // interactions). Broad cluster overlap is a quality flag at import time, not
+  // proof that another model request is necessary. Keep the hard failure for a
+  // repeated claim or for a closely overlapping cluster *and* assessment.
   return accepted.some(
     (question) =>
       conceptSimilarity(question.conceptCluster ?? question.concept, cluster) >=

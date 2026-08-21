@@ -718,3 +718,32 @@ test("claim identity blocks repeated semantic families", () => {
     true,
   );
 });
+
+test("a focused source may assess distinct claims in one broad concept cluster", () => {
+  const accepted = [
+    {
+      claimKey: "lithosphere consists crust upper mantle",
+      conceptCluster: "plate tectonics earth structure",
+      concept: "Lithosphere composition",
+      question: "Which layers together form the lithosphere?",
+    },
+  ];
+  assert.equal(
+    candidateDuplicatesAccepted(
+      {
+        concept: "Convergent plate interaction",
+        question:
+          "How do tectonic plates interact at a convergent plate margin?",
+        claim: {
+          subject: "tectonic plates",
+          relation: "move toward one another at",
+          value: "a convergent margin",
+          cluster: "plate tectonics earth structure",
+        },
+      },
+      accepted,
+      5,
+    ),
+    false,
+  );
+});

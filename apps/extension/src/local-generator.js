@@ -639,7 +639,9 @@ function generationMessagesV58(input, isTransientRetry) {
 
 Eligible instructional evidence — every answer-bearing field must be supported here:\n${focusExcerpt}
 
-Already accepted objectives — do not repeat or closely paraphrase them:\n${accepted}
+Already accepted objectives — do not repeat or closely paraphrase their subject-relation-value claim:\n${accepted}
+
+Distinctness rule: shared domain vocabulary is allowed, but the new item must assess a different definition, condition, causal relationship, mechanism, method, application, or formula. Choose that distinct claim before writing the question; do not merely paraphrase an accepted prompt.
 
 Type-specific requirements:\n${typeRules}
 
