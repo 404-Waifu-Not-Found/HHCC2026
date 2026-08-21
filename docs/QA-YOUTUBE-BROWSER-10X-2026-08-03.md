@@ -1,6 +1,6 @@
 # Production YouTube browser-caption QA — 2026-08-03
 
-> Historical production evidence. The 2026-08-04 full-subtitle changes were verified locally and are documented below, but were not deployed during that implementation run. See [the current handoff](./HANDOFF-2026-08-04.md) for the authoritative release state.
+> Historical production evidence. The 2026-08-04 full-subtitle changes were verified locally and are documented below, but were not deployed during that implementation run. See the [README release status](../README.md#release-status) for the authoritative release state.
 
 ## Scope
 

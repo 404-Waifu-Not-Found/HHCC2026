@@ -1,6 +1,6 @@
 # ClipQuest Operations Console
 
-Status reviewed: 2026-08-04. This document describes the current operations surface; release-level implementation and verification state is recorded in [the current handoff](./HANDOFF-2026-08-04.md).
+Status reviewed: 2026-08-04. This document describes the current operations surface; release-level implementation and verification state is recorded in the [README release status](../README.md#release-status).
 
 The private operations console lives at `/admin`. It uses ClipQuest's existing Expo application and visual system, but it is deliberately isolated from the learner navigation.
 

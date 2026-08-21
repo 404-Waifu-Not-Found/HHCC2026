@@ -24,6 +24,7 @@
 
 <p align="center">
   <a href="#overview">Overview</a> ·
+  <a href="#release-status">Release status</a> ·
   <a href="#journey">Learning journey</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#tech-stack">Tech stack</a> ·
@@ -36,7 +37,7 @@
 
 <p align="center">
   <strong>Project guides:</strong>
-  <a href="./docs/HANDOFF-2026-08-04.md">Current handoff</a> ·
+  <a href="./docs/ADMIN-CONSOLE.md">Operations console</a> ·
   <a href="./docs/duolingo-ui-research.md">UI research</a> ·
   <a href="./docs/QA-YOUTUBE-BROWSER-10X-2026-08-03.md">Browser QA</a>
 </p>
@@ -73,6 +74,21 @@ timestamped text   transient no-store audio stream
 
 > [!IMPORTANT]
 > YouTube or Google account access is not required. ClipQuest begins with a public link, does not fetch watch history, and keeps its experimental YouTube device flow disabled by default. Private, deleted, geo-restricted, active-live, and otherwise unplayable sources fail explicitly instead of producing a quiz from partial text.
+
+<p align="right"><a href="#top">↑ Back to top</a></p>
+
+<a id="release-status"></a>
+
+## 🚦 Current release status
+
+The repository and this README are the authoritative sources for current behavior. The 2026-08-04 source implements complete accepted subtitles, learner-selected multiple-choice/true-false/short-answer quizzes, paste-time transcript prework, concurrent evidence-grounded generation, and deterministic fallback questions. New source attempts do not generate or serve ordering questions.
+
+The full local quality gate passes 66 Vitest tests, seven Playwright journeys, TypeScript checks, ESLint, Prettier, the Expo/Worker production build, the local D1 migration check, and a Wrangler dry run. Real Chrome also completed the required `BjRvQbWsTfM` YouTube flow through a five-question, 100% completion screen.
+
+> [!WARNING]
+> Production currently runs an older application build and can still expose the legacy ordering-question type. Before calling the current source released, apply `apps/api/migrations/0008_question_types.sql`, deploy the app and Worker together, verify `/health`, complete the required Chrome flow again, and inspect structured Worker logs. Local and historical QA evidence is not proof that the latest commit is live.
+
+Remaining release acceptance includes production latency/fallback measurements, the captionless local-Whisper path on supported hardware, live bilibili acquisition, Resend and push delivery, and production-signed native builds.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -187,7 +203,7 @@ The native bridge used to turn source media into Whisper-compatible PCM without 
 
 ### 5. [Documentation and browser QA](./docs/)
 
-The single [current handoff](./docs/HANDOFF-2026-08-04.md) records architecture, validation evidence, deployment state, and remaining risks. [Browser QA](./docs/QA-YOUTUBE-BROWSER-10X-2026-08-03.md) preserves the dated production run, while [Playwright journeys](./e2e/clipquest.spec.ts) cover the primary visual, responsive, validation, retry, feedback, completion, and operations states.
+This README records current architecture, validation evidence, deployment state, and remaining risks. [Browser QA](./docs/QA-YOUTUBE-BROWSER-10X-2026-08-03.md) preserves the dated production run, while [Playwright journeys](./e2e/clipquest.spec.ts) cover the primary visual, responsive, validation, retry, feedback, completion, and operations states.
 
 ### 6. [Private operations console](./docs/ADMIN-CONSOLE.md)
 
@@ -209,7 +225,7 @@ ClipQuest/
 ├─ modules/
 │  └─ local-audio-decoder/     # Native PCM decoding module
 ├─ e2e/                        # Playwright browser journeys
-├─ docs/                       # Current handoff, research, QA notes, screenshots
+├─ docs/                       # Product guides, research, QA notes, screenshots
 └─ scripts/                    # Whisper model preparation and upload
 ```
 

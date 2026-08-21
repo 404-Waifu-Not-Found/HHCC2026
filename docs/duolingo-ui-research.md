@@ -4,7 +4,7 @@ Accessed: 2026-07-31. ClipQuest implementation notes reconciled: 2026-08-04.
 
 ## Purpose and boundaries
 
-This document records public Duolingo interface patterns that informed the ClipQuest rebuild. It is historical product-design research, not a current release handoff and not permission to copy Duolingo assets. Current implementation and acceptance status lives in [the 2026-08-04 handoff](./HANDOFF-2026-08-04.md).
+This document records public Duolingo interface patterns that informed the ClipQuest rebuild. It is historical product-design research, not current release documentation and not permission to copy Duolingo assets. Current implementation and acceptance status lives in the [README release status](../README.md#release-status).
 
 ClipQuest will independently implement interaction principles such as focused tasks, visible progress, large controls, tactile depth, immediate feedback, and responsive navigation. It will not ship Duolingo screenshots, logos, characters, illustrations, sounds, copy, proprietary fonts, or brand colors.
 
@@ -216,7 +216,7 @@ Baseline behavior and issues recorded before visual replacement:
 - The old visual layer emits Expo warnings for legacy `shadow*` props. The rebuild will use the supported `boxShadow` style.
 - The repository has no lint, format, Playwright, Detox, or browser-integration script at baseline.
 
-The baseline counts and limitations above are intentionally historical. As of 2026-08-04, the repository has ESLint, Prettier, Playwright journeys, 66 Vitest tests, complete-transcript integrity contracts, paste-time pre-generation, and learner-selected question types. Use the current handoff—not this research baseline—for release decisions.
+The baseline counts and limitations above are intentionally historical. As of 2026-08-04, the repository has ESLint, Prettier, Playwright journeys, 66 Vitest tests, complete-transcript integrity contracts, paste-time pre-generation, and learner-selected question types. Use the README release status—not this research baseline—for release decisions.
 
 ## Legal-safe adaptation checklist
 
