@@ -330,7 +330,7 @@ function createConceptFirstDatabase(timestamp = Date.now()) {
     importVersion: "extension-progressive-import-v7",
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
-    validatorVersion: "validator-local-progressive-v4.10",
+    validatorVersion: "validator-local-progressive-v4.11",
     generationProfile: "concept_first_auto_v5_8",
     promptFingerprint: "e".repeat(64),
     sourceSelection: {

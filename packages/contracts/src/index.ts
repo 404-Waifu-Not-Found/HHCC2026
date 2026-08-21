@@ -375,12 +375,13 @@ export const LocalQuizValidatorVersionSchema = z.enum([
   "validator-local-progressive-v4.8",
   "validator-local-progressive-v4.9",
   "validator-local-progressive-v4.10",
+  "validator-local-progressive-v4.11",
 ]);
 export type LocalQuizValidatorVersion = z.infer<
   typeof LocalQuizValidatorVersionSchema
 >;
 export const LOCAL_QUIZ_VALIDATOR_VERSION =
-  "validator-local-progressive-v4.10" as const;
+  "validator-local-progressive-v4.11" as const;
 export const LocalQuizProgressiveImportVersionSchema = z.enum([
   "extension-progressive-import-v3",
   "extension-progressive-import-v4",
@@ -548,7 +549,7 @@ export const QuizGenerationProfileResponseSchema = z
       "0.8.8",
       "0.8.9",
       "0.8.10",
-      "0.8.11",
+      "0.8.12",
     ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -563,7 +564,7 @@ export const QuizGenerationProfileResponseSchema = z
   .superRefine((value, context) => {
     const expected =
       value.generationProfile === "concept_first_auto_v5_8"
-        ? ["0.8.11", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        ? ["0.8.12", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
         : value.generationProfile === "evidence_grounded_auto_v5_4"
           ? ["0.8.7", GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
           : value.generationProfile === "stable_auto_recovery_v5_3"

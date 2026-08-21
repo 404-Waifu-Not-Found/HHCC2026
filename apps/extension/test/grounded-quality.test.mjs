@@ -950,6 +950,37 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
   expectConceptFailure(
     {
       ...directConcept,
+      concept: "depth of processing",
+      question: "What does the depth of processing determine?",
+      answer: "how deep you dig through the different levels of processing",
+      explanation:
+        "The depth of processing determines how well information is retained.",
+    },
+    "question_tautology_invalid",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "depth of processing",
+      question: "What does the depth of processing determine?",
+      answer: "how well information is retained",
+    },
+    null,
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      concept: "memory loss case study",
+      question:
+        "What caused Clive's inability to remember his past and make new memories?",
+      answer:
+        "a rare Herpes encephalitis virus that ravaged his central nervous system",
+    },
+    "low_pedagogical_value",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
       question:
         "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
       answer: "even without cataclysmic events, like volcanoes and asteroids",

@@ -306,6 +306,10 @@ const MALFORMED_WH_ACTION_STEM_PATTERN =
   /^\s*what\s+(?:condition|factor|cause|process|method)\s+(?:do|does|did|can|could|will|would)\b.{0,160}\b(?:provide|support|affect|influence|enable|allow)\b/iu;
 const PLURAL_HOW_SINGULAR_PRONOUN_PATTERN =
   /^\s*how\s+(?:do|can|could|may|might)\b/iu;
+const NAMED_CASE_RECALL_PATTERN =
+  /^\s*(?:[Ww]hat|[Ww]hich|[Hh]ow|[Ww]hy)\b.{0,120}?\b(?!Earth\b)[A-Z][\p{L}-]+['’]s\s+(?:account|case|condition|decision|experience|illness|inability|injury|memory|symptoms?)\b/u;
+const GENERIC_DETERMINATION_QUESTION_PATTERN =
+  /^\s*what\s+(?:does|do|did)\s+(.{2,140}?)\s+(?:determine|control|govern|influence|affect)\??\s*$/iu;
 const HOW_CAN_MECHANISM_ANSWER_PATTERN =
   /^(?:when|if|by|because|through|due\s+to|as\s+(?:a\s+result|\p{L}+\s+(?:declines?|falls?|rises?|increases?|decreases?)))\b|\b(?:loss|lack|reduction|removal|failure|disruption|decline|depletion|fragmentation|mutation|competition|pressure)\b.{0,120}\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|\b(?:cause(?:s|d)?|make(?:s|d)?|lead(?:s)?\s+to|result(?:s|ed)?\s+in|weaken(?:s|ed)?|reduce(?:s|d)?|remove(?:s|d)?|disrupt(?:s|ed)?|undermine(?:s|d)?|increase(?:s|d)?|decrease(?:s|d)?|prevent(?:s|ed)?)\b|(?:当|如果|通过|因为|由于|随着|导致|使得?|削弱|降低|减少|破坏|增加)/iu;
 const HOW_OUTCOME_QUESTION_PATTERN =
@@ -323,6 +327,48 @@ const OUTCOME_RELATION_PATTERN =
   /\b(?:is|are|become(?:s)?|remain(?:s)?)\b.{0,100}\b(?:more|less|higher|lower|greater|smaller|larger|increased|decreased|reduced|vulnerable|resilient|stable|unstable|likely|unlikely|similar|different|dependent|independent)\b/iu;
 const CJK_OUTCOME_ANSWER_PATTERN =
   /(?:通过|因为|因此|从而|使得?|导致|促进|支持|增强|减弱|提高|降低|减少|防止|保护|提供|产生|分配|维持|依赖|共享|对应|相关|决定|改变|上升|下降|加密|解密|验证)/u;
+
+function determinationAnswerMerelyRestatesSubject(question, answer) {
+  const subject = String(question ?? "").match(
+    GENERIC_DETERMINATION_QUESTION_PATTERN,
+  )?.[1];
+  if (!subject) return false;
+  const roots = (value) =>
+    new Set(
+      normalizeGroundedText(value)
+        .split(/\s+/u)
+        .map((token) =>
+          token
+            .replace(/^(?:deep|depth)$/u, "depth")
+            .replace(/(?:ing|ed|es|s)$/u, ""),
+        )
+        .filter(
+          (token) =>
+            token.length >= 3 &&
+            !ENGLISH_STOP_WORDS.has(token) &&
+            !new Set([
+              "the",
+              "and",
+              "different",
+              "how",
+              "level",
+              "much",
+              "through",
+              "well",
+            ]).has(token),
+        ),
+    );
+  const subjectRoots = roots(subject);
+  const answerRoots = roots(answer);
+  if (!subjectRoots.size || !answerRoots.size) return false;
+  const overlap = [...subjectRoots].filter((token) =>
+    answerRoots.has(token),
+  ).length;
+  const novel = [...answerRoots].filter(
+    (token) => !subjectRoots.has(token),
+  ).length;
+  return overlap === subjectRoots.size && novel <= 2;
+}
 
 /**
  * Require an answer to supply the outcome, relationship, or mechanism promised
@@ -531,6 +577,12 @@ export function questionConceptFailure(candidate) {
     /^(?:what|which)\b/iu.test(question)
   ) {
     return "question_tautology_invalid";
+  }
+  if (determinationAnswerMerelyRestatesSubject(question, directAnswerSource)) {
+    return "question_tautology_invalid";
+  }
+  if (NAMED_CASE_RECALL_PATTERN.test(question)) {
+    return "low_pedagogical_value";
   }
   if (
     /^(?:what|which)\s+(?:factor|cause|process|method|term|concept|quantity)\b/iu.test(

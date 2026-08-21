@@ -941,7 +941,7 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
 
   assert.equal(result.protocolVersion, 9);
   assert.equal(result.promptVersion, "quiz-local-json-stream-v5.8");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.10");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.11");
   assert.equal(result.importVersion, "extension-progressive-import-v7");
   assert.equal(result.generationProfile, "concept_first_auto_v5_8");
   assert.match(result.promptFingerprint, /^[a-f0-9]{64}$/u);
@@ -1163,7 +1163,7 @@ test("v5.8 rejects a pre-release continuation with a different prompt fingerprin
             startIndex: 1,
             resultProtocolVersion: 9,
             promptVersion: "quiz-local-json-stream-v5.8",
-            validatorVersion: "validator-local-progressive-v4.10",
+            validatorVersion: "validator-local-progressive-v4.11",
             promptFingerprint: "0".repeat(64),
             generationProfile: "concept_first_auto_v5_8",
             acceptedQuestions: [
@@ -1306,7 +1306,7 @@ test("v5.8 repairs a relationship answer that drops its directional qualifier", 
     startIndex: 4,
     resultProtocolVersion: 9,
     promptVersion: "quiz-local-json-stream-v5.8",
-    validatorVersion: "validator-local-progressive-v4.10",
+    validatorVersion: "validator-local-progressive-v4.11",
     promptFingerprint: createHash("sha256")
       .update(CONCEPT_FIRST_SYSTEM_PROMPT)
       .digest("hex"),
