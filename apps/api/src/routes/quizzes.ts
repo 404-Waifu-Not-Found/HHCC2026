@@ -221,7 +221,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       AttemptAnswerResponseSchema.parse({
         correct: false,
         explanation: grade.feedback,
-        evidenceSegmentIds: parseEvidence(question),
+        evidenceSegmentIds: parseQuestionEvidence(question),
         nextQuestion: toPublicQuestion(
           question,
           attempt.current_index,
@@ -271,7 +271,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       AttemptAnswerResponseSchema.parse({
         correct: grade.correct,
         explanation: grade.feedback,
-        evidenceSegmentIds: parseEvidence(question),
+        evidenceSegmentIds: parseQuestionEvidence(question),
         nextQuestion: null,
         completed: true,
         score,
@@ -314,7 +314,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     AttemptAnswerResponseSchema.parse({
       correct: grade.correct,
       explanation: grade.feedback,
-      evidenceSegmentIds: parseEvidence(question),
+      evidenceSegmentIds: parseQuestionEvidence(question),
       nextQuestion: toPublicQuestion(
         nextQuestion,
         nextIndex,
@@ -509,7 +509,7 @@ async function gradeAnswer(
         "transcript_invalid",
         "Video evidence failed integrity checks.",
       );
-    const evidenceIds = new Set(parseEvidence(question));
+    const evidenceIds = new Set(parseQuestionEvidence(question));
     return gradeWrittenAnswer(env, {
       prompt: attempt.current_variant
         ? question.reformulated_prompt
@@ -558,10 +558,12 @@ async function gradeAnswer(
   return { correct, feedback: question.explanation };
 }
 
-function parseEvidence(question: QuestionRow): string[] {
+export function parseQuestionEvidence(
+  question: Pick<QuestionRow, "evidence_segment_ids_json">,
+): string[] {
   return parseStoredJson(
     question.evidence_segment_ids_json,
-    z.array(z.string()).min(1),
+    z.array(z.string()),
     "question evidence",
   );
 }
