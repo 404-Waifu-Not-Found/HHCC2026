@@ -111,10 +111,11 @@ export default function HomeScreen() {
       );
       setLibrary({ dueReviews: response.dueReviews, saved: response.saved });
       setLibraryError(undefined);
-    } catch (cause) {
-      setLibraryError(
-        cause instanceof Error ? cause.message : t("libraryLoadFailed"),
-      );
+    } catch {
+      // Keep transport and platform details out of the learner-facing UI.
+      // Android can surface verbose TLS/OkHttp messages that are neither
+      // actionable nor safe to treat as product copy.
+      setLibraryError(t("libraryLoadFailed"));
     } finally {
       setLoadingLibrary(false);
     }
