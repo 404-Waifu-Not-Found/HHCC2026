@@ -582,6 +582,39 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     },
     "question_tautology_invalid",
   );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      answer: "even without cataclysmic events, like volcanoes and asteroids",
+    },
+    "question_answer_kind_mismatch",
+  );
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "How can an ecosystem become vulnerable to collapse even without catastrophic events?",
+      answer: "when biodiversity becomes too low to maintain resilience",
+    },
+    null,
+  );
+
+  for (const answer of [
+    "Every link provides stability to the next",
+    "Cut too many links, and we risk unraveling it all.",
+    "a jacket of gases",
+  ]) {
+    expectConceptFailure(
+      {
+        ...directConcept,
+        question: "How does biodiversity support ecosystem stability?",
+        answer,
+      },
+      "low_pedagogical_value",
+    );
+  }
 
   expectConceptFailure(
     {
@@ -600,6 +633,30 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       answer: "4 m/s^2",
     },
     null,
+  );
+});
+
+test("v5.8 source selection excludes figurative presentation scaffolding", () => {
+  const selection = buildConceptFirstInstructionalSelection(
+    [
+      "Biodiversity is like a tapestry woven from many strands.",
+      "Every link provides stability to the next.",
+      "Cut too many links and the ecosystem may unravel.",
+      "Genetic diversity increases the range of traits available for adaptation.",
+      "Greater trait variation makes it more likely that some organisms survive environmental change.",
+      "Interacting species distribute ecological functions across the community.",
+    ].join(" "),
+    { topicHint: "biodiversity and ecosystem resilience" },
+  );
+
+  assert.ok(selection.excerpts.length > 0);
+  assert.doesNotMatch(
+    selection.excerpts.join(" "),
+    /tapestry|woven|strands|every link|unravel/iu,
+  );
+  assert.match(
+    selection.excerpts.join(" "),
+    /genetic diversity|trait variation/iu,
   );
 });
 

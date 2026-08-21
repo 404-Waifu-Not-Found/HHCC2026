@@ -279,6 +279,21 @@ const CONCEPTUAL_QUESTION_PATTERNS = [
   /(?:定义|条件|关系|原因|结果|为什么|如何|机制|过程|方法|公式|计算|推导|应用|比较|作用|功能|性质|原理|定理|导致)/u,
 ];
 
+// Presentation vehicles are not assessment concepts. Keep this deliberately
+// narrow so technical uses such as a network link or a DNA strand remain
+// available, while the production metaphors that previously leaked into
+// answer controls fail before storage.
+const FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS = [
+  /\b(?:weav(?:e|es|ing|en)|tapestr(?:y|ies)|unravel(?:s|ed|ing)?)\b/iu,
+  /\b(?:cut(?:ting)?\s+(?:too\s+)?many\s+links?|every\s+link\s+(?:provides|gives|adds)\s+stability)\b/iu,
+  /\bjacket\s+of\s+gases\b/iu,
+  /(?:编织|织网|织物|线头|解开整张网|气体外套)/u,
+];
+
+const HOW_CAN_QUESTION_PATTERN = /^\s*how\s+(?:can|could|may|might)\b/iu;
+const CONCESSIVE_NON_ANSWER_PATTERN =
+  /^\s*(?:(?:it|they|this|that)\s+(?:can|could|may|might)\s+)?even\s+(?:without|despite|when|if)\b/iu;
+
 const NUMERIC_RECALL_QUESTION_PATTERN =
   /^\s*(?:(?:what (?:percentage|percent|number|count|frequency|duration|amount|value|cost|price)|how (?:many|often|long|much))\b|(?:多少|几次|多久|百分之几|占比多少|价值多少|价格多少|成本多少))/iu;
 const NECESSARY_NUMERIC_OBJECTIVE_PATTERN =
@@ -306,6 +321,13 @@ export function questionConceptFailure(candidate) {
   }
   if (LOGISTICS_PATTERNS.some((pattern) => pattern.test(inspected))) {
     return "course_logistics_invalid";
+  }
+  if (
+    FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
+      pattern.test(inspected),
+    )
+  ) {
+    return "low_pedagogical_value";
   }
   if (
     LOW_VALUE_RECALL_PATTERNS.some((pattern) => pattern.test(question)) &&
@@ -358,6 +380,16 @@ export function questionConceptFailure(candidate) {
           "",
       ),
     )
+  ) {
+    return "question_answer_kind_mismatch";
+  }
+  // A concessive condition is not a mechanism. The production regression
+  // asked "How can an ecosystem become vulnerable ...?" but accepted "even
+  // without catastrophic events" as the answer. That phrase only repeats the
+  // stem's exception; it never explains how the outcome occurs.
+  if (
+    HOW_CAN_QUESTION_PATTERN.test(question) &&
+    CONCESSIVE_NON_ANSWER_PATTERN.test(directAnswerSource)
   ) {
     return "question_answer_kind_mismatch";
   }
@@ -417,6 +449,9 @@ export function questionMatchesQuizLanguage(candidate, quizLanguage) {
 function sentenceExcludedFromConceptFirst(value) {
   return (
     LOGISTICS_PATTERNS.some((pattern) => pattern.test(value)) ||
+    FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
+      pattern.test(value),
+    ) ||
     /\b(?:hello|hi everyone|welcome(?: back)?|thanks for watching|see you next|subscribe|like and share|sponsor(?:ed)?|promo code|my name is|today i(?:'m| am) joined by)\b/iu.test(
       value,
     ) ||
