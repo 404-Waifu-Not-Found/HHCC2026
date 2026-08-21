@@ -370,7 +370,16 @@ export function repairMultipleChoiceQuestionKind(candidate, answer) {
   if ((semanticTokens(assertion).size ?? 0) < 4) return null;
   if (!COMPLETE_MC_ASSERTION_PATTERN.test(assertion)) return null;
   if (CONCESSIVE_NON_ANSWER_PATTERN.test(assertion)) return null;
-  if (conceptSimilarity(concept, assertion) >= 0.72) return null;
+  const normalizedConcept = normalizeGroundedText(concept);
+  const normalizedAssertion = normalizeGroundedText(assertion);
+  if (
+    normalizedConcept.length >= 12 &&
+    normalizedAssertion.length >= 12 &&
+    (normalizedConcept.includes(normalizedAssertion) ||
+      normalizedAssertion.includes(normalizedConcept))
+  ) {
+    return null;
+  }
   if (
     SOURCE_REFERENCE_PATTERNS.some((pattern) => pattern.test(concept)) ||
     LOGISTICS_PATTERNS.some((pattern) => pattern.test(concept))
@@ -378,8 +387,22 @@ export function repairMultipleChoiceQuestionKind(candidate, answer) {
     return null;
   }
   const objective = String(candidate?.objectiveCategory ?? "").toLowerCase();
-  const lead =
-    objective === "definition"
+  const isChinese = /\p{Script=Han}/u.test(concept);
+  const lead = isChinese
+    ? objective === "definition"
+      ? "请选择正确定义"
+      : objective === "condition"
+        ? "请选择正确说明以下概念成立条件的陈述："
+        : objective === "mechanism"
+          ? "请选择正确解释以下机制的陈述："
+          : objective === "method"
+            ? "请选择正确描述以下方法的陈述："
+            : objective === "application"
+              ? "请选择正确应用"
+              : objective === "formula"
+                ? "请选择正确表示"
+                : "请选择正确描述"
+    : objective === "definition"
       ? "Which statement correctly defines"
       : objective === "condition"
         ? "Which statement correctly identifies the condition for"
@@ -392,7 +415,17 @@ export function repairMultipleChoiceQuestionKind(candidate, answer) {
               : objective === "formula"
                 ? "Which expression correctly represents"
                 : "Which statement correctly describes";
-  const question = `${lead} ${concept}?`;
+  const question = isChinese
+    ? objective === "definition" || objective === "application"
+      ? `${lead}${concept}的陈述。`
+      : objective === "formula"
+        ? `${lead}${concept}的表达式。`
+        : objective === "condition" ||
+            objective === "mechanism" ||
+            objective === "method"
+          ? `${lead}${concept}。`
+          : `${lead}${concept}的陈述。`
+    : `${lead} ${concept}?`;
   return questionConceptFailure({
     ...candidate,
     question,

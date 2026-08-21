@@ -1407,6 +1407,13 @@ test("a complete grounded assertion can receive a deterministic safe MC stem", (
     ),
     null,
   );
+  assert.equal(
+    repairMultipleChoiceQuestionKind(
+      { concept: "温室气体浓度变化", objectiveCategory: "relationship" },
+      "温室气体的浓度会继续上升。",
+    ),
+    "请选择正确描述温室气体浓度变化的陈述。",
+  );
 });
 
 test("resolved answer propositions block the live coral habitat duplicate", () => {
