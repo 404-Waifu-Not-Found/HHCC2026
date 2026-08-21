@@ -103,7 +103,9 @@ describe("Android UI regressions", () => {
   it("keeps a compact quiz feedback action visible beside long explanations", () => {
     const feedback = source("src/components/FeedbackPanel.tsx");
 
-    expect(feedback).toContain("const compactMaxHeight = Math.round(height * 0.46)");
+    expect(feedback).toContain(
+      "const compactMaxHeight = Math.round(height * 0.46)",
+    );
     expect(feedback).toContain("<ScrollView");
     expect(feedback).toContain("compact && { maxHeight: compactMaxHeight }");
     expect(feedback).toContain("compact && styles.actionCompact");
@@ -138,6 +140,14 @@ describe("Android UI regressions", () => {
     expect(videoCard).not.toContain("event.stopPropagation()");
     expect(videoCard).toContain('accessibilityRole="text"');
     expect(videoCard).not.toContain("onPress={() => undefined}");
+  });
+
+  it("fills desktop library cards so horizontal metadata remains visible", () => {
+    const library = source("app/(tabs)/library.tsx");
+
+    expect(library).toContain(
+      "<VideoCard\n              compact={compact}\n              fill",
+    );
   });
 
   it("keeps an explicit PDF action on the quiz completion screen", () => {

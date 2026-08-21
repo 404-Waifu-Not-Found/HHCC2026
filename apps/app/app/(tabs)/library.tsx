@@ -235,7 +235,7 @@ function QuestList({
           >
             <VideoCard
               compact={compact}
-              fill={compact}
+              fill
               card={card}
               onPress={() => onOpen(card)}
               onExport={
