@@ -192,7 +192,7 @@ describe("extension generation profile compatibility", () => {
     expect(indicator).toContain('"打开本地 AI 设置"');
   });
 
-  it("latches terminal automatic recovery instead of reclaiming forever", () => {
+  it("keeps automatic recovery in the background and removes learner retry controls", () => {
     const recovery = readFileSync(
       resolve(
         dirname(fileURLToPath(import.meta.url)),
@@ -207,18 +207,40 @@ describe("extension generation profile compatibility", () => {
       ),
       "utf8",
     );
+    const indicator = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/components/QuestionStreamIndicator.tsx",
+      ),
+      "utf8",
+    );
     expect(recovery).toContain("terminalAutomaticRecoveryAttempts");
     expect(recovery).toContain("persistedRecoveryExhausted");
     expect(recovery).toContain("reportedRecoveryExhausted");
+    expect(recovery).toContain("runAutomaticRecoveryUntilSettled");
+    expect(recovery).toContain("AUTOMATIC_RECOVERY_LOOP_MAX_PASSES");
+    expect(recovery).toContain("waitForAutomaticRecovery");
+    expect(recovery).toContain(
+      "terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force",
+    );
+    expect(recovery).toContain('status.generation.state === "cooldown"');
+    expect(recovery).toContain(
+      'status.continuation?.claim.state === "available"',
+    );
     expect(recovery).toContain(
       "(persistedRecoveryExhausted && !options.force)",
     );
     expect(recovery).toContain("isLeaseConflict(error) && !options.force");
     expect(recovery).toContain("options.force");
-    expect(quiz).toContain(
-      "ensureProgressiveAttemptRecovery(attemptId, { force: true })",
-    );
+    expect(quiz).not.toContain("onRetry={");
+    expect(quiz).not.toContain("force: true");
     expect(quiz).toContain("current.retryAvailable === next.retryAvailable");
+    expect(indicator).not.toContain("onRetry");
+    expect(indicator).not.toContain("retryAction");
+    expect(indicator).toContain("Automatically recovering");
+    expect(indicator).toContain(
+      "ClipQuest will keep generating the remaining questions automatically.",
+    );
   });
 
   it("keeps first-question admission independent from call telemetry", () => {

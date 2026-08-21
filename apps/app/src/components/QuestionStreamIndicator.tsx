@@ -14,21 +14,15 @@ import { VoxelIcon } from "./VoxelIcon";
 
 export function QuestionStreamIndicator({
   generation,
-  onRetry,
 }: {
   generation: AttemptGenerationAvailability;
-  onRetry?: () => void;
 }) {
-  const { locale, theme, t } = useSettings();
+  const { locale, theme } = useSettings();
   if (generation.state === "ready") return null;
   const count = `${generation.availableQuestions}/${generation.totalQuestions}`;
   const stopped =
     generation.state === "action_required" ||
     generation.state === "generation_failed";
-  const retryable =
-    generation.state === "retry_required" ||
-    (generation.state === "generation_failed" &&
-      generation.retryAvailable === true);
   const label = generationLabel(generation, count, locale);
   const explanation = stopped
     ? generationReasonExplanation(
@@ -85,24 +79,6 @@ export function QuestionStreamIndicator({
               : Platform.OS !== "web"
                 ? "Open Local AI settings"
                 : "Open extension settings"}
-          </Text>
-        </Pressable>
-      ) : null}
-      {retryable && onRetry ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t("retry")}
-          onPress={onRetry}
-          style={({ pressed }) => [
-            styles.retryAction,
-            {
-              borderColor: theme.primary,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={[styles.retryActionText, { color: theme.primary }]}>
-            {t("retry")}
           </Text>
         </Pressable>
       ) : null}
@@ -166,14 +142,19 @@ function generationLabel(
       : `DeepSeek configuration required · ${count} ready`;
   }
   if (generation.state === "generation_failed") {
+    if (generation.retryAvailable === true) {
+      return chinese
+        ? `正在自动恢复 · 已就绪 ${count}`
+        : `Automatically recovering · ${count} ready`;
+    }
     return chinese
       ? `生成无法完成 · 已就绪 ${count}`
       : `Generation could not complete · ${count} ready`;
   }
   if (generation.state === "retry_required") {
     return chinese
-      ? `正在自动接管旧版生成 · 已就绪 ${count}`
-      : `Recovering legacy generation automatically · ${count} ready`;
+      ? `正在自动生成剩余题目 · 已就绪 ${count}`
+      : `Automatically generating the remaining questions · ${count} ready`;
   }
   return chinese ? `已就绪 ${count} 道题` : `${count} questions ready`;
 }
@@ -188,6 +169,11 @@ function generationReasonExplanation(
     return chinese
       ? "本次 AI 生成已停止；请重新开始测验以请求新的题库。"
       : "This AI generation has stopped; start a new quiz to request a fresh question bank.";
+  }
+  if (retryAvailable === true) {
+    return chinese
+      ? "ClipQuest 将在后台自动生成剩余题目。"
+      : "ClipQuest will keep generating the remaining questions automatically.";
   }
   if (reasonCode === "credential_required") {
     return chinese
@@ -252,18 +238,5 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyBold,
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
-  },
-  retryAction: {
-    alignSelf: "flex-start",
-    minHeight: 36,
-    justifyContent: "center",
-    borderWidth: borders.standard,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing[4],
-    marginTop: spacing[2],
-  },
-  retryActionText: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.label,
   },
 });

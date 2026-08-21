@@ -56,7 +56,6 @@ import {
 } from "../../src/lib/quiz-order";
 import { ensureProgressiveAttemptRecovery } from "../../src/generation/progressive-continuation";
 import {
-  cancelProgressiveRecoveryTask,
   hasActiveProgressiveGenerationForAttempt,
   publishAttemptGeneration,
   subscribeToAttemptGeneration,
@@ -346,19 +345,6 @@ export default function QuizScreen() {
     await applyResume(resumed);
   }, [applyResume, attemptId]);
 
-  const retryGeneration = useCallback(() => {
-    cancelProgressiveRecoveryTask(attemptId);
-    recoveryAttemptedRef.current = false;
-    setError(undefined);
-    void ensureProgressiveAttemptRecovery(attemptId, { force: true }).catch(
-      (cause) => {
-        setError(
-          cause instanceof Error ? cause.message : t("quizResumeFailed"),
-        );
-      },
-    );
-  }, [attemptId, t]);
-
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -520,10 +506,7 @@ export default function QuizScreen() {
   }, [answer, orderingTouched, question?.type, questionInteractionReady]);
 
   const streamIndicator = generation ? (
-    <QuestionStreamIndicator
-      generation={generation}
-      onRetry={retryGeneration}
-    />
+    <QuestionStreamIndicator generation={generation} />
   ) : undefined;
 
   const submit = async () => {

@@ -85,11 +85,93 @@ export function ensureProgressiveAttemptRecovery(
   options: { allowActionRequired?: boolean; force?: boolean } = {},
 ): Promise<void> {
   return getOrStartProgressiveRecoveryTask(attemptId, (signal) =>
-    runAutomaticRecovery(attemptId, signal, options),
+    runAutomaticRecoveryUntilSettled(attemptId, signal, options),
   ).completion;
 }
 
-async function runAutomaticRecovery(
+const AUTOMATIC_RECOVERY_LOOP_MAX_PASSES = 12;
+
+async function runAutomaticRecoveryUntilSettled(
+  attemptId: string,
+  signal: AbortSignal,
+  options: { allowActionRequired?: boolean; force?: boolean },
+): Promise<void> {
+  // A terminal failure is latched locally when recovery has already failed
+  // closed. Do not spin a new background pass against a stale API snapshot;
+  // the next authoritative poll will either expose the terminal state or a
+  // newly configured recovery path will explicitly opt in with `force`.
+  if (terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force) {
+    return;
+  }
+  for (let pass = 0; pass < AUTOMATIC_RECOVERY_LOOP_MAX_PASSES; pass += 1) {
+    if (signal.aborted) return;
+    if (terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force) {
+      return;
+    }
+    await runAutomaticRecoveryOnce(attemptId, signal, options);
+    if (signal.aborted) return;
+
+    const status = await readStatus(attemptId, signal);
+    if (status.generation.state === "ready") return;
+    if (status.generation.state === "action_required") return;
+
+    if (
+      status.generation.state === "cooldown" &&
+      status.generation.nextRecoveryAt
+    ) {
+      const delayMs = Math.max(
+        0,
+        Date.parse(status.generation.nextRecoveryAt) - Date.now(),
+      );
+      await waitForAutomaticRecovery(delayMs, signal);
+      continue;
+    }
+
+    if (
+      status.generation.state === "generation_failed" &&
+      status.continuation?.claim.state === "available"
+    ) {
+      // The server still owns a bounded recovery budget. Reclaim it in this
+      // same background task instead of waiting for a learner to press Retry.
+      continue;
+    }
+
+    if (
+      status.generation.state === "recovering" ||
+      status.generation.state === "retrying" ||
+      status.generation.state === "generation_failed"
+    ) {
+      await waitForAutomaticRecovery(1_000, signal);
+      continue;
+    }
+    return;
+  }
+}
+
+async function waitForAutomaticRecovery(
+  delayMs: number,
+  signal: AbortSignal,
+): Promise<void> {
+  if (delayMs <= 0) return;
+  await new Promise<void>((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    };
+    const onAbort = () => {
+      finish();
+    };
+    timer = setTimeout(finish, delayMs);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function runAutomaticRecoveryOnce(
   attemptId: string,
   signal: AbortSignal,
   options: { allowActionRequired?: boolean; force?: boolean } = {},
