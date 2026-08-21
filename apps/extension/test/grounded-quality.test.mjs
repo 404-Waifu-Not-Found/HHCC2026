@@ -472,6 +472,36 @@ test("v5.8 source selection fails closed for logistics-only material", () => {
   assert.equal(selection.metrics.selectedWindowCount, 0);
 });
 
+test("v5.8 source selection excludes attributed and statistic-only measurements", () => {
+  const transcript = [
+    "Greenhouse gases absorb outgoing infrared radiation and slow the loss of heat from Earth.",
+    "The resulting energy imbalance raises surface temperature until incoming and outgoing energy balance again.",
+    "The year 2005 was one of the warmest years in the instrumental record.",
+    "According to NASA studies, the extent of Arctic sea ice declined about 10 percent over recent decades.",
+    "Fossil-fuel combustion adds carbon dioxide to the atmosphere because oxidation converts carbon in the fuel into carbon dioxide.",
+    "Warmer ocean water expands, which contributes to sea-level rise alongside water released by melting land ice.",
+  ].join(" ");
+  const options = {
+    conceptFirstV58: true,
+    topicHint: "Global warming and the greenhouse effect",
+  };
+  const selection = buildConceptFirstInstructionalSelection(transcript, {
+    topicHint: options.topicHint,
+  });
+  const allEvidence = selection.excerpts.join(" ");
+  assert.doesNotMatch(allEvidence, /2005|10 percent|according to NASA/iu);
+  assert.match(allEvidence, /infrared radiation|fossil-fuel combustion/iu);
+  assert.match(allEvidence, /ocean water expands|sea-level rise/iu);
+  const primaryFocuses = Array.from({ length: 5 }, (_, ordinal) =>
+    focusExcerptForOrdinal(transcript, ordinal, 5, 0, options),
+  );
+  assert.ok(new Set(primaryFocuses).size >= 2);
+  assert.notEqual(primaryFocuses[0], primaryFocuses[1]);
+  for (const focus of primaryFocuses) {
+    assert.doesNotMatch(focus, /2005|10 percent|according to NASA/iu);
+  }
+});
+
 test("v5.8 repair windows do not consume the next ordinal's primary focus", () => {
   const transcript = Array.from(
     { length: 18 },

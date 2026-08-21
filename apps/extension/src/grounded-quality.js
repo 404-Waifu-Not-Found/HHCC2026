@@ -350,8 +350,24 @@ const NON_TRANSFERABLE_QUANTITATIVE_PATTERN =
   /(?:\b(?:estimated|reported|surveyed|annual)\b.{0,60}\b(?:monetary|market|economic|financial)?\s*(?:value|worth|cost|price|output|total|amount|percentage|percent|count|frequency|figure|statistic)s?\b|\b(?:annual monetary value|monetary value|global economic output|market worth|economic estimate|survey percentage)\b|[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:trillion|billion|million|thousand)\s+(?:dollars?|euros?|pounds?|yen)\b|(?:估计|估算|报告|调查).{0,30}(?:货币价值|市场价值|经济产出|金额|百分比|数量|频率)|(?:货币价值|市场价值|经济产出).{0,30}(?:万亿|亿|万元|美元|人民币))/iu;
 const PRESENTATION_STATISTIC_ATTRIBUTION_PATTERN =
   /\baccording to\b.{0,80}\b(?:calculations?|estimates?|statistics?|surveys?|figures?|reported data)\b|(?:根据|按照).{0,30}(?:计算|估算|统计|调查|数据)/iu;
+const ATTRIBUTED_MEASUREMENT_SOURCE_PATTERN =
+  /\baccording to\b.{0,90}\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data|nasa|noaa|who|cdc)\b|\b(?:stud(?:y|ies)|research|reports?|records?|measurements?|observations?|data)\s+(?:from|by)\s+(?:nasa|noaa|who|cdc|the\s+\p{L}+(?:\s+\p{L}+){0,3})\b|(?:根据|按照).{0,40}(?:研究|报告|记录|测量|观测|数据)/iu;
+const NON_TRANSFERABLE_DATE_STATISTIC_SOURCE_PATTERN =
+  /\b(?:the\s+year|in)\s+(?:1[5-9]|20)\d{2}\b.{0,120}\b(?:warmest|coldest|highest|lowest|largest|smallest|most|least|recorded|reported|observed|measured|record)\b/iu;
 const QUANTITATIVE_ANSWER_PATTERN =
   /(?:[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:%|percent|trillion|billion|million|thousand|dollars?|euros?|pounds?|yen|years?|times|devices?|people)\b|^(?:it is |they are )?(?:less|greater|higher|lower|more|fewer|equal|about half|roughly twice)\b|(?:万亿|亿|万元|美元|人民币|百分之|更少|更多|更高|更低))/iu;
+
+function isNonTransferableQuantitativeEvidence(value) {
+  const text = String(value ?? "");
+  if (NECESSARY_NUMERIC_OBJECTIVE_PATTERN.test(text)) return false;
+  return (
+    NON_TRANSFERABLE_QUANTITATIVE_PATTERN.test(text) ||
+    PRESENTATION_STATISTIC_ATTRIBUTION_PATTERN.test(text) ||
+    ATTRIBUTED_MEASUREMENT_SOURCE_PATTERN.test(text) ||
+    NON_TRANSFERABLE_DATE_STATISTIC_SOURCE_PATTERN.test(text) ||
+    QUANTITATIVE_ANSWER_PATTERN.test(text)
+  );
+}
 
 function hasSuppliedCalculationOperands(question) {
   return (String(question).match(/\b\d+(?:\.\d+)?\b/gu)?.length ?? 0) >= 2;
@@ -509,6 +525,7 @@ export function questionMatchesQuizLanguage(candidate, quizLanguage) {
 function sentenceExcludedFromConceptFirst(value) {
   return (
     LOGISTICS_PATTERNS.some((pattern) => pattern.test(value)) ||
+    isNonTransferableQuantitativeEvidence(value) ||
     FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
       pattern.test(value),
     ) ||
@@ -541,12 +558,6 @@ function conceptFirstInstructionalScore(value, topicTokens) {
     score += 3;
   }
   if (/[=+*/^≤≥≈]|\b\w+\([^)]*\)/u.test(value)) score += 3;
-  if (
-    NON_TRANSFERABLE_QUANTITATIVE_PATTERN.test(value) &&
-    !NECESSARY_NUMERIC_OBJECTIVE_PATTERN.test(value)
-  ) {
-    score -= 8;
-  }
   score += Math.min(5, Math.floor(tokens.size / 8));
   if (value.length >= 45 && value.length <= 700) score += 2;
   return score;
@@ -734,6 +745,17 @@ export function focusExcerptForOrdinal(
   const excerpts = buildInstructionalExcerpts(plainText, options);
   if (!excerpts.length) return "";
   if (options.conceptFirstV58) {
+    // A very short source can yield fewer safe windows than requested
+    // questions. Rotate those windows immediately instead of pinning several
+    // early ordinals to q1's strongest focus. Reuse is unavoidable in this
+    // scarcity case, but adjacent primary calls still receive different
+    // evidence whenever at least two safe windows exist.
+    if (excerpts.length < totalQuestions) {
+      const boundedOrdinal = Math.max(0, Math.min(totalQuestions - 1, ordinal));
+      const index =
+        (boundedOrdinal + Math.max(0, repairCycle)) % excerpts.length;
+      return excerpts[index].slice(0, 2_400).trim();
+    }
     // q1 keeps the strongest-ranked window. Spread later primary questions
     // across the complete safe evidence set instead of walking adjacent
     // high-scoring windows, which often describe the same objective. Each
