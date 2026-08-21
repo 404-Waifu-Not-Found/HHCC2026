@@ -278,26 +278,33 @@ async function runAutomaticRecovery(
       signal,
       continuation.quizLanguage,
     );
-  } catch (error) {
+    const captionWordCount = countCaptionWords(transcript.segments);
+    await apiRequest(
+      `/api/videos/${encodeURIComponent(imported.video.id)}/source-metadata`,
+      {
+        method: "PATCH",
+        body: jsonBody({
+          durationSeconds: transcript.verifiedDurationSeconds,
+          sourceLanguage: transcript.language || "und",
+          captionSourceCategory: transcript.captionSourceCategory,
+          captionSegmentCount: transcript.segments.length,
+          captionWordCount,
+        }),
+        signal,
+      },
+      VerifiedVideoMetadataResponseSchema,
+    );
+  } catch (cause) {
     stopLeaseHeartbeat();
-    throw error;
+    if (signal.aborted) throw cause;
+    if (cause instanceof LocalGenerationRequestError) throw cause;
+    throw new LocalGenerationRequestError(
+      cause instanceof Error
+        ? cause.message
+        : "The video source metadata is unavailable for local recovery.",
+      "source_unavailable",
+    );
   }
-  const captionWordCount = countCaptionWords(transcript.segments);
-  await apiRequest(
-    `/api/videos/${encodeURIComponent(imported.video.id)}/source-metadata`,
-    {
-      method: "PATCH",
-      body: jsonBody({
-        durationSeconds: transcript.verifiedDurationSeconds,
-        sourceLanguage: transcript.language || "und",
-        captionSourceCategory: transcript.captionSourceCategory,
-        captionSegmentCount: transcript.segments.length,
-        captionWordCount,
-      }),
-      signal,
-    },
-    VerifiedVideoMetadataResponseSchema,
-  );
 
   const timestamp = Date.now();
   try {
