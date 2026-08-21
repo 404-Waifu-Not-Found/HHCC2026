@@ -127,10 +127,7 @@ export default function QuizScreen() {
   }, []);
 
   useEffect(() => {
-    if (!question) {
-      setQuestionInteractionReady(false);
-      return;
-    }
+    if (!question) return;
     const controlCount =
       question.type === "multiple_choice"
         ? (question.options?.length ?? 0)
