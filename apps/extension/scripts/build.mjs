@@ -7,6 +7,7 @@ import {
   readFileSync,
   rmSync,
   utimesSync,
+  writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -111,26 +112,45 @@ cpSync(extensionOutput, stableExtensionOutput, {
 });
 const archiveFiles = normalizeAndListFiles(stagingRoot, extensionOutput);
 // Prefer the system `zip` CLI (identical bytes to the tracked release asset);
-// fall back to the dependency-free writer where `zip` is not installed, such
-// as Windows developer machines, so dev:web, build, and e2e stay runnable.
-const zipped = spawnSync("zip", ["-X", "-q", archive, ...archiveFiles], {
-  cwd: stagingRoot,
-  stdio: "inherit",
-});
+// fall back to the dependency-free writer whenever `zip` is missing or cannot
+// run, such as on Windows developer machines, so dev:web, build, and e2e stay
+// runnable. Consumers read build-info.json to learn which packager produced
+// the archive.
 let packager = "zip";
-if (zipped.error && zipped.error.code === "ENOENT") {
-  writeZipArchive(archive, stagingRoot, archiveFiles);
-  packager = "node";
-}
-rmSync(stagingRoot, { recursive: true, force: true });
-if (packager === "zip" && zipped.status !== 0) {
-  throw new Error(
-    "Could not package the ClipQuest caption extension. Install the zip command and retry.",
-  );
+try {
+  const zipped = spawnSync("zip", ["-X", "-q", archive, ...archiveFiles], {
+    cwd: stagingRoot,
+    stdio: "inherit",
+  });
+  if (zipped.error || zipped.status !== 0) {
+    const reason = zipped.error
+      ? `${zipped.error.code ?? zipped.error.name}: ${zipped.error.message}`
+      : `zip exited with status ${zipped.status}`;
+    console.warn(
+      `zip CLI unavailable (${reason}); packaging with the built-in ZIP writer instead.`,
+    );
+    rmSync(archive, { force: true });
+    writeZipArchive(archive, stagingRoot, archiveFiles);
+    packager = "node";
+  }
+} finally {
+  rmSync(stagingRoot, { recursive: true, force: true });
 }
 const archiveSha256 = createHash("sha256")
   .update(readFileSync(archive))
   .digest("hex");
+writeFileSync(
+  resolve(outputRoot, "build-info.json"),
+  JSON.stringify(
+    {
+      archive: "clipquest-captions-extension.zip",
+      packager,
+      sha256: archiveSha256,
+    },
+    null,
+    2,
+  ),
+);
 console.log(
   `Built ${archive} (sha256 ${archiveSha256}, packaged with ${packager})`,
 );

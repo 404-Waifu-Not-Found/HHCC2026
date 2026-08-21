@@ -5,22 +5,12 @@
 import { Buffer } from "node:buffer";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { deflateRawSync } from "node:zlib";
+import { crc32 as zlibCrc32, deflateRawSync } from "node:zlib";
 
-const CRC_TABLE = new Uint32Array(256).map((_, index) => {
-  let value = index;
-  for (let bit = 0; bit < 8; bit += 1) {
-    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-  }
-  return value >>> 0;
-});
-
+// Node >= 22.2 ships a native CRC-32; re-exported so the archive tests can
+// assert the checksum ZIP readers will verify.
 export function crc32(buffer) {
-  let crc = 0xffffffff;
-  for (const byte of buffer) {
-    crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+  return zlibCrc32(buffer) >>> 0;
 }
 
 export function dosDateTime(date) {
