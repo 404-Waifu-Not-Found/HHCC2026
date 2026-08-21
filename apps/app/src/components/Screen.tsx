@@ -1,5 +1,6 @@
 import { useState, type PropsWithChildren, type ReactNode } from "react";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -107,11 +108,12 @@ export function Screen({
       ) : null}
       {floating ? (
         <View
+          nativeID="clipquest-screen-floating"
           pointerEvents="box-none"
           style={[
             styles.floating,
             {
-              right: horizontal,
+              right: Platform.OS === "web" ? undefined : horizontal,
               bottom:
                 (footer ? footerHeight : safeArea.minimumBottom) + spacing[3],
             },

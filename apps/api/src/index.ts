@@ -98,6 +98,7 @@ app.use("*", async (c, next) => {
             headers: c.req.raw.headers,
           }),
         ),
+        publicWorkerVersion(c.env),
       );
       return;
     }
@@ -124,6 +125,11 @@ app.get("/health", (c) => {
     promptVersion: LOCAL_QUIZ_PROMPT_VERSION,
     validatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
     worker: publicWorkerVersion(c.env),
+    versionAffinity: {
+      requestKeyPresent: Boolean(
+        c.req.header("Cloudflare-Workers-Version-Key"),
+      ),
+    },
     maintenance: false,
     configuration,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",

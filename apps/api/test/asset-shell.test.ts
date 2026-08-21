@@ -33,9 +33,17 @@ describe("public route asset shells", () => {
           ETag: '"old-shell"',
         },
       }),
+      {
+        versionId: "873e0843-ab3b-4a2a-9d0d-4581dcceb810",
+        versionTag: "release-sha",
+      },
     );
 
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-ClipQuest-Worker-Version")).toBe(
+      "873e0843-ab3b-4a2a-9d0d-4581dcceb810",
+    );
+    expect(response.headers.get("X-ClipQuest-Worker-Tag")).toBe("release-sha");
     expect(response.headers.get("ETag")).toBe('"old-shell"');
     expect(await response.text()).toBe("shell");
   });

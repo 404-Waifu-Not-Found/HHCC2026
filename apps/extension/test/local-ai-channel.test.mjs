@@ -348,6 +348,12 @@ test("release builds preserve the loaded unpacked extension directory", () => {
   assert.match(bridge, /async function announce\(\) \{\s+try \{/);
 });
 
+test("release ZIPs normalize metadata for reproducible matching artifacts", () => {
+  assert.match(buildScript, /new Date\("2020-01-01T00:00:00\.000Z"\)/u);
+  assert.match(buildScript, /\["-X", "-q", archive, \.\.\.archiveFiles\]/u);
+  assert.match(buildScript, /createHash\("sha256"\)/u);
+});
+
 test("the popup exposes only DeepSeek configuration", () => {
   assert.equal(manifest.version, "0.8.1");
   assert.match(popupHtml, /DeepSeek configuration/);

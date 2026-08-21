@@ -35,15 +35,27 @@ export function publicAssetShell(pathname: string): string | null {
   );
 }
 
-export function preventStaleAppShell(response: Response): Response {
+export function preventStaleAppShell(
+  response: Response,
+  workerVersion?: PublicWorkerVersion,
+): Response {
   const headers = new Headers(response.headers);
   // The HTML shell points at a content-hashed JavaScript bundle. Never keep an
   // old shell in the browser after a deploy, or it can continue loading an old
   // bundle even though the new assets are already live.
   headers.set("Cache-Control", "no-store");
+  if (workerVersion) {
+    headers.set("X-ClipQuest-Worker-Version", workerVersion.versionId);
+    if (workerVersion.versionTag) {
+      headers.set("X-ClipQuest-Worker-Tag", workerVersion.versionTag);
+    } else {
+      headers.delete("X-ClipQuest-Worker-Tag");
+    }
+  }
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
     headers,
   });
 }
+import type { PublicWorkerVersion } from "./worker-version";

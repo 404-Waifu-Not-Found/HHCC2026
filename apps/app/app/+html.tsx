@@ -17,6 +17,13 @@ export default function Root({ children }: PropsWithChildren) {
         <style>{`
           html, body { background: #F7F9F4; }
           html[data-cq-theme="dark"], html[data-cq-theme="dark"] body { background: #101B15; }
+          #clipquest-screen-floating { right: 20px; }
+          @media (min-width: 768px) {
+            #clipquest-screen-floating { right: 24px; }
+          }
+          @media (min-width: 1024px) {
+            #clipquest-screen-floating { right: 32px; }
+          }
           @media (prefers-color-scheme: dark) {
             html:not([data-cq-theme]), html:not([data-cq-theme]) body { background: #101B15; }
           }
