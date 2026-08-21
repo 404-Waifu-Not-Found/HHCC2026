@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  extractYouTubePlayerResponse,
   loadYouTubeCaptionSegments,
+  parseYouTubePlayerResponse,
   parseYouTubeTimedText,
   selectPreferredYouTubeCaptionTrack,
 } from "../src/sources/youtube";
@@ -10,6 +12,40 @@ afterEach(() => {
 });
 
 describe("YouTube timed text", () => {
+  it("extracts bounded player metadata without being confused by braces inside strings", () => {
+    const html = `<script>var ytInitialPlayerResponse = ${JSON.stringify({
+      videoDetails: {
+        title: "Neural {networks}",
+        lengthSeconds: "1120",
+        thumbnail: { thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }] },
+      },
+      captions: {
+        playerCaptionsTracklistRenderer: {
+          captionTracks: [
+            {
+              baseUrl: "https://www.youtube.com/api/timedtext?signed=yes",
+              languageCode: "en",
+              name: { runs: [{ text: "English" }] },
+            },
+          ],
+        },
+      },
+    })};</script>`;
+
+    expect(parseYouTubePlayerResponse(extractYouTubePlayerResponse(html))).toEqual({
+      title: "Neural {networks}",
+      durationSeconds: 1120,
+      thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }],
+      tracks: [
+        {
+          base_url: "https://www.youtube.com/api/timedtext?signed=yes",
+          language_code: "en",
+          label: "English",
+        },
+      ],
+    });
+  });
+
   it("turns json3 events into normalized transcript segments", () => {
     expect(
       parseYouTubeTimedText({

@@ -4,14 +4,23 @@ import { ApiError } from "../lib/errors";
 import type { AudioStream, SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
 
-const YOUTUBE_INFO_CLIENTS = ["IOS", "ANDROID", "WEB"] as const;
+const YOUTUBE_INFO_CLIENT = "IOS" as const;
 const YOUTUBE_AUDIO_CLIENT = "IOS" as const;
 const MAX_TIMED_TEXT_BYTES = 8 * 1024 * 1024;
+const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 
 type YouTubeCaptionTrack = {
   base_url: string;
   language_code: string;
   kind?: "asr" | "frc";
+  label?: string;
+};
+
+type YouTubeInspectionData = {
+  title: string;
+  durationSeconds: number;
+  thumbnails: Array<{ url: string; width?: number }>;
+  tracks: YouTubeCaptionTrack[];
 };
 
 type YouTubeTimedTextEvent = {
@@ -38,6 +47,169 @@ async function createYouTubeClient(retrievePlayer: boolean): Promise<Innertube> 
 
 function getBestThumbnail(thumbnails: Array<{ url: string; width?: number }>): string {
   return [...thumbnails].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? "";
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function getYouTubeText(value: unknown): string {
+  const record = asRecord(value);
+  if (!record) return "";
+  if (typeof record.simpleText === "string") return record.simpleText.trim();
+  if (!Array.isArray(record.runs)) return "";
+  return record.runs
+    .flatMap((run) => {
+      const runRecord = asRecord(run);
+      return typeof runRecord?.text === "string" ? [runRecord.text] : [];
+    })
+    .join("")
+    .trim();
+}
+
+export function extractYouTubePlayerResponse(html: string): unknown | null {
+  const markers = ["var ytInitialPlayerResponse = ", "ytInitialPlayerResponse = "];
+  for (const marker of markers) {
+    let markerIndex = html.indexOf(marker);
+    while (markerIndex >= 0) {
+      const start = html.indexOf("{", markerIndex + marker.length);
+      if (start < 0 || start - markerIndex > marker.length + 32) break;
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      for (let index = start; index < html.length; index += 1) {
+        const character = html[index];
+        if (inString) {
+          if (escaped) escaped = false;
+          else if (character === "\\") escaped = true;
+          else if (character === '"') inString = false;
+          continue;
+        }
+        if (character === '"') inString = true;
+        else if (character === "{") depth += 1;
+        else if (character === "}" && --depth === 0) {
+          try {
+            return JSON.parse(html.slice(start, index + 1));
+          } catch {
+            break;
+          }
+        }
+      }
+      markerIndex = html.indexOf(marker, markerIndex + marker.length);
+    }
+  }
+  return null;
+}
+
+export function parseYouTubePlayerResponse(value: unknown): YouTubeInspectionData | null {
+  const response = asRecord(value);
+  const videoDetails = asRecord(response?.videoDetails);
+  const title = typeof videoDetails?.title === "string" ? videoDetails.title.trim() : "";
+  if (!title) return null;
+
+  const rawDuration =
+    typeof videoDetails?.lengthSeconds === "string" || typeof videoDetails?.lengthSeconds === "number"
+      ? Number(videoDetails.lengthSeconds)
+      : 0;
+  const thumbnailContainer = asRecord(videoDetails?.thumbnail);
+  const thumbnails = Array.isArray(thumbnailContainer?.thumbnails)
+    ? thumbnailContainer.thumbnails.flatMap((thumbnail) => {
+        const record = asRecord(thumbnail);
+        if (typeof record?.url !== "string") return [];
+        return [{ url: record.url, ...(typeof record.width === "number" ? { width: record.width } : {}) }];
+      })
+    : [];
+  const captions = asRecord(response?.captions);
+  const trackList = asRecord(captions?.playerCaptionsTracklistRenderer);
+  const tracks = Array.isArray(trackList?.captionTracks)
+    ? trackList.captionTracks.flatMap((track) => {
+        const record = asRecord(track);
+        if (typeof record?.baseUrl !== "string" || typeof record.languageCode !== "string") return [];
+        const kind: YouTubeCaptionTrack["kind"] =
+          record.kind === "asr" || record.kind === "frc" ? record.kind : undefined;
+        return [
+          {
+            base_url: record.baseUrl,
+            language_code: record.languageCode,
+            ...(kind ? { kind } : {}),
+            label: getYouTubeText(record.name) || record.languageCode,
+          },
+        ];
+      })
+    : [];
+  return {
+    title,
+    durationSeconds: Number.isFinite(rawDuration) && rawDuration >= 0 ? Math.round(rawDuration) : 0,
+    thumbnails,
+    tracks,
+  };
+}
+
+async function fetchYouTubeWatchPage(sourceVideoId: string): Promise<YouTubeInspectionData> {
+  const watchUrl = new URL("https://www.youtube.com/watch");
+  watchUrl.searchParams.set("v", sourceVideoId);
+  watchUrl.searchParams.set("hl", "en");
+  const response = await fetch(watchUrl, {
+    headers: {
+      Accept: "text/html,application/xhtml+xml",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    },
+    redirect: "error",
+  });
+  if (!response.ok) throw new Error("YouTube watch metadata was unavailable.");
+  const declaredLength = Number.parseInt(response.headers.get("content-length") ?? "", 10);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_WATCH_PAGE_BYTES) {
+    throw new Error("YouTube watch metadata exceeded the size limit.");
+  }
+  const html = await response.text();
+  if (new TextEncoder().encode(html).byteLength > MAX_WATCH_PAGE_BYTES) {
+    throw new Error("YouTube watch metadata exceeded the size limit.");
+  }
+  const parsed = parseYouTubePlayerResponse(extractYouTubePlayerResponse(html));
+  if (!parsed) throw new Error("YouTube watch metadata was incomplete.");
+  return parsed;
+}
+
+async function inspectWithInnerTube(sourceVideoId: string): Promise<YouTubeInspectionData | null> {
+  try {
+    const client = await createYouTubeClient(false);
+    const info = await client.getBasicInfo(sourceVideoId, { client: YOUTUBE_INFO_CLIENT });
+    const title = info.basic_info.title?.trim();
+    if (!title) return null;
+    return {
+      title,
+      durationSeconds: Math.max(0, Math.round(info.basic_info.duration ?? 0)),
+      thumbnails: info.basic_info.thumbnail ?? [],
+      tracks: (info.captions?.caption_tracks ?? []).map((track) => {
+        const kind = track.kind === "asr" || track.kind === "frc" ? track.kind : undefined;
+        return {
+          base_url: track.base_url,
+          language_code: track.language_code,
+          ...(kind ? { kind } : {}),
+          label: track.name.toString(),
+        };
+      }),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function mergeYouTubeInspection(
+  primary: YouTubeInspectionData | null,
+  fallback: YouTubeInspectionData,
+): YouTubeInspectionData {
+  if (!primary) return fallback;
+  return {
+    title: primary.title || fallback.title,
+    durationSeconds: primary.durationSeconds || fallback.durationSeconds,
+    thumbnails: primary.thumbnails.length > 0 ? primary.thumbnails : fallback.thumbnails,
+    tracks: primary.tracks.length >= fallback.tracks.length ? primary.tracks : fallback.tracks,
+  };
 }
 
 function toFiniteMilliseconds(value: unknown): number | null {
@@ -138,72 +310,58 @@ export class YouTubeAdapter implements SourceAdapter {
   async inspect(url: URL): Promise<SourceVideo> {
     const sourceVideoId = parseYouTubeId(url);
     try {
-      const client = await createYouTubeClient(false);
-      let info: Awaited<ReturnType<Innertube["getBasicInfo"]>> | undefined;
-      let captionInfo: Awaited<ReturnType<Innertube["getBasicInfo"]>> | undefined;
-      let bestScore = -1;
-      for (const clientName of YOUTUBE_INFO_CLIENTS) {
+      let inspected = await inspectWithInnerTube(sourceVideoId);
+      let watchPageInspection: YouTubeInspectionData | null = null;
+      if (!inspected || inspected.tracks.length === 0) {
         try {
-          const candidate = await client.getBasicInfo(sourceVideoId, { client: clientName });
-          if (candidate.basic_info.title?.trim()) {
-            if (
-              (candidate.captions?.caption_tracks?.length ?? 0) >
-              (captionInfo?.captions?.caption_tracks?.length ?? 0)
-            ) {
-              captionInfo = candidate;
-            }
-            const score =
-              Number(candidate.playability_status?.status === "OK") * 100 +
-              Number((candidate.captions?.caption_tracks?.length ?? 0) > 0) * 10 +
-              Number((candidate.basic_info.duration ?? 0) > 0) * 2 +
-              Number((candidate.basic_info.thumbnail?.length ?? 0) > 0);
-            if (score > bestScore) {
-              info = candidate;
-              bestScore = score;
-            }
-            if (
-              candidate.playability_status?.status === "OK" &&
-              (candidate.captions?.caption_tracks?.length ?? 0) > 0 &&
-              (candidate.basic_info.duration ?? 0) > 0
-            ) {
-              break;
-            }
-          }
+          watchPageInspection = await fetchYouTubeWatchPage(sourceVideoId);
+          inspected = mergeYouTubeInspection(inspected, watchPageInspection);
         } catch {
-          // YouTube frequently retires individual client modes. Try the next supported client.
+          // A usable InnerTube response is sufficient when the public watch page is temporarily unavailable.
         }
       }
-      if (!info?.basic_info.title?.trim()) throw new Error("YouTube returned incomplete video metadata.");
-      const tracks = captionInfo?.captions?.caption_tracks ?? info.captions?.caption_tracks ?? [];
-      const captionTracks = tracks.map((track) => ({
-        language: track.language_code,
-        label: track.name.toString(),
-        isAutoGenerated: track.kind === "asr",
-      }));
+      if (!inspected) throw new Error("YouTube returned incomplete video metadata.");
 
       let preferredCaptionSegments: TranscriptSegment[] | undefined;
-      const preferredTrack = selectPreferredYouTubeCaptionTrack(tracks);
+      let preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
       if (preferredTrack) {
         try {
           preferredCaptionSegments = await loadYouTubeCaptionSegments(preferredTrack);
         } catch (error) {
-          console.warn("YouTube captions were listed but could not be loaded", {
-            sourceVideoId,
-            reason: error instanceof YouTubeCaptionLoadError ? error.reason : "unexpected_error",
-          });
+          try {
+            watchPageInspection ??= await fetchYouTubeWatchPage(sourceVideoId);
+            inspected = mergeYouTubeInspection(inspected, watchPageInspection);
+            preferredTrack = selectPreferredYouTubeCaptionTrack(watchPageInspection.tracks);
+            if (!preferredTrack) throw error;
+            preferredCaptionSegments = await loadYouTubeCaptionSegments(preferredTrack);
+          } catch (fallbackError) {
+            console.warn("YouTube captions were listed but could not be loaded", {
+              sourceVideoId,
+              reason:
+                fallbackError instanceof YouTubeCaptionLoadError
+                  ? fallbackError.reason
+                  : error instanceof YouTubeCaptionLoadError
+                    ? error.reason
+                    : "unexpected_error",
+            });
+          }
         }
       }
+      const captionTracks = inspected.tracks.map((track) => ({
+        language: track.language_code,
+        label: track.label || track.language_code,
+        isAutoGenerated: track.kind === "asr",
+      }));
 
       return {
         source: "youtube",
         sourceVideoId,
         canonicalUrl: `https://www.youtube.com/watch?v=${sourceVideoId}`,
-        title: info.basic_info.title.trim(),
+        title: inspected.title,
         thumbnailUrl:
-          getBestThumbnail(info.basic_info.thumbnail ?? []) ||
-          `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
-        durationSeconds: Math.max(0, Math.round(info.basic_info.duration ?? 0)),
-        sourceLanguage: preferredTrack?.language_code ?? tracks[0]?.language_code ?? null,
+          getBestThumbnail(inspected.thumbnails) || `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
+        durationSeconds: inspected.durationSeconds,
+        sourceLanguage: preferredTrack?.language_code ?? inspected.tracks[0]?.language_code ?? null,
         captionTracks,
         ...(preferredCaptionSegments?.length ? { preferredCaptionSegments } : {}),
       };
