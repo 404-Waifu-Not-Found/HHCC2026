@@ -535,6 +535,9 @@ test("desktop learning journey and visual states", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: baseQuestion.prompt }),
   ).toBeVisible();
+  const quizCloseButton = page.getByRole("button", { name: "Cancel" });
+  await expect(quizCloseButton).toContainText("×");
+  await expect(quizCloseButton.locator("img")).toHaveCount(0);
   await capture(page, "desktop-quiz-initial");
 
   const firstAnswer = page.getByRole("button", {
