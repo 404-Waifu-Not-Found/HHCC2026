@@ -16,41 +16,59 @@ export function useOpenVideoCard() {
   const [openingId, setOpeningId] = useState<string>();
   const [error, setError] = useState<string>();
 
-  const open = useCallback(async (card: LibraryCard) => {
-    setOpeningId(card.videoId);
-    setError(undefined);
-    try {
-      if (card.attemptId) {
-        router.push({ pathname: "/quiz/[attemptId]", params: { attemptId: card.attemptId } });
-        return;
-      }
-      if (card.quizId) {
-        const start = await apiRequest(
-          `/api/quizzes/${card.quizId}/start`,
-          {
-            method: "POST",
-            headers: { "Idempotency-Key": Crypto.randomUUID() },
-            body: jsonBody({ mode: card.action === "review" ? "review" : "learn", sessionLength: "medium" }),
-          },
-          QuizStartResponseSchema,
+  const open = useCallback(
+    async (card: LibraryCard) => {
+      setOpeningId(card.videoId);
+      setError(undefined);
+      try {
+        if (card.attemptId) {
+          router.push({
+            pathname: "/quiz/[attemptId]",
+            params: { attemptId: card.attemptId },
+          });
+          return;
+        }
+        if (card.quizId) {
+          const startSettings = card.startSettings ?? {
+            sessionLength: "medium" as const,
+          };
+          const start = await apiRequest(
+            `/api/quizzes/${card.quizId}/start`,
+            {
+              method: "POST",
+              headers: { "Idempotency-Key": Crypto.randomUUID() },
+              body: jsonBody({
+                mode: card.action === "review" ? "review" : "learn",
+                ...startSettings,
+              }),
+            },
+            QuizStartResponseSchema,
+          );
+          await saveAttemptStart(start);
+          router.push({
+            pathname: "/quiz/[attemptId]",
+            params: { attemptId: start.attemptId },
+          });
+          return;
+        }
+        const imported = await apiRequest(
+          "/api/videos/import",
+          { method: "POST", body: jsonBody({ url: card.originalUrl }) },
+          VideoImportResponseSchema,
         );
-        await saveAttemptStart(start);
-        router.push({ pathname: "/quiz/[attemptId]", params: { attemptId: start.attemptId } });
-        return;
+        await saveImportedVideo(imported);
+        router.push({
+          pathname: "/create/[videoId]",
+          params: { videoId: imported.video.id },
+        });
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : t("openQuestFailed"));
+      } finally {
+        setOpeningId(undefined);
       }
-      const imported = await apiRequest(
-        "/api/videos/import",
-        { method: "POST", body: jsonBody({ url: card.originalUrl }) },
-        VideoImportResponseSchema,
-      );
-      await saveImportedVideo(imported);
-      router.push({ pathname: "/create/[videoId]", params: { videoId: imported.video.id } });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("openQuestFailed"));
-    } finally {
-      setOpeningId(undefined);
-    }
-  }, [t]);
+    },
+    [t],
+  );
 
   return { open, openingId, error, clearError: () => setError(undefined) };
 }

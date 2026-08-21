@@ -32,6 +32,7 @@ type Scenario = {
   requestedPaths: string[];
   quizImportBodies: unknown[];
   quizImportKeys: (string | null)[];
+  quizStartBodies: unknown[];
   answerBodies: unknown[];
   progressiveAvailable: number;
   progressiveTotal: 5 | 10 | 15;
@@ -128,7 +129,7 @@ const dueCard = {
 const savedCard = {
   ...dueCard,
   videoId: VIDEO_ID_TWO,
-  quizId: null,
+  quizId: QUIZ_ID,
   attemptId: null,
   originalUrl: "https://www.youtube.com/watch?v=feynman-learning",
   source: "youtube" as const,
@@ -137,6 +138,10 @@ const savedCard = {
   mastery: "not_started" as const,
   action: "start" as const,
   dueForReview: false,
+  startSettings: {
+    sessionLength: "long" as const,
+    questionTypes: ["short_answer"] as const,
+  },
 };
 
 test.beforeEach(async ({ page }) => {
@@ -619,6 +624,26 @@ test("imports the extension quiz, opens the learner flow, and accepts an answer"
     questionId: QUESTION_ID,
     answer: 0,
   });
+});
+
+test("reopens a completed progressive quiz with its stored Library settings", async ({
+  page,
+}) => {
+  const scenario = await installMocks(page);
+  scenario.progressiveAvailable = 15;
+  scenario.progressiveTotal = 15;
+  await page.goto("/library");
+  await page
+    .getByRole("button", { name: /A visual guide to the Feynman technique/u })
+    .click();
+  await expect(page).toHaveURL(`/quiz/${ATTEMPT_ID}`);
+  expect(scenario.quizStartBodies).toEqual([
+    {
+      mode: "learn",
+      sessionLength: "long",
+      questionTypes: ["short_answer"],
+    },
+  ]);
 });
 
 test("multiple-choice views reshuffle only on activation and submit canonical indexes", async ({
@@ -1391,6 +1416,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     requestedPaths: [],
     quizImportBodies: [],
     quizImportKeys: [],
+    quizStartBodies: [],
     answerBodies: [],
     progressiveAvailable: 5,
     progressiveTotal: 5,
@@ -1774,6 +1800,7 @@ async function installMocks(page: Page): Promise<Scenario> {
       path === `/api/quizzes/${QUIZ_ID}/start` &&
       request.method() === "POST"
     ) {
+      scenario.quizStartBodies.push(request.postDataJSON());
       await json(
         route,
         {

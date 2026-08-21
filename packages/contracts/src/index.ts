@@ -893,6 +893,13 @@ export const LibraryCardSchema = z.object({
   mastery: MasteryStateSchema,
   action: z.enum(["start", "continue", "review"]),
   dueForReview: z.boolean(),
+  startSettings: z
+    .object({
+      sessionLength: SessionLengthSchema,
+      questionTypes: QuizQuestionTypesSchema,
+    })
+    .nullable()
+    .optional(),
 });
 export type LibraryCard = z.infer<typeof LibraryCardSchema>;
 
