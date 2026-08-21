@@ -1,0 +1,195 @@
+import { z } from "zod";
+
+export const AdminRoleSchema = z.enum(["user", "admin", "owner"]);
+export type AdminRole = z.infer<typeof AdminRoleSchema>;
+
+export const AdminPermissionSchema = z.enum([
+  "overview:read",
+  "users:read",
+  "users:moderate",
+  "users:set-role",
+  "jobs:read",
+  "jobs:manage",
+  "lessons:read",
+  "audit:read",
+  "system:read",
+]);
+export type AdminPermission = z.infer<typeof AdminPermissionSchema>;
+
+const NullableDateSchema = z.string().datetime().nullable();
+
+export const AdminMeResponseSchema = z.object({
+  user: z.object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string().email(),
+    role: AdminRoleSchema,
+  }),
+  permissions: z.array(AdminPermissionSchema),
+});
+export type AdminMeResponse = z.infer<typeof AdminMeResponseSchema>;
+
+export const AdminOverviewResponseSchema = z.object({
+  totals: z.object({
+    users: z.number().int().nonnegative(),
+    lessons: z.number().int().nonnegative(),
+    activeJobs: z.number().int().nonnegative(),
+    failedJobs: z.number().int().nonnegative(),
+  }),
+  activity: z.object({
+    newUsers7d: z.number().int().nonnegative(),
+    lessons7d: z.number().int().nonnegative(),
+    completedAttempts7d: z.number().int().nonnegative(),
+  }),
+  recentFailures: z.array(
+    z.object({
+      id: z.string(),
+      videoTitle: z.string(),
+      ownerEmail: z.string().email(),
+      errorCode: z.string().nullable(),
+      errorMessage: z.string().nullable(),
+      updatedAt: z.string().datetime(),
+    }),
+  ),
+});
+export type AdminOverviewResponse = z.infer<typeof AdminOverviewResponseSchema>;
+
+export const AdminUserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  username: z.string().nullable(),
+  role: AdminRoleSchema,
+  banned: z.boolean(),
+  banReason: z.string().nullable(),
+  banExpiresAt: NullableDateSchema,
+  emailVerified: z.boolean(),
+  createdAt: z.string().datetime(),
+  lastSeenAt: NullableDateSchema,
+  lessonCount: z.number().int().nonnegative(),
+  attemptCount: z.number().int().nonnegative(),
+});
+export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+const PaginationSchema = z.object({
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+});
+
+export const AdminUsersResponseSchema = z.object({
+  users: z.array(AdminUserSchema),
+  pagination: PaginationSchema,
+});
+export type AdminUsersResponse = z.infer<typeof AdminUsersResponseSchema>;
+
+export const AdminJobStateSchema = z.enum([
+  "queued",
+  "running",
+  "complete",
+  "failed",
+]);
+export const AdminJobSchema = z.object({
+  id: z.string(),
+  state: AdminJobStateSchema,
+  stage: z.string(),
+  progress: z.number().min(0).max(1),
+  errorCode: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+  cancelRequested: z.boolean(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  owner: z.object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string().email(),
+  }),
+  video: z.object({
+    id: z.string(),
+    title: z.string(),
+    source: z.enum(["youtube", "bilibili"]),
+  }),
+});
+export type AdminJob = z.infer<typeof AdminJobSchema>;
+
+export const AdminJobsResponseSchema = z.object({
+  jobs: z.array(AdminJobSchema),
+  pagination: PaginationSchema,
+});
+export type AdminJobsResponse = z.infer<typeof AdminJobsResponseSchema>;
+
+export const AdminLessonSchema = z.object({
+  id: z.string(),
+  language: z.string(),
+  sessionLength: z.string(),
+  watched: z.boolean(),
+  createdAt: z.string().datetime(),
+  questionCount: z.number().int().nonnegative(),
+  attemptCount: z.number().int().nonnegative(),
+  owner: z.object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string().email(),
+  }),
+  video: z.object({
+    id: z.string(),
+    title: z.string(),
+    source: z.enum(["youtube", "bilibili"]),
+  }),
+});
+export type AdminLesson = z.infer<typeof AdminLessonSchema>;
+
+export const AdminLessonsResponseSchema = z.object({
+  lessons: z.array(AdminLessonSchema),
+  pagination: PaginationSchema,
+});
+export type AdminLessonsResponse = z.infer<typeof AdminLessonsResponseSchema>;
+
+export const AdminAuditEntrySchema = z.object({
+  id: z.string(),
+  action: z.string(),
+  targetType: z.string(),
+  targetId: z.string().nullable(),
+  reason: z.string().nullable(),
+  outcome: z.enum(["success", "failed"]),
+  metadata: z.record(z.string(), z.unknown()),
+  createdAt: z.string().datetime(),
+  actor: z.object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string().email(),
+  }),
+});
+export type AdminAuditEntry = z.infer<typeof AdminAuditEntrySchema>;
+
+export const AdminAuditResponseSchema = z.object({
+  entries: z.array(AdminAuditEntrySchema),
+  pagination: PaginationSchema,
+});
+export type AdminAuditResponse = z.infer<typeof AdminAuditResponseSchema>;
+
+export const AdminSystemResponseSchema = z.object({
+  configuration: z.object({
+    authentication: z.boolean(),
+    generation: z.boolean(),
+    email: z.boolean(),
+    youtubeEncryption: z.boolean(),
+    youtubeDemoHistory: z.boolean(),
+  }),
+  model: z.string(),
+  jobs: z.record(AdminJobStateSchema, z.number().int().nonnegative()),
+  database: z.object({ migration: z.string(), auditEnabled: z.literal(true) }),
+});
+export type AdminSystemResponse = z.infer<typeof AdminSystemResponseSchema>;
+
+export const AdminReasonRequestSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+});
+
+export const AdminSetRoleRequestSchema = z.object({
+  role: AdminRoleSchema,
+  reason: z.string().trim().min(3).max(500),
+});
+
+export const AdminMutationResponseSchema = z.object({ ok: z.literal(true) });
+export type AdminMutationResponse = z.infer<typeof AdminMutationResponseSchema>;

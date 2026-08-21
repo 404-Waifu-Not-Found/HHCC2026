@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export * from "./admin";
+
 export const SourceSchema = z.enum(["youtube", "bilibili"]);
 export type VideoSource = z.infer<typeof SourceSchema>;
 
@@ -9,7 +11,11 @@ export type AppLanguage = z.infer<typeof LanguageSchema>;
 export const SessionLengthSchema = z.enum(["short", "medium", "long"]);
 export type SessionLength = z.infer<typeof SessionLengthSchema>;
 
-export const MasteryStateSchema = z.enum(["not_started", "learning", "mastered"]);
+export const MasteryStateSchema = z.enum([
+  "not_started",
+  "learning",
+  "mastered",
+]);
 export type MasteryState = z.infer<typeof MasteryStateSchema>;
 
 export const GenerationStageSchema = z.enum([
@@ -46,9 +52,12 @@ const httpUrl = z
   .string()
   .url()
   .max(2_048)
-  .refine((value) => value.startsWith("https://") || value.startsWith("http://"), {
-    message: "Only HTTP(S) video links are supported",
-  });
+  .refine(
+    (value) => value.startsWith("https://") || value.startsWith("http://"),
+    {
+      message: "Only HTTP(S) video links are supported",
+    },
+  );
 
 export const VideoImportRequestSchema = z.object({
   url: httpUrl,
@@ -95,13 +104,17 @@ export const TranscriptUploadRequestSchema = z.object({
   sessionLength: SessionLengthSchema,
   watched: z.boolean(),
 });
-export type TranscriptUploadRequest = z.infer<typeof TranscriptUploadRequestSchema>;
+export type TranscriptUploadRequest = z.infer<
+  typeof TranscriptUploadRequestSchema
+>;
 
 export const TranscriptUploadResponseSchema = z.object({
   jobId: z.string().uuid(),
   stage: GenerationStageSchema,
 });
-export type TranscriptUploadResponse = z.infer<typeof TranscriptUploadResponseSchema>;
+export type TranscriptUploadResponse = z.infer<
+  typeof TranscriptUploadResponseSchema
+>;
 
 export const GenerationStatusSchema = z.object({
   jobId: z.string().uuid(),
@@ -287,8 +300,18 @@ export const YouTubeDeviceStatusSchema = z.object({
   message: z.string().optional(),
 });
 
-const youtubeHosts = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"]);
-const bilibiliHosts = new Set(["bilibili.com", "www.bilibili.com", "m.bilibili.com", "b23.tv"]);
+const youtubeHosts = new Set([
+  "youtube.com",
+  "www.youtube.com",
+  "m.youtube.com",
+  "youtu.be",
+]);
+const bilibiliHosts = new Set([
+  "bilibili.com",
+  "www.bilibili.com",
+  "m.bilibili.com",
+  "b23.tv",
+]);
 
 export function identifyVideoSource(rawUrl: string): VideoSource | null {
   try {
