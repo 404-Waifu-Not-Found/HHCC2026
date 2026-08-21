@@ -6686,8 +6686,13 @@ async function callDeepSeekJson(
                 : input.questionCount === 2
                   ? 6_144
                   : 8_192,
-          stream: true,
-          stream_options: { include_usage: true },
+          // Chrome MV3 service workers can be terminated while an otherwise
+          // healthy SSE body is quiet. The extension opts into one bounded
+          // JSON envelope per singleton; native clients retain streamed SSE.
+          stream: input.disableStreaming !== true,
+          ...(input.disableStreaming === true
+            ? {}
+            : { stream_options: { include_usage: true } }),
         }),
         signal: controller.signal,
       },
@@ -6903,6 +6908,7 @@ export async function generateQuizFromPlainText(
     continuation: rawInput?.continuation,
     cryptoImpl,
     secureRandom,
+    disableStreaming: rawInput?.disableStreaming === true,
   };
   if (!input.title) throw new Error("The lesson title is missing.");
   if (![5, 10, 15].includes(input.questionCount)) {
@@ -8359,6 +8365,7 @@ export async function generateLocalQuiz(
       automaticRetryCount: context?.continuation?.automaticRetryCount,
       fetchImpl: adapters.fetch,
       cryptoImpl: adapters.crypto,
+      disableStreaming: adapters.disableStreaming === true,
     },
     apiKey,
     onProgress,

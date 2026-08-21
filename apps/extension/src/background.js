@@ -671,6 +671,7 @@ chrome.runtime.onConnect.addListener((port) => {
             controller.signal,
             question,
             call,
+            { disableStreaming: true },
           );
         }
         return generateQuizForVideo(
