@@ -1060,6 +1060,41 @@ test("v5.8 repairs learner-visible source-language leakage before storing a ques
   );
 });
 
+test("v5.8 source-framing repair carries private evidence and explicit deictic guidance", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const tasks = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const parsed = conceptFirstTaskFromRequest(init.body);
+    tasks.push(parsed.task);
+    return conceptFirstResponse(init.body, (value, task) => {
+      if (task.ordinal === 1 && tasks.length === 1) {
+        value.questions[0].question =
+          "Which method is mentioned for transferring energy?";
+        value.questions[0].explanation =
+          "The reference lists the pathway as the correct mechanism.";
+      }
+      return value;
+    });
+  };
+
+  const result = await generateQuizFromPlainText(
+    conceptFirstInput(),
+    "sk-local-test",
+  );
+
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(result.metrics.retryCount, 1);
+  assert.match(tasks[1], /sourceEvidence/u);
+  assert.match(tasks[1], /Do not use the words.*mentioned.*listed.*stated/iu);
+  assert.doesNotMatch(
+    `${result.quiz.questions[0].question} ${result.quiz.questions[0].explanation}`,
+    /mentioned|the reference lists/iu,
+  );
+});
+
 test("v5.8 completes a 100-bank recorded-fixture release benchmark without content retries", async (context) => {
   const originalFetch = globalThis.fetch;
   let httpCalls = 0;

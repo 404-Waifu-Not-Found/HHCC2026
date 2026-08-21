@@ -6,7 +6,9 @@ import {
   buildConceptFirstInstructionalSelection,
   buildInstructionalExcerpts,
   candidateDuplicatesAccepted,
+  claimKeyForCandidate,
   choicesLikelyEquivalent,
+  conceptClusterForCandidate,
   constructConceptFirstTrueFalseQuestion,
   focusExcerptForOrdinal,
   groundedMultipleChoiceCandidate,
@@ -722,6 +724,53 @@ test("claim identity blocks repeated semantic families", () => {
       },
       accepted,
       10,
+    ),
+    true,
+  );
+});
+
+test("resolved answer propositions block the live climate projection paraphrase", () => {
+  const first = {
+    type: "multiple_choice",
+    concept: "Climate projections definition",
+    objectiveCategory: "definition",
+    question:
+      "What do scientists and climate experts use to make projections about the world's future climate over the next 30 to 80 years?",
+    correctAnswer: "They factor in the current state of affairs.",
+    claim: {
+      subject: "Climate projections definition",
+      relation: "definition",
+      value: "Climate projections definition",
+      cluster: "Climate projections definition",
+    },
+  };
+  const accepted = [
+    {
+      claimKey: claimKeyForCandidate(first),
+      conceptCluster: conceptClusterForCandidate(first),
+      concept: first.concept,
+      question: first.question,
+      answer: first.correctAnswer,
+    },
+  ];
+  assert.equal(
+    candidateDuplicatesAccepted(
+      {
+        type: "multiple_choice",
+        concept: "condition for climate projections",
+        objectiveCategory: "condition",
+        question:
+          "What condition is necessary for scientists and climate experts to make projections about the world's future climate over the next 30 to 80 years?",
+        correctAnswer: "They factor in the current state of affairs.",
+        claim: {
+          subject: "condition for climate projections",
+          relation: "condition",
+          value: "condition for climate projections",
+          cluster: "condition for climate projections",
+        },
+      },
+      accepted,
+      5,
     ),
     true,
   );

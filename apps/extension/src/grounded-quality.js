@@ -655,9 +655,26 @@ export function conceptSimilarity(left, right) {
 
 export function claimKeyForCandidate(candidate) {
   const claim = candidate?.claim;
-  const parts = claim
-    ? [claim.subject, claim.relation, claim.value]
-    : [candidate?.concept, candidate?.question];
+  // Multiple-choice wording can move the same proposition between a
+  // definition, condition, or relationship stem. Include the locally resolved
+  // answer in its claim identity so those cosmetic shifts stay duplicates.
+  // True/false facts are full source sentences and share substantial template
+  // language, so their existing concept/claim identity remains more precise.
+  const assessmentAnswer =
+    candidate?.type === "multiple_choice"
+      ? (candidate?.correctAnswer ??
+        candidate?.answerText ??
+        candidate?.answerSpan)
+      : undefined;
+  const parts = assessmentAnswer
+    ? [
+        candidate?.concept ?? claim?.subject,
+        candidate?.objectiveCategory ?? claim?.relation,
+        assessmentAnswer,
+      ]
+    : claim
+      ? [claim.subject, claim.relation, claim.value]
+      : [candidate?.concept, candidate?.question];
   return normalizeGroundedText(parts.filter(Boolean).join(" | ")).slice(0, 300);
 }
 
