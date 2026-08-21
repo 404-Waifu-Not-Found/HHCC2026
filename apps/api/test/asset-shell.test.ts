@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { publicAssetShell } from "../src/lib/asset-shell";
+import { preventStaleAppShell, publicAssetShell } from "../src/lib/asset-shell";
 
 describe("public route asset shells", () => {
   it("maps extensionless static URLs to their exported Expo pages", () => {
@@ -22,5 +22,21 @@ describe("public route asset shells", () => {
     expect(publicAssetShell("/create/")).toBeNull();
     expect(publicAssetShell("/create/video-id/extra")).toBeNull();
     expect(publicAssetShell("/library/video-id")).toBeNull();
+  });
+
+  it("prevents browsers from retaining an app shell across deployments", async () => {
+    const response = preventStaleAppShell(
+      new Response("shell", {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=0, must-revalidate",
+          ETag: '"old-shell"',
+        },
+      }),
+    );
+
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("ETag")).toBe('"old-shell"');
+    expect(await response.text()).toBe("shell");
   });
 });

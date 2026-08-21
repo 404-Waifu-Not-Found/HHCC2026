@@ -17,7 +17,7 @@ const staticShells = new Map<string, string>([
   ["/welcome", "/welcome.html"],
 ]);
 
-const dynamicShells: ReadonlyArray<readonly [RegExp, string]> = [
+const dynamicShells: readonly (readonly [RegExp, string])[] = [
   [/^\/create\/[^/]+$/, "/create/[videoId].html"],
   [/^\/generation\/[^/]+$/, "/generation/[videoId].html"],
   [/^\/quiz\/[^/]+$/, "/quiz/[attemptId].html"],
@@ -33,4 +33,17 @@ export function publicAssetShell(pathname: string): string | null {
     dynamicShells.find(([pattern]) => pattern.test(normalizedPath))?.[1] ??
     null
   );
+}
+
+export function preventStaleAppShell(response: Response): Response {
+  const headers = new Headers(response.headers);
+  // The HTML shell points at a content-hashed JavaScript bundle. Never keep an
+  // old shell in the browser after a deploy, or it can continue loading an old
+  // bundle even though the new assets are already live.
+  headers.set("Cache-Control", "no-store");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }

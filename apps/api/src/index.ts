@@ -7,7 +7,7 @@ import {
   LOCAL_QUIZ_VALIDATOR_VERSION,
 } from "@clipquest/contracts";
 import { createAuth } from "./auth";
-import { publicAssetShell } from "./lib/asset-shell";
+import { preventStaleAppShell, publicAssetShell } from "./lib/asset-shell";
 import { ApiError, errorResponse } from "./lib/errors";
 import { clearExpiredRateLimits } from "./lib/rate-limit";
 import { authenticated, type ApiBindings } from "./middleware/authenticated";
@@ -90,11 +90,13 @@ app.use("*", async (c, next) => {
     if (shellPath) {
       const assetUrl = new URL(c.req.url);
       assetUrl.pathname = shellPath;
-      c.res = await c.env.ASSETS.fetch(
-        new Request(assetUrl.toString(), {
-          method: c.req.method,
-          headers: c.req.raw.headers,
-        }),
+      c.res = preventStaleAppShell(
+        await c.env.ASSETS.fetch(
+          new Request(assetUrl.toString(), {
+            method: c.req.method,
+            headers: c.req.raw.headers,
+          }),
+        ),
       );
       return;
     }
