@@ -109,5 +109,7 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain("accessibilityLabel={");
     expect(videoCard).toContain("card.cheatSheet.status");
     expect(videoCard).not.toContain("event.stopPropagation()");
+    expect(videoCard).toContain('accessibilityRole="text"');
+    expect(videoCard).not.toContain("onPress={() => undefined}");
   });
 });

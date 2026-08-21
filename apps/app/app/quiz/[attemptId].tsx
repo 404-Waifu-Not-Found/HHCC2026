@@ -543,11 +543,11 @@ export default function QuizScreen() {
           question.type === "multiple_choice" &&
           typeof submittedAnswer === "number"
             ? (question.options?.[submittedAnswer] ?? String(submittedAnswer))
-              : question.type === "true_false"
-                ? submittedAnswer
-                  ? "True"
-                  : "False"
-                : String(submittedAnswer);
+            : question.type === "true_false"
+              ? submittedAnswer
+                ? "True"
+                : "False"
+              : String(submittedAnswer);
         const gradingController = new AbortController();
         const gradingTimeout = setTimeout(() => {
           gradingController.abort(new Error("Local grading timed out."));
@@ -739,7 +739,7 @@ export default function QuizScreen() {
                 }
               />
             </StaggerItem>
-            {completedTotal ? (
+            {completedTotal !== undefined ? (
               <StaggerItem
                 index={2}
                 style={[

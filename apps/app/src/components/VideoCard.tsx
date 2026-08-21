@@ -121,7 +121,7 @@ export function VideoCard({
               </Text>
             </View>
             {card.bestScore !== null ? (
-              <Text style={[styles.score, { color: masteryColor }]}> 
+              <Text style={[styles.score, { color: masteryColor }]}>
                 {Math.round(card.bestScore)}%
               </Text>
             ) : null}
@@ -134,20 +134,17 @@ export function VideoCard({
         </Text>
         <VoxelIcon name="next" size={20} color={theme.primary} />
         {card.cheatSheet.status === "none" ? (
-          <Text
+          <View
             accessible
-            accessibilityRole="button"
-            accessibilityLabel={t("notesNotReady")}
+            accessibilityRole="text"
+            accessibilityLabel={`${t("notesNotReady")}. Complete a quiz to enable notes export.`}
             accessibilityHint="Complete a quiz to enable notes export."
-            onPress={() => undefined}
-            style={[
-              styles.exportText,
-              styles.exportStatus,
-              { color: theme.textMuted },
-            ]}
+            style={styles.exportStatus}
           >
-            {t("notesNotReady")}
-          </Text>
+            <Text style={[styles.exportText, { color: theme.textMuted }]}>
+              {t("notesNotReady")}
+            </Text>
+          </View>
         ) : (
           <Pressable
             accessibilityRole="button"

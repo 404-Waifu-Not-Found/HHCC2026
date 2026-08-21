@@ -58,4 +58,10 @@ describe("quiz answer presentation", () => {
     expect(htmlSource).toContain("@media (min-width: 1024px)");
     expect(htmlSource).toContain("right: 32px");
   });
+
+  it("keeps a zero-question completion total visible", async () => {
+    const source = await quizSource();
+    expect(source).toContain("{completedTotal !== undefined ? (");
+    expect(source).not.toContain("{completedTotal ? (");
+  });
 });
