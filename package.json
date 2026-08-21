@@ -19,6 +19,7 @@
     "cf:deploy": "npm run deploy -w @clipquest/api",
     "db:migrate:local": "npm run db:migrate:local -w @clipquest/api",
     "db:migrate:remote": "npm run db:migrate:remote -w @clipquest/api",
+    "postinstall": "node scripts/patch-expo-modules-jsi.mjs",
     "models:prepare": "node scripts/prepare-models.mjs",
     "models:upload": "node scripts/upload-models.mjs"
   },
