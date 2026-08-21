@@ -19,6 +19,7 @@ const TRANSCRIPT_CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
 const GENERATION_OUTBOX_PREFIX = "clipquestGenerationOutboxV1:";
 const GENERATION_OUTBOX_TTL_MS = 24 * 60 * 60 * 1_000;
 const MAX_GENERATION_OUTBOX_ENTRIES = 64;
+const MAX_CHEAT_SHEET_TRANSCRIPT_CHARACTERS = 120_000;
 
 function generationOutboxKey(generationId) {
   return `${GENERATION_OUTBOX_PREFIX}${generationId}`;
@@ -360,6 +361,7 @@ async function downloadPlainTextCaptions(request) {
   if (!/^[\w-]{11}$/.test(request.videoId)) {
     throw new Error("The YouTube video id is invalid.");
   }
+
   const response = await extractCaptions(request);
   if (!response?.ok || !Array.isArray(response.result?.segments)) {
     throw new Error(
@@ -384,6 +386,40 @@ async function downloadPlainTextCaptions(request) {
     segmentCount: response.result.segments.length,
     characterCount: text.length,
   };
+}
+
+async function generateCaptionBackedCheatSheet(context, apiKey, signal) {
+  if (!/^[\w-]{11}$/.test(context?.sourceVideoId)) {
+    throw new Error("The YouTube source id is missing from this video.");
+  }
+  const response = await extractCaptions(
+    {
+      videoId: context.sourceVideoId,
+      preferredLanguage: context.language,
+    },
+    { ensureSource: true },
+  );
+  if (!response?.ok || !Array.isArray(response.result?.segments)) {
+    throw new Error(
+      typeof response?.error === "string"
+        ? response.error
+        : "Caption extraction failed.",
+    );
+  }
+  const transcript = captionsToPlainText(response.result.segments).slice(
+    0,
+    MAX_CHEAT_SHEET_TRANSCRIPT_CHARACTERS,
+  );
+  if (!transcript) throw new Error("YouTube returned empty captions.");
+  return generateLocalCheatSheet(
+    {
+      ...context,
+      title: response.result.title || context.title,
+      transcript,
+    },
+    apiKey,
+    signal,
+  );
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -628,7 +664,7 @@ chrome.runtime.onConnect.addListener((port) => {
           (Array.isArray(generationContext?.questions) &&
             typeof generationContext?.sourceRevision === "string");
         if (isCheatSheetRequest) {
-          return generateLocalCheatSheet(
+          return generateCaptionBackedCheatSheet(
             generationContext,
             apiKey,
             controller.signal,

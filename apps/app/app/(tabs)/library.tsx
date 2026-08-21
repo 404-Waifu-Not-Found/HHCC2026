@@ -21,7 +21,15 @@ import { Surface } from "../../src/components/Surface";
 import { VideoCard } from "../../src/components/VideoCard";
 import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest } from "../../src/lib/api";
-import { exportCheatSheet } from "../../src/lib/cheat-sheet";
+import {
+  createLibraryCheatSheetContext,
+  exportCheatSheet,
+  exportCheatSheetPdf,
+  generateCheatSheetDocumentWithLocalAi,
+  loadCheatSheetContext,
+  renderCheatSheetPdf,
+  uploadCheatSheet,
+} from "../../src/lib/cheat-sheet";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { breakpoints, spacing, typography } from "../../src/theme/tokens";
 import {
@@ -44,6 +52,8 @@ export default function LibraryScreen() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [notesGeneratingId, setNotesGeneratingId] = useState<string>();
+  const [notesError, setNotesError] = useState<string>();
   const { open, openingId, error: openError } = useOpenVideoCard();
 
   const refresh = useCallback(async () => {
@@ -70,6 +80,54 @@ export default function LibraryScreen() {
     useCallback(() => {
       void refresh();
     }, [refresh]),
+  );
+
+  const generateNotes = useCallback(
+    async (card: LibraryCard) => {
+      if (notesGeneratingId) return;
+      setNotesGeneratingId(card.videoId);
+      setNotesError(undefined);
+      try {
+        const context = card.quizId
+          ? await loadCheatSheetContext(card.quizId)
+          : createLibraryCheatSheetContext(card);
+        const document = await generateCheatSheetDocumentWithLocalAi(context);
+        const pdf = await renderCheatSheetPdf(document);
+        let persistenceError: unknown;
+        if (context.quizId) {
+          try {
+            await uploadCheatSheet({
+              videoId: card.videoId,
+              quizId: context.quizId,
+              document,
+              pdf,
+            });
+          } catch (cause) {
+            persistenceError = cause;
+          }
+        }
+        await exportCheatSheetPdf(pdf, card.title);
+        if (persistenceError) {
+          const detail =
+            persistenceError instanceof Error
+              ? persistenceError.message
+              : "The notes could not be saved.";
+          throw new Error(
+            `Notes downloaded, but could not be saved: ${detail}`,
+          );
+        }
+        if (context.quizId) await refresh();
+      } catch (cause) {
+        setNotesError(
+          cause instanceof Error
+            ? cause.message
+            : "The notes could not be generated.",
+        );
+      } finally {
+        setNotesGeneratingId(undefined);
+      }
+    },
+    [notesGeneratingId, refresh],
   );
 
   const allCards = useMemo(() => {
@@ -128,14 +186,14 @@ export default function LibraryScreen() {
         />
       </View>
 
-      {error || openError ? (
-        <FeedbackMotion signal={error ?? openError} kind="error">
+      {error || openError || notesError ? (
+        <FeedbackMotion signal={error ?? openError ?? notesError} kind="error">
           <MotionView preset="rise" exiting>
             <Text
               accessibilityRole="alert"
               style={[styles.error, { color: theme.error }]}
             >
-              {error ?? openError}
+              {error ?? openError ?? notesError}
             </Text>
           </MotionView>
         </FeedbackMotion>
@@ -166,6 +224,8 @@ export default function LibraryScreen() {
               compact={compact}
               openingId={openingId}
               onOpen={(card) => void open(card)}
+              notesGeneratingId={notesGeneratingId}
+              onGenerateNotes={(card) => void generateNotes(card)}
             />
           ) : (
             <>
@@ -176,6 +236,8 @@ export default function LibraryScreen() {
                   compact={compact}
                   openingId={openingId}
                   onOpen={(card) => void open(card)}
+                  notesGeneratingId={notesGeneratingId}
+                  onGenerateNotes={(card) => void generateNotes(card)}
                 />
               ) : null}
               {savedCards.length ? (
@@ -185,6 +247,8 @@ export default function LibraryScreen() {
                   compact={compact}
                   openingId={openingId}
                   onOpen={(card) => void open(card)}
+                  notesGeneratingId={notesGeneratingId}
+                  onGenerateNotes={(card) => void generateNotes(card)}
                 />
               ) : null}
             </>
@@ -211,12 +275,16 @@ function QuestList({
   compact,
   openingId,
   onOpen,
+  notesGeneratingId,
+  onGenerateNotes,
 }: {
   title: string;
   cards: LibraryCard[];
   compact: boolean;
   openingId?: string;
   onOpen(card: LibraryCard): void;
+  notesGeneratingId?: string;
+  onGenerateNotes(card: LibraryCard): void;
 }) {
   const { theme } = useSettings();
   return (
@@ -239,13 +307,12 @@ function QuestList({
               card={card}
               onPress={() => onOpen(card)}
               onExport={
-                card.cheatSheet.status === "failed"
-                  ? () => onOpen(card)
-                  : card.cheatSheet.sheetId
-                    ? () =>
-                        exportCheatSheet(card.cheatSheet.sheetId!, card.title)
-                    : undefined
+                card.cheatSheet.status === "ready" && card.cheatSheet.sheetId
+                  ? () => exportCheatSheet(card.cheatSheet.sheetId!, card.title)
+                  : undefined
               }
+              onGenerateNotes={() => onGenerateNotes(card)}
+              notesPending={notesGeneratingId === card.videoId}
             />
             {openingId === card.videoId ? (
               <ActivityIndicator

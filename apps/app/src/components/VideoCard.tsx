@@ -2,6 +2,7 @@ import type { LibraryCard } from "@clipquest/contracts";
 import { VoxelIcon } from "./VoxelIcon";
 import {
   Alert,
+  ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
@@ -26,12 +27,16 @@ export function VideoCard({
   compact = false,
   fill = false,
   onExport,
+  onGenerateNotes,
+  notesPending = false,
 }: {
   card: LibraryCard;
   onPress(): void;
   compact?: boolean;
   fill?: boolean;
   onExport?(): void | Promise<void>;
+  onGenerateNotes?(): void | Promise<void>;
+  notesPending?: boolean;
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
@@ -55,6 +60,22 @@ export function VideoCard({
       : card.mastery === "learning"
         ? theme.primary
         : theme.textMuted;
+  const notesStatus = notesPending ? "generating" : card.cheatSheet.status;
+  const notesLabel =
+    notesStatus === "ready"
+      ? t("exportNotes")
+      : notesStatus === "failed"
+        ? t("retryNotes")
+        : notesStatus === "generating"
+          ? t("generatingNotes")
+          : t("generateNotes");
+  const notesIcon =
+    notesStatus === "ready"
+      ? "download"
+      : notesStatus === "failed"
+        ? "refresh"
+        : "idea";
+  const notesAction = notesStatus === "ready" ? onExport : onGenerateNotes;
 
   return (
     <View
@@ -66,6 +87,7 @@ export function VideoCard({
           backgroundColor: theme.surface,
           borderColor: theme.border,
           borderBottomColor: theme.borderStrong,
+          position: "relative",
         },
       ]}
     >
@@ -128,58 +150,53 @@ export function VideoCard({
           </View>
         </View>
       </MotionPressable>
-      <View style={[styles.actionRow, { borderTopColor: theme.divider }]}>
-        <Text style={[styles.action, { color: theme.primary }]}>
-          {actionLabel}
-        </Text>
-        <VoxelIcon name="next" size={20} color={theme.primary} />
-        {card.cheatSheet.status === "none" ? (
-          <View
-            accessible
-            accessibilityRole="text"
-            accessibilityLabel={`${t("notesNotReady")}. Complete a quiz to enable notes export.`}
-            accessibilityHint="Complete a quiz to enable notes export."
-            style={styles.exportStatus}
-          >
-            <Text style={[styles.exportText, { color: theme.textMuted }]}>
-              {t("notesNotReady")}
-            </Text>
-          </View>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              card.cheatSheet.status === "ready"
-                ? t("exportNotes")
-                : t("retryNotes")
-            }
-            accessibilityState={{ disabled: !onExport }}
-            onPress={() => {
-              if (!onExport) return;
-              void Promise.resolve(onExport()).catch((cause) => {
-                Alert.alert(
-                  t("exportNotes"),
-                  cause instanceof Error
-                    ? cause.message
-                    : "The cheat sheet could not be exported.",
-                );
-              });
-            }}
-            style={({ pressed }) => [
-              styles.exportButton,
-              {
-                borderColor: theme.borderStrong,
-                opacity: !onExport ? 0.45 : pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Text style={[styles.exportText, { color: theme.textMuted }]}>
-              {card.cheatSheet.status === "ready"
-                ? t("exportNotes")
-                : t("retryNotes")}
-            </Text>
-          </Pressable>
-        )}
+      <View style={styles.actions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={notesLabel}
+          accessibilityState={{
+            busy: notesPending,
+            disabled: notesPending || !notesAction,
+          }}
+          onPress={() => {
+            if (!notesAction || notesPending) return;
+            void Promise.resolve(notesAction()).catch((cause) => {
+              Alert.alert(
+                notesLabel,
+                cause instanceof Error
+                  ? cause.message
+                  : "The cheat sheet could not be prepared.",
+              );
+            });
+          }}
+          style={({ pressed }) => [
+            styles.iconButton,
+            {
+              backgroundColor: theme.surfaceSunken,
+              opacity: notesPending || !notesAction ? 0.45 : pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          {notesPending ? (
+            <ActivityIndicator color={theme.secondary} size="small" />
+          ) : (
+            <VoxelIcon name={notesIcon} size={26} />
+          )}
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.iconButton,
+            {
+              backgroundColor: theme.surfaceSunken,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <VoxelIcon name="next" size={26} />
+        </Pressable>
       </View>
     </View>
   );
@@ -242,6 +259,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flex: 1,
     padding: spacing[4],
+    paddingBottom: spacing[7],
     gap: spacing[3],
   },
   title: {
@@ -278,34 +296,19 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyBold,
     fontSize: typography.size.label,
   },
-  actionRow: {
-    minHeight: 36,
+  actions: {
+    position: "absolute",
+    right: spacing[3],
+    bottom: spacing[3],
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: spacing[2],
-    borderTopWidth: borders.hairline,
-    paddingTop: spacing[3],
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[4],
   },
-  action: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.label,
-  },
-  exportButton: {
-    minHeight: 34,
+  iconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
     justifyContent: "center",
-    borderWidth: borders.standard,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing[3],
-  },
-  exportText: {
-    fontFamily: typography.bodyBold,
-    fontSize: 11,
-  },
-  exportStatus: {
-    paddingHorizontal: spacing[2],
   },
 });

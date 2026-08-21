@@ -18,7 +18,7 @@ cheatSheetContextRouter.get(
   async (c) => {
     const user = c.get("user");
     const quiz = await c.env.DB.prepare(
-      `SELECT qb.id AS quiz_id, qb.video_id, qb.language, qb.primer, qb.created_at,
+      `SELECT qb.id AS quiz_id, qb.video_id, v.source_video_id, qb.language, qb.primer, qb.created_at,
             v.title, v.source, q.prompt, q.reformulated_prompt, q.explanation
        FROM quiz_banks qb
        JOIN videos v ON v.id = qb.video_id AND v.owner_id = qb.user_id
@@ -30,6 +30,7 @@ cheatSheetContextRouter.get(
       .all<{
         quiz_id: string;
         video_id: string;
+        source_video_id: string;
         language: string;
         primer: string;
         created_at: number;
@@ -44,6 +45,7 @@ cheatSheetContextRouter.get(
     return c.json(
       CheatSheetContextSchema.parse({
         videoId: first.video_id,
+        sourceVideoId: first.source_video_id,
         quizId: first.quiz_id,
         sourceRevision: `${first.quiz_id}:${first.created_at}`,
         title: first.title,
@@ -70,17 +72,6 @@ cheatSheetsRouter.post("/", async (c) => {
     .bind(input.quizId, input.videoId, user.id)
     .first<{ id: string; video_id: string; created_at: number }>();
   if (!ownership) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
-  const complete = await c.env.DB.prepare(
-    "SELECT id FROM attempts WHERE quiz_id = ? AND user_id = ? AND status = 'complete' LIMIT 1",
-  )
-    .bind(input.quizId, user.id)
-    .first();
-  if (!complete)
-    throw new ApiError(
-      409,
-      "quiz_not_complete",
-      "Complete the quiz before saving notes.",
-    );
   const expectedRevision = `${input.quizId}:${ownership.created_at}`;
   if (input.sourceRevision !== expectedRevision)
     throw new ApiError(

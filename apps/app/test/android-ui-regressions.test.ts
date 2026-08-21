@@ -129,16 +129,17 @@ describe("Android UI regressions", () => {
     expect(home).toContain("compact={compact}");
   });
 
-  it("keeps card navigation and export as separate native controls", () => {
+  it("keeps card navigation and notes controls out of the card footer", () => {
     const videoCard = source("src/components/VideoCard.tsx");
 
     expect(videoCard).toContain('accessibilityRole="button"');
     expect(videoCard).toContain("styles.main");
-    expect(videoCard).toContain("styles.actionRow");
+    expect(videoCard).toContain("styles.actions");
     expect(videoCard).toContain("accessibilityLabel={");
     expect(videoCard).toContain("card.cheatSheet.status");
+    expect(videoCard).toContain("onGenerateNotes");
+    expect(videoCard).not.toContain("styles.actionRow");
     expect(videoCard).not.toContain("event.stopPropagation()");
-    expect(videoCard).toContain('accessibilityRole="text"');
     expect(videoCard).not.toContain("onPress={() => undefined}");
   });
 

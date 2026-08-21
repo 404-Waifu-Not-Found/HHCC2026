@@ -218,6 +218,7 @@ describe("session length", () => {
   it("carries progressive replay settings on Library cards", () => {
     const card = LibraryCardSchema.parse({
       videoId: "11111111-1111-4111-8111-111111111111",
+      sourceVideoId: "dQw4w9WgXcQ",
       quizId: "22222222-2222-4222-8222-222222222222",
       attemptId: null,
       originalUrl: "https://www.youtube.com/watch?v=library-replay",

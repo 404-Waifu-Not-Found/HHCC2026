@@ -14,6 +14,7 @@ import type { ApiBindings } from "../middleware/authenticated";
 
 const LibraryRowSchema = z.object({
   video_id: z.string().uuid(),
+  source_video_id: z.string().regex(/^[\w-]{11}$/u),
   original_url: z.string().url(),
   source: SourceSchema,
   title: z.string(),
@@ -39,6 +40,7 @@ libraryRouter.get("/", async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT
       v.id AS video_id,
+      v.source_video_id,
       v.source,
       v.title,
       v.original_url,
@@ -115,6 +117,7 @@ libraryRouter.get("/", async (c) => {
     );
     return {
       videoId: row.video_id,
+      sourceVideoId: row.source_video_id,
       quizId,
       attemptId: row.active_attempt_id,
       originalUrl: row.original_url,
@@ -131,14 +134,11 @@ libraryRouter.get("/", async (c) => {
       dueForReview,
       startSettings,
       origin: row.origin,
-      cheatSheet:
-        row.completed_attempt > 0
-          ? {
-              status: row.cheat_sheet_status ?? "none",
-              sheetId: row.cheat_sheet_id,
-              updatedAt: row.cheat_sheet_updated_at,
-            }
-          : { status: "none" as const, sheetId: null, updatedAt: null },
+      cheatSheet: {
+        status: row.cheat_sheet_status ?? "none",
+        sheetId: row.cheat_sheet_id,
+        updatedAt: row.cheat_sheet_updated_at,
+      },
     };
   });
   return c.json(

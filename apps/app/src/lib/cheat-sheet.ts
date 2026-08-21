@@ -3,6 +3,7 @@ import {
   CheatSheetDocumentSchema,
   type CheatSheetContext,
   type CheatSheetDocument,
+  type LibraryCard,
 } from "@clipquest/contracts";
 // Use pdf-lib's prebundled ESM artifact on Expo web/native. The package module
 // entry imports tslib as a bare dependency, which Expo's web resolver exposes
@@ -13,6 +14,29 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { apiBinaryRequest, apiRequest, ClientApiError, jsonBody } from "./api";
 import { requestLocalCheatSheet } from "../generation/local-generation-client";
+
+export function createLibraryCheatSheetContext(
+  card: Pick<
+    LibraryCard,
+    "videoId" | "sourceVideoId" | "originalUrl" | "title" | "source" | "quizId"
+  >,
+): CheatSheetContext {
+  const sourceVideoId =
+    card.sourceVideoId ?? new URL(card.originalUrl).searchParams.get("v") ?? "";
+  return CheatSheetContextSchema.parse({
+    videoId: card.videoId,
+    sourceVideoId,
+    quizId: card.quizId,
+    sourceRevision: card.quizId
+      ? `${card.quizId}:library`
+      : `video:${card.videoId}`,
+    title: card.title,
+    source: card.source,
+    language: "en",
+    primer: "",
+    questions: [],
+  });
+}
 
 export async function generateCheatSheetDocumentWithLocalAi(
   context: CheatSheetContext,

@@ -2824,6 +2824,7 @@ export type AttemptResumeResponse = z.infer<typeof AttemptResumeResponseSchema>;
 
 export const LibraryCardSchema = z.object({
   videoId: z.string().uuid(),
+  sourceVideoId: z.string().min(1).max(128).optional(),
   quizId: z.string().uuid().nullable(),
   attemptId: z.string().uuid().nullable(),
   originalUrl: httpUrl,
@@ -2864,7 +2865,8 @@ export type CheatSheetStatus = z.infer<typeof CheatSheetStatusSchema>;
 export const CheatSheetContextSchema = z
   .object({
     videoId: z.string().uuid(),
-    quizId: z.string().uuid(),
+    sourceVideoId: z.string().min(1).max(128),
+    quizId: z.string().uuid().nullable(),
     sourceRevision: z.string().min(1).max(128),
     title: z.string().min(1).max(500),
     source: SourceSchema,
@@ -2877,7 +2879,6 @@ export const CheatSheetContextSchema = z
           explanation: z.string().min(1).max(4_000),
         }),
       )
-      .min(1)
       .max(100),
   })
   .strict();
