@@ -38,32 +38,27 @@ async function sourceFiles(path: string): Promise<string[]> {
 }
 
 describe("ClipQuest rebrand assets", () => {
-  it("resolves every typed voxel icon to a transparent canonical PNG", async () => {
-    const iconRoot = resolve(appRoot, "assets/icons/voxel");
-    const files = (await readdir(iconRoot)).sort();
-    expect(files).toEqual(voxelIconNames.map((name) => `${name}.png`).sort());
-
+  it("resolves every typed icon to a flat vector component", async () => {
+    const source = await readFile(
+      resolve(appRoot, "src/components/VoxelIcon.tsx"),
+      "utf8",
+    );
     for (const name of voxelIconNames) {
-      const image = sharp(resolve(iconRoot, `${name}.png`));
-      const metadata = await image.metadata();
-      const stats = await image.stats();
-      expect(metadata).toMatchObject({ width: 512, height: 512, channels: 4 });
-      expect(stats.entropy).toBeGreaterThan(1);
-
-      const { data, info } = await image
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-      const cornerOffsets = [
-        0,
-        (info.width - 1) * info.channels,
-        (info.height - 1) * info.width * info.channels,
-        (info.width * info.height - 1) * info.channels,
-      ];
-      for (const offset of cornerOffsets) {
-        expect(data[offset + 3]).toBe(0);
-      }
+      expect(source).toContain(name.includes("-") ? `"${name}"` : `${name}:`);
     }
-  }, 30_000);
+    expect(source).toContain('from "lucide-react-native"');
+    expect(source).not.toContain(".png");
+    expect(source).not.toContain("require(");
+  });
+
+  it("uses a vector icon for the lesson close control", async () => {
+    const source = await readFile(
+      resolve(appRoot, "src/components/LessonHeader.tsx"),
+      "utf8",
+    );
+    expect(source).toContain('<VoxelIcon name="close"');
+    expect(source).not.toContain(">×</Text>");
+  });
 
   it("keeps platform identity nonblank and replaces placeholder artwork", async () => {
     const splashDensities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"];
