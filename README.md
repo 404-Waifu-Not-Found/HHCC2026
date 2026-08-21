@@ -259,6 +259,12 @@ The lesson keeps the question readable while the lower action region changes sta
 | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | ![ClipQuest correct-answer feedback](./docs/screenshots/final/desktop-feedback-correct.png) | ![ClipQuest incorrect-answer feedback](./docs/screenshots/final/desktop-feedback-incorrect.png) |
 
+### Completion recap — what to review
+
+The completion screen pairs the score and mastery state with a "Right first try" count and a **What to review** list: every question missed during the session, the learner's answer, the correct answer, the reasoning, and whether the concept was recovered on its adaptive retry. Reopened historical attempts show the summary tiles only.
+
+![ClipQuest completion recap listing a missed question with the correct answer and reasoning](./docs/screenshots/final/desktop-completion-recap.png)
+
 ### Mobile learning and completion
 
 | Paste a link                                                                     | Answer feedback                                                                   | Quest complete                                                                 |

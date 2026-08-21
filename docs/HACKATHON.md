@@ -46,6 +46,9 @@ for the learner or the teacher.
   <img alt="Quiz question with tactile answer cards" src="./screenshots/final/desktop-generated-quiz.png" width="47%" />
   <img alt="Incorrect-answer feedback with reasoning" src="./screenshots/final/desktop-feedback-incorrect.png" width="47%" />
 </p>
+<p align="center">
+  <img alt="Completion screen with score, mastery, right-first-try count and the What to review list" src="./screenshots/final/desktop-completion-recap.png" width="72%" />
+</p>
 
 ## 3. Learning science → product decisions
 
@@ -72,7 +75,7 @@ for the learner or the teacher.
   device builds have been installed and launched; store distribution and the full physical
   device matrix remain open ([Android guide](./ANDROID-BETA.md), [iOS QA](../qa-results/ios-native-full-feature-qa-2026-08-18.md)).
 - **Quality gate** — `npm run format:check`, `lint`, `typecheck`, `test` (700+ unit,
-  contract, API, app, extension, and engine tests) and 22 Playwright browser journeys run
+  contract, API, app, extension, and engine tests) and 24 Playwright browser journeys run
   in [GitHub Actions](../.github/workflows/ci.yml) on every push.
 - **Evidence culture** — every production claim in [`qa-results/`](../qa-results/) names
   the exact Worker, extension, and profile it measured; dated reports are append-only.
