@@ -6,6 +6,7 @@ import type { SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
 
 const YOUTUBE_INFO_CLIENT = "IOS" as const;
+const YOUTUBE_CAPTION_CLIENTS = ["IOS", "ANDROID"] as const;
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
 const MAX_AUDIO_BYTES = 180 * 1024 * 1024;
@@ -274,26 +275,64 @@ async function inspectWithInnerTube(
 ): Promise<YouTubeInspectionData | null> {
   try {
     const client = await createYouTubeClient(false);
-    const info = await client.getBasicInfo(sourceVideoId, {
-      client: YOUTUBE_INFO_CLIENT,
-    });
-    const title = info.basic_info.title?.trim();
-    if (!title) return null;
-    return {
-      title,
-      durationSeconds: Math.max(0, Math.round(info.basic_info.duration ?? 0)),
-      thumbnails: info.basic_info.thumbnail ?? [],
-      tracks: (info.captions?.caption_tracks ?? []).map((track) => {
-        const kind =
-          track.kind === "asr" || track.kind === "frc" ? track.kind : undefined;
+    const results = await Promise.allSettled(
+      YOUTUBE_CAPTION_CLIENTS.map(async (clientName) => {
+        const info = await client.getBasicInfo(sourceVideoId, {
+          client: clientName,
+        });
+        const title = info.basic_info.title?.trim();
+        if (!title) return null;
         return {
-          base_url: track.base_url,
-          language_code: track.language_code,
-          ...(kind ? { kind } : {}),
-          label: track.name.toString(),
+          clientName,
+          inspection: {
+            title,
+            durationSeconds: Math.max(
+              0,
+              Math.round(info.basic_info.duration ?? 0),
+            ),
+            thumbnails: info.basic_info.thumbnail ?? [],
+            tracks: (info.captions?.caption_tracks ?? []).map((track) => {
+              const kind =
+                track.kind === "asr" || track.kind === "frc"
+                  ? track.kind
+                  : undefined;
+              return {
+                base_url: track.base_url,
+                language_code: track.language_code,
+                ...(kind ? { kind } : {}),
+                label: track.name.toString(),
+              };
+            }),
+          } satisfies YouTubeInspectionData,
         };
       }),
-    };
+    );
+    const candidates = results.flatMap((result) =>
+      result.status === "fulfilled" && result.value ? [result.value] : [],
+    );
+    console.info(
+      JSON.stringify({
+        scope: "youtube_captions",
+        event: "innertube_clients.completed",
+        sourceVideoId,
+        clients: YOUTUBE_CAPTION_CLIENTS.map((clientName, index) => {
+          const result = results[index];
+          const candidate = candidates.find(
+            (value) => value.clientName === clientName,
+          );
+          return {
+            clientName,
+            succeeded: result?.status === "fulfilled" && Boolean(result.value),
+            captionTrackCount: candidate?.inspection.tracks.length ?? 0,
+          };
+        }),
+      }),
+    );
+    return (
+      candidates.sort(
+        (a, b) => b.inspection.tracks.length - a.inspection.tracks.length,
+      )[0]?.inspection ?? null
+    );
   } catch {
     return null;
   }
