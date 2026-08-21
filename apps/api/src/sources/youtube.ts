@@ -508,7 +508,11 @@ export class YouTubeAdapter implements SourceAdapter {
             ],
             tracks: [],
           };
-        } catch {
+        } catch (error) {
+          console.warn("YouTube transcript fallback was unavailable", {
+            sourceVideoId,
+            reason: error instanceof YouTubeCaptionLoadError ? error.reason : "unexpected_error",
+          });
           // Metadata-only fallbacks can still allow on-device transcription when captions are unavailable.
         }
       }
@@ -552,7 +556,14 @@ export class YouTubeAdapter implements SourceAdapter {
             try {
               transcriptFallback ??= await loadYouTubeTranscriptFallback(sourceVideoId);
               preferredCaptionSegments = transcriptFallback.segments;
-            } catch {
+            } catch (fallbackTranscriptError) {
+              console.warn("YouTube transcript fallback was unavailable", {
+                sourceVideoId,
+                reason:
+                  fallbackTranscriptError instanceof YouTubeCaptionLoadError
+                    ? fallbackTranscriptError.reason
+                    : "unexpected_error",
+              });
               // The client can still fall back to on-device transcription.
             }
           }
