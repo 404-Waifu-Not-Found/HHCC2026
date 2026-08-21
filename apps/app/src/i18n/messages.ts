@@ -83,6 +83,9 @@ export const messages = {
     creatingQuestions: "Creating questions",
     finalizingQuestions: "Opening your quiz",
     estimatedProgress: "Estimated progress",
+    firstQuestionEta: "Ready-to-start ETA",
+    firstQuestionTakingLonger:
+      "Question 1 is taking longer than usual — still streaming",
     takingLonger: "Still working carefully — almost there",
     cached: "Already downloaded",
     removeModel: "Remove downloaded model",
@@ -311,6 +314,8 @@ export const messages = {
     creatingQuestions: "正在生成题目",
     finalizingQuestions: "正在打开测验",
     estimatedProgress: "预计进度",
+    firstQuestionEta: "开始答题倒计时",
+    firstQuestionTakingLonger: "第一题比平时稍慢，仍在生成中",
     takingLonger: "正在认真处理，很快就好",
     cached: "已下载",
     removeModel: "删除已下载模型",

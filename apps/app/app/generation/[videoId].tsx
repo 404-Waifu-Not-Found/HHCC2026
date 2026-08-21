@@ -26,7 +26,10 @@ import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
-import { estimatedGenerationDurationMs } from "../../src/generation/eta";
+import {
+  countCaptionWords,
+  estimatedFirstQuestionDurationMs,
+} from "../../src/generation/eta";
 import {
   cancelProgressiveGenerationTask,
   getOrStartProgressiveGenerationTask,
@@ -87,6 +90,8 @@ export default function GenerationScreen() {
   const [cancelling, setCancelling] = useState(false);
   const taskKeyRef = useRef<string | undefined>(undefined);
   const [localTranscription, setLocalTranscription] = useState(false);
+  const [captionWordCount, setCaptionWordCount] = useState<number>();
+  const [videoDurationSeconds, setVideoDurationSeconds] = useState<number>();
   const questionTypes = useMemo<QuizQuestionType[]>(() => {
     const parsed = QuizQuestionTypesSchema.safeParse(
       params.questionTypes?.split(",").filter(Boolean),
@@ -95,6 +100,7 @@ export default function GenerationScreen() {
   }, [params.questionTypes]);
   const questionCount = questionLimitForSession(params.sessionLength) as
     5 | 10 | 15;
+  const firstQuestionType = questionTypes[0] ?? "multiple_choice";
   const taskKey = useMemo(
     () =>
       [
@@ -114,7 +120,16 @@ export default function GenerationScreen() {
       runNumber,
     ],
   );
-  const journeyDurationMs = estimatedGenerationDurationMs(questionCount);
+  const journeyDurationMs = useMemo(
+    () =>
+      estimatedFirstQuestionDurationMs({
+        captionWordCount,
+        videoDurationSeconds,
+        questionCount,
+        firstQuestionType,
+      }),
+    [captionWordCount, firstQuestionType, questionCount, videoDurationSeconds],
+  );
   const journeySteps = useMemo<JourneyStep[]>(
     () => [
       { id: "video", label: t("gettingVideo") },
@@ -128,6 +143,7 @@ export default function GenerationScreen() {
     [t],
   );
   const [estimatedProgress, setEstimatedProgressState] = useState(0);
+  const [journeyElapsedMs, setJourneyElapsedMs] = useState(0);
   const estimatedProgressRef = useRef(0);
   const journeyStartedAtRef = useRef(0);
   const finishingPresentationRef = useRef(false);
@@ -146,6 +162,7 @@ export default function GenerationScreen() {
     finishingPresentationRef.current = false;
     estimatedProgressRef.current = 0;
     setEstimatedProgressState(0);
+    setJourneyElapsedMs(0);
   }, []);
 
   useEffect(() => {
@@ -153,6 +170,7 @@ export default function GenerationScreen() {
     const tick = () => {
       if (journeyStartedAtRef.current === 0) return;
       const elapsed = Date.now() - journeyStartedAtRef.current;
+      setJourneyElapsedMs(elapsed);
       setEstimatedProgress(
         Math.min(
           LINEAR_PROGRESS_LIMIT,
@@ -178,6 +196,12 @@ export default function GenerationScreen() {
       };
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
+      setVideoDurationSeconds(imported.video.durationSeconds || undefined);
+      setCaptionWordCount(
+        imported.captions.preferredSegments?.length
+          ? countCaptionWords(imported.captions.preferredSegments)
+          : undefined,
+      );
       const storedGeneration = await loadGenerationState(params.videoId);
       const idempotencyKey = isUuid(storedGeneration?.idempotencyKey)
         ? storedGeneration.idempotencyKey
@@ -242,6 +266,7 @@ export default function GenerationScreen() {
           "ClipQuest could not verify a complete transcript for this video.",
         );
       }
+      setCaptionWordCount(countCaptionWords(segments));
       updateStage("creating_questions");
       const context: LocalQuizContext = {
         protocolVersion: 1,
@@ -465,13 +490,9 @@ export default function GenerationScreen() {
   const failed = Boolean(error);
   const activeIndex = journeyStepIndex(estimatedProgress, journeySteps.length);
   const activeStep = journeySteps[activeIndex] ?? journeySteps[0]!;
-  const linearFraction = Math.max(
-    0,
-    Math.min(1, estimatedProgress / LINEAR_PROGRESS_LIMIT),
-  );
   const estimatedSecondsLeft = Math.max(
     0,
-    Math.ceil((journeyDurationMs / 1_000) * (1 - linearFraction)),
+    Math.ceil((journeyDurationMs - journeyElapsedMs) / 1_000),
   );
   const compactFooter = width < breakpoints.compact;
   const stageTitle = failed
@@ -582,12 +603,12 @@ export default function GenerationScreen() {
               />
               <View style={styles.detailRow}>
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
-                  {t("estimatedProgress")}
+                  {t("firstQuestionEta")}
                 </Text>
                 <Text style={[styles.detail, { color: theme.textMuted }]}>
                   {estimatedSecondsLeft > 0
-                    ? formatEstimatedRemaining(estimatedSecondsLeft, locale)
-                    : t("takingLonger")}
+                    ? formatFirstQuestionRemaining(estimatedSecondsLeft, locale)
+                    : t("firstQuestionTakingLonger")}
                 </Text>
               </View>
             </View>
@@ -708,20 +729,20 @@ function journeyStepIndex(progress: number, stepCount: number): number {
   );
 }
 
-function formatEstimatedRemaining(
+function formatFirstQuestionRemaining(
   seconds: number,
   locale: "en" | "zh-CN",
 ): string {
   if (seconds < 60) {
     const roundedSeconds = Math.max(5, Math.ceil(seconds / 5) * 5);
     return locale === "zh-CN"
-      ? `预计还需约 ${roundedSeconds} 秒`
-      : `About ${roundedSeconds} sec left`;
+      ? `第一题预计约 ${roundedSeconds} 秒后出现`
+      : `Question 1 in about ${roundedSeconds} sec`;
   }
   const minutes = Math.ceil(seconds / 60);
   return locale === "zh-CN"
-    ? `预计还需约 ${minutes} 分钟`
-    : `About ${minutes} min left`;
+    ? `第一题预计约 ${minutes} 分钟后出现`
+    : `Question 1 in about ${minutes} min`;
 }
 
 const styles = StyleSheet.create({
