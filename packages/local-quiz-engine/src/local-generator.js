@@ -8405,13 +8405,13 @@ export async function generateLocalCheatSheet(
   if (!parsed || typeof parsed !== "object")
     throw new Error("DeepSeek returned an invalid cheat sheet.");
   const bounded = {
-    title: String(parsed.title ?? context.title)
+    title: String(parsed.title ?? "")
       .trim()
       .slice(0, 240),
-    source: String(parsed.source ?? context.source)
+    source: String(parsed.source ?? "")
       .trim()
       .slice(0, 500),
-    summary: String(parsed.summary ?? context.primer)
+    summary: String(parsed.summary ?? "")
       .trim()
       .slice(0, 4_000),
     keyConcepts: boundedTextArray(parsed.keyConcepts, 20, 500),
@@ -8432,8 +8432,11 @@ export async function generateLocalCheatSheet(
     formulas: boundedTextArray(parsed.formulas, 20, 500),
     rememberThis: boundedTextArray(parsed.rememberThis, 10, 500),
   };
-  if (!bounded.summary)
-    throw new Error("DeepSeek returned an empty cheat sheet.");
+  if (!bounded.title || !bounded.source || !bounded.summary) {
+    throw new Error(
+      "DeepSeek returned an incomplete cheat sheet; AI-generated title, source, and summary are required.",
+    );
+  }
   return bounded;
 }
 

@@ -14,45 +14,6 @@ import * as Sharing from "expo-sharing";
 import { apiBinaryRequest, apiRequest, jsonBody } from "./api";
 import { requestLocalCheatSheet } from "../generation/local-generation-client";
 
-export function buildCheatSheetDocument(
-  raw: CheatSheetContext,
-): CheatSheetDocument {
-  const context = CheatSheetContextSchema.parse(raw);
-  const concepts = unique(
-    context.questions
-      .map((question) => question.prompt.replace(/[?!.].*$/, "").trim())
-      .filter(Boolean),
-  ).slice(0, 12);
-  const definitions = context.questions.slice(0, 12).map((question) => ({
-    term: question.prompt.slice(0, 100),
-    definition: question.explanation.slice(0, 600),
-  }));
-  const formulas = context.questions
-    .flatMap(
-      (question) =>
-        question.explanation.match(/[^.!?]*(?:=|\^|\+|-|\/)[^.!?]*/g) ?? [],
-    )
-    .slice(0, 10);
-  return CheatSheetDocumentSchema.parse({
-    title: context.title,
-    source: context.source,
-    summary:
-      context.primer ||
-      context.questions
-        .map((question) => question.explanation)
-        .join(" ")
-        .slice(0, 2_000),
-    keyConcepts: concepts,
-    definitions,
-    formulas,
-    rememberThis: context.questions
-      .slice(0, 6)
-      .map((question) => question.explanation.slice(0, 300)),
-    generatedAt: new Date().toISOString(),
-    sourceRevision: context.sourceRevision,
-  });
-}
-
 export async function generateCheatSheetDocumentWithLocalAi(
   context: CheatSheetContext,
   signal?: AbortSignal,
@@ -234,9 +195,6 @@ function wrap(
   return lines;
 }
 
-function unique(values: string[]): string[] {
-  return [...new Set(values)];
-}
 function safeFilename(value: string): string {
   return (
     value
