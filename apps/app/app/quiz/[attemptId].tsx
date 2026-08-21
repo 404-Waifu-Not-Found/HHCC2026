@@ -315,9 +315,13 @@ export default function QuizScreen() {
   const retryGeneration = useCallback(() => {
     recoveryAttemptedRef.current = false;
     setError(undefined);
-    void ensureProgressiveAttemptRecovery(attemptId).catch((cause) => {
-      setError(cause instanceof Error ? cause.message : t("quizResumeFailed"));
-    });
+    void ensureProgressiveAttemptRecovery(attemptId, { force: true }).catch(
+      (cause) => {
+        setError(
+          cause instanceof Error ? cause.message : t("quizResumeFailed"),
+        );
+      },
+    );
   }, [attemptId, t]);
 
   useEffect(() => {
@@ -465,7 +469,9 @@ export default function QuizScreen() {
       )
         return;
       recoveryAttemptedRef.current = true;
-      void ensureProgressiveAttemptRecovery(attemptId).finally(() => {
+      void ensureProgressiveAttemptRecovery(attemptId, {
+        allowActionRequired: true,
+      }).finally(() => {
         recoveryAttemptedRef.current = false;
       });
     });

@@ -1,6 +1,7 @@
 import type { AttemptGenerationAvailability } from "@clipquest/contracts";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -73,7 +74,13 @@ export function QuestionStreamIndicator({
           ]}
         >
           <Text style={[styles.actionText, { color: theme.textOnAction }]}>
-            {locale === "zh-CN" ? "打开扩展设置" : "Open extension settings"}
+            {locale === "zh-CN"
+              ? Platform.OS !== "web"
+                ? "打开本地 AI 设置"
+                : "打开扩展设置"
+              : Platform.OS !== "web"
+                ? "Open Local AI settings"
+                : "Open extension settings"}
           </Text>
         </Pressable>
       ) : null}

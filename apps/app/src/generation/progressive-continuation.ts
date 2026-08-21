@@ -61,6 +61,12 @@ import {
 import { retryAuthoritativeTelemetryWrite } from "./telemetry-write";
 
 const RECOVERY_HEARTBEAT_MS = 10_000;
+// A recovery can fail before the extension emits a call event (for example a
+// port disconnect while the worker is waking). The server cannot derive that
+// attempt from call telemetry, so keep a tab-local terminal latch as well as
+// the persisted recovery-cycle budget. Without this latch the quiz poller can
+// immediately reclaim the same incomplete bank forever.
+const terminalAutomaticRecoveryAttempts = new Set<string>();
 
 function automaticProfile(profile: string | undefined): boolean {
   return (
@@ -76,16 +82,20 @@ function automaticProfile(profile: string | undefined): boolean {
 
 export function ensureProgressiveAttemptRecovery(
   attemptId: string,
+  options: { allowActionRequired?: boolean; force?: boolean } = {},
 ): Promise<void> {
   return getOrStartProgressiveRecoveryTask(attemptId, (signal) =>
-    runAutomaticRecovery(attemptId, signal),
+    runAutomaticRecovery(attemptId, signal, options),
   ).completion;
 }
 
 async function runAutomaticRecovery(
   attemptId: string,
   signal: AbortSignal,
+  options: { allowActionRequired?: boolean; force?: boolean } = {},
 ): Promise<void> {
+  if (terminalAutomaticRecoveryAttempts.has(attemptId) && !options.force)
+    return;
   const status = await readStatus(attemptId, signal);
   if (status.generation.state === "ready" || !status.continuation) {
     return;
@@ -101,6 +111,15 @@ async function runAutomaticRecovery(
     continuation.generationProfile === "prompt_first_auto_v5_10" ||
     continuation.generationProfile === "prompt_first_auto_v5_11" ||
     continuation.generationProfile === "prompt_first_auto_v5_12";
+  const storedBeforeClaim = await loadGenerationRecordForAttempt(attemptId);
+  const persistedRecoveryExhausted =
+    storedBeforeClaim?.version === 4 &&
+    storedBeforeClaim.recoveryCycle >= GROUNDED_GENERATION_MAX_RECOVERY_CYCLES;
+  const reportedRecoveryExhausted =
+    (continuation.automaticRecoveryCount ?? 0) >=
+      GROUNDED_GENERATION_MAX_RECOVERY_CYCLES ||
+    (continuation.retryBudgetUsedCount ?? 0) >=
+      GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES;
   const maxOrdinalAttempt = grounded
     ? GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT
     : CONCEPT_ONLY_GENERATION_MAX_ORDINAL_ATTEMPT;
@@ -112,9 +131,12 @@ async function runAutomaticRecovery(
     return;
   }
   if (
-    status.generation.state === "action_required" ||
+    (status.generation.state === "action_required" &&
+      !options.allowActionRequired) ||
     (status.generation.state === "generation_failed" &&
-      status.continuation.claim.state !== "available")
+      (status.continuation.claim.state !== "available" ||
+        persistedRecoveryExhausted ||
+        reportedRecoveryExhausted))
   ) {
     return;
   }
@@ -701,6 +723,9 @@ async function runAutomaticRecovery(
     if (failed) {
       latest = failed.generation;
       publishAttemptGeneration(attemptId, status.quizId, latest);
+    }
+    if (state === "generation_failed" && automatic) {
+      terminalAutomaticRecoveryAttempts.add(attemptId);
     }
   } finally {
     stopLeaseHeartbeat();

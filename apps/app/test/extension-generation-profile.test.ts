@@ -162,6 +162,60 @@ describe("extension generation profile compatibility", () => {
     }
   });
 
+  it("lets a newly configured native client resume an action-required quiz", () => {
+    const recovery = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/generation/progressive-continuation.ts",
+      ),
+      "utf8",
+    );
+    const quiz = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../app/quiz/[attemptId].tsx",
+      ),
+      "utf8",
+    );
+    const indicator = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/components/QuestionStreamIndicator.tsx",
+      ),
+      "utf8",
+    );
+    expect(recovery).toContain(
+      'status.generation.state === "action_required" &&\n      !options.allowActionRequired',
+    );
+    expect(quiz).toContain("allowActionRequired: true");
+    expect(indicator).toContain('"Open Local AI settings"');
+    expect(indicator).toContain('"打开本地 AI 设置"');
+  });
+
+  it("latches terminal automatic recovery instead of reclaiming forever", () => {
+    const recovery = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/generation/progressive-continuation.ts",
+      ),
+      "utf8",
+    );
+    const quiz = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../app/quiz/[attemptId].tsx",
+      ),
+      "utf8",
+    );
+    expect(recovery).toContain("terminalAutomaticRecoveryAttempts");
+    expect(recovery).toContain("persistedRecoveryExhausted");
+    expect(recovery).toContain("reportedRecoveryExhausted");
+    expect(recovery).toContain("options.force");
+    expect(quiz).toContain(
+      "ensureProgressiveAttemptRecovery(attemptId, { force: true })",
+    );
+  });
+
   it("keeps first-question admission independent from call telemetry", () => {
     const source = readFileSync(
       resolve(
