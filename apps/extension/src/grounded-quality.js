@@ -82,6 +82,7 @@ const SOURCE_REFERENCE_PATTERNS = [
   /\b(?:mentioned|shown|said|stated|covered|discussed|supported|described) (?:in|by) (?:the )?(?:lesson|video|lecture|transcript|presenter|instructor|teacher|professor|speaker|narrator)\b/iu,
   /\b(?:(?:according to|based on) (?:the )?source|the source (?:says?|states?|mentions?|explains?|shows?|describes?))\b/iu,
   /\b(?:according to (?:the )?described|(?:the )?(?:described|discussed|aforementioned) (?:mechanism|process|method|relationship|example)|as (?:described|discussed|shown|stated) (?:above|earlier|previously)|the (?:above|preceding|following) example|the evidence (?:says?|states?|shows?|supports?|indicates?))\b/iu,
+  /\b(?:biodiversity(?:'s)?\s+weave|biodiversity\s+strands?|strands?\s+of\s+biodiversity|cutting\s+(?:too\s+)?many\s+links?\s+in\s+biodiversity|(?:weave|tapestry)\s+of\s+biodiversity)\b/iu,
   /(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)|(?:课|课程|视频|讲座|讲解|老师|讲师|主讲人)(?:中|里)?(?:提到|说到|讲到|介绍|展示)/u,
 ];
 
@@ -1148,7 +1149,11 @@ export function constructConceptFirstTrueFalseQuestion(
   };
 }
 
-export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
+export function groundedMultipleChoiceCandidate(
+  candidate,
+  focusExcerpt,
+  quizLanguage = "en",
+) {
   const evidence = String(
     candidate?.evidenceQuote ?? candidate?.sourceEvidence ?? "",
   ).trim();
@@ -1187,33 +1192,43 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
       (distractor) =>
         distractor && !answerSupportedByEvidence(distractor, groundingSource),
     );
+  const requestedAnswerIsGrounded = answerSupportedByEvidence(
+    requestedAnswerSpan,
+    groundingSource,
+  );
+  const learnerAnswerIsGrounded = answerSupportedByEvidence(
+    learnerAnswer,
+    groundingSource,
+  );
   const answerRepresentationsAgree =
     Boolean(exactRequestedAnswerSpan || exactLearnerAnswerSpan) ||
+    learnerAnswerIsUniquelyGrounded ||
     normalizeGroundedText(requestedAnswerSpan) ===
       normalizeGroundedText(learnerAnswer) ||
     choicesLikelyEquivalent(requestedAnswerSpan, learnerAnswer) ||
-    learnerAnswerIsUniquelyGrounded;
+    (requestedAnswerIsGrounded && learnerAnswerIsGrounded);
   // DeepSeek occasionally paraphrases the private answerSpan even though the
   // learner-facing answerText is copied exactly from the evidence. Preserve a
   // valid exact source-language span for translated quizzes; otherwise resolve
   // the benign mismatch locally only when both representations are equivalent
   // and independently grounded. A wrong or unrelated answer is never repaired
   // into acceptance.
-  const correctAnswer =
+  const groundedAnswer =
     exactRequestedAnswerSpan ??
     exactLearnerAnswerSpan ??
     (learnerAnswerIsUniquelyGrounded ? learnerAnswer : null) ??
     (answerRepresentationsAgree &&
-    answerSupportedByEvidence(requestedAnswerSpan, groundingSource) &&
-    answerSupportedByEvidence(learnerAnswer, groundingSource)
+    requestedAnswerIsGrounded &&
+    learnerAnswerIsGrounded
       ? requestedAnswerSpan
       : null);
   if (
-    !correctAnswer ||
+    !groundedAnswer ||
     !learnerAnswer ||
     !answerRepresentationsAgree ||
     (!exactRequestedAnswerSpan &&
-      !answerSupportedByEvidence(learnerAnswer, groundingSource)) ||
+      !learnerAnswerIsGrounded &&
+      !requestedAnswerIsGrounded) ||
     !Array.isArray(candidate?.distractors) ||
     candidate.distractors.length !== 3
   ) {
@@ -1224,18 +1239,17 @@ export function groundedMultipleChoiceCandidate(candidate, focusExcerpt) {
   );
   if (
     distractors.some(
-      (entry) =>
-        !entry ||
-        typeof entry.text !== "string" ||
-        !entry.text.trim() ||
-        typeof entry.whyWrong !== "string" ||
-        entry.whyWrong.trim().length < 8,
+      (entry) => !entry || typeof entry.text !== "string" || !entry.text.trim(),
     )
   ) {
     return null;
   }
+  const storedAnswer =
+    quizLanguage === "zh-CN"
+      ? learnerAnswer
+      : (exactRequestedAnswerSpan ?? exactLearnerAnswerSpan ?? groundedAnswer);
   return {
-    correctAnswer: learnerAnswer,
+    correctAnswer: storedAnswer,
     distractors: distractors.map((entry) => entry.text.trim()),
   };
 }

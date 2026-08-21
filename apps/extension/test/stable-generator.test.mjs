@@ -991,6 +991,11 @@ test("v5.8 sends the concept-first singleton contract and truthful call lifecycl
         request.task,
         /do not paraphrase, summarize, change morphology/u,
       );
+      assert.match(
+        request.task,
+        /distractors as exactly three concise strings/u,
+      );
+      assert.doesNotMatch(request.task, /Each whyWrong must/u);
     }
   }
   const sentSystemFingerprints = new Set(

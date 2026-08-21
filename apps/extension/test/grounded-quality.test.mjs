@@ -76,6 +76,38 @@ test("multiple-choice grounding resolves an equivalent private answer span local
   );
 });
 
+test("v5.8 accepts compact distractor strings but never trusts a mismatched learner answer", () => {
+  const evidence =
+    "Species that lack genetic diversity are much more vulnerable to environmental fluctuations.";
+  const base = {
+    evidenceQuote: evidence,
+    answerSpan:
+      "Species that lack genetic diversity are much more vulnerable to environmental fluctuations",
+    answerText:
+      "Species that lack genetic diversity are much more vulnerable to environmental fluctuations",
+    distractors: [
+      "Genetic diversity affects appearance but not survival.",
+      "Low genetic diversity makes a species more resilient.",
+      "Environmental fluctuations affect every species equally.",
+    ],
+  };
+  assert.deepEqual(groundedMultipleChoiceCandidate(base, evidence), {
+    correctAnswer: base.answerSpan,
+    distractors: base.distractors,
+  });
+  assert.deepEqual(
+    groundedMultipleChoiceCandidate(
+      {
+        ...base,
+        answerText: "High genetic diversity makes species vulnerable.",
+      },
+      evidence,
+    ),
+    { correctAnswer: base.answerSpan, distractors: base.distractors },
+    "the locally resolved exact span replaces a contradictory model answer",
+  );
+});
+
 test("v5.8 preserves directional scope between a relationship stem and its answer", () => {
   const evidence =
     "A species with less genetic diversity is much more vulnerable to fluctuations caused by climate change, disease, or habitat fragmentation.";
@@ -102,6 +134,33 @@ test("v5.8 preserves directional scope between a relationship stem and its answe
       evidence,
     ),
     true,
+  );
+});
+
+test("v5.8 rejects source-specific metaphor scaffolding from learner copy", () => {
+  for (const question of [
+    "What condition strengthens biodiversity's weave in a rainforest?",
+    "How does the loss of biodiversity strands affect human well-being?",
+    "How does cutting too many links in biodiversity affect human survival?",
+  ]) {
+    assert.equal(
+      questionConceptFailure({
+        question,
+        concept: "ecosystem interdependence",
+        explanation: "Ecosystem interdependence supports resilience.",
+      }),
+      "source_framing_invalid",
+    );
+  }
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "How does biodiversity loss affect ecosystem resilience and human well-being?",
+      concept: "ecosystem interdependence",
+      explanation:
+        "Biodiversity loss weakens ecological interactions that support resilience and human well-being.",
+    }),
+    null,
   );
 });
 
