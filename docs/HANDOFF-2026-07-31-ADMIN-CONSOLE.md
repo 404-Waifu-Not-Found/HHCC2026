@@ -4,6 +4,19 @@
 **Branch:** `codex/duolingo-ui-rebuild`  
 **Previous handoff:** `docs/HANDOFF-2026-07-31-UI-REBUILD.md`
 
+## Production acceptance update
+
+The rebuilt application, auth/theme refinement, and admin console are now pushed and deployed.
+
+- **GitHub:** `codex/duolingo-ui-rebuild` through `7c19b26`
+- **Cloudflare Worker version:** `ceb71660-7b11-4a4b-a67c-cb1eed2bf473`
+- **Domain:** `https://clipquest.ccwu.cc`
+- **Package manager:** npm (`package-lock.json`)
+- **Environment:** the supplied configuration was used without copying or exposing values; the four expected Worker secret names are configured.
+- **Database:** remote migrations `0006` and `0007` are applied.
+
+The auth shell now preflights saved/system theme and device class before UI mount, uses mature evidence-based product copy, and renders auth labels as in-field gray placeholders. Desktop dark/light and 390 × 844 mobile sign-up were accepted in real Chrome.
+
 ## Completed work
 
 ClipQuest now includes a private, responsive `/admin` operations console that follows the rebuilt ClipQuest indigo/lime visual language. It is part of the existing Expo application and Cloudflare Worker rather than a separate dashboard stack.
@@ -53,21 +66,19 @@ The learner-facing paste-to-lesson flow, authentication screens, transcripts, ge
 - Focused admin Playwright journey passed after the mobile-axis refinement.
 - Final verification passed: formatting, lint, all workspace type checks, 43 Vitest tests, seven Playwright journeys, Expo static export, and Worker dry build.
 
+Final post-auth production verification passed formatting, lint, all workspace type checks, 47 Vitest tests, a 29-route Expo static export, Worker dry build, Cloudflare deployment, and live Chrome acceptance. The existing seven Playwright journeys were not rerun after the auth-only preflight/copy change; equivalent auth/theme/mobile checks were performed against production in Chrome.
+
+Live Chrome acceptance covered sign-in, sign-up, in-field placeholder behavior, light mode, dark mode, System restoration, reduced-motion restoration, desktop/mobile device classification, a seven-question AP Biology lesson, and every admin route. The isolated learner suspension and restoration both appeared in the audit log.
+
 Browser coverage includes server-denied learner access, desktop overview/people/processing, owner-only role control visibility, an audited suspension action, mobile navigation, and 390 px overflow.
 
 ## Deployment status
 
-This admin-console change has **not** been pushed, remotely migrated, or deployed. The existing production version recorded in the previous handoff remains the live version.
+Production rollout is complete. Migrations `0006` and `0007` are remote, the Worker/static export is live, and `/admin` plus a reversible audited moderation action were verified.
 
-Before production deployment:
+Two isolated accounts were used for acceptance. Cleanup is complete: both are banned, both are demoted to `user`, and both have zero sessions. No permanent QA owner remains.
 
-1. Apply migrations `0006` and `0007` remotely.
-2. Promote one trusted, verified existing account to `owner` using its D1 user ID.
-3. Build and rerun all tests.
-4. Deploy the Worker/static export.
-5. Verify `/admin` and one reversible audited action.
-
-See `docs/ADMIN-CONSOLE.md` for exact rollout and bootstrap guidance.
+The live source test used AP Biology YouTube and bilibili references. YouTube metadata succeeded but its audio request was blocked by upstream Worker-egress controls. bilibili returned an HTML challenge to Worker egress. These limitations are surfaced honestly and are not hidden behind fake lesson progress. The completed AP quiz used an isolated seeded transcript/question bank to verify the downstream product without misrepresenting upstream retrieval.
 
 ## Dependencies
 
@@ -80,7 +91,9 @@ No dependency was added or removed. The implementation uses the existing Expo, R
 - Audit records are append-only by application convention; D1 does not provide a separate write-once database role.
 - Pagination is page/offset based for V1. Large production tables may later move to cursor pagination.
 - Native iOS/Android admin screens share the responsive route code but were not accepted on physical devices in this task.
-- Production migration, first-owner promotion, live role enforcement, and live audit insertion remain operational acceptance steps.
+- Cloudflare shared egress remains subject to YouTube audio blocking and bilibili HTML challenges.
+- YouTube OAuth, account linking, recent-watch import, watch-history retrieval, subscription import, playlist import, and liked-video import remain deferred and out of scope.
+- The temporary QA owner was removed after acceptance. A future trusted owner must be promoted directly by an authorized database operator before the console can be used again.
 
 ## Exact local commands
 
@@ -101,4 +114,13 @@ npm run typecheck
 npm test
 npm run test:e2e
 npm run build
+npm run cf:dry-run
 ```
+
+Production deploy, when explicitly authorized:
+
+```bash
+npm run cf:deploy
+```
+
+See `docs/LIVE-QA-2026-07-31.md` for the live AP-source results and screenshot paths.
