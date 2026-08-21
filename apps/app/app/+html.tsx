@@ -9,6 +9,11 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <meta name="theme-color" content="#B8F244" />
+        <title>ClipQuest — Paste a video, build mastery</title>
+        <meta
+          name="description"
+          content="Turn YouTube and bilibili learning videos into evidence-backed adaptive quizzes."
+        />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>
