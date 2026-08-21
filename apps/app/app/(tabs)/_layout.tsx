@@ -202,7 +202,7 @@ function LearningTabBar({
                   {options.tabBarIcon?.({
                     focused: selected,
                     color,
-                    size: desktop ? 27 : 25,
+                    size: desktop ? 27 : 24,
                   })}
                 </MotionView>
               </FeedbackMotion>
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     minHeight: controls.navigationHeight - spacing[1],
     flexDirection: "row",
     alignItems: "stretch",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     gap: spacing[1],
   },
   item: {
@@ -278,13 +278,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   mobileItem: {
-    minHeight: 54,
-    maxWidth: 68,
+    minHeight: 60,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: 0,
     paddingHorizontal: spacing[1],
+    paddingVertical: 3,
   },
   itemLabel: {
     minWidth: 0,
@@ -296,6 +296,8 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.body,
   },
   mobileLabel: {
-    display: "none",
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: "center",
   },
 });

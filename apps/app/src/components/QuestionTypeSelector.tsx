@@ -3,9 +3,15 @@ import {
   type QuizQuestionType,
 } from "@clipquest/contracts";
 import { VoxelIcon } from "./VoxelIcon";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { borders, radii, spacing, typography } from "../theme/tokens";
+import {
+  borders,
+  breakpoints,
+  radii,
+  spacing,
+  typography,
+} from "../theme/tokens";
 import { FeedbackMotion, MotionPressable } from "../motion/Motion";
 
 const choices = [
@@ -24,6 +30,8 @@ export function QuestionTypeSelector({
   disabled?: boolean;
 }) {
   const { t, theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const compact = width < breakpoints.tablet;
   const selected = new Set(value);
   return (
     <View
@@ -38,6 +46,7 @@ export function QuestionTypeSelector({
             key={choice.type}
             signal={active ? choice.type : false}
             kind="attention"
+            style={compact ? styles.choiceWrapCompact : styles.choiceWrap}
           >
             <MotionPressable
               accessibilityRole="checkbox"
@@ -56,6 +65,7 @@ export function QuestionTypeSelector({
               }}
               style={({ pressed }) => [
                 styles.choice,
+                compact && styles.choiceCompact,
                 {
                   backgroundColor: active
                     ? theme.primarySoft
@@ -66,7 +76,7 @@ export function QuestionTypeSelector({
               ]}
             >
               <VoxelIcon
-                name={active ? "selected" : "selected"}
+                name={active ? "checkbox-checked" : "checkbox-unchecked"}
                 size={21}
                 color={active ? theme.primary : theme.textMuted}
               />
@@ -83,6 +93,8 @@ export function QuestionTypeSelector({
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  choiceWrap: { flexShrink: 0 },
+  choiceWrapCompact: { width: "100%" },
   choice: {
     minHeight: 52,
     flexDirection: "row",
@@ -91,6 +103,10 @@ const styles = StyleSheet.create({
     borderWidth: borders.standard,
     borderRadius: radii.medium,
     paddingHorizontal: spacing[4],
+  },
+  choiceCompact: {
+    width: "100%",
+    justifyContent: "flex-start",
   },
   pressed: { opacity: 0.72 },
   label: {

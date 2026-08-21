@@ -59,7 +59,7 @@ export function Screen({
         centered && styles.centered,
         padded && {
           paddingHorizontal: horizontal,
-          paddingTop: spacing[6],
+          paddingTop: width < breakpoints.tablet ? spacing[5] : spacing[6],
           paddingBottom: spacing[10],
         },
         maxWidth ? { maxWidth } : null,

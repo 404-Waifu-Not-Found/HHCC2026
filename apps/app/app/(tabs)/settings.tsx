@@ -159,7 +159,11 @@ export default function SettingsScreen() {
       ) : null}
 
       <View style={[styles.grid, desktop && styles.gridDesktop]}>
-        <MotionView preset="from-left" delay={44} style={styles.column}>
+        <MotionView
+          preset="from-left"
+          delay={44}
+          style={[styles.column, desktop && styles.columnDesktop]}
+        >
           <SettingsSection title={t("account")} icon="people">
             <View style={styles.accountRow}>
               <View
@@ -256,7 +260,11 @@ export default function SettingsScreen() {
           </SettingsSection>
         </MotionView>
 
-        <MotionView preset="from-right" delay={88} style={styles.column}>
+        <MotionView
+          preset="from-right"
+          delay={88}
+          style={[styles.column, desktop && styles.columnDesktop]}
+        >
           <SettingsSection title={t("appearance")} icon="appearance">
             <FieldLabel>{t("theme")}</FieldLabel>
             <SegmentedControl
@@ -479,8 +487,10 @@ const styles = StyleSheet.create({
   },
   column: {
     minWidth: 0,
-    flex: 1,
     gap: spacing[5],
+  },
+  columnDesktop: {
+    flex: 1,
   },
   section: {
     padding: 0,

@@ -231,6 +231,7 @@ function QuestList({
           >
             <VideoCard
               compact={compact}
+              fill={compact}
               card={card}
               onPress={() => onOpen(card)}
             />
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   cardWrapCompact: {
-    alignItems: "center",
+    width: "100%",
   },
   opening: {
     opacity: 0.65,

@@ -1349,6 +1349,31 @@ test("mobile link, processing, lesson feedback, and completion", async ({
 
   await page.goto("/");
   await expect(page.getByLabel("Paste a YouTube link")).toBeVisible();
+  const questionTypeBoxes = await Promise.all(
+    ["Multiple choice", "True / false", "Short answer"].map((name) =>
+      page.getByRole("checkbox", { name }).boundingBox(),
+    ),
+  );
+  expect(questionTypeBoxes.every(Boolean)).toBe(true);
+  expect(
+    Math.max(...questionTypeBoxes.map((box) => box?.width ?? 0)) -
+      Math.min(...questionTypeBoxes.map((box) => box?.width ?? 0)),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.max(...questionTypeBoxes.map((box) => box?.x ?? 0)) -
+      Math.min(...questionTypeBoxes.map((box) => box?.x ?? 0)),
+  ).toBeLessThanOrEqual(1);
+
+  const mobileTabBoxes = await Promise.all(
+    ["Home", "Library", "Settings"].map((name) =>
+      page.getByRole("tab", { name }).boundingBox(),
+    ),
+  );
+  expect(mobileTabBoxes.every(Boolean)).toBe(true);
+  expect(
+    Math.max(...mobileTabBoxes.map((box) => box?.width ?? 0)) -
+      Math.min(...mobileTabBoxes.map((box) => box?.width ?? 0)),
+  ).toBeLessThanOrEqual(1);
   await capture(page, "mobile-link-import");
 
   await seedImportedVideo(page, importedVideo);
@@ -1400,6 +1425,31 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   await capture(page, "mobile-completion");
   await page.getByRole("button", { name: "Return to library" }).click();
   await expect(page).toHaveURL(/\/library$/);
+  await expect(page.getByRole("heading", { name: "Library" })).toBeVisible();
+  const mobileLibraryCard = page.getByRole("button", {
+    name: /How memory really works/,
+  });
+  await expect(mobileLibraryCard).toBeVisible();
+  expect((await mobileLibraryCard.boundingBox())?.width ?? 0).toBeGreaterThan(
+    340,
+  );
+  await capture(page, "mobile-library");
+
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  const deleteAccountBox = await page
+    .getByRole("button", { name: "Delete account" })
+    .boundingBox();
+  const appearanceHeadingBox = await page
+    .getByRole("heading", { name: "Appearance" })
+    .boundingBox();
+  expect(deleteAccountBox).not.toBeNull();
+  expect(appearanceHeadingBox).not.toBeNull();
+  expect(
+    (appearanceHeadingBox?.y ?? 0) -
+      ((deleteAccountBox?.y ?? 0) + (deleteAccountBox?.height ?? 0)),
+  ).toBeLessThan(80);
+  await capture(page, "mobile-settings");
   expect(
     scenario.requestedPaths.filter((path) => path.startsWith("/api/youtube")),
   ).toEqual([]);
