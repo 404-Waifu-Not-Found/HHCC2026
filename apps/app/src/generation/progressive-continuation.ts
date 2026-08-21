@@ -135,7 +135,10 @@ async function runAutomaticRecovery(
       !options.allowActionRequired) ||
     (status.generation.state === "generation_failed" &&
       (status.continuation.claim.state !== "available" ||
-        persistedRecoveryExhausted ||
+        // An explicit learner retry may clear a stale tab-local recovery
+        // cycle. The API claim and telemetry budget remain authoritative, so
+        // this cannot create unbounded server-side retries.
+        (persistedRecoveryExhausted && !options.force) ||
         reportedRecoveryExhausted))
   ) {
     return;

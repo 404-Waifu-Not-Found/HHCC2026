@@ -210,6 +210,9 @@ describe("extension generation profile compatibility", () => {
     expect(recovery).toContain("terminalAutomaticRecoveryAttempts");
     expect(recovery).toContain("persistedRecoveryExhausted");
     expect(recovery).toContain("reportedRecoveryExhausted");
+    expect(recovery).toContain(
+      "(persistedRecoveryExhausted && !options.force)",
+    );
     expect(recovery).toContain("options.force");
     expect(quiz).toContain(
       "ensureProgressiveAttemptRecovery(attemptId, { force: true })",
