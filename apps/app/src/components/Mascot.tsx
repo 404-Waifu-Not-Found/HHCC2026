@@ -2,7 +2,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii } from "../theme/tokens";
 
@@ -10,7 +17,13 @@ export type MascotMood = "ready" | "thinking" | "happy" | "oops";
 
 const readyAsset = require("../../assets/illustrations/clip-explorer-ready.png");
 
-export function Mascot({ mood = "ready", size = 84 }: { mood?: MascotMood; size?: number }) {
+export function Mascot({
+  mood = "ready",
+  size = 84,
+}: {
+  mood?: MascotMood;
+  size?: number;
+}) {
   const { reduceMotion, theme } = useSettings();
   const bob = useSharedValue(0);
 
@@ -29,9 +42,23 @@ export function Mascot({ mood = "ready", size = 84 }: { mood?: MascotMood; size?
     );
   }, [bob, reduceMotion]);
 
-  const animated = useAnimatedStyle(() => ({ transform: [{ translateY: bob.value }] }));
-  const moodIcon = mood === "happy" ? "star-four-points" : mood === "thinking" ? "dots-horizontal" : mood === "oops" ? "alert" : null;
-  const moodColor = mood === "happy" ? theme.warning : mood === "oops" ? theme.error : theme.primary;
+  const animated = useAnimatedStyle(() => ({
+    transform: [{ translateY: bob.value }],
+  }));
+  const moodIcon =
+    mood === "happy"
+      ? "star-four-points"
+      : mood === "thinking"
+        ? "dots-horizontal"
+        : mood === "oops"
+          ? "alert"
+          : null;
+  const moodColor =
+    mood === "happy"
+      ? theme.warning
+      : mood === "oops"
+        ? theme.error
+        : theme.primary;
 
   return (
     <Animated.View
@@ -39,10 +66,24 @@ export function Mascot({ mood = "ready", size = 84 }: { mood?: MascotMood; size?
       importantForAccessibility="no-hide-descendants"
       style={[styles.wrap, animated, { width: size, height: size }]}
     >
-      <Image source={readyAsset} contentFit="contain" style={styles.image} transition={reduceMotion ? 0 : 160} />
+      <Image
+        source={readyAsset}
+        contentFit="contain"
+        style={styles.image}
+        transition={reduceMotion ? 0 : 160}
+      />
       {moodIcon ? (
-        <View style={[styles.mood, { backgroundColor: theme.surface, borderColor: moodColor }]}> 
-          <MaterialCommunityIcons name={moodIcon} size={Math.max(12, size * 0.16)} color={moodColor} />
+        <View
+          style={[
+            styles.mood,
+            { backgroundColor: theme.surface, borderColor: moodColor },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name={moodIcon}
+            size={Math.max(12, size * 0.16)}
+            color={moodColor}
+          />
         </View>
       ) : null}
     </Animated.View>

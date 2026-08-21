@@ -12,8 +12,12 @@
     "dev:api": "npm run dev -w @clipquest/api",
     "dev:web": "npm run web -w @clipquest/app",
     "build": "npm run build -w @clipquest/contracts && npm run build -w @clipquest/app && npm run build -w @clipquest/api",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run build -w @clipquest/contracts && npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "lint": "eslint apps/app/app apps/app/src e2e playwright.config.ts",
+    "format": "prettier --write apps/app/app apps/app/src/components apps/app/src/i18n/messages.ts apps/app/src/theme/tokens.ts e2e playwright.config.ts eslint.config.js",
+    "format:check": "prettier --check apps/app/app apps/app/src/components apps/app/src/i18n/messages.ts apps/app/src/theme/tokens.ts e2e playwright.config.ts eslint.config.js",
+    "test:e2e": "playwright test",
     "cf:types": "npm run cf:types -w @clipquest/api",
     "cf:dry-run": "npm run deploy:dry -w @clipquest/api",
     "cf:deploy": "npm run deploy -w @clipquest/api",
@@ -28,6 +32,10 @@
     "npm": ">=10"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.1",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.3"
   }
 }

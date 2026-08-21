@@ -5,9 +5,10 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { radii, typography } from "../../src/theme/tokens";
+import { borders, radii, spacing, typography } from "../../src/theme/tokens";
 
 export default function SignUpScreen() {
   const { t, theme } = useSettings();
@@ -17,7 +18,11 @@ export default function SignUpScreen() {
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
-  const canSubmit = ageConfirmed && username.trim().length >= 3 && email.includes("@") && password.length >= 8;
+  const canSubmit =
+    ageConfirmed &&
+    username.trim().length >= 3 &&
+    email.includes("@") &&
+    password.length >= 8;
 
   const submit = async () => {
     if (loading) return;
@@ -44,7 +49,10 @@ export default function SignUpScreen() {
         setError(result.error.message ?? t("signUpFailed"));
         return;
       }
-      router.replace({ pathname: "/(auth)/verify-email", params: { email: normalizedEmail } });
+      router.replace({
+        pathname: "/(auth)/verify-email",
+        params: { email: normalizedEmail },
+      });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signUpFailed"));
     } finally {
@@ -58,8 +66,15 @@ export default function SignUpScreen() {
       subtitle={t("authCrossDevice")}
       footer={
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.textMuted }]}>{t("alreadyHaveAccount")}</Text>
-          <Link href="/(auth)/sign-in" style={[styles.link, styles.footerLink, { color: theme.text }]}>{t("signIn")}</Link>
+          <Text style={[styles.footerText, { color: theme.textMuted }]}>
+            {t("alreadyHaveAccount")}
+          </Text>
+          <Link
+            href="/(auth)/sign-in"
+            style={[styles.link, styles.footerLink, { color: theme.text }]}
+          >
+            {t("signIn")}
+          </Link>
         </View>
       }
     >
@@ -67,6 +82,13 @@ export default function SignUpScreen() {
         label={t("username")}
         value={username}
         onChangeText={setUsername}
+        leading={
+          <MaterialCommunityIcons
+            name="account-outline"
+            size={22}
+            color={theme.textMuted}
+          />
+        }
         autoCapitalize="none"
         autoComplete="username-new"
         maxLength={24}
@@ -76,6 +98,13 @@ export default function SignUpScreen() {
         label={t("email")}
         value={email}
         onChangeText={setEmail}
+        leading={
+          <MaterialCommunityIcons
+            name="email-outline"
+            size={22}
+            color={theme.textMuted}
+          />
+        }
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
@@ -85,6 +114,13 @@ export default function SignUpScreen() {
         label={t("password")}
         value={password}
         onChangeText={setPassword}
+        leading={
+          <MaterialCommunityIcons
+            name="lock-outline"
+            size={22}
+            color={theme.textMuted}
+          />
+        }
         secureTextEntry
         autoComplete="new-password"
         returnKeyType="done"
@@ -96,19 +132,59 @@ export default function SignUpScreen() {
         accessibilityState={{ checked: ageConfirmed, disabled: loading }}
         disabled={loading}
         onPress={() => setAgeConfirmed((value) => !value)}
-        style={[styles.checkboxRow, { borderColor: theme.border }]}
+        style={({ pressed, hovered }) => [
+          styles.checkboxRow,
+          {
+            backgroundColor: ageConfirmed
+              ? theme.actionSoft
+              : hovered
+                ? theme.surfaceTint
+                : theme.surface,
+            borderColor: ageConfirmed
+              ? theme.actionPressed
+              : theme.borderStrong,
+            transform: [{ scale: pressed ? 0.99 : 1 }],
+          },
+          loading && styles.disabled,
+        ]}
       >
         <MaterialCommunityIcons
           name={ageConfirmed ? "checkbox-marked" : "checkbox-blank-outline"}
-          size={27}
-          color={ageConfirmed ? theme.secondary : theme.textMuted}
+          size={29}
+          color={ageConfirmed ? theme.actionPressed : theme.textMuted}
         />
-        <Text style={[styles.checkboxText, { color: theme.text }]}>{t("ageConfirmation")}</Text>
+        <Text style={[styles.checkboxText, { color: theme.text }]}>
+          {t("ageConfirmation")}
+        </Text>
       </Pressable>
-      {error ? <Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{error}</Text> : null}
+      {error ? (
+        <Surface tone="error" style={styles.status}>
+          <View style={styles.statusRow}>
+            <MaterialCommunityIcons
+              name="alert-circle-outline"
+              size={22}
+              color={theme.error}
+            />
+            <Text
+              accessibilityRole="alert"
+              selectable
+              style={[styles.statusText, { color: theme.text }]}
+            >
+              {error}
+            </Text>
+          </View>
+        </Surface>
+      ) : null}
       <PrimaryButton
         loading={loading}
         disabled={!canSubmit}
+        leadingIcon={
+          <MaterialCommunityIcons
+            name="account-plus-outline"
+            size={21}
+            color={theme.textOnAction}
+          />
+        }
         onPress={() => void submit()}
       >
         {t("signUp")}
@@ -118,11 +194,43 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  checkboxRow: { minHeight: 52, borderWidth: 2, borderRadius: radii.medium, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
-  checkboxText: { flex: 1, fontFamily: typography.bodyMedium, fontSize: 14, lineHeight: 20 },
-  error: { fontFamily: typography.bodyMedium, fontSize: 14 },
-  footer: { marginTop: 22, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 6 },
-  footerText: { fontFamily: typography.body, fontSize: 14 },
-  link: { fontFamily: typography.bodyBold, fontSize: 14 },
-  footerLink: { minHeight: 44, paddingVertical: 12 },
+  checkboxRow: {
+    minHeight: 64,
+    borderWidth: borders.standard,
+    borderRadius: radii.large,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  checkboxText: {
+    flex: 1,
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  disabled: { opacity: 0.6 },
+  status: { padding: spacing[4] },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing[3],
+  },
+  statusText: {
+    flex: 1,
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  footer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[2],
+  },
+  footerText: { fontFamily: typography.body, fontSize: typography.size.label },
+  link: { fontFamily: typography.bodyBold, fontSize: typography.size.label },
+  footerLink: { minHeight: 44, paddingVertical: spacing[3] },
 });

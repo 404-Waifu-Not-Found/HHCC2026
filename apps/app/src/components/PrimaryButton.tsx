@@ -1,6 +1,13 @@
 import type { ComponentProps, PropsWithChildren, ReactNode } from "react";
 import { useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, controls, motion, radii, typography } from "../theme/tokens";
 
@@ -36,12 +43,32 @@ export function PrimaryButton({
 
   const colors =
     variant === "primary"
-      ? { background: theme.action, depth: theme.actionPressed, border: theme.actionPressed, text: theme.textOnAction }
+      ? {
+          background: theme.action,
+          depth: theme.actionPressed,
+          border: theme.actionPressed,
+          text: theme.textOnAction,
+        }
       : variant === "secondary"
-        ? { background: theme.primary, depth: theme.primaryPressed, border: theme.primaryPressed, text: theme.textOnPrimary }
+        ? {
+            background: theme.primary,
+            depth: theme.primaryPressed,
+            border: theme.primaryPressed,
+            text: theme.textOnPrimary,
+          }
         : variant === "danger"
-          ? { background: theme.error, depth: theme.errorPressed, border: theme.errorPressed, text: "#FFFFFF" }
-          : { background: theme.surface, depth: theme.borderStrong, border: theme.borderStrong, text: theme.text };
+          ? {
+              background: theme.error,
+              depth: theme.errorPressed,
+              border: theme.errorPressed,
+              text: "#FFFFFF",
+            }
+          : {
+              background: theme.surface,
+              depth: theme.borderStrong,
+              border: theme.borderStrong,
+              text: theme.text,
+            };
 
   if (unavailable) {
     colors.background = theme.disabled;
@@ -68,8 +95,18 @@ export function PrimaryButton({
             backgroundColor: colors.background,
             borderColor: focused ? theme.focus : colors.border,
             borderBottomColor: colors.depth,
-            borderBottomWidth: pressed ? borders.standard : borders.tactileDepth + borders.standard,
-            transform: [{ translateY: pressed ? borders.tactileDepth : hovered && !reduceMotion ? -1 : 0 }],
+            borderBottomWidth: pressed
+              ? borders.standard
+              : borders.tactileDepth + borders.standard,
+            transform: [
+              {
+                translateY: pressed
+                  ? borders.tactileDepth
+                  : hovered && !reduceMotion
+                    ? -1
+                    : 0,
+              },
+            ],
           },
           Platform.OS === "web" && {
             transitionDuration: `${motion.fast}ms`,
@@ -83,7 +120,14 @@ export function PrimaryButton({
         ) : (
           <View style={styles.labelRow}>
             {leadingIcon}
-            <Text numberOfLines={1} style={[styles.label, compact && styles.labelCompact, { color: colors.text }]}>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.label,
+                compact && styles.labelCompact,
+                { color: colors.text },
+              ]}
+            >
               {children}
             </Text>
             {trailingIcon}

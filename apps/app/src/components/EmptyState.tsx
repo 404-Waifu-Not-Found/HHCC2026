@@ -18,11 +18,23 @@ export function EmptyState({
   const { theme } = useSettings();
   return (
     <View style={styles.wrap}>
-      <View style={[styles.icon, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}> 
+      <View
+        style={[
+          styles.icon,
+          { backgroundColor: theme.primarySoft, borderColor: theme.primary },
+        ]}
+      >
         <MaterialCommunityIcons name={icon} size={34} color={theme.primary} />
       </View>
-      <Text accessibilityRole="header" style={[styles.title, { color: theme.text }]}>{title}</Text>
-      <Text style={[styles.description, { color: theme.textMuted }]}>{description}</Text>
+      <Text
+        accessibilityRole="header"
+        style={[styles.title, { color: theme.text }]}
+      >
+        {title}
+      </Text>
+      <Text style={[styles.description, { color: theme.textMuted }]}>
+        {description}
+      </Text>
       {action ? <View style={styles.action}>{action}</View> : null}
     </View>
   );

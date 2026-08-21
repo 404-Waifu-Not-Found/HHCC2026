@@ -1,9 +1,18 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { borders, controls, motion, radii, spacing, typography } from "../theme/tokens";
+import {
+  borders,
+  controls,
+  motion,
+  radii,
+  spacing,
+  typography,
+} from "../theme/tokens";
 
-export type AnswerState = "default" | "selected" | "correct" | "incorrect" | "disabled";
+export type AnswerState =
+  "default" | "selected" | "correct" | "incorrect" | "disabled";
 
 export function AnswerCard({
   label,
@@ -24,16 +33,34 @@ export function AnswerCard({
   const disabled = state === "disabled";
   const selected = state !== "default" && state !== "disabled";
   const backgroundColor =
-    state === "correct" ? theme.successSoft : state === "incorrect" ? theme.errorSoft : state === "selected" ? theme.primarySoft : theme.surface;
+    state === "correct"
+      ? theme.successSoft
+      : state === "incorrect"
+        ? theme.errorSoft
+        : state === "selected"
+          ? theme.primarySoft
+          : theme.surface;
   const borderColor =
-    state === "correct" ? theme.success : state === "incorrect" ? theme.error : state === "selected" ? theme.primary : theme.borderStrong;
+    state === "correct"
+      ? theme.success
+      : state === "incorrect"
+        ? theme.error
+        : state === "selected"
+          ? theme.primary
+          : theme.borderStrong;
   const depthColor =
-    state === "correct" ? theme.successPressed : state === "incorrect" ? theme.errorPressed : state === "selected" ? theme.primaryPressed : theme.borderStrong;
-
+    state === "correct"
+      ? theme.successPressed
+      : state === "incorrect"
+        ? theme.errorPressed
+        : state === "selected"
+          ? theme.primaryPressed
+          : theme.borderStrong;
   return (
     <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ selected, disabled, checked: selected }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed, hovered }) => [
@@ -42,9 +69,19 @@ export function AnswerCard({
           backgroundColor: disabled ? theme.surfaceSunken : backgroundColor,
           borderColor,
           borderBottomColor: depthColor,
-          borderBottomWidth: pressed ? borders.standard : borders.tactileDepth + borders.standard,
+          borderBottomWidth: pressed
+            ? borders.standard
+            : borders.tactileDepth + borders.standard,
           opacity: disabled ? 0.7 : 1,
-          transform: [{ translateY: pressed ? borders.tactileDepth : hovered && !reduceMotion ? -1 : 0 }],
+          transform: [
+            {
+              translateY: pressed
+                ? borders.tactileDepth
+                : hovered && !reduceMotion
+                  ? -1
+                  : 0,
+            },
+          ],
         },
         Platform.OS === "web" && {
           transitionDuration: `${motion.fast}ms`,
@@ -54,16 +91,61 @@ export function AnswerCard({
       ]}
     >
       {indexLabel ? (
-        <View style={[styles.index, { backgroundColor: selected ? borderColor : theme.surfaceSunken, borderColor }]}> 
-          <Text style={[styles.indexText, { color: selected ? theme.textOnPrimary : theme.textMuted }]}>{indexLabel}</Text>
+        <View
+          style={[
+            styles.index,
+            {
+              backgroundColor: selected ? borderColor : theme.surfaceSunken,
+              borderColor,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.indexText,
+              { color: selected ? theme.textOnPrimary : theme.textMuted },
+            ]}
+          >
+            {indexLabel}
+          </Text>
         </View>
       ) : leading ? (
         <View style={styles.leading}>{leading}</View>
       ) : null}
       <View style={styles.copy}>
-        <Text style={[styles.label, { color: disabled ? theme.textMuted : theme.text }]}>{label}</Text>
-        {supporting ? <Text style={[styles.supporting, { color: theme.textMuted }]}>{supporting}</Text> : null}
+        <Text
+          style={[
+            styles.label,
+            { color: disabled ? theme.textMuted : theme.text },
+          ]}
+        >
+          {label}
+        </Text>
+        {supporting ? (
+          <Text style={[styles.supporting, { color: theme.textMuted }]}>
+            {supporting}
+          </Text>
+        ) : null}
       </View>
+      {selected ? (
+        <MaterialCommunityIcons
+          name={
+            state === "correct"
+              ? "check-circle"
+              : state === "incorrect"
+                ? "close-circle"
+                : "check-circle-outline"
+          }
+          size={24}
+          color={
+            state === "correct"
+              ? theme.success
+              : state === "incorrect"
+                ? theme.error
+                : theme.primary
+          }
+        />
+      ) : null}
     </Pressable>
   );
 }

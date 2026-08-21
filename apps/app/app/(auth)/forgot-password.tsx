@@ -1,11 +1,13 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { typography } from "../../src/theme/tokens";
+import { spacing, typography } from "../../src/theme/tokens";
 
 export default function ForgotPasswordScreen() {
   const { t, theme } = useSettings();
@@ -19,7 +21,10 @@ export default function ForgotPasswordScreen() {
     setError(undefined);
     setMessage(undefined);
     try {
-      const result = await authClient.requestPasswordReset({ email: email.trim().toLowerCase(), redirectTo: "/reset-password" });
+      const result = await authClient.requestPasswordReset({
+        email: email.trim().toLowerCase(),
+        redirectTo: "/reset-password",
+      });
       if (result.error) {
         setError(result.error.message ?? t("emailSendFailed"));
         return;
@@ -32,11 +37,92 @@ export default function ForgotPasswordScreen() {
     }
   };
   return (
-    <AuthShell title={t("forgotPassword")} subtitle={t("forgotPasswordSubtitle")}>
-      <AppTextInput label={t("email")} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" editable={!loading} returnKeyType="send" onSubmitEditing={() => void submit()} />
-      {message ? <Text accessibilityLiveRegion="polite" style={{ color: theme.success, fontFamily: typography.bodyMedium }}>{message}</Text> : null}
-      {error ? <Text accessibilityRole="alert" style={{ color: theme.error, fontFamily: typography.bodyMedium }}>{error}</Text> : null}
-      <PrimaryButton loading={loading} disabled={!email.includes("@")} onPress={() => void submit()}>{t("sendResetLink")}</PrimaryButton>
+    <AuthShell
+      title={t("forgotPassword")}
+      subtitle={t("forgotPasswordSubtitle")}
+    >
+      <AppTextInput
+        label={t("email")}
+        value={email}
+        onChangeText={setEmail}
+        leading={
+          <MaterialCommunityIcons
+            name="email-outline"
+            size={22}
+            color={theme.textMuted}
+          />
+        }
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        editable={!loading}
+        returnKeyType="send"
+        onSubmitEditing={() => void submit()}
+      />
+      {message ? (
+        <Surface tone="success" style={styles.status}>
+          <View style={styles.statusRow}>
+            <MaterialCommunityIcons
+              name="check-circle-outline"
+              size={22}
+              color={theme.success}
+            />
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[styles.statusText, { color: theme.text }]}
+            >
+              {message}
+            </Text>
+          </View>
+        </Surface>
+      ) : null}
+      {error ? (
+        <Surface tone="error" style={styles.status}>
+          <View style={styles.statusRow}>
+            <MaterialCommunityIcons
+              name="alert-circle-outline"
+              size={22}
+              color={theme.error}
+            />
+            <Text
+              accessibilityRole="alert"
+              selectable
+              style={[styles.statusText, { color: theme.text }]}
+            >
+              {error}
+            </Text>
+          </View>
+        </Surface>
+      ) : null}
+      <PrimaryButton
+        loading={loading}
+        disabled={!email.includes("@")}
+        leadingIcon={
+          <MaterialCommunityIcons
+            name="email-fast-outline"
+            size={21}
+            color={theme.textOnAction}
+          />
+        }
+        onPress={() => void submit()}
+      >
+        {t("sendResetLink")}
+      </PrimaryButton>
     </AuthShell>
   );
 }
+
+const styles = StyleSheet.create({
+  status: { padding: spacing[4] },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing[3],
+  },
+  statusText: {
+    flex: 1,
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+});

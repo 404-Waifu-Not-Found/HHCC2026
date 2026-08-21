@@ -3,7 +3,10 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
-import { Fredoka_600SemiBold, Fredoka_700Bold } from "@expo-google-fonts/fredoka";
+import {
+  Fredoka_600SemiBold,
+  Fredoka_700Bold,
+} from "@expo-google-fonts/fredoka";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -12,7 +15,10 @@ import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { SettingsProvider, useSettings } from "../src/providers/SettingsProvider";
+import {
+  SettingsProvider,
+  useSettings,
+} from "../src/providers/SettingsProvider";
 
 const SITE_TITLE = "ClipQuest — Paste a video, build mastery";
 
@@ -47,7 +53,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
-    const frame = requestAnimationFrame(() => { document.title = SITE_TITLE; });
+    const frame = requestAnimationFrame(() => {
+      document.title = SITE_TITLE;
+    });
     return () => cancelAnimationFrame(frame);
   }, []);
 

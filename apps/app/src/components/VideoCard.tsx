@@ -1,18 +1,47 @@
 import type { LibraryCard } from "@clipquest/contracts";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, motion, radii, spacing, typography } from "../theme/tokens";
 
-const masteryKeys = { not_started: "notStarted", learning: "learning", mastered: "mastered" } as const;
+const masteryKeys = {
+  not_started: "notStarted",
+  learning: "learning",
+  mastered: "mastered",
+} as const;
 
-export function VideoCard({ card, onPress, compact = false }: { card: LibraryCard; onPress(): void; compact?: boolean }) {
+export function VideoCard({
+  card,
+  onPress,
+  compact = false,
+}: {
+  card: LibraryCard;
+  onPress(): void;
+  compact?: boolean;
+}) {
   const { t, theme, reduceMotion } = useSettings();
   const { width } = useWindowDimensions();
   const horizontal = !compact && width >= 720;
-  const actionLabel = card.action === "continue" ? t("continue") : card.action === "review" ? t("review") : t("start");
-  const masteryColor = card.mastery === "mastered" ? theme.success : card.mastery === "learning" ? theme.primary : theme.textMuted;
+  const actionLabel =
+    card.action === "continue"
+      ? t("continue")
+      : card.action === "review"
+        ? t("review")
+        : t("start");
+  const masteryColor =
+    card.mastery === "mastered"
+      ? theme.success
+      : card.mastery === "learning"
+        ? theme.primary
+        : theme.textMuted;
 
   return (
     <Pressable
@@ -22,10 +51,26 @@ export function VideoCard({ card, onPress, compact = false }: { card: LibraryCar
       style={({ pressed, hovered }) => [
         styles.card,
         horizontal && styles.horizontal,
-        { backgroundColor: theme.surface, borderColor: hovered ? theme.primary : theme.border, borderBottomColor: hovered ? theme.primaryPressed : theme.borderStrong },
         {
-          borderBottomWidth: pressed ? borders.standard : borders.tactileDepth + borders.standard,
-          transform: [{ translateY: pressed ? borders.tactileDepth : hovered && !reduceMotion ? -2 : 0 }],
+          backgroundColor: theme.surface,
+          borderColor: hovered ? theme.primary : theme.border,
+          borderBottomColor: hovered
+            ? theme.primaryPressed
+            : theme.borderStrong,
+        },
+        {
+          borderBottomWidth: pressed
+            ? borders.standard
+            : borders.tactileDepth + borders.standard,
+          transform: [
+            {
+              translateY: pressed
+                ? borders.tactileDepth
+                : hovered && !reduceMotion
+                  ? -2
+                  : 0,
+            },
+          ],
         },
         Platform.OS === "web" && {
           transitionDuration: `${motion.fast}ms`,
@@ -35,24 +80,56 @@ export function VideoCard({ card, onPress, compact = false }: { card: LibraryCar
       ]}
     >
       <View style={[styles.media, horizontal && styles.mediaHorizontal]}>
-        <Image source={{ uri: card.thumbnailUrl }} contentFit="cover" transition={reduceMotion ? 0 : 180} style={styles.image} />
-        <View style={[styles.sourceBadge, { backgroundColor: "rgba(11,20,48,0.78)" }]}> 
-          <MaterialCommunityIcons name={card.source === "youtube" ? "youtube" : "television-play"} size={15} color="#FFFFFF" />
-          <Text style={styles.source}>{card.source === "youtube" ? "YouTube" : "bilibili"}</Text>
+        <Image
+          source={{ uri: card.thumbnailUrl }}
+          contentFit="cover"
+          transition={reduceMotion ? 0 : 180}
+          style={styles.image}
+        />
+        <View
+          style={[
+            styles.sourceBadge,
+            { backgroundColor: "rgba(11,20,48,0.78)" },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name={card.source === "youtube" ? "youtube" : "television-play"}
+            size={15}
+            color="#FFFFFF"
+          />
+          <Text style={styles.source}>
+            {card.source === "youtube" ? "YouTube" : "bilibili"}
+          </Text>
         </View>
       </View>
       <View style={styles.body}>
-        <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>{card.title}</Text>
+        <Text numberOfLines={2} style={[styles.title, { color: theme.text }]}>
+          {card.title}
+        </Text>
         <View style={styles.meta}>
-          <View style={[styles.badge, { backgroundColor: theme.surfaceSunken }]}> 
+          <View
+            style={[styles.badge, { backgroundColor: theme.surfaceSunken }]}
+          >
             <View style={[styles.dot, { backgroundColor: masteryColor }]} />
-            <Text style={[styles.badgeText, { color: theme.textMuted }]}>{t(masteryKeys[card.mastery])}</Text>
+            <Text style={[styles.badgeText, { color: theme.textMuted }]}>
+              {t(masteryKeys[card.mastery])}
+            </Text>
           </View>
-          {card.bestScore !== null ? <Text style={[styles.score, { color: masteryColor }]}>{Math.round(card.bestScore)}%</Text> : null}
+          {card.bestScore !== null ? (
+            <Text style={[styles.score, { color: masteryColor }]}>
+              {Math.round(card.bestScore)}%
+            </Text>
+          ) : null}
         </View>
-        <View style={[styles.actionRow, { borderTopColor: theme.divider }]}> 
-          <Text style={[styles.action, { color: theme.primary }]}>{actionLabel}</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.primary} />
+        <View style={[styles.actionRow, { borderTopColor: theme.divider }]}>
+          <Text style={[styles.action, { color: theme.primary }]}>
+            {actionLabel}
+          </Text>
+          <MaterialCommunityIcons
+            name="arrow-right"
+            size={20}
+            color={theme.primary}
+          />
         </View>
       </View>
     </Pressable>

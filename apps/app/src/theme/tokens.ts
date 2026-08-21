@@ -237,4 +237,3 @@ export const shadows = {
   darkSubtle: "0 2px 8px rgba(0, 0, 0, 0.24)",
   darkFloating: "0 12px 30px rgba(0, 0, 0, 0.34)",
 } as const;
-

@@ -3,7 +3,8 @@ import { Platform, StyleSheet, View, type ViewStyle } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, shadows, spacing } from "../theme/tokens";
 
-type SurfaceTone = "default" | "tinted" | "sunken" | "success" | "error" | "warning";
+type SurfaceTone =
+  "default" | "tinted" | "sunken" | "success" | "error" | "warning";
 
 export function Surface({
   children,
@@ -35,7 +36,13 @@ export function Surface({
                 ? theme.surfaceRaised
                 : theme.surface;
   const borderColor =
-    tone === "success" ? theme.success : tone === "error" ? theme.error : tone === "warning" ? theme.warning : theme.border;
+    tone === "success"
+      ? theme.success
+      : tone === "error"
+        ? theme.error
+        : tone === "warning"
+          ? theme.warning
+          : theme.border;
 
   return (
     <View
@@ -43,12 +50,21 @@ export function Surface({
         styles.surface,
         padded && styles.padded,
         { backgroundColor, borderColor },
-        elevated && Platform.OS === "web" ? { boxShadow: theme.mode === "dark" ? shadows.darkFloating : shadows.floating } : null,
+        elevated && Platform.OS === "web"
+          ? {
+              boxShadow:
+                theme.mode === "dark" ? shadows.darkFloating : shadows.floating,
+            }
+          : null,
         style,
       ]}
     >
       {children}
-      {footer ? <View style={[styles.footer, { borderTopColor: theme.divider }]}>{footer}</View> : null}
+      {footer ? (
+        <View style={[styles.footer, { borderTopColor: theme.divider }]}>
+          {footer}
+        </View>
+      ) : null}
     </View>
   );
 }

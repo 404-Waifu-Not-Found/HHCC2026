@@ -2,33 +2,75 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { PropsWithChildren, ReactNode } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { breakpoints, borders, radii, spacing, typography } from "../theme/tokens";
+import {
+  breakpoints,
+  borders,
+  radii,
+  spacing,
+  typography,
+} from "../theme/tokens";
 import { Mascot } from "./Mascot";
 import { Screen } from "./Screen";
 
-export function AuthShell({ title, subtitle, children, footer }: PropsWithChildren<{ title: string; subtitle?: string; footer?: ReactNode }>) {
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+  footer,
+}: PropsWithChildren<{
+  title: string;
+  subtitle?: string;
+  footer?: ReactNode;
+}>) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
   return (
     <Screen contentWidth="wide" centered>
       <View style={[styles.page, desktop && styles.pageWide]}>
-        <View style={[styles.intro, { backgroundColor: theme.backgroundAccent, borderColor: theme.border }]}> 
+        <View
+          style={[
+            styles.intro,
+            {
+              backgroundColor: theme.backgroundAccent,
+              borderColor: theme.border,
+            },
+          ]}
+        >
           <View style={styles.artRow}>
             <Mascot mood="ready" size={desktop ? 230 : 116} />
           </View>
           <View style={styles.brandCopy}>
             <View style={styles.kickerRow}>
-              <MaterialCommunityIcons name="play-box-multiple" size={20} color={theme.primary} />
-              <Text style={[styles.kicker, { color: theme.primary }]}>{t("appName")}</Text>
+              <MaterialCommunityIcons
+                name="play-box-multiple"
+                size={20}
+                color={theme.primary}
+              />
+              <Text style={[styles.kicker, { color: theme.primary }]}>
+                {t("appName")}
+              </Text>
             </View>
-            <Text style={[styles.tagline, { color: theme.text }]}>{t("authShellTagline")}</Text>
-            <Text style={[styles.detail, { color: theme.textMuted }]}>Turn one useful video into a focused lesson you can finish.</Text>
+            <Text style={[styles.tagline, { color: theme.text }]}>
+              {t("authShellTagline")}
+            </Text>
+            <Text style={[styles.detail, { color: theme.textMuted }]}>
+              Turn one useful video into a focused lesson you can finish.
+            </Text>
           </View>
         </View>
         <View style={styles.formColumn}>
-          <Text accessibilityRole="header" style={[styles.title, { color: theme.text }]}>{title}</Text>
-          {subtitle ? <Text style={[styles.subtitle, { color: theme.textMuted }]}>{subtitle}</Text> : null}
+          <Text
+            accessibilityRole="header"
+            style={[styles.title, { color: theme.text }]}
+          >
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+              {subtitle}
+            </Text>
+          ) : null}
           <View style={styles.form}>{children}</View>
           {footer ? <View style={styles.footer}>{footer}</View> : null}
         </View>

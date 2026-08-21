@@ -20,7 +20,13 @@ export function IconButton({
   size?: number;
 }) {
   const { theme, reduceMotion } = useSettings();
-  const foreground = disabled ? theme.textSubtle : tone === "danger" ? theme.error : tone === "primary" ? theme.primary : theme.textMuted;
+  const foreground = disabled
+    ? theme.textSubtle
+    : tone === "danger"
+      ? theme.error
+      : tone === "primary"
+        ? theme.primary
+        : theme.textMuted;
 
   return (
     <Pressable
@@ -32,7 +38,8 @@ export function IconButton({
       style={({ pressed, hovered }) => [
         styles.button,
         {
-          backgroundColor: hovered && !disabled ? theme.surfaceTint : "transparent",
+          backgroundColor:
+            hovered && !disabled ? theme.surfaceTint : "transparent",
           borderColor: pressed ? theme.borderStrong : "transparent",
           transform: [{ scale: pressed && !reduceMotion ? 0.94 : 1 }],
         },

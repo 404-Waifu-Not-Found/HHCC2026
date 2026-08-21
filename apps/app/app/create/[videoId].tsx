@@ -1,22 +1,43 @@
-import type { AppLanguage, SessionLength, VideoImportResponse } from "@clipquest/contracts";
+import type {
+  AppLanguage,
+  SessionLength,
+  VideoImportResponse,
+} from "@clipquest/contracts";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { Mascot } from "../../src/components/Mascot";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
+import { Surface } from "../../src/components/Surface";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { loadImportedVideo } from "../../src/state/creation";
-import { radii, typography } from "../../src/theme/tokens";
+import {
+  borders,
+  breakpoints,
+  layout,
+  radii,
+  spacing,
+  typography,
+} from "../../src/theme/tokens";
 import { canTranscribeInBrowser } from "../../src/transcription/limits";
 import { blurActiveWebElement } from "../../src/lib/web-focus";
 
 export default function CreateQuestScreen() {
   const { videoId } = useLocalSearchParams<{ videoId: string }>();
   const { t, theme, locale } = useSettings();
+  const { width } = useWindowDimensions();
   const [video, setVideo] = useState<VideoImportResponse>();
   const [error, setError] = useState<string>();
   const [watched, setWatched] = useState(true);
@@ -32,89 +53,256 @@ export default function CreateQuestScreen() {
   }, [t, videoId]);
 
   if (!video && !error) {
-    return <Screen scroll={false}><View style={styles.center}><ActivityIndicator color={theme.secondary} /></View></Screen>;
-  }
-  if (!video) {
     return (
-      <Screen>
-        <BackButton />
-        <View style={styles.center}><Mascot mood="oops" /><Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{error}</Text></View>
+      <Screen scroll={false}>
+        <View style={styles.center}>
+          <ActivityIndicator color={theme.secondary} />
+        </View>
       </Screen>
     );
   }
-  const tooLong = video.requiresLocalTranscription && video.video.durationSeconds > 5_400;
-  const tooLongForWeb = video.requiresLocalTranscription && Platform.OS === "web" && !canTranscribeInBrowser(video.video.durationSeconds);
+  if (!video) {
+    return (
+      <Screen contentWidth="reading" centered>
+        <BackButton />
+        <Surface tone="error" style={styles.expiredCard}>
+          <Mascot mood="oops" size={96} />
+          <Text
+            accessibilityRole="alert"
+            style={[styles.expiredText, { color: theme.text }]}
+          >
+            {error}
+          </Text>
+        </Surface>
+      </Screen>
+    );
+  }
+  const tooLong =
+    video.requiresLocalTranscription && video.video.durationSeconds > 5_400;
+  const tooLongForWeb =
+    video.requiresLocalTranscription &&
+    Platform.OS === "web" &&
+    !canTranscribeInBrowser(video.video.durationSeconds);
+  const compact = width < breakpoints.tablet;
+  const transcriptStatus = (
+    video.requiresLocalTranscription
+      ? t("localTranscript")
+      : t("sourceCaptions")
+  ).replace(/[—–]/g, "-");
   const proceed = () => {
     blurActiveWebElement();
     router.push({
       pathname: "/generation/[videoId]",
-      params: { videoId: video.video.id, watched: String(watched), quizLanguage, sessionLength },
+      params: {
+        videoId: video.video.id,
+        watched: String(watched),
+        quizLanguage,
+        sessionLength,
+      },
     });
   };
 
   return (
-    <Screen>
-      <BackButton />
-      <View style={styles.hero}>
-        <Image source={{ uri: video.video.thumbnailUrl }} contentFit="cover" style={styles.thumbnail} />
-        <View style={styles.heroCopy}>
-          <Text style={[styles.kicker, { color: theme.textMuted }]}>{video.video.source === "youtube" ? "YOUTUBE" : "BILIBILI"}</Text>
-          <Text accessibilityRole="header" style={[styles.title, { color: theme.text }]}>{video.video.title}</Text>
-          <View style={[styles.captionStatus, { backgroundColor: video.requiresLocalTranscription ? theme.elevated : theme.primary }]}>
-            <MaterialCommunityIcons name={video.requiresLocalTranscription ? "cellphone-sound" : "subtitles-outline"} size={19} color={theme.text} />
-            <Text style={[styles.captionStatusText, { color: theme.text }]}>{video.requiresLocalTranscription ? t("localTranscript") : t("sourceCaptions")}</Text>
-          </View>
+    <Screen
+      contentWidth="wide"
+      footer={
+        <View style={styles.footerInner}>
+          <PrimaryButton disabled={tooLong || tooLongForWeb} onPress={proceed}>
+            {t("generate")}
+          </PrimaryButton>
         </View>
-      </View>
+      }
+    >
+      <View style={styles.page}>
+        <BackButton />
 
-      <View style={styles.grid}>
-        <SettingCard title={t("watchedQuestion")} help={t("watchedHelp")}>
-          <SegmentedControl
-            label={t("watchedQuestion")}
-            value={watched ? "yes" : "no"}
-            onChange={(value) => setWatched(value === "yes")}
-            options={[{ value: "yes", label: t("watchedYes") }, { value: "no", label: t("watchedNo") }] as const}
-          />
-        </SettingCard>
-        <SettingCard title={t("quizLanguage")} help={t("quizLanguageHelp")}>
-          <SegmentedControl
-            label={t("quizLanguage")}
-            value={quizLanguage}
-            onChange={(value) => setQuizLanguage(value as AppLanguage)}
-            options={[{ value: "en", label: t("languageEnglish") }, { value: "zh-CN", label: t("languageChinese") }] as const}
-          />
-        </SettingCard>
-        <SettingCard title={t("sessionLength")}>
-          <SegmentedControl
-            label={t("sessionLength")}
-            value={sessionLength}
-            onChange={(value) => setSessionLength(value as SessionLength)}
-            options={[{ value: "short", label: t("short") }, { value: "medium", label: t("medium") }, { value: "long", label: t("long") }] as const}
-          />
-        </SettingCard>
-      </View>
-
-      {video.requiresLocalTranscription ? (
-        <View style={[styles.privacy, { borderColor: theme.secondary, backgroundColor: theme.surface }]}>
-          <MaterialCommunityIcons name="shield-lock-outline" size={28} color={theme.secondary} />
-          <View style={styles.privacyCopy}>
-            <Text style={[styles.privacyTitle, { color: theme.text }]}>{t("modelSize")}</Text>
-            <Text style={[styles.help, { color: theme.textMuted }]}>{t("privateTranscription")}</Text>
-          </View>
+        <View style={styles.heading}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.pageTitle, { color: theme.text }]}
+          >
+            {t("videoReady")}
+          </Text>
+          <Text style={[styles.pageSubtitle, { color: theme.textMuted }]}>
+            {t("tagline")}
+          </Text>
         </View>
-      ) : null}
-      {tooLong || tooLongForWeb ? <Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{t(tooLongForWeb ? "webUnsupportedLength" : "unsupportedLength")}</Text> : null}
-      <View style={styles.submit}><PrimaryButton disabled={tooLong || tooLongForWeb} onPress={proceed}>{t("generate")}</PrimaryButton></View>
+
+        <Surface elevated padded={false} style={styles.previewSurface}>
+          <View style={[styles.preview, compact && styles.previewCompact]}>
+            <Image
+              accessibilityLabel={video.video.title}
+              source={{ uri: video.video.thumbnailUrl }}
+              contentFit="cover"
+              style={[styles.thumbnail, compact && styles.thumbnailCompact]}
+            />
+            <View style={styles.previewCopy}>
+              <Text style={[styles.source, { color: theme.primary }]}>
+                {video.video.source === "youtube" ? "YouTube" : "Bilibili"}
+              </Text>
+              <Text
+                accessibilityRole="header"
+                style={[styles.videoTitle, { color: theme.text }]}
+              >
+                {video.video.title}
+              </Text>
+              <View
+                style={[
+                  styles.captionStatus,
+                  {
+                    backgroundColor: video.requiresLocalTranscription
+                      ? theme.secondarySoft
+                      : theme.successSoft,
+                    borderColor: video.requiresLocalTranscription
+                      ? theme.secondary
+                      : theme.success,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={
+                    video.requiresLocalTranscription
+                      ? "cellphone-sound"
+                      : "subtitles-outline"
+                  }
+                  size={22}
+                  color={
+                    video.requiresLocalTranscription
+                      ? theme.secondaryPressed
+                      : theme.successPressed
+                  }
+                />
+                <Text style={[styles.captionStatusText, { color: theme.text }]}>
+                  {transcriptStatus}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </Surface>
+
+        <Surface style={styles.setupSurface}>
+          <SettingGroup title={t("watchedQuestion")} help={t("watchedHelp")}>
+            <SegmentedControl
+              label={t("watchedQuestion")}
+              value={watched ? "yes" : "no"}
+              onChange={(value) => setWatched(value === "yes")}
+              options={
+                [
+                  { value: "yes", label: t("watchedYes") },
+                  { value: "no", label: t("watchedNo") },
+                ] as const
+              }
+            />
+          </SettingGroup>
+          <SettingGroup
+            divided
+            title={t("quizLanguage")}
+            help={t("quizLanguageHelp")}
+          >
+            <SegmentedControl
+              label={t("quizLanguage")}
+              value={quizLanguage}
+              onChange={(value) => setQuizLanguage(value as AppLanguage)}
+              options={
+                [
+                  { value: "en", label: t("languageEnglish") },
+                  { value: "zh-CN", label: t("languageChinese") },
+                ] as const
+              }
+            />
+          </SettingGroup>
+          <SettingGroup divided title={t("sessionLength")}>
+            <SegmentedControl
+              label={t("sessionLength")}
+              value={sessionLength}
+              onChange={(value) => setSessionLength(value as SessionLength)}
+              options={
+                [
+                  { value: "short", label: t("short") },
+                  { value: "medium", label: t("medium") },
+                  { value: "long", label: t("long") },
+                ] as const
+              }
+            />
+          </SettingGroup>
+        </Surface>
+
+        {video.requiresLocalTranscription ? (
+          <Surface tone="tinted" style={styles.noticeSurface}>
+            <View style={styles.noticeRow}>
+              <View
+                style={[styles.noticeIcon, { backgroundColor: theme.surface }]}
+              >
+                <MaterialCommunityIcons
+                  name="shield-lock-outline"
+                  size={27}
+                  color={theme.primary}
+                />
+              </View>
+              <View style={styles.noticeCopy}>
+                <Text style={[styles.noticeTitle, { color: theme.text }]}>
+                  {t("modelSize")}
+                </Text>
+                <Text style={[styles.help, { color: theme.textMuted }]}>
+                  {t("privateTranscription")}
+                </Text>
+              </View>
+            </View>
+          </Surface>
+        ) : null}
+
+        {tooLong || tooLongForWeb ? (
+          <Surface tone="error" style={styles.limitSurface}>
+            <View style={styles.noticeRow}>
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={25}
+                color={theme.error}
+              />
+              <Text
+                accessibilityRole="alert"
+                style={[styles.limitText, { color: theme.text }]}
+              >
+                {t(
+                  tooLongForWeb ? "webUnsupportedLength" : "unsupportedLength",
+                )}
+              </Text>
+            </View>
+          </Surface>
+        ) : null}
+      </View>
     </Screen>
   );
 }
 
-function SettingCard({ title, help, children }: { title: string; help?: string; children: React.ReactNode }) {
+function SettingGroup({
+  title,
+  help,
+  children,
+  divided = false,
+}: {
+  title: string;
+  help?: string;
+  children: React.ReactNode;
+  divided?: boolean;
+}) {
   const { theme } = useSettings();
   return (
-    <View style={[styles.settingCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      <Text style={[styles.settingTitle, { color: theme.text }]}>{title}</Text>
-      {help ? <Text style={[styles.help, { color: theme.textMuted }]}>{help}</Text> : null}
+    <View
+      style={[
+        styles.settingGroup,
+        divided && styles.settingGroupDivided,
+        divided && { borderTopColor: theme.divider },
+      ]}
+    >
+      <View style={styles.settingCopy}>
+        <Text style={[styles.settingTitle, { color: theme.text }]}>
+          {title}
+        </Text>
+        {help ? (
+          <Text style={[styles.help, { color: theme.textMuted }]}>{help}</Text>
+        ) : null}
+      </View>
       {children}
     </View>
   );
@@ -123,7 +311,12 @@ function SettingCard({ title, help, children }: { title: string; help?: string; 
 function BackButton() {
   const { t, theme } = useSettings();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={t("back")} onPress={() => router.back()} style={styles.back}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t("back")}
+      onPress={() => router.back()}
+      style={styles.back}
+    >
       <MaterialCommunityIcons name="arrow-left" size={24} color={theme.text} />
       <Text style={[styles.backText, { color: theme.text }]}>{t("back")}</Text>
     </Pressable>
@@ -131,23 +324,125 @@ function BackButton() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, minHeight: 400, alignItems: "center", justifyContent: "center", gap: 18 },
-  back: { alignSelf: "flex-start", minHeight: 48, flexDirection: "row", alignItems: "center", gap: 7, paddingRight: 14 },
-  backText: { fontFamily: typography.bodyBold, fontSize: 15 },
-  hero: { marginTop: 10, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 22 },
-  thumbnail: { flexGrow: 1, flexShrink: 1, flexBasis: 300, minWidth: 0, maxWidth: 520, aspectRatio: 16 / 9, borderRadius: radii.large, backgroundColor: "#CBD2DE" },
-  heroCopy: { flex: 1, flexShrink: 1, flexBasis: 280, minWidth: 0, gap: 8 },
-  kicker: { fontFamily: typography.bodyBold, fontSize: 12, letterSpacing: 1.5 },
-  title: { fontFamily: typography.display, fontSize: 30, lineHeight: 36 },
-  captionStatus: { marginTop: 5, borderRadius: radii.medium, padding: 12, flexDirection: "row", alignItems: "center", gap: 9 },
-  captionStatusText: { flex: 1, fontFamily: typography.bodyMedium, fontSize: 13, lineHeight: 18 },
-  grid: { marginTop: 28, flexDirection: "row", flexWrap: "wrap", alignItems: "stretch", gap: 16 },
-  settingCard: { flex: 1, flexShrink: 1, flexBasis: 290, minWidth: 0, borderWidth: 2, borderRadius: radii.large, padding: 17, gap: 10 },
-  settingTitle: { fontFamily: typography.displayMedium, fontSize: 20 },
-  help: { fontFamily: typography.body, fontSize: 13, lineHeight: 19 },
-  privacy: { marginTop: 18, borderWidth: 2, borderRadius: radii.large, padding: 16, flexDirection: "row", alignItems: "center", gap: 13 },
-  privacyCopy: { flex: 1, gap: 3 },
-  privacyTitle: { fontFamily: typography.bodyBold, fontSize: 14 },
-  error: { fontFamily: typography.bodyMedium, fontSize: 14, textAlign: "center", marginTop: 14 },
-  submit: { width: "100%", maxWidth: 520, alignSelf: "center", marginTop: 24 },
+  center: {
+    flex: 1,
+    minHeight: 400,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 18,
+  },
+  page: { width: "100%", maxWidth: 920, alignSelf: "center", gap: spacing[5] },
+  back: {
+    alignSelf: "flex-start",
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    paddingRight: spacing[4],
+  },
+  backText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  heading: { gap: spacing[1], marginTop: spacing[1] },
+  pageTitle: {
+    fontFamily: typography.display,
+    fontSize: typography.size.displaySmall,
+    lineHeight: typography.lineHeight.displaySmall,
+  },
+  pageSubtitle: {
+    fontFamily: typography.body,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  previewSurface: { width: "100%" },
+  preview: { flexDirection: "row", alignItems: "stretch" },
+  previewCompact: { flexDirection: "column" },
+  thumbnail: {
+    flex: 0.95,
+    minWidth: 0,
+    aspectRatio: 16 / 10,
+    backgroundColor: "#CBD2DE",
+  },
+  thumbnailCompact: { width: "100%", flex: 0, aspectRatio: 16 / 9 },
+  previewCopy: {
+    flex: 1.05,
+    minWidth: 0,
+    padding: spacing[6],
+    justifyContent: "center",
+    gap: spacing[3],
+  },
+  source: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  videoTitle: {
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.title,
+    lineHeight: typography.lineHeight.title,
+  },
+  captionStatus: {
+    borderWidth: borders.standard,
+    borderRadius: radii.medium,
+    padding: spacing[3],
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  captionStatusText: {
+    flex: 1,
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  setupSurface: { gap: 0 },
+  settingGroup: { gap: spacing[4], paddingVertical: spacing[1] },
+  settingGroupDivided: {
+    marginTop: spacing[5],
+    paddingTop: spacing[6],
+    borderTopWidth: borders.hairline,
+  },
+  settingCopy: { gap: spacing[1] },
+  settingTitle: {
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.titleSmall,
+    lineHeight: typography.lineHeight.titleSmall,
+  },
+  help: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  noticeSurface: { padding: spacing[5] },
+  noticeRow: { flexDirection: "row", alignItems: "center", gap: spacing[4] },
+  noticeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noticeCopy: { flex: 1, minWidth: 0, gap: spacing[1] },
+  noticeTitle: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  limitSurface: { padding: spacing[4] },
+  limitText: {
+    flex: 1,
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  footerInner: { width: "100%", maxWidth: layout.reading, alignSelf: "center" },
+  expiredCard: { width: "100%", alignItems: "center", gap: spacing[5] },
+  expiredText: {
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+    textAlign: "center",
+  },
 });

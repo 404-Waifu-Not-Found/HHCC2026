@@ -1,5 +1,10 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../providers/SettingsProvider";
 import { breakpoints, layout, safeArea, spacing } from "../theme/tokens";
@@ -13,16 +18,23 @@ export function Screen({
   contentWidth = "wide",
   centered = false,
   padded = true,
+  footerFlush = false,
 }: PropsWithChildren<{
   scroll?: boolean;
   footer?: ReactNode;
   contentWidth?: ContentWidth;
   centered?: boolean;
   padded?: boolean;
+  footerFlush?: boolean;
 }>) {
   const { theme } = useSettings();
   const { width } = useWindowDimensions();
-  const horizontal = width >= breakpoints.desktop ? layout.desktopGutter : width >= breakpoints.tablet ? layout.gutter : layout.compactGutter;
+  const horizontal =
+    width >= breakpoints.desktop
+      ? layout.desktopGutter
+      : width >= breakpoints.tablet
+        ? layout.gutter
+        : layout.compactGutter;
   const maxWidth =
     contentWidth === "reading"
       ? layout.reading
@@ -38,7 +50,11 @@ export function Screen({
       style={[
         styles.content,
         centered && styles.centered,
-        padded && { paddingHorizontal: horizontal, paddingTop: spacing[6], paddingBottom: spacing[10] },
+        padded && {
+          paddingHorizontal: horizontal,
+          paddingTop: spacing[6],
+          paddingBottom: spacing[10],
+        },
         maxWidth ? { maxWidth } : null,
       ]}
     >
@@ -47,7 +63,10 @@ export function Screen({
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={["top", "left", "right", "bottom"]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: theme.background }]}
+      edges={["top", "left", "right", "bottom"]}
+    >
       {scroll ? (
         <ScrollView
           style={styles.flex}
@@ -66,10 +85,11 @@ export function Screen({
         <View
           style={[
             styles.footer,
+            footerFlush && styles.footerFlush,
             {
               backgroundColor: theme.surface,
               borderTopColor: theme.divider,
-              paddingHorizontal: horizontal,
+              paddingHorizontal: footerFlush ? 0 : horizontal,
             },
           ]}
         >
@@ -104,5 +124,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing[3],
     paddingBottom: safeArea.minimumBottom,
   },
+  footerFlush: {
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
 });
-

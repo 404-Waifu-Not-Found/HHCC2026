@@ -9,20 +9,28 @@ export function LessonHeader({
   progressLabel,
   onClose,
   statusLabel,
+  closeLabel = "Exit lesson",
 }: {
   progress: number;
   progressLabel: string;
   onClose(): void;
   statusLabel?: string;
+  closeLabel?: string;
 }) {
   const { theme } = useSettings();
   return (
     <View style={styles.header}>
-      <IconButton icon="close" label="Exit lesson" onPress={onClose} />
+      <IconButton icon="close" label={closeLabel} onPress={onClose} />
       <View style={styles.progress}>
         <ProgressBar progress={progress} accessibilityLabel={progressLabel} />
       </View>
-      {statusLabel ? <Text style={[styles.status, { color: theme.textMuted }]}>{statusLabel}</Text> : <View style={styles.placeholder} />}
+      {statusLabel ? (
+        <Text style={[styles.status, { color: theme.textMuted }]}>
+          {statusLabel}
+        </Text>
+      ) : (
+        <View style={styles.placeholder} />
+      )}
     </View>
   );
 }

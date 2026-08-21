@@ -3,12 +3,37 @@ import { StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, spacing, typography } from "../theme/tokens";
 
-export function StatTile({ value, label, icon, tone = "primary" }: { value: string; label: string; icon?: ReactNode; tone?: "primary" | "success" | "warning" | "secondary" }) {
+export function StatTile({
+  value,
+  label,
+  icon,
+  tone = "primary",
+}: {
+  value: string;
+  label: string;
+  icon?: ReactNode;
+  tone?: "primary" | "success" | "warning" | "secondary";
+}) {
   const { theme } = useSettings();
-  const color = tone === "success" ? theme.success : tone === "warning" ? theme.warning : tone === "secondary" ? theme.secondary : theme.primary;
+  const color =
+    tone === "success"
+      ? theme.success
+      : tone === "warning"
+        ? theme.warning
+        : tone === "secondary"
+          ? theme.secondary
+          : theme.primary;
   return (
-    <View style={[styles.tile, { backgroundColor: theme.surface, borderColor: theme.border }]}> 
-      <View style={styles.valueRow}>{icon}<Text style={[styles.value, { color }]}>{value}</Text></View>
+    <View
+      style={[
+        styles.tile,
+        { backgroundColor: theme.surface, borderColor: theme.border },
+      ]}
+    >
+      <View style={styles.valueRow}>
+        {icon}
+        <Text style={[styles.value, { color }]}>{value}</Text>
+      </View>
       <Text style={[styles.label, { color: theme.textMuted }]}>{label}</Text>
     </View>
   );

@@ -5,24 +5,87 @@ import { borders, radii, spacing, typography } from "../theme/tokens";
 
 export type ProcessingStepState = "complete" | "active" | "upcoming" | "error";
 
-export function ProcessingSteps({ steps }: { steps: readonly { label: string; state: ProcessingStepState; detail?: string }[] }) {
+export function ProcessingSteps({
+  steps,
+}: {
+  steps: readonly {
+    label: string;
+    state: ProcessingStepState;
+    detail?: string;
+  }[];
+}) {
   const { theme } = useSettings();
   return (
     <View accessibilityLiveRegion="polite" style={styles.list}>
       {steps.map((step, index) => {
-        const color = step.state === "complete" ? theme.success : step.state === "error" ? theme.error : step.state === "active" ? theme.primary : theme.borderStrong;
-        const icon = step.state === "complete" ? "check" : step.state === "error" ? "alert" : step.state === "active" ? "dots-horizontal" : "circle-small";
+        const color =
+          step.state === "complete"
+            ? theme.success
+            : step.state === "error"
+              ? theme.error
+              : step.state === "active"
+                ? theme.primary
+                : theme.borderStrong;
+        const icon =
+          step.state === "complete"
+            ? "check"
+            : step.state === "error"
+              ? "alert"
+              : step.state === "active"
+                ? "dots-horizontal"
+                : "circle-small";
         return (
           <View key={`${step.label}-${index}`} style={styles.row}>
             <View style={styles.rail}>
-              <View style={[styles.marker, { borderColor: color, backgroundColor: step.state === "upcoming" ? theme.surface : color }]}> 
-                <MaterialCommunityIcons name={icon} size={18} color={step.state === "upcoming" ? theme.textMuted : theme.surface} />
+              <View
+                style={[
+                  styles.marker,
+                  {
+                    borderColor: color,
+                    backgroundColor:
+                      step.state === "upcoming" ? theme.surface : color,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={icon}
+                  size={18}
+                  color={
+                    step.state === "upcoming" ? theme.textMuted : theme.surface
+                  }
+                />
               </View>
-              {index < steps.length - 1 ? <View style={[styles.line, { backgroundColor: step.state === "complete" ? theme.success : theme.divider }]} /> : null}
+              {index < steps.length - 1 ? (
+                <View
+                  style={[
+                    styles.line,
+                    {
+                      backgroundColor:
+                        step.state === "complete"
+                          ? theme.success
+                          : theme.divider,
+                    },
+                  ]}
+                />
+              ) : null}
             </View>
             <View style={styles.copy}>
-              <Text style={[styles.label, { color: step.state === "upcoming" ? theme.textMuted : theme.text }]}>{step.label}</Text>
-              {step.detail ? <Text style={[styles.detail, { color: theme.textMuted }]}>{step.detail}</Text> : null}
+              <Text
+                style={[
+                  styles.label,
+                  {
+                    color:
+                      step.state === "upcoming" ? theme.textMuted : theme.text,
+                  },
+                ]}
+              >
+                {step.label}
+              </Text>
+              {step.detail ? (
+                <Text style={[styles.detail, { color: theme.textMuted }]}>
+                  {step.detail}
+                </Text>
+              ) : null}
             </View>
           </View>
         );

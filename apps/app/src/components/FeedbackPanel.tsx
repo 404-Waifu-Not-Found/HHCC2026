@@ -1,8 +1,14 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { PropsWithChildren, ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { borders, layout, spacing, typography } from "../theme/tokens";
+import {
+  borders,
+  breakpoints,
+  layout,
+  spacing,
+  typography,
+} from "../theme/tokens";
 
 export function FeedbackPanel({
   status,
@@ -17,24 +23,55 @@ export function FeedbackPanel({
   action?: ReactNode;
 }>) {
   const { theme } = useSettings();
+  const { width } = useWindowDimensions();
+  const compact = width < breakpoints.tablet;
   const isCorrect = status === "correct";
   const isIncorrect = status === "incorrect";
-  const color = isCorrect ? theme.success : isIncorrect ? theme.error : theme.primary;
-  const background = isCorrect ? theme.successSoft : isIncorrect ? theme.errorSoft : theme.surface;
-  const icon = isCorrect ? "check-circle" : isIncorrect ? "alert-circle" : "lightbulb-on";
+  const color = isCorrect
+    ? theme.success
+    : isIncorrect
+      ? theme.error
+      : theme.primary;
+  const background = isCorrect
+    ? theme.successSoft
+    : isIncorrect
+      ? theme.errorSoft
+      : theme.surface;
+  const icon = isCorrect
+    ? "check-circle"
+    : isIncorrect
+      ? "alert-circle"
+      : "lightbulb-on";
 
   return (
-    <View accessibilityRole="summary" accessibilityLiveRegion="polite" style={[styles.panel, { backgroundColor: background, borderTopColor: color }]}> 
-      <View style={styles.inner}>
-        <View style={[styles.icon, { borderColor: color }]}> 
+    <View
+      accessibilityRole="summary"
+      accessibilityLiveRegion="polite"
+      style={[
+        styles.panel,
+        { backgroundColor: background, borderTopColor: color },
+      ]}
+    >
+      <View style={[styles.inner, compact && styles.innerCompact]}>
+        <View style={[styles.icon, { borderColor: color }]}>
           <MaterialCommunityIcons name={icon} color={color} size={28} />
         </View>
         <View style={styles.copy}>
-          <Text accessibilityRole="header" style={[styles.title, { color }]}>{title}</Text>
-          {detail ? <Text selectable style={[styles.detail, { color: theme.text }]}>{detail}</Text> : null}
+          <Text accessibilityRole="header" style={[styles.title, { color }]}>
+            {title}
+          </Text>
+          {detail ? (
+            <Text selectable style={[styles.detail, { color: theme.text }]}>
+              {detail}
+            </Text>
+          ) : null}
           {children}
         </View>
-        {action ? <View style={styles.action}>{action}</View> : null}
+        {action ? (
+          <View style={[styles.action, compact && styles.actionCompact]}>
+            {action}
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -82,5 +119,13 @@ const styles = StyleSheet.create({
   },
   action: {
     minWidth: 180,
+  },
+  innerCompact: {
+    flexWrap: "wrap",
+  },
+  actionCompact: {
+    width: "100%",
+    minWidth: 0,
+    paddingLeft: 62,
   },
 });

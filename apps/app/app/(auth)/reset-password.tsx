@@ -1,31 +1,42 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import { Text } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { typography } from "../../src/theme/tokens";
+import { spacing, typography } from "../../src/theme/tokens";
 
 export default function ResetPasswordScreen() {
-  const { token, error: linkError } = useLocalSearchParams<{ token?: string; error?: string }>();
+  const { token, error: linkError } = useLocalSearchParams<{
+    token?: string;
+    error?: string;
+  }>();
   const { t, theme } = useSettings();
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<string | undefined>(() =>
+    linkError
+      ? t("invalidResetLink")
+      : !token
+        ? t("missingResetToken")
+        : undefined,
+  );
   const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    if (linkError) setError(t("invalidResetLink"));
-    else if (!token) setError(t("missingResetToken"));
-  }, [linkError, t, token]);
 
   const submit = async () => {
     if (!token || linkError || password.length < 8 || loading) return;
     setLoading(true);
     setError(undefined);
     try {
-      const result = await authClient.resetPassword({ token, newPassword: password });
-      if (result.error) return setError(result.error.message ?? t("invalidResetLink"));
+      const result = await authClient.resetPassword({
+        token,
+        newPassword: password,
+      });
+      if (result.error)
+        return setError(result.error.message ?? t("invalidResetLink"));
       router.replace("/(auth)/sign-in");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("invalidResetLink"));
@@ -35,9 +46,70 @@ export default function ResetPasswordScreen() {
   };
   return (
     <AuthShell title={t("chooseNewPassword")}>
-      <AppTextInput label={t("newPassword")} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" editable={!loading && Boolean(token) && !linkError} returnKeyType="done" onSubmitEditing={() => void submit()} />
-      {error ? <Text accessibilityRole="alert" style={{ color: theme.error, fontFamily: typography.bodyMedium }}>{error}</Text> : null}
-      <PrimaryButton loading={loading} disabled={password.length < 8 || !token || Boolean(linkError)} onPress={() => void submit()}>{t("saveNewPassword")}</PrimaryButton>
+      <AppTextInput
+        label={t("newPassword")}
+        value={password}
+        onChangeText={setPassword}
+        leading={
+          <MaterialCommunityIcons
+            name="lock-reset"
+            size={22}
+            color={theme.textMuted}
+          />
+        }
+        secureTextEntry
+        autoComplete="new-password"
+        editable={!loading && Boolean(token) && !linkError}
+        returnKeyType="done"
+        onSubmitEditing={() => void submit()}
+      />
+      {error ? (
+        <Surface tone="error" style={styles.status}>
+          <View style={styles.statusRow}>
+            <MaterialCommunityIcons
+              name="alert-circle-outline"
+              size={22}
+              color={theme.error}
+            />
+            <Text
+              accessibilityRole="alert"
+              selectable
+              style={[styles.statusText, { color: theme.text }]}
+            >
+              {error}
+            </Text>
+          </View>
+        </Surface>
+      ) : null}
+      <PrimaryButton
+        loading={loading}
+        disabled={password.length < 8 || !token || Boolean(linkError)}
+        leadingIcon={
+          <MaterialCommunityIcons
+            name="lock-check-outline"
+            size={21}
+            color={theme.textOnAction}
+          />
+        }
+        onPress={() => void submit()}
+      >
+        {t("saveNewPassword")}
+      </PrimaryButton>
     </AuthShell>
   );
 }
+
+const styles = StyleSheet.create({
+  status: { padding: spacing[4] },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing[3],
+  },
+  statusText: {
+    flex: 1,
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+});

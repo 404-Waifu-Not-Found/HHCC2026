@@ -1,6 +1,13 @@
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { borders, controls, motion, radii, spacing, typography } from "../theme/tokens";
+import {
+  borders,
+  controls,
+  motion,
+  radii,
+  spacing,
+  typography,
+} from "../theme/tokens";
 
 export type Segment<T extends string> = { value: T; label: string };
 
@@ -20,7 +27,10 @@ export function SegmentedControl<T extends string>({
     <View
       accessibilityRole="radiogroup"
       accessibilityLabel={label}
-      style={[styles.group, { borderColor: theme.border, backgroundColor: theme.surfaceSunken }]}
+      style={[
+        styles.group,
+        { borderColor: theme.border, backgroundColor: theme.surfaceSunken },
+      ]}
     >
       {options.map((option) => {
         const selected = value === option.value;
@@ -44,7 +54,13 @@ export function SegmentedControl<T extends string>({
               },
             ]}
           >
-            <Text style={[styles.label, { color: selected ? theme.primary : theme.textMuted }]} numberOfLines={2}>
+            <Text
+              style={[
+                styles.label,
+                { color: selected ? theme.primary : theme.textMuted },
+              ]}
+              numberOfLines={2}
+            >
               {option.label}
             </Text>
           </Pressable>

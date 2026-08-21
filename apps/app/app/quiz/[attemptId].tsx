@@ -10,23 +10,40 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { AnswerCard, type AnswerState } from "../../src/components/AnswerCard";
+import { AppTextInput } from "../../src/components/AppTextInput";
+import { EmptyState } from "../../src/components/EmptyState";
+import { FeedbackPanel } from "../../src/components/FeedbackPanel";
+import { IconButton } from "../../src/components/IconButton";
+import { LessonHeader } from "../../src/components/LessonHeader";
 import { Mascot } from "../../src/components/Mascot";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
-import { ProgressBar } from "../../src/components/ProgressBar";
 import { Screen } from "../../src/components/Screen";
+import { StatTile } from "../../src/components/StatTile";
+import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
 import { createInitialOrdering } from "../../src/lib/quiz-order";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { clearAttempt, loadAttempt, markPrimerSeen, saveAttemptQuestion } from "../../src/state/attempt";
-import { radii, typography } from "../../src/theme/tokens";
+import {
+  clearAttempt,
+  loadAttempt,
+  markPrimerSeen,
+  saveAttemptQuestion,
+} from "../../src/state/attempt";
+import {
+  borders,
+  breakpoints,
+  radii,
+  spacing,
+  typography,
+} from "../../src/theme/tokens";
 
 type Answer = number | boolean | number[] | string;
 
 export default function QuizScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
-  const { t, theme, reduceMotion } = useSettings();
+  const { t, theme } = useSettings();
   const [question, setQuestion] = useState<PublicQuestion>();
   const [primer, setPrimer] = useState<string | null>(null);
   const [showPrimer, setShowPrimer] = useState(false);
@@ -35,28 +52,52 @@ export default function QuizScreen() {
   const [feedback, setFeedback] = useState<AttemptAnswerResponse>();
   const [score, setScore] = useState<number>();
   const [mastery, setMastery] = useState<MasteryState>();
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [completedTotal, setCompletedTotal] = useState<number>();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
 
-  const applyResume = useCallback(async (resumed: AttemptResumeResponse) => {
+  const activateQuestion = useCallback((nextQuestion: PublicQuestion) => {
+    setQuestion(nextQuestion);
+    setAnswer(
+      nextQuestion.type === "ordering"
+        ? createInitialOrdering(nextQuestion.items?.length ?? 0)
+        : undefined,
+    );
+    setOrderingTouched(false);
     setFeedback(undefined);
     setError(undefined);
-    if (resumed.completed) {
-      setQuestion(undefined);
-      setScore(resumed.score ?? 0);
-      setMastery(resumed.mastery ?? "learning");
-      return;
-    }
-    if (!resumed.question) throw new Error(t("quizResumeMissing"));
-    setQuestion(resumed.question);
-    setScore(undefined);
-    setMastery(undefined);
-    await saveAttemptQuestion(attemptId, resumed.question);
-  }, [attemptId, t]);
+  }, []);
+
+  const applyResume = useCallback(
+    async (resumed: AttemptResumeResponse) => {
+      setFeedback(undefined);
+      setError(undefined);
+      if (resumed.completed) {
+        setQuestion(undefined);
+        setAnswer(undefined);
+        setScore(resumed.score ?? 0);
+        setMastery(resumed.mastery ?? "learning");
+        setShowCompletion(true);
+        return;
+      }
+      if (!resumed.question) throw new Error(t("quizResumeMissing"));
+      activateQuestion(resumed.question);
+      setScore(undefined);
+      setMastery(undefined);
+      setShowCompletion(false);
+      await saveAttemptQuestion(attemptId, resumed.question);
+    },
+    [activateQuestion, attemptId, t],
+  );
 
   const resume = useCallback(async () => {
-    const resumed = await apiRequest(`/api/attempts/${attemptId}/resume`, {}, AttemptResumeResponseSchema);
+    const resumed = await apiRequest(
+      `/api/attempts/${attemptId}/resume`,
+      {},
+      AttemptResumeResponseSchema,
+    );
     await applyResume(resumed);
   }, [applyResume, attemptId]);
 
@@ -66,27 +107,25 @@ export default function QuizScreen() {
       const stored = await loadAttempt(attemptId);
       if (!active) return;
       if (stored) {
-        setQuestion(stored.question ?? undefined);
+        if (stored.question) activateQuestion(stored.question);
         setPrimer(stored.primer);
         setShowPrimer(Boolean(stored.primer && !stored.primerSeen));
       }
       try {
         await resume();
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : t("quizResumeFailed"));
+        if (active)
+          setError(
+            cause instanceof Error ? cause.message : t("quizResumeFailed"),
+          );
       } finally {
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
-  }, [attemptId, resume]);
-
-  useEffect(() => {
-    setAnswer(question?.type === "ordering" ? createInitialOrdering(question.items?.length ?? 0) : undefined);
-    setOrderingTouched(false);
-    setFeedback(undefined);
-    setError(undefined);
-  }, [question?.id, question?.isRetry]);
+    return () => {
+      active = false;
+    };
+  }, [activateQuestion, attemptId, resume, t]);
 
   const canSubmit = useMemo(() => {
     if (answer === undefined) return false;
@@ -112,19 +151,35 @@ export default function QuizScreen() {
       if (result.completed) {
         setScore(result.score ?? 0);
         setMastery(result.mastery ?? "learning");
+        setCompletedTotal(question.total);
       }
-      if (result.correct) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      else void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      if (result.correct)
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+      else
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );
     } catch (cause) {
-      if (cause instanceof ClientApiError && cause.code === "answer_out_of_sequence") {
+      if (
+        cause instanceof ClientApiError &&
+        cause.code === "answer_out_of_sequence"
+      ) {
         try {
           await resume();
           setError(t("quizResynced"));
         } catch (resumeCause) {
-          setError(resumeCause instanceof Error ? resumeCause.message : t("quizResumeFailed"));
+          setError(
+            resumeCause instanceof Error
+              ? resumeCause.message
+              : t("quizResumeFailed"),
+          );
         }
       } else {
-        setError(cause instanceof Error ? cause.message : t("answerCheckFailed"));
+        setError(
+          cause instanceof Error ? cause.message : t("answerCheckFailed"),
+        );
       }
     } finally {
       setSubmitting(false);
@@ -133,104 +188,404 @@ export default function QuizScreen() {
 
   const next = () => {
     if (!feedback) return;
-    if (feedback.completed) return;
-    if (feedback.nextQuestion) setQuestion(feedback.nextQuestion);
+    if (feedback.completed) {
+      setShowCompletion(true);
+      return;
+    }
+    if (feedback.nextQuestion) activateQuestion(feedback.nextQuestion);
   };
 
-  if (loading) return <Screen scroll={false}><View style={styles.center}><ActivityIndicator size="large" color={theme.secondary} /></View></Screen>;
-
-  if (score !== undefined && (!question || feedback?.completed)) {
+  if (loading) {
     return (
-      <Screen>
+      <Screen scroll={false} contentWidth="lesson" centered>
+        <View accessibilityLiveRegion="polite" style={styles.center}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textMuted }]}>
+            {t("loading")}
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (showCompletion && score !== undefined) {
+    const mastered = mastery === "mastered";
+    return (
+      <Screen contentWidth="lesson" centered>
         <View style={styles.complete}>
-          <Mascot mood="happy" size={124} />
-          <Text accessibilityRole="header" style={[styles.completeTitle, { color: theme.text }]}>{t("quizComplete")}</Text>
-          <View style={[styles.scoreCircle, { backgroundColor: score >= 80 ? theme.primary : theme.secondary }]}>
-            <Text style={[styles.scoreNumber, { color: theme.text }]}>{Math.round(score)}%</Text>
-            <Text style={[styles.scoreLabel, { color: theme.text }]}>{t("score")}</Text>
+          <View style={styles.celebrationArt}>
+            <MaterialCommunityIcons
+              name="star-four-points"
+              size={30}
+              color={theme.warning}
+              style={styles.sparkLeft}
+            />
+            <Mascot mood="happy" size={176} />
+            <MaterialCommunityIcons
+              name="star-four-points"
+              size={24}
+              color={theme.secondary}
+              style={styles.sparkRight}
+            />
           </View>
-          <Text style={[styles.completeBody, { color: theme.textMuted }]}>{mastery === "mastered" ? t("masteryBuilt") : t("laterReview")}</Text>
-          <View style={styles.completeButton}><PrimaryButton onPress={() => { void clearAttempt(attemptId); router.replace("/(tabs)"); }}>{t("finish")}</PrimaryButton></View>
+          <View style={styles.completeCopy}>
+            <Text
+              accessibilityRole="header"
+              style={[styles.completeTitle, { color: theme.text }]}
+            >
+              {t("quizComplete")}
+            </Text>
+            <Text style={[styles.completeBody, { color: theme.textMuted }]}>
+              {mastered ? t("masteryBuilt") : t("laterReview")}
+            </Text>
+          </View>
+          <View style={styles.stats}>
+            <StatTile
+              value={`${Math.round(score)}%`}
+              label={t("score")}
+              tone={score >= 80 ? "success" : "primary"}
+              icon={
+                <MaterialCommunityIcons
+                  name="target"
+                  size={22}
+                  color={score >= 80 ? theme.success : theme.primary}
+                />
+              }
+            />
+            <StatTile
+              value={t(mastery === "mastered" ? "mastered" : "learning")}
+              label={t("mastery")}
+              tone={mastered ? "success" : "secondary"}
+              icon={
+                <MaterialCommunityIcons
+                  name={
+                    mastered
+                      ? "check-decagram"
+                      : "chart-timeline-variant-shimmer"
+                  }
+                  size={22}
+                  color={mastered ? theme.success : theme.secondary}
+                />
+              }
+            />
+            {completedTotal ? (
+              <StatTile
+                value={String(completedTotal)}
+                label={t("questions")}
+                tone="warning"
+                icon={
+                  <MaterialCommunityIcons
+                    name="help-circle-outline"
+                    size={22}
+                    color={theme.warning}
+                  />
+                }
+              />
+            ) : null}
+          </View>
+          <View style={styles.completeButton}>
+            <PrimaryButton
+              trailingIcon={
+                <MaterialCommunityIcons
+                  name="arrow-right"
+                  size={20}
+                  color={theme.textOnAction}
+                />
+              }
+              onPress={() => {
+                void clearAttempt(attemptId);
+                router.replace("/(tabs)");
+              }}
+            >
+              {t("finish")}
+            </PrimaryButton>
+          </View>
         </View>
       </Screen>
     );
   }
 
   if (error && !question) {
-    return <Screen><View style={styles.center}><Mascot mood="oops" /><Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{error}</Text><PrimaryButton onPress={() => router.replace("/(tabs)")}>{t("home")}</PrimaryButton></View></Screen>;
+    return (
+      <Screen contentWidth="reading" centered>
+        <EmptyState
+          icon="alert-circle-outline"
+          title={t("quizResumeFailed")}
+          description={error}
+          action={
+            <PrimaryButton onPress={() => router.replace("/(tabs)")}>
+              {t("home")}
+            </PrimaryButton>
+          }
+        />
+      </Screen>
+    );
   }
   if (!question) return null;
 
   if (showPrimer && primer) {
     return (
-      <Screen>
-        <View style={styles.primerTop}><Mascot mood="ready" size={100} /><Text accessibilityRole="header" style={[styles.primerTitle, { color: theme.text }]}>{t("primerTitle")}</Text></View>
-        <View style={[styles.primerCard, { backgroundColor: theme.surface, borderColor: theme.border }]}><Text style={[styles.primerText, { color: theme.text }]}>{primer}</Text></View>
-        <View style={styles.primerButton}><PrimaryButton onPress={() => { setShowPrimer(false); void markPrimerSeen(attemptId); }}>{t("beginQuiz")}</PrimaryButton></View>
+      <Screen contentWidth="reading" centered>
+        <View style={styles.primerTop}>
+          <Mascot mood="ready" size={132} />
+          <View style={styles.primerHeading}>
+            <Text style={[styles.eyebrow, { color: theme.primary }]}>
+              {t("question")}
+            </Text>
+            <Text
+              accessibilityRole="header"
+              style={[styles.primerTitle, { color: theme.text }]}
+            >
+              {t("primerTitle")}
+            </Text>
+          </View>
+        </View>
+        <Surface tone="tinted" style={styles.primerCard}>
+          <View style={styles.primerLabel}>
+            <MaterialCommunityIcons
+              name="lightbulb-on-outline"
+              size={22}
+              color={theme.primary}
+            />
+            <Text style={[styles.primerLabelText, { color: theme.primary }]}>
+              {t("primerTitle")}
+            </Text>
+          </View>
+          <Text selectable style={[styles.primerText, { color: theme.text }]}>
+            {primer}
+          </Text>
+        </Surface>
+        <View style={styles.primerButton}>
+          <PrimaryButton
+            onPress={() => {
+              setShowPrimer(false);
+              void markPrimerSeen(attemptId);
+            }}
+          >
+            {t("beginQuiz")}
+          </PrimaryButton>
+        </View>
       </Screen>
     );
   }
 
   const progress = (question.position - 1) / question.total;
-  return (
-    <Screen footer={
-      feedback ? <PrimaryButton onPress={next}>{feedback.completed ? t("finish") : t("next")}</PrimaryButton> : <PrimaryButton loading={submitting} disabled={!canSubmit} onPress={() => void submit()}>{t("checkAnswer")}</PrimaryButton>
-    }>
-      <View style={styles.quizHeader}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("cancel")} onPress={() => router.replace("/(tabs)")} style={styles.close}>
-          <MaterialCommunityIcons name="close" size={27} color={theme.textMuted} />
-        </Pressable>
-        <View style={styles.topProgress}><ProgressBar progress={progress} accessibilityLabel={`${t("question")} ${question.position} of ${question.total}`} /></View>
-        <Text style={[styles.counter, { color: theme.textMuted }]}>{question.position}/{question.total}</Text>
+  const progressLabel = `${t("question")} ${question.position} of ${question.total}`;
+  const footer = feedback ? (
+    <FeedbackPanel
+      status={feedback.correct ? "correct" : "incorrect"}
+      title={feedback.correct ? t("correct") : t("incorrect")}
+      detail={feedback.explanation}
+      action={
+        <PrimaryButton onPress={next}>
+          {feedback.completed ? t("finish") : t("next")}
+        </PrimaryButton>
+      }
+    />
+  ) : (
+    <View
+      style={[
+        styles.actionBar,
+        { backgroundColor: theme.surface, borderTopColor: theme.divider },
+      ]}
+    >
+      <View style={styles.actionInner}>
+        <PrimaryButton
+          loading={submitting}
+          disabled={!canSubmit}
+          onPress={() => void submit()}
+        >
+          {t("checkAnswer")}
+        </PrimaryButton>
       </View>
+    </View>
+  );
+
+  return (
+    <Screen contentWidth="lesson" footer={footer} footerFlush>
+      <LessonHeader
+        progress={progress}
+        progressLabel={progressLabel}
+        statusLabel={`${question.position}/${question.total}`}
+        closeLabel={t("cancel")}
+        onClose={() => router.replace("/(tabs)")}
+      />
       <View style={styles.quizBody}>
-        {question.isRetry ? <View style={[styles.retryBadge, { backgroundColor: theme.secondary }]}><MaterialCommunityIcons name="refresh" size={16} color={theme.text} /><Text style={[styles.retryText, { color: theme.text }]}>{t("retryingConcept")}</Text></View> : null}
-        <Text accessibilityRole="header" style={[styles.question, { color: theme.text }]}>{question.prompt}</Text>
+        <View style={styles.questionMeta}>
+          <Text style={[styles.eyebrow, { color: theme.primary }]}>
+            {questionTypeLabel(question.type)}
+          </Text>
+          {question.isRetry ? (
+            <View
+              style={[
+                styles.retryBadge,
+                { backgroundColor: theme.secondarySoft },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="refresh"
+                size={16}
+                color={theme.secondaryPressed}
+              />
+              <Text
+                style={[styles.retryText, { color: theme.secondaryPressed }]}
+              >
+                {t("retryingConcept")}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Text
+          accessibilityRole="header"
+          style={[styles.question, { color: theme.text }]}
+        >
+          {question.prompt}
+        </Text>
         <QuestionInput
           question={question}
           answer={answer}
+          feedback={feedback}
           setAnswer={setAnswer}
           onInteraction={() => setOrderingTouched(true)}
           disabled={Boolean(feedback) || submitting}
         />
-        {error ? <Text accessibilityRole="alert" style={[styles.error, { color: theme.error }]}>{error}</Text> : null}
-        {feedback ? (
-          <Animated.View
-            entering={reduceMotion ? undefined : FadeInDown.duration(280)}
-            accessibilityLiveRegion="polite"
-            style={[styles.feedback, { backgroundColor: feedback.correct ? `${theme.success}24` : `${theme.error}1D`, borderColor: feedback.correct ? theme.success : theme.error }]}
+        {error ? (
+          <Text
+            accessibilityRole="alert"
+            style={[styles.error, { color: theme.error }]}
           >
-            <Mascot mood={feedback.correct ? "happy" : "oops"} size={60} />
-            <View style={styles.feedbackCopy}>
-              <Text style={[styles.feedbackTitle, { color: theme.text }]}>{feedback.correct ? t("correct") : t("incorrect")}</Text>
-              <Text style={[styles.explanation, { color: theme.text }]}>{feedback.explanation}</Text>
-            </View>
-          </Animated.View>
+            {error}
+          </Text>
         ) : null}
       </View>
     </Screen>
   );
 }
 
-function QuestionInput({ question, answer, setAnswer, onInteraction, disabled }: { question: PublicQuestion; answer: Answer | undefined; setAnswer(answer: Answer): void; onInteraction(): void; disabled: boolean }) {
+function QuestionInput({
+  question,
+  answer,
+  feedback,
+  setAnswer,
+  onInteraction,
+  disabled,
+}: {
+  question: PublicQuestion;
+  answer: Answer | undefined;
+  feedback?: AttemptAnswerResponse;
+  setAnswer(answer: Answer): void;
+  onInteraction(): void;
+  disabled: boolean;
+}) {
   const { t, theme } = useSettings();
+  const stateFor = (selected: boolean): AnswerState => {
+    if (feedback && selected) return feedback.correct ? "correct" : "incorrect";
+    if (selected) return "selected";
+    return disabled ? "disabled" : "default";
+  };
+
   if (question.type === "multiple_choice") {
-    return <View style={styles.options}>{question.options?.map((option, index) => <OptionButton key={`${index}-${option}`} label={option} selected={answer === index} disabled={disabled} onPress={() => setAnswer(index)} />)}</View>;
+    return (
+      <View style={styles.options}>
+        {question.options?.map((option, index) => (
+          <AnswerCard
+            key={`${index}-${option}`}
+            indexLabel={String.fromCharCode(65 + index)}
+            label={option}
+            state={stateFor(answer === index)}
+            onPress={() => setAnswer(index)}
+          />
+        ))}
+      </View>
+    );
   }
   if (question.type === "true_false") {
-    return <View style={styles.binary}><OptionButton label={t("true")} icon="check-circle-outline" selected={answer === true} disabled={disabled} onPress={() => setAnswer(true)} /><OptionButton label={t("false")} icon="close-circle-outline" selected={answer === false} disabled={disabled} onPress={() => setAnswer(false)} /></View>;
+    return (
+      <View style={styles.binary}>
+        <View style={styles.binaryOption}>
+          <AnswerCard
+            label={t("true")}
+            leading={
+              <MaterialCommunityIcons
+                name="check-circle-outline"
+                size={26}
+                color={theme.success}
+              />
+            }
+            state={stateFor(answer === true)}
+            onPress={() => setAnswer(true)}
+          />
+        </View>
+        <View style={styles.binaryOption}>
+          <AnswerCard
+            label={t("false")}
+            leading={
+              <MaterialCommunityIcons
+                name="close-circle-outline"
+                size={26}
+                color={theme.error}
+              />
+            }
+            state={stateFor(answer === false)}
+            onPress={() => setAnswer(false)}
+          />
+        </View>
+      </View>
+    );
   }
   if (question.type === "ordering") {
-    const order = Array.isArray(answer) ? answer : question.items?.map((_, index) => index) ?? [];
+    const order = Array.isArray(answer)
+      ? answer
+      : (question.items?.map((_, index) => index) ?? []);
     return (
       <View accessibilityLabel={t("arrangeItems")} style={styles.options}>
         {order.map((itemIndex, position) => (
-          <View key={itemIndex} style={[styles.orderItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={[styles.orderNumber, { backgroundColor: theme.secondary }]}><Text style={[styles.orderNumberText, { color: theme.text }]}>{position + 1}</Text></View>
-            <Text style={[styles.orderText, { color: theme.text }]}>{question.items?.[itemIndex]}</Text>
+          <View
+            key={itemIndex}
+            style={[
+              styles.orderItem,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+                borderBottomColor: theme.borderStrong,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.orderNumber,
+                {
+                  backgroundColor: theme.primarySoft,
+                  borderColor: theme.primary,
+                },
+              ]}
+            >
+              <Text style={[styles.orderNumberText, { color: theme.primary }]}>
+                {position + 1}
+              </Text>
+            </View>
+            <Text style={[styles.orderText, { color: theme.text }]}>
+              {question.items?.[itemIndex]}
+            </Text>
             <View style={styles.orderActions}>
-              <MoveButton label={t("moveUp")} icon="chevron-up" disabled={disabled || position === 0} onPress={() => { onInteraction(); setAnswer(move(order, position, position - 1)); }} />
-              <MoveButton label={t("moveDown")} icon="chevron-down" disabled={disabled || position === order.length - 1} onPress={() => { onInteraction(); setAnswer(move(order, position, position + 1)); }} />
+              <IconButton
+                label={t("moveUp")}
+                icon="chevron-up"
+                disabled={disabled || position === 0}
+                onPress={() => {
+                  onInteraction();
+                  setAnswer(move(order, position, position - 1));
+                }}
+              />
+              <IconButton
+                label={t("moveDown")}
+                icon="chevron-down"
+                disabled={disabled || position === order.length - 1}
+                onPress={() => {
+                  onInteraction();
+                  setAnswer(move(order, position, position + 1));
+                }}
+              />
             </View>
           </View>
         ))}
@@ -238,7 +593,8 @@ function QuestionInput({ question, answer, setAnswer, onInteraction, disabled }:
     );
   }
   return (
-    <TextInput
+    <AppTextInput
+      label={t("shortAnswer")}
       accessibilityLabel={t("shortAnswer")}
       editable={!disabled}
       multiline
@@ -246,25 +602,9 @@ function QuestionInput({ question, answer, setAnswer, onInteraction, disabled }:
       value={typeof answer === "string" ? answer : ""}
       onChangeText={setAnswer}
       placeholder={t("shortAnswerPlaceholder")}
-      placeholderTextColor={theme.textMuted}
-      style={[styles.shortAnswer, { color: theme.text, backgroundColor: theme.surface, borderColor: theme.border }]}
+      style={styles.shortAnswer}
     />
   );
-}
-
-function OptionButton({ label, selected, disabled, onPress, icon }: { label: string; selected: boolean; disabled: boolean; onPress(): void; icon?: "check-circle-outline" | "close-circle-outline" }) {
-  const { theme } = useSettings();
-  return (
-    <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected, disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.option, { backgroundColor: selected ? theme.primary : theme.surface, borderColor: selected ? theme.text : theme.border }, pressed && styles.pressed]}>
-      {icon ? <MaterialCommunityIcons name={icon} size={25} color={theme.text} /> : null}
-      <Text style={[styles.optionText, { color: theme.text }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function MoveButton({ label, icon, disabled, onPress }: { label: string; icon: "chevron-up" | "chevron-down"; disabled: boolean; onPress(): void }) {
-  const { theme } = useSettings();
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[styles.moveButton, disabled && styles.disabled]}><MaterialCommunityIcons name={icon} size={25} color={theme.text} /></Pressable>;
 }
 
 function move(values: number[], from: number, to: number): number[] {
@@ -274,44 +614,219 @@ function move(values: number[], from: number, to: number): number[] {
   return next;
 }
 
+function questionTypeLabel(type: PublicQuestion["type"]): string {
+  if (type === "multiple_choice") return "SELECT ONE";
+  if (type === "true_false") return "TRUE OR FALSE";
+  if (type === "ordering") return "PUT IN ORDER";
+  return "SHORT ANSWER";
+}
+
 const styles = StyleSheet.create({
-  center: { flex: 1, minHeight: 400, alignItems: "center", justifyContent: "center", gap: 18 },
-  quizHeader: { flexDirection: "row", alignItems: "center", gap: 13 },
-  close: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
-  topProgress: { flex: 1 },
-  counter: { minWidth: 44, fontFamily: typography.bodyBold, fontSize: 14, textAlign: "right" },
-  quizBody: { width: "100%", maxWidth: 760, alignSelf: "center", flex: 1, paddingTop: 24, gap: 20 },
-  retryBadge: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 11, paddingVertical: 7, borderRadius: radii.pill },
-  retryText: { fontFamily: typography.bodyBold, fontSize: 12 },
-  question: { fontFamily: typography.displayMedium, fontSize: 27, lineHeight: 34 },
-  options: { gap: 11 },
-  binary: { flexDirection: "row", gap: 12 },
-  option: { flex: 1, minHeight: 60, borderWidth: 2, borderRadius: radii.medium, paddingHorizontal: 16, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 10 },
-  optionText: { flex: 1, fontFamily: typography.bodyBold, fontSize: 16, lineHeight: 22 },
-  pressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },
-  shortAnswer: { minHeight: 150, borderWidth: 2, borderRadius: radii.medium, padding: 16, fontFamily: typography.body, fontSize: 16, lineHeight: 23, textAlignVertical: "top" },
-  orderItem: { minHeight: 64, borderWidth: 2, borderRadius: radii.medium, flexDirection: "row", alignItems: "center", padding: 9, gap: 10 },
-  orderNumber: { width: 35, height: 35, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  orderNumberText: { fontFamily: typography.bodyBold, fontSize: 14 },
-  orderText: { flex: 1, fontFamily: typography.bodyMedium, fontSize: 15, lineHeight: 20 },
-  orderActions: { flexDirection: "row" },
-  moveButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  disabled: { opacity: 0.28 },
-  feedback: { borderWidth: 2, borderRadius: radii.large, padding: 14, flexDirection: "row", alignItems: "center", gap: 13 },
-  feedbackCopy: { flex: 1, gap: 4 },
-  feedbackTitle: { fontFamily: typography.displayMedium, fontSize: 19 },
-  explanation: { fontFamily: typography.body, fontSize: 14, lineHeight: 20 },
-  error: { fontFamily: typography.bodyMedium, fontSize: 14, lineHeight: 20, textAlign: "center" },
-  primerTop: { alignItems: "center", gap: 10 },
-  primerTitle: { fontFamily: typography.display, fontSize: 32 },
-  primerCard: { width: "100%", maxWidth: 720, alignSelf: "center", borderWidth: 2, borderRadius: radii.large, padding: 24, marginTop: 18 },
-  primerText: { fontFamily: typography.body, fontSize: 17, lineHeight: 27 },
-  primerButton: { width: "100%", maxWidth: 520, alignSelf: "center", marginTop: 20 },
-  complete: { flex: 1, minHeight: 500, alignItems: "center", justifyContent: "center", gap: 17 },
-  completeTitle: { fontFamily: typography.display, fontSize: 36, textAlign: "center" },
-  scoreCircle: { width: 142, height: 142, borderRadius: 71, alignItems: "center", justifyContent: "center" },
-  scoreNumber: { fontFamily: typography.display, fontSize: 39 },
-  scoreLabel: { fontFamily: typography.bodyBold, fontSize: 13 },
-  completeBody: { maxWidth: 520, fontFamily: typography.bodyMedium, fontSize: 15, lineHeight: 22, textAlign: "center" },
-  completeButton: { width: "100%", maxWidth: 420 },
+  center: {
+    flex: 1,
+    minHeight: 380,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[4],
+  },
+  loadingText: {
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.body,
+  },
+  quizBody: {
+    width: "100%",
+    flex: 1,
+    alignSelf: "center",
+    paddingTop: spacing[10],
+    paddingBottom: spacing[8],
+    gap: spacing[6],
+  },
+  questionMeta: {
+    minHeight: 28,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3],
+  },
+  eyebrow: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
+    letterSpacing: 1.4,
+  },
+  retryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+  },
+  retryText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+  },
+  question: {
+    maxWidth: 680,
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.title,
+    lineHeight: typography.lineHeight.title,
+    letterSpacing: -0.3,
+  },
+  options: {
+    gap: spacing[3],
+  },
+  binary: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing[3],
+  },
+  binaryOption: {
+    minWidth: 260,
+    flex: 1,
+  },
+  shortAnswer: {
+    minHeight: 150,
+    paddingTop: spacing[3],
+    textAlignVertical: "top",
+  },
+  orderItem: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    borderWidth: borders.standard,
+    borderBottomWidth: borders.tactileDepth + borders.standard,
+    borderRadius: radii.large,
+    padding: spacing[3],
+  },
+  orderNumber: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: borders.standard,
+    borderRadius: radii.small,
+  },
+  orderNumberText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+  },
+  orderText: {
+    minWidth: 0,
+    flex: 1,
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  orderActions: {
+    flexDirection: "row",
+    gap: spacing[1],
+  },
+  error: {
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+    textAlign: "center",
+  },
+  actionBar: {
+    minHeight: 88,
+    justifyContent: "center",
+    borderTopWidth: borders.hairline,
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[4],
+  },
+  actionInner: {
+    width: "100%",
+    maxWidth: breakpoints.compact,
+    alignSelf: "center",
+  },
+  primerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[5],
+    marginBottom: spacing[5],
+  },
+  primerHeading: {
+    minWidth: 0,
+    flex: 1,
+    gap: spacing[2],
+  },
+  primerTitle: {
+    fontFamily: typography.display,
+    fontSize: typography.size.title,
+    lineHeight: typography.lineHeight.title,
+  },
+  primerCard: {
+    gap: spacing[4],
+  },
+  primerLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  primerLabelText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+  },
+  primerText: {
+    fontFamily: typography.body,
+    fontSize: typography.size.bodyLarge,
+    lineHeight: 29,
+  },
+  primerButton: {
+    width: "100%",
+    maxWidth: 440,
+    alignSelf: "flex-end",
+    marginTop: spacing[6],
+  },
+  complete: {
+    flex: 1,
+    minHeight: 560,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[6],
+    paddingVertical: spacing[8],
+  },
+  celebrationArt: {
+    position: "relative",
+  },
+  sparkLeft: {
+    position: "absolute",
+    left: -28,
+    top: 28,
+  },
+  sparkRight: {
+    position: "absolute",
+    right: -22,
+    top: 10,
+  },
+  completeCopy: {
+    maxWidth: 560,
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  completeTitle: {
+    fontFamily: typography.display,
+    fontSize: typography.size.displaySmall,
+    lineHeight: typography.lineHeight.displaySmall,
+    textAlign: "center",
+  },
+  completeBody: {
+    fontFamily: typography.bodyMedium,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+    textAlign: "center",
+  },
+  stats: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing[3],
+  },
+  completeButton: {
+    width: "100%",
+    maxWidth: 440,
+  },
 });

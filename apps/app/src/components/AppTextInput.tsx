@@ -1,7 +1,14 @@
 import { useId, useState, type ComponentProps, type ReactNode } from "react";
 import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import { borders, controls, motion, radii, spacing, typography } from "../theme/tokens";
+import {
+  borders,
+  controls,
+  motion,
+  radii,
+  spacing,
+  typography,
+} from "../theme/tokens";
 
 type Props = ComponentProps<typeof TextInput> & {
   label: string;
@@ -31,7 +38,10 @@ export function AppTextInput({
 
   return (
     <View style={styles.wrap}>
-      <Text nativeID={`${inputId}-label`} style={[styles.label, { color: theme.text }]}>
+      <Text
+        nativeID={`${inputId}-label`}
+        style={[styles.label, { color: theme.text }]}
+      >
         {label}
       </Text>
       <View
@@ -40,7 +50,11 @@ export function AppTextInput({
           large && styles.fieldLarge,
           {
             backgroundColor: theme.surface,
-            borderColor: error ? theme.error : focused ? theme.focus : theme.borderStrong,
+            borderColor: error
+              ? theme.error
+              : focused
+                ? theme.focus
+                : theme.borderStrong,
           },
           focused && styles.fieldFocused,
           Platform.OS === "web" && {
@@ -54,7 +68,13 @@ export function AppTextInput({
           {...props}
           nativeID={inputId}
           aria-labelledby={`${inputId}-label`}
-          aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-help` : undefined}
+          aria-describedby={
+            error
+              ? `${inputId}-error`
+              : helperText
+                ? `${inputId}-help`
+                : undefined
+          }
           accessibilityLabel={props.accessibilityLabel ?? label}
           accessibilityHint={props.accessibilityHint ?? helperText}
           placeholderTextColor={theme.textSubtle}
@@ -67,16 +87,29 @@ export function AppTextInput({
             setFocused(false);
             onBlur?.(event);
           }}
-          style={[styles.input, large && styles.inputLarge, { color: theme.text }, style]}
+          style={[
+            styles.input,
+            large && styles.inputLarge,
+            { color: theme.text },
+            style,
+          ]}
         />
         {trailing ? <View style={styles.adornment}>{trailing}</View> : null}
       </View>
       {error ? (
-        <Text nativeID={`${inputId}-error`} accessibilityRole="alert" selectable style={[styles.support, { color: theme.error }]}>
+        <Text
+          nativeID={`${inputId}-error`}
+          accessibilityRole="alert"
+          selectable
+          style={[styles.support, { color: theme.error }]}
+        >
           {error}
         </Text>
       ) : helperText ? (
-        <Text nativeID={`${inputId}-help`} style={[styles.support, { color: theme.textMuted }]}>
+        <Text
+          nativeID={`${inputId}-help`}
+          style={[styles.support, { color: theme.textMuted }]}
+        >
           {helperText}
         </Text>
       ) : null}

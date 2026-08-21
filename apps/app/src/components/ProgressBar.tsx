@@ -15,21 +15,35 @@ export function ProgressBar({
 }) {
   const { theme, reduceMotion } = useSettings();
   const value = Math.max(0, Math.min(1, progress));
-  const fillColor = tone === "primary" ? theme.primary : tone === "success" ? theme.success : tone === "secondary" ? theme.secondary : theme.action;
+  const fillColor =
+    tone === "primary"
+      ? theme.primary
+      : tone === "success"
+        ? theme.success
+        : tone === "secondary"
+          ? theme.secondary
+          : theme.action;
 
   return (
     <View
       accessibilityRole="progressbar"
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}
-      style={[styles.track, compact && styles.trackCompact, { backgroundColor: theme.surfaceSunken }]}
+      style={[
+        styles.track,
+        compact && styles.trackCompact,
+        { backgroundColor: theme.surfaceSunken },
+      ]}
     >
       <View
         style={[
           styles.fill,
           { width: `${value * 100}%`, backgroundColor: fillColor },
           Platform.OS === "web" && !reduceMotion
-            ? { transitionDuration: `${motion.route}ms`, transitionProperty: "width" }
+            ? {
+                transitionDuration: `${motion.route}ms`,
+                transitionProperty: "width",
+              }
             : null,
         ]}
       >
@@ -61,4 +75,3 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.38)",
   },
 });
-
