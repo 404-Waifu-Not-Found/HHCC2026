@@ -4,11 +4,12 @@
 // Text segments render as Markdown-light math text, tool call entries render
 // through `ToolCallTrail`, and practice sets render through the existing
 // interactive `WorkplacePracticeSet` surface.
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSettings } from "../../providers/SettingsProvider";
-import { spacing, typography } from "../../theme/tokens";
-import { MotionView } from "../../motion/Motion";
-import { MathText } from "../MathText";
+import { spacing } from "../../theme/tokens";
+import { MotionView, StreamingCursor } from "../../motion/Motion";
+import { Markdown } from "./Markdown";
+import { ThinkingWindow } from "./ThinkingWindow";
 import { WorkplacePracticeSet as WorkplacePracticeSetView } from "../WorkplacePracticeSet";
 import type {
   WorkplaceLiveEntry,
@@ -26,6 +27,15 @@ export function AssistantDocument({
   streaming?: boolean;
 }) {
   const { theme } = useSettings();
+  const activeTool = entries.find(
+    (entry) =>
+      entry.kind === "tool" &&
+      (entry.status === "requested" || entry.status === "running"),
+  );
+  const showThinking =
+    streaming &&
+    (Boolean(activeTool) ||
+      !entries.some((entry) => entry.kind === "text" && entry.text.trim()));
 
   // Group consecutive tool entries into a single trail so a multi-tool round
   // renders as one connected stepper instead of several disjoint ones.
@@ -51,6 +61,13 @@ export function AssistantDocument({
 
   return (
     <View style={styles.document}>
+      {showThinking ? (
+        <ThinkingWindow
+          activeToolName={
+            activeTool?.kind === "tool" ? activeTool.name : undefined
+          }
+        />
+      ) : null}
       {groups.map((group, index) => {
         if (group.kind === "tools") {
           return (
@@ -70,16 +87,9 @@ export function AssistantDocument({
         const isLast = index === groups.length - 1;
         return (
           <MotionView key={group.entry.id} preset="fade" style={styles.block}>
-            <MathText style={[styles.text, { color: theme.text }]}>
-              {group.entry.text || " "}
-            </MathText>
+            <Markdown>{group.entry.text || " "}</Markdown>
             {streaming && isLast && !group.entry.final ? (
-              <Text
-                accessibilityElementsHidden
-                style={[styles.cursor, { color: theme.primary }]}
-              >
-                {"\u2588"}
-              </Text>
+              <StreamingCursor color={theme.primary} />
             ) : null}
           </MotionView>
         );
@@ -94,15 +104,5 @@ const styles = StyleSheet.create({
   },
   block: {
     gap: spacing[1],
-  },
-  text: {
-    fontFamily: typography.body,
-    fontSize: typography.size.body,
-    lineHeight: typography.lineHeight.body,
-  },
-  cursor: {
-    fontSize: typography.size.body,
-    lineHeight: typography.lineHeight.body,
-    opacity: 0.6,
   },
 });

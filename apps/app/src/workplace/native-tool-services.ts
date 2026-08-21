@@ -16,12 +16,10 @@
 
 import {
   CheatSheetResponseSchema,
-  LibraryResponseSchema,
   LocalQuizContextSchema,
   VideoImportResponseSchema,
   DEFAULT_QUIZ_QUESTION_TYPES,
   LOCAL_QUIZ_PROTOCOL_VERSION,
-  type LibraryCard,
   type LocalQuizContext,
   type TranscriptSegment,
   type VideoImportResponse,
@@ -40,9 +38,13 @@ import {
   acquireTextTranscript,
   CAPTIONS_REQUIRED_MESSAGE,
 } from "../transcription/acquire-text-transcript";
+import {
+  fetchOwnedLibraryCards,
+  libraryQueryTerms as queryTerms,
+  searchOwnedLibrary,
+} from "./owned-library";
 import type {
   WorkplaceCaptionSource,
-  WorkplaceLibraryVideo,
   WorkplaceNotesSource,
   WorkplaceToolServices,
 } from "./tool-executors";
@@ -56,79 +58,6 @@ export type NativeWorkplaceToolServicesConfig = {
    */
   apiKey: string;
 };
-
-function queryTerms(query: string): string[] {
-  return query
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter((term) => term.length > 1)
-    .slice(0, 12);
-}
-
-function libraryCardToWorkplaceVideo(card: LibraryCard): WorkplaceLibraryVideo {
-  return {
-    videoId: card.videoId,
-    title: card.title,
-    source: card.source,
-    mastery: card.mastery,
-    dueForReview: card.dueForReview,
-    bestScore: card.bestScore,
-    quizId: card.quizId,
-  };
-}
-
-// The learner's owned library, deduplicated across the due/saved/suggestion
-// groupings the `/api/library` route returns. Ownership itself is enforced
-// server-side (the route is scoped to the signed-in user); this only shapes
-// the response for the tool.
-async function fetchOwnedLibraryCards(
-  signal?: AbortSignal,
-): Promise<LibraryCard[]> {
-  const response = await apiRequest(
-    "/api/library",
-    { signal },
-    LibraryResponseSchema,
-  );
-  const seen = new Set<string>();
-  const cards: LibraryCard[] = [];
-  for (const group of [
-    response.dueReviews,
-    response.saved,
-    response.youtubeSuggestions,
-  ]) {
-    for (const card of group) {
-      if (seen.has(card.videoId)) continue;
-      seen.add(card.videoId);
-      cards.push(card);
-    }
-  }
-  return cards;
-}
-
-async function searchOwnedLibrary(
-  query: string,
-  limit: number,
-  signal?: AbortSignal,
-): Promise<WorkplaceLibraryVideo[]> {
-  const cards = await fetchOwnedLibraryCards(signal);
-  const terms = queryTerms(query);
-  const ranked =
-    terms.length === 0
-      ? cards
-      : cards
-          .map((card) => ({
-            card,
-            score: terms.reduce(
-              (total, term) =>
-                card.title.toLowerCase().includes(term) ? total + 1 : total,
-              0,
-            ),
-          }))
-          .filter((entry) => entry.score > 0)
-          .sort((a, b) => b.score - a.score)
-          .map((entry) => entry.card);
-  return ranked.slice(0, limit).map(libraryCardToWorkplaceVideo);
-}
 
 // Resolve one owned video's import metadata, preferring the existing
 // account-scoped cache (shared with generation/recovery) over a network call.

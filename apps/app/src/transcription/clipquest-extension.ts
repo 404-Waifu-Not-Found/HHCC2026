@@ -29,6 +29,7 @@ import {
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import { Platform } from "react-native";
+import { respondToWorkplacePageTool } from "../workplace/web-page-tools";
 import {
   MINIMUM_LEGACY_LOCAL_AI_EXTENSION_VERSION,
   MINIMUM_AUTOMATIC_LOCAL_AI_EXTENSION_VERSION,
@@ -977,6 +978,33 @@ export type WorkplaceChatTurnSummary = {
  * events plus a single terminal result. `onEvent` streams the parsed events;
  * cancellation flows through `signal` to the background AbortController.
  */
+// Answer one delegated Workplace page-tool request from the extension: run the
+// bounded, authenticated tool on this page and post the result back over the
+// bridge. The extension's page handshake has its own timeout, so a thrown tool
+// still resolves to a bounded `{ error }` result rather than hanging the turn.
+async function handleWorkplacePageToolRequest(
+  requestId: string,
+  data: Record<string, unknown>,
+  signal: AbortSignal,
+): Promise<void> {
+  const toolCallId =
+    typeof data.toolCallId === "string" ? data.toolCallId : undefined;
+  const name = typeof data.name === "string" ? data.name : undefined;
+  if (!toolCallId || !name) return;
+  let result: unknown;
+  try {
+    result = await respondToWorkplacePageTool(name, data.arguments, signal);
+  } catch (error) {
+    result = {
+      error:
+        error instanceof Error
+          ? error.message.slice(0, 300)
+          : "The tool could not run.",
+    };
+  }
+  post({ type: "workplace-tool-result", requestId, toolCallId, result });
+}
+
 export async function requestExtensionWorkplaceChatTurn(
   input: WorkplaceChatTurnInput,
   signal: AbortSignal,
@@ -1055,6 +1083,15 @@ export async function requestExtensionWorkplaceChatTurn(
         // A malformed event never aborts a healthy turn; the terminal result is
         // authoritative. Only forward well-formed, sanitized events.
         if (parsed.success) onEvent(parsed.data);
+        return;
+      }
+      if (data.type === "workplace-tool-request") {
+        // The extension runs the orchestrator but cannot see the learner's
+        // authenticated ClipQuest session, so it delegates owned-library /
+        // saved-notes reads back to this page. Answer the bounded handshake and
+        // relay the result to the running background turn; an unanswered
+        // request is why library search previously failed on every attempt.
+        void handleWorkplacePageToolRequest(id, data, signal);
         return;
       }
       if (data.type !== "workplace-result") return;

@@ -672,7 +672,16 @@ function DetailPane({
               message.role === "user" ? (
                 <UserBubble key={message.id} message={message} />
               ) : (
-                <View key={message.id} style={styles.assistantWrap}>
+                <View
+                  key={message.id}
+                  style={[
+                    styles.assistantWrap,
+                    {
+                      borderLeftColor: theme.primary,
+                      backgroundColor: theme.surfaceRaised,
+                    },
+                  ]}
+                >
                   <AssistantDocument
                     entries={messageToEntries(message)}
                     threadId={message.threadId}
@@ -681,7 +690,15 @@ function DetailPane({
               ),
             )}
             {liveMessage ? (
-              <View style={styles.assistantWrap}>
+              <View
+                style={[
+                  styles.assistantWrap,
+                  {
+                    borderLeftColor: theme.primary,
+                    backgroundColor: theme.surfaceRaised,
+                  },
+                ]}
+              >
                 <AssistantDocument
                   entries={liveMessage.entries}
                   threadId={liveMessage.threadId}
@@ -862,6 +879,11 @@ const styles = StyleSheet.create({
   },
   assistantWrap: {
     gap: spacing[2],
+    maxWidth: 860,
+    borderLeftWidth: 3,
+    borderRadius: radii.medium,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
   },
   userRow: {
     flexDirection: "row",
