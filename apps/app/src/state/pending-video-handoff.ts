@@ -55,6 +55,21 @@ export async function createAndSavePendingVideoHandoff(input: {
   return handoff;
 }
 
+export async function persistAuthJourneyQuickOpenHandoff(
+  url: string,
+): Promise<PendingVideoHandoffV2> {
+  const current = await readPendingVideoHandoff();
+  if (
+    current?.source === "quick_open" &&
+    current.url === url &&
+    current.state === "pending" &&
+    !current.claimedUserId
+  ) {
+    return current;
+  }
+  return createAndSavePendingVideoHandoff({ url, source: "quick_open" });
+}
+
 export async function readPendingVideoHandoff(
   nowMs = Date.now(),
 ): Promise<PendingVideoHandoffV2 | null> {

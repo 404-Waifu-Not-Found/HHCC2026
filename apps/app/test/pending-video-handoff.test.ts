@@ -103,6 +103,14 @@ describe("pending video handoff v2", () => {
       resolve(import.meta.dirname, "../app/(tabs)/settings.tsx"),
       "utf8",
     );
+    const signInSource = readFileSync(
+      resolve(import.meta.dirname, "../app/(auth)/sign-in.tsx"),
+      "utf8",
+    );
+    const signUpSource = readFileSync(
+      resolve(import.meta.dirname, "../app/(auth)/sign-up.tsx"),
+      "utf8",
+    );
 
     expect(stateSource).toContain("window.sessionStorage");
     expect(stateSource).toContain("AsyncStorage.removeItem");
@@ -120,5 +128,10 @@ describe("pending video handoff v2", () => {
       quickOpenEffect.indexOf("createAndSavePendingVideoHandoff"),
     );
     expect(settingsSource.match(/clearPendingVideoHandoffs/g)).toHaveLength(3);
+    for (const authSource of [signInSource, signUpSource]) {
+      expect(authSource).toContain("persistAuthJourneyQuickOpenHandoff");
+      expect(authSource).toMatch(/pathname: "\/\(auth\)\/sign-(?:in|up)"/);
+      expect(authSource).toContain("params: quickOpen");
+    }
   });
 });

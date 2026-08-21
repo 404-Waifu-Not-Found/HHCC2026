@@ -12,6 +12,7 @@ import {
   type QuickOpenSearchParams,
 } from "../../src/lib/quick-open";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { persistAuthJourneyQuickOpenHandoff } from "../../src/state/pending-video-handoff";
 import { radii, spacing, typography } from "../../src/theme/tokens";
 import {
   FeedbackMotion,
@@ -34,6 +35,9 @@ export default function SignInScreen() {
     setLoading(true);
     setError(undefined);
     try {
+      if (quickOpen) {
+        await persistAuthJourneyQuickOpenHandoff(quickOpen.url);
+      }
       const result = identifier.includes("@")
         ? await authClient.signIn.email({
             email: identifier.trim().toLowerCase(),
@@ -47,9 +51,7 @@ export default function SignInScreen() {
         setError(result.error.message ?? t("signInFailed"));
         return;
       }
-      router.replace(
-        quickOpen ? { pathname: "/(tabs)", params: quickOpen } : "/(tabs)",
-      );
+      router.replace("/(tabs)");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signInFailed"));
     } finally {
@@ -68,7 +70,11 @@ export default function SignInScreen() {
             {t("newToClipQuest")}
           </Text>
           <Link
-            href="/(auth)/sign-up"
+            href={
+              quickOpen
+                ? { pathname: "/(auth)/sign-up", params: quickOpen }
+                : "/(auth)/sign-up"
+            }
             style={[styles.link, styles.footerLink, { color: theme.text }]}
           >
             {t("signUp")}
