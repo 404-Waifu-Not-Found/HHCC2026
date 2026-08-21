@@ -5,6 +5,8 @@ export const messages = {
     appName: "ClipQuest",
     tagline: "Paste a video. Build real mastery.",
     signIn: "Sign in",
+    welcomeBack: "Welcome back",
+    welcomeBackSubtitle: "Continue your learning progress.",
     signUp: "Create account",
     email: "Email",
     username: "Username",
@@ -31,6 +33,8 @@ export const messages = {
       "Your progress stays synced across web, iPhone, and Android.",
     welcomeSubtitle:
       "Turn the videos you already watch into a focused, evidence-based learning quest.",
+    welcomePrivacy:
+      "No YouTube login required. We only use captions from the public video.",
     authShellTagline: "Turn serious videos into lasting knowledge",
     authShellDetail:
       "Build an evidence-backed lesson from any public YouTube or bilibili link.",
@@ -222,6 +226,8 @@ export const messages = {
     appName: "ClipQuest",
     tagline: "粘贴视频，真正掌握。",
     signIn: "登录",
+    welcomeBack: "欢迎回来",
+    welcomeBackSubtitle: "继续你的学习进度。",
     signUp: "创建账户",
     email: "邮箱",
     username: "用户名",
@@ -245,6 +251,7 @@ export const messages = {
     alreadyHaveAccount: "已有账户？",
     authCrossDevice: "学习进度会在网页、iPhone 和 Android 设备间同步。",
     welcomeSubtitle: "把你正在观看的视频变成专注、基于证据的学习任务。",
+    welcomePrivacy: "无需登录 YouTube，我们只使用公开视频字幕。",
     authShellTagline: "把严谨视频转化为真正掌握的知识",
     authShellDetail: "通过公开的 YouTube 或哔哩哔哩链接生成基于证据的课程。",
     ageConfirmation: "我确认自己已满 13 岁。",

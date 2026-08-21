@@ -1,69 +1,81 @@
-import { VoxelIcon } from "./VoxelIcon";
 import type { PropsWithChildren, ReactNode } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
-import {
-  breakpoints,
-  borders,
-  radii,
-  spacing,
-  typography,
-} from "../theme/tokens";
+import { breakpoints, spacing, typography } from "../theme/tokens";
 import { LearningPrism } from "./LearningPrism";
 import { Screen } from "./Screen";
+
+type AuthShellVariant = "form" | "welcome";
 
 export function AuthShell({
   title,
   subtitle,
   children,
   footer,
+  variant = "form",
 }: PropsWithChildren<{
   title: string;
   subtitle?: string;
   footer?: ReactNode;
+  variant?: AuthShellVariant;
 }>) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
+  const welcome = variant === "welcome";
+
   return (
-    <Screen contentWidth="wide" centered>
-      <View style={[styles.page, desktop && styles.pageWide]}>
-        <View
-          style={[
-            styles.intro,
-            {
-              backgroundColor: theme.backgroundAccent,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <View style={styles.artRow}>
-            <LearningPrism size={desktop ? 230 : 116} variant="hero" />
-          </View>
-          <View style={styles.brandCopy}>
-            <View style={styles.kickerRow}>
-              <VoxelIcon name="video" size={20} color={theme.primary} />
+    <Screen contentWidth={welcome ? "wide" : "auth"} centered>
+      <View
+        style={[
+          styles.page,
+          welcome && styles.welcomePage,
+          welcome && desktop && styles.welcomePageWide,
+          !welcome && styles.formPage,
+        ]}
+      >
+        {welcome && desktop ? (
+          <View style={styles.intro}>
+            <LearningPrism size={292} variant="hero" />
+            <View style={styles.brandCopy}>
               <Text style={[styles.kicker, { color: theme.primary }]}>
                 {t("appName")}
               </Text>
+              <Text style={[styles.tagline, { color: theme.text }]}>
+                {t("authShellTagline")}
+              </Text>
+              <Text style={[styles.detail, { color: theme.textMuted }]}>
+                {t("authShellDetail")}
+              </Text>
             </View>
-            <Text style={[styles.tagline, { color: theme.text }]}>
-              {t("authShellTagline")}
-            </Text>
-            <Text style={[styles.detail, { color: theme.textMuted }]}>
-              {t("authShellDetail")}
+          </View>
+        ) : (
+          <View style={[styles.compactBrand, welcome && styles.welcomeBrand]}>
+            <LearningPrism size={welcome ? 72 : 64} />
+            <Text style={[styles.compactBrandName, { color: theme.primary }]}>
+              {t("appName")}
             </Text>
           </View>
-        </View>
-        <View style={styles.formColumn}>
+        )}
+        <View style={[styles.formColumn, welcome && styles.welcomeColumn]}>
           <Text
             accessibilityRole="header"
-            style={[styles.title, { color: theme.text }]}
+            style={[
+              styles.title,
+              !welcome && styles.formTitle,
+              { color: theme.text },
+            ]}
           >
             {title}
           </Text>
           {subtitle ? (
-            <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                !welcome && styles.formSubtitle,
+                { color: theme.textMuted },
+              ]}
+            >
               {subtitle}
             </Text>
           ) : null}
@@ -80,36 +92,47 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "stretch",
     justifyContent: "center",
-    gap: spacing[8],
+  },
+  welcomePage: {
+    gap: spacing[7],
     paddingVertical: spacing[4],
   },
-  pageWide: {
+  welcomePageWide: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing[16],
+    justifyContent: "space-between",
+    gap: spacing[20],
+    paddingVertical: spacing[12],
+  },
+  formPage: {
     paddingVertical: spacing[10],
   },
   intro: {
-    flex: 1.1,
+    flex: 1,
     minWidth: 0,
-    maxWidth: 560,
-    alignSelf: "center",
-    overflow: "hidden",
-    borderWidth: borders.standard,
-    borderRadius: radii.modal,
-    padding: spacing[8],
-    gap: spacing[5],
-  },
-  artRow: {
+    maxWidth: 500,
     alignItems: "center",
+    gap: spacing[6],
   },
   brandCopy: {
+    width: "100%",
+    maxWidth: 460,
     gap: spacing[2],
   },
-  kickerRow: {
-    flexDirection: "row",
+  compactBrand: {
     alignItems: "center",
-    gap: spacing[2],
+    justifyContent: "center",
+    gap: spacing[1],
+    marginBottom: spacing[8],
+  },
+  welcomeBrand: {
+    marginBottom: 0,
+  },
+  compactBrandName: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+    letterSpacing: typography.tracking.wide,
+    textTransform: "uppercase",
   },
   kicker: {
     fontFamily: typography.bodyBold,
@@ -118,14 +141,13 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   tagline: {
-    maxWidth: 420,
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.title,
-    lineHeight: typography.lineHeight.title,
-    letterSpacing: -0.4,
+    fontFamily: typography.display,
+    fontSize: typography.size.displaySmall,
+    lineHeight: typography.lineHeight.displaySmall,
+    letterSpacing: typography.tracking.tight,
   },
   detail: {
-    maxWidth: 420,
+    maxWidth: 400,
     fontFamily: typography.body,
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
@@ -135,17 +157,26 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     alignSelf: "center",
   },
+  welcomeColumn: {
+    maxWidth: 460,
+  },
   title: {
     fontFamily: typography.display,
     fontSize: typography.size.title,
     lineHeight: typography.lineHeight.title,
     letterSpacing: -0.5,
   },
+  formTitle: {
+    textAlign: "center",
+  },
   subtitle: {
     marginTop: spacing[2],
     fontFamily: typography.body,
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
+  },
+  formSubtitle: {
+    textAlign: "center",
   },
   form: {
     gap: spacing[4],

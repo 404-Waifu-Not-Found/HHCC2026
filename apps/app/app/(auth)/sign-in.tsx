@@ -46,7 +46,8 @@ export default function SignInScreen() {
 
   return (
     <AuthShell
-      title={t("signIn")}
+      title={t("welcomeBack")}
+      subtitle={t("welcomeBackSubtitle")}
       footer={
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: theme.textMuted }]}>
@@ -66,9 +67,6 @@ export default function SignInScreen() {
         labelPlacement="inside"
         value={identifier}
         onChangeText={setIdentifier}
-        leading={
-          <VoxelIcon name="registration" size={22} color={theme.textMuted} />
-        }
         autoCapitalize="none"
         autoComplete="username"
         returnKeyType="next"
@@ -79,9 +77,6 @@ export default function SignInScreen() {
         labelPlacement="inside"
         value={password}
         onChangeText={setPassword}
-        leading={
-          <VoxelIcon name="password" size={22} color={theme.textMuted} />
-        }
         secureTextEntry
         autoComplete="current-password"
         returnKeyType="done"
@@ -110,7 +105,6 @@ export default function SignInScreen() {
           { backgroundColor: pressed ? theme.surfaceTint : "transparent" },
         ]}
       >
-        <VoxelIcon name="help" size={19} color={theme.primary} />
         <Text style={[styles.link, { color: theme.primary }]}>
           {t("forgotPassword")}
         </Text>
@@ -118,9 +112,6 @@ export default function SignInScreen() {
       <PrimaryButton
         loading={loading}
         disabled={!canSubmit}
-        leadingIcon={
-          <VoxelIcon name="sign-in" size={21} color={theme.textOnAction} />
-        }
         onPress={() => void submit()}
       >
         {t("signIn")}
@@ -147,9 +138,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-end",
-    gap: spacing[2],
     borderRadius: radii.medium,
-    paddingHorizontal: spacing[3],
+    paddingHorizontal: spacing[2],
   },
   link: { fontFamily: typography.bodyBold, fontSize: typography.size.label },
   footer: {
