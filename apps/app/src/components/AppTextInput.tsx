@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { useId, type ComponentProps } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { radii, typography } from "../theme/tokens";
@@ -10,11 +10,13 @@ type Props = ComponentProps<typeof TextInput> & {
 
 export function AppTextInput({ label, error, style, ...props }: Props) {
   const { theme } = useSettings();
+  const generatedId = useId();
   return (
     <View style={styles.wrap}>
       <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
       <TextInput
         {...props}
+        nativeID={props.nativeID ?? generatedId}
         accessibilityLabel={props.accessibilityLabel ?? label}
         placeholderTextColor={theme.textMuted}
         selectionColor={theme.secondary}
@@ -46,4 +48,3 @@ const styles = StyleSheet.create({
   },
   error: { fontFamily: typography.bodyMedium, fontSize: 13 },
 });
-
