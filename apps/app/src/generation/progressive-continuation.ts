@@ -49,6 +49,7 @@ import {
   groundedRecoveryCooldownMs,
   groundedRecoveryIsExhausted,
 } from "./automatic-recovery-policy";
+import { retryAuthoritativeTelemetryWrite } from "./telemetry-write";
 
 const RECOVERY_HEARTBEAT_MS = 10_000;
 
@@ -369,15 +370,19 @@ async function runAutomaticRecovery(
 
   const enqueueCall = (event: LocalGenerationCallEvent) => {
     ingestion = ingestion.then(async () => {
-      await apiRequest(
-        `/api/quiz-imports/${status.quizId}/calls/${event.generationSessionId}/${event.callIndex}`,
-        {
-          method: "PUT",
-          headers: { "Idempotency-Key": claimKey },
-          body: jsonBody(event),
-          signal,
-        },
-        ExtensionQuizGenerationCallEventResponseSchema,
+      await retryAuthoritativeTelemetryWrite(
+        () =>
+          apiRequest(
+            `/api/quiz-imports/${status.quizId}/calls/${event.generationSessionId}/${event.callIndex}`,
+            {
+              method: "PUT",
+              headers: { "Idempotency-Key": claimKey },
+              body: jsonBody(event),
+              signal,
+            },
+            ExtensionQuizGenerationCallEventResponseSchema,
+          ),
+        signal,
       );
       if ("lifecycleState" in event) {
         if (
@@ -414,6 +419,9 @@ async function runAutomaticRecovery(
         );
         retryBudgetUsedCount = Math.min(48, retryBudgetUsedCount + 1);
       }
+      // The Worker event is authoritative. A stale or missing browser cache
+      // record cannot be allowed to poison the ingestion chain and suppress
+      // the remaining model-call events.
       await updateGenerationRecord(
         generationId,
         stored?.version === 3 || stored?.version === 4
@@ -424,7 +432,7 @@ async function runAutomaticRecovery(
                 : {}),
             }
           : { nextCallIndex: event.callIndex + 1 },
-      );
+      ).catch(() => undefined);
     });
     void ingestion.catch(() => undefined);
   };
@@ -448,10 +456,14 @@ async function runAutomaticRecovery(
           latestOrdinalAttempt = detail.ordinalAttempt;
         }
         ingestion = ingestion.then(async () => {
-          const response = await updateProgress(
-            status.quizId,
-            claimKey,
-            progressPayload(nextState, detail, recoverySessionId),
+          const response = await retryAuthoritativeTelemetryWrite(
+            () =>
+              updateProgress(
+                status.quizId,
+                claimKey,
+                progressPayload(nextState, detail, recoverySessionId),
+                signal,
+              ),
             signal,
           );
           latest = response.generation;
@@ -476,7 +488,7 @@ async function runAutomaticRecovery(
                       }),
                 }
               : { state: nextState },
-          );
+          ).catch(() => undefined);
         });
         void ingestion.catch(() => undefined);
       },

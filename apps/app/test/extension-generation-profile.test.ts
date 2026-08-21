@@ -140,6 +140,9 @@ describe("extension generation profile compatibility", () => {
     );
     expect(source).not.toContain("pendingStartedCall");
     expect(source).toContain(
+      "The Worker event is authoritative. Losing the best-effort browser",
+    );
+    expect(source).toContain(
       "if (!attemptId) await startAttempt(response.quizId)",
     );
     const admissionBlock = source.slice(

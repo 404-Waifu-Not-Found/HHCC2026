@@ -48,6 +48,7 @@ import {
   groundedRecoveryCooldownMs,
   groundedRecoveryIsExhausted,
 } from "../../src/generation/automatic-recovery-policy";
+import { retryAuthoritativeTelemetryWrite } from "../../src/generation/telemetry-write";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
@@ -498,16 +499,23 @@ export default function GenerationScreen() {
           pendingCallEvents.push(event);
           return;
         }
-        await apiRequest(
-          `/api/quiz-imports/${progressiveQuizId}/calls/${event.generationSessionId}/${event.callIndex}`,
-          {
-            method: "PUT",
-            headers: { "Idempotency-Key": idempotencyKey },
-            body: jsonBody(event),
-            signal,
-          },
-          ExtensionQuizGenerationCallEventResponseSchema,
+        await retryAuthoritativeTelemetryWrite(
+          () =>
+            apiRequest(
+              `/api/quiz-imports/${progressiveQuizId}/calls/${event.generationSessionId}/${event.callIndex}`,
+              {
+                method: "PUT",
+                headers: { "Idempotency-Key": idempotencyKey },
+                body: jsonBody(event),
+                signal,
+              },
+              ExtensionQuizGenerationCallEventResponseSchema,
+            ),
+          signal,
         );
+        // The Worker event is authoritative. Losing the best-effort browser
+        // cursor must not poison this queue and suppress every later call
+        // event after the question uploads have already succeeded.
         await persistRecord({
           nextCallIndex: Math.max(
             generationRecord.nextCallIndex,
@@ -524,7 +532,7 @@ export default function GenerationScreen() {
                 ),
               }
             : {}),
-        });
+        }).catch(() => undefined);
       };
 
       const schedulePendingCallFlush = () => {
@@ -664,28 +672,34 @@ export default function GenerationScreen() {
           ) {
             throw new Error("Automatic retry metadata is incomplete.");
           }
-          const response = await apiRequest(
-            `/api/quiz-imports/${progressiveQuizId}/progress`,
-            {
-              method: "PATCH",
-              headers: { "Idempotency-Key": idempotencyKey },
-              body: jsonBody(
-                isAutomaticGenerationProfile(rolloutProfile.generationProfile)
-                  ? {
-                      state: "retrying",
-                      retryOrdinal: detail.retryOrdinal,
-                      ordinalAttempt: detail.ordinalAttempt,
-                      retryKind: detail.retryKind,
-                      retryDelayMs: detail.retryDelayMs,
-                      reasonCode: detail.reasonCode,
-                      recoverySessionId,
-                      recoveryPhase: "preparing",
-                    }
-                  : { state: "retrying" },
+          const response = await retryAuthoritativeTelemetryWrite(
+            () =>
+              apiRequest(
+                `/api/quiz-imports/${progressiveQuizId}/progress`,
+                {
+                  method: "PATCH",
+                  headers: { "Idempotency-Key": idempotencyKey },
+                  body: jsonBody(
+                    isAutomaticGenerationProfile(
+                      rolloutProfile.generationProfile,
+                    )
+                      ? {
+                          state: "retrying",
+                          retryOrdinal: detail.retryOrdinal,
+                          ordinalAttempt: detail.ordinalAttempt,
+                          retryKind: detail.retryKind,
+                          retryDelayMs: detail.retryDelayMs,
+                          reasonCode: detail.reasonCode,
+                          recoverySessionId,
+                          recoveryPhase: "preparing",
+                        }
+                      : { state: "retrying" },
+                  ),
+                  signal,
+                },
+                ExtensionQuizProgressiveImportResponseSchema,
               ),
-              signal,
-            },
-            ExtensionQuizProgressiveImportResponseSchema,
+            signal,
           );
           if (isAutomaticGenerationProfile(rolloutProfile.generationProfile)) {
             await persistRecord({
@@ -694,9 +708,17 @@ export default function GenerationScreen() {
               ordinalAttempt: detail.ordinalAttempt,
               retryKind: detail.retryKind,
               retryDelayMs: detail.retryDelayMs,
+            }).catch(() => undefined);
+          }
+          progressiveQuizId = response.quizId;
+          latestGeneration = response.generation;
+          if (attemptId) {
+            publish({
+              quizId: response.quizId,
+              attemptId,
+              generation: response.generation,
             });
           }
-          await publishStoredState(response);
         });
         void callIngestion.catch(() => undefined);
       };
