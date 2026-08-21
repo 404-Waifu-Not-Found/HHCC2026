@@ -39,6 +39,8 @@
 | 25  | Documentation | The progressive short-answer grader comment claimed pipeline-7 attempts still used a historical grader, while the route now correctly uses the deterministic compatibility grader for every stored rubric shape.                                         | Corrected the comment to describe the actual privacy-preserving compatibility path; existing legacy, atomic, proposition, enumeration, Chinese, and formula grading regressions all remain green.                                                                                      |
 | 26  | Low security  | Rapid native account transitions could complete asynchronous cleanup out of order and restore a stale observed-user marker. A later account could then be treated as though the prior boundary had already been processed.                               | Native account-boundary work now runs through a rejection-isolated serial task queue. Delayed A→B→C transition coverage proves every departing account is cleaned in order and the final observed marker belongs to C.                                                                 |
 | 27  | Low security  | The create route loaded a generation record by a URL-provided UUID and could poll or mutate it without proving that its stored owner and video matched the authenticated route context.                                                                  | Generation records are now accepted only when both `ownerUserId` and `videoId` match the authenticated user and requested source. Mismatches are ignored and replaced with a fresh owner-bound generation; focused tests cover owner, video, and null cases.                           |
+| 28  | Build         | Expo Doctor rejected the workspace because Expo 57 requires TypeScript `~6.0.3`, while the root toolchain remained pinned to TypeScript 5.9.3.                                                                                                           | Upgraded the exact root development toolchain to TypeScript `~6.0.3`, refreshed the lockfile, and reran Expo Doctor, lint, typecheck, every workspace test, Playwright, web/Worker builds, Android, and iOS successfully.                                                              |
+| 29  | Build         | TypeScript 6 then rejected the app's deprecated `baseUrl` option, which would make the upgraded Expo-compatible toolchain fail the canonical typecheck.                                                                                                  | Removed the obsolete `baseUrl` setting instead of suppressing the deprecation. The existing relative `@/*` path mapping resolves from the app tsconfig, and all TypeScript, bundle, native-build, and runtime gates pass.                                                              |
 
 ## Verification evidence
 
@@ -114,6 +116,8 @@ A third fixed-range scan reviewed every one of the 37 source files changed betwe
 - Reportable findings: 0.
 - Sealed report: `/private/var/folders/hz/khm8rffn6zz424tl3j6_lbd40000gn/T/codex-security-scans-lFimR6/ClipQuest/871f89f5c58ff0a466c57df457be06305385d053_20260817T195712Z_3hm_gsdq/report.md`
 
+The fourth pass changed only the root TypeScript development-toolchain version, its lockfile resolution, and the app TypeScript configuration. A sequential parent review of that complete diff found no new executable trust boundary, runtime data flow, authorization decision, or security finding. The preceding 37/37 source-file scan remains the authoritative independent source review; no independent baseline scan was available in this pass because agent delegation was disabled.
+
 ## Third-pass full verification
 
 After a clean `npm ci --legacy-peer-deps` using the refreshed lockfile, the complete verification suite passed again:
@@ -126,6 +130,19 @@ After a clean `npm ci --legacy-peer-deps` using the refreshed lockfile, the comp
 - A machine-default JDK 25 Android invocation still fails in native CMake configuration; this is the documented unsupported toolchain path. The JDK 17 command is the reproducible native build gate.
 - A loopback-only Metro invocation cannot serve Android through its `10.0.2.2` host bridge. The verified simulator command uses development-client LAN mode; this is a QA-harness requirement, not an application-source defect.
 - No additional application, UI, privacy-boundary, or authorization defect was found in this pass. User-owned untracked QA evidence remained untouched.
+
+## Fourth-pass toolchain and native verification
+
+A fresh `npm ci --legacy-peer-deps` exposed the two toolchain defects recorded as problems 28 and 29. After correcting them, the complete candidate passed again:
+
+- Formatting, lint, TypeScript 6, all workspace tests, all 23 Playwright scenarios, the web/Worker build, Cloudflare type generation, both Wrangler dry-runs, Expo Doctor 21/21, and the generated-shell asset verifier passed.
+- Workspace test totals were API 163, release scripts 8, app 120, shell verifier 2, extension 228, contracts 25, and shared engine 5: 551 tests in total. The extension total includes the recorded 100-bank generation benchmark.
+- The web export still contains 31 routes, and all 470 same-origin asset references across 32 generated HTML shells resolve.
+- Android rebuilt on API 36 with JDK 17 (`BUILD SUCCESSFUL`, 397 Gradle tasks), the rebuilt APK launched to the authenticated learner home, and filtered runtime logs contained no fatal Android or React Native entry.
+- iOS rebuilt for the iPhone 17 Pro simulator (`BUILD SUCCEEDED`), the rebuilt app launched to the responsive sign-in screen, and filtered logs contained no fatal or uncaught application entry.
+- The extension ZIP is reproducible at SHA-256 `d29a37e0e8b9278ac35a0b0cb4fc314727f08bc3cffd8b2470a450fb1ed1c268`.
+- Current full and `--omit=dev` npm audit views both report 25 inherited advisories (`0 low`, `8 moderate`, `17 high`, `0 critical`). Compatible safe upgrades are exhausted; forced suggestions require incompatible Expo/React Native/native-tooling changes or target packages with no upstream fix.
+- Android and iOS simulator processes plus the development Metro server were shut down after evidence collection. Existing user-owned untracked QA files remained untouched.
 
 ### Read-only live browser smoke
 
