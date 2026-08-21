@@ -64,7 +64,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(true);
   });
 
-  it("requires v0.8.9 and stream v6 for new concept-first generation", () => {
+  it("requires v0.8.10 and stream v6 for new concept-first generation", () => {
     expect(
       isCompatibleClipQuestExtensionVersion(
         "0.8.3",
@@ -91,7 +91,7 @@ describe("extension generation profile compatibility", () => {
     ).toBe(false);
     expect(
       isCompatibleClipQuestExtensionVersion(
-        "0.8.9",
+        "0.8.10",
         MINIMUM_LOCAL_AI_EXTENSION_VERSION,
       ),
     ).toBe(true);

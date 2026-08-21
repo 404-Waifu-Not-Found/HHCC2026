@@ -85,7 +85,7 @@ describe("extension mixed-question persistence", () => {
       model: "deepseek-v4-flash" as const,
       pipelineVersion: 9 as const,
       promptVersion: "quiz-local-json-stream-v5.8" as const,
-      validatorVersion: "validator-local-progressive-v4.8" as const,
+      validatorVersion: "validator-local-progressive-v4.9" as const,
       protocolVersion: 9 as const,
       importVersion: "extension-progressive-import-v7" as const,
     };
