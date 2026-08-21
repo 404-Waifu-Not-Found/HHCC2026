@@ -66,6 +66,11 @@ describe("Android UI regressions", () => {
     );
     expect(generation).toContain('"captionPrivacyNative"');
     expect(generation).toContain('label: t("checkingCaptions")');
+    expect(localClient).toContain("globalThis.fetch.bind(globalThis)");
+    expect(localClient).toContain("createLocalCrypto([");
+    expect(localClient).not.toContain("requireNativeModule");
+    expect(localClient).not.toContain("nativeExpoCrypto");
+    expect(localClient).not.toContain("import * as ExpoCrypto");
     expect(localClient).toContain("disableStreaming: true");
   });
 

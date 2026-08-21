@@ -12,7 +12,12 @@ describe("iOS native generation", () => {
 
     expect(client).toContain('kind: "ios_app"');
     expect(client).toContain("generateLocalQuiz(");
+    expect(client).toContain("globalThis.fetch.bind(globalThis)");
     expect(client).toContain("expoFetch");
+    expect(client).toContain("createLocalCrypto([");
+    expect(client).not.toContain("requireNativeModule");
+    expect(client).not.toContain("nativeExpoCrypto");
+    expect(client).not.toContain("import * as ExpoCrypto");
     expect(client).toContain("disableStreaming: true");
     expect(client).toContain("flushLocalGenerationOutbox");
     expect(keyStore).toContain("expo-secure-store");

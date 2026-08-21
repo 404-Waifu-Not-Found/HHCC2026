@@ -629,34 +629,41 @@ export default function GenerationScreen() {
 
       const enqueueQuestion = (chunk: LocalConceptQuizQuestionChunk) => {
         questionIngestion = questionIngestion.then(async () => {
-          const response = progressiveQuizId
-            ? await apiRequest(
-                `/api/quiz-imports/${progressiveQuizId}/questions`,
-                {
-                  method: "PUT",
-                  headers: { "Idempotency-Key": idempotencyKey },
-                  body: jsonBody({ chunk }),
-                  signal,
-                },
-                ExtensionQuizProgressiveImportResponseSchema,
-              )
-            : await apiRequest(
-                "/api/quiz-imports/progressive",
-                {
-                  method: "POST",
-                  headers: { "Idempotency-Key": idempotencyKey },
-                  body: jsonBody({
-                    videoId: imported.video.id,
-                    quizLanguage: params.quizLanguage,
-                    sessionLength: params.sessionLength,
-                    questionTypes,
-                    watched: true,
-                    chunk,
-                  }),
-                  signal,
-                },
-                ExtensionQuizProgressiveImportResponseSchema,
-              );
+          let response: ExtensionQuizProgressiveImportResponse;
+          try {
+            response = progressiveQuizId
+              ? await apiRequest(
+                  `/api/quiz-imports/${progressiveQuizId}/questions`,
+                  {
+                    method: "PUT",
+                    headers: { "Idempotency-Key": idempotencyKey },
+                    body: jsonBody({ chunk }),
+                    signal,
+                  },
+                  ExtensionQuizProgressiveImportResponseSchema,
+                )
+              : await apiRequest(
+                  "/api/quiz-imports/progressive",
+                  {
+                    method: "POST",
+                    headers: { "Idempotency-Key": idempotencyKey },
+                    body: jsonBody({
+                      videoId: imported.video.id,
+                      quizLanguage: params.quizLanguage,
+                      sessionLength: params.sessionLength,
+                      questionTypes,
+                      watched: true,
+                      chunk,
+                    }),
+                    signal,
+                  },
+                  ExtensionQuizProgressiveImportResponseSchema,
+                );
+          } catch (error) {
+            throw new Error(
+              `Accepted question upload failed: ${error instanceof Error ? error.message : "unknown API error"}`,
+            );
+          }
           if (
             isAutomaticGenerationProfile(rolloutProfile.generationProfile) &&
             generationRecord.version === 2
@@ -712,12 +719,26 @@ export default function GenerationScreen() {
                 });
             generationRecord = upgraded;
           }
-          await publishStoredState(response);
+          try {
+            await publishStoredState(response);
+          } catch (error) {
+            throw new Error(
+              `Accepted question state save failed: ${error instanceof Error ? error.message : "unknown state error"}`,
+            );
+          }
           if (chunk.questionPlan && !generationRecord.questionPlan) {
             await persistRecord({ questionPlan: chunk.questionPlan });
           }
           lastProgressKey = undefined;
-          if (!attemptId) await startAttempt(response.quizId);
+          if (!attemptId) {
+            try {
+              await startAttempt(response.quizId);
+            } catch (error) {
+              throw new Error(
+                `First-question attempt start failed: ${error instanceof Error ? error.message : "unknown attempt error"}`,
+              );
+            }
+          }
           if (!callEventsReady) schedulePendingCallFlush();
         });
         void questionIngestion.catch(() => undefined);

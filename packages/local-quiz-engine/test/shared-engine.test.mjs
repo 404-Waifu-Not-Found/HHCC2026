@@ -320,6 +320,135 @@ test("stable v5.2 publishes question one before generating the suffix and automa
   assert.equal(result.metrics.retryCount, 1);
 });
 
+test("stable native JSON generation does not require a Web Streams body reader", async () => {
+  let fetchCalls = 0;
+  let bodyReads = 0;
+  let randomCalls = 0;
+  const chunks = [];
+  const cryptoImpl = {
+    subtle: {
+      async digest() {
+        return new Uint8Array(32).buffer;
+      },
+    },
+    getRandomValues(values) {
+      randomCalls += 1;
+      values.fill(0x12345678);
+      return values;
+    },
+    randomUUID() {
+      return "11111111-1111-4111-8111-111111111111";
+    },
+  };
+  const result = await shared.generateQuizFromPlainText(
+    stableProgressiveInput(
+      async () => {
+        fetchCalls += 1;
+        const startIndex = fetchCalls === 1 ? 1 : fetchCalls === 2 ? 2 : 5;
+        const count = fetchCalls === 1 ? 1 : fetchCalls === 2 ? 3 : 1;
+        const questions = Array.from({ length: count }, (_, index) =>
+          stableMultipleChoiceQuestion(startIndex + index),
+        );
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "Content-Type": "application/json" }),
+          get body() {
+            bodyReads += 1;
+            throw new TypeError("Native response body is not a Web Stream");
+          },
+          async text() {
+            return stableResponse(questions);
+          },
+        };
+      },
+      { cryptoImpl },
+    ),
+    "private-test-key",
+    () => undefined,
+    undefined,
+    async (chunk) => chunks.push(chunk),
+  );
+
+  assert.equal(fetchCalls, 3);
+  assert.equal(bodyReads, 0);
+  assert.ok(randomCalls > 0);
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.startIndex),
+    [0, 1, 2, 3, 4],
+  );
+  assert.equal(result.quiz.questions.length, 5);
+});
+
+test("classifies a fetch rejection as a transient network interruption", async () => {
+  let fetchCalls = 0;
+  await assert.rejects(
+    shared.generateQuizFromPlainText(
+      stableProgressiveInput(async () => {
+        fetchCalls += 1;
+        throw new TypeError("Network request failed");
+      }),
+      "private-test-key",
+      () => undefined,
+    ),
+    (error) =>
+      error?.reasonCode === "network_interrupted" && error?.transient === true,
+  );
+  assert.equal(fetchCalls, 3);
+});
+
+test("does not misclassify a resolved response decoding bug as a network failure", async () => {
+  let fetchCalls = 0;
+  await assert.rejects(
+    shared.generateQuizFromPlainText(
+      stableProgressiveInput(async () => {
+        fetchCalls += 1;
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "Content-Type": "application/json" }),
+          async text() {
+            throw new TypeError("Native response text bridge failed");
+          },
+        };
+      }),
+      "private-test-key",
+      () => undefined,
+    ),
+    (error) =>
+      error?.reasonCode === "schema_invalid" &&
+      /Native response text bridge failed/.test(error?.message ?? ""),
+  );
+  assert.equal(fetchCalls, 3);
+});
+
+test("does not repeat an AI call when accepted-question persistence fails", async () => {
+  let fetchCalls = 0;
+  await assert.rejects(
+    shared.generateQuizFromPlainText(
+      stableProgressiveInput(async () => {
+        fetchCalls += 1;
+        return new Response(stableResponse([stableMultipleChoiceQuestion(1)]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+      "private-test-key",
+      () => undefined,
+      undefined,
+      async () => {
+        throw new TypeError("Native store unavailable");
+      },
+    ),
+    (error) =>
+      error?.reasonCode === "local_state_conflict" &&
+      /Accepted question could not be stored: Native store unavailable/.test(
+        error?.message ?? "",
+      ),
+  );
+  assert.equal(fetchCalls, 1);
+});
+
 test("stable v5.2 does not retry an invalid credential", async () => {
   let fetchCalls = 0;
   const calls = [];

@@ -276,9 +276,9 @@ describe("extension generation profile compatibility", () => {
     expect(source).not.toContain(
       'rolloutProfile.generationProfile !== "stable_non_thinking_v5_2"',
     );
-    expect(source).toContain(
-      "if (!attemptId) await startAttempt(response.quizId);",
-    );
+    expect(source).toContain("if (!attemptId) {");
+    expect(source).toContain("await startAttempt(response.quizId);");
+    expect(source).toContain("First-question attempt start failed:");
     const admissionBlock = source.slice(
       source.indexOf("lastProgressKey = undefined"),
       source.indexOf("void questionIngestion.catch"),

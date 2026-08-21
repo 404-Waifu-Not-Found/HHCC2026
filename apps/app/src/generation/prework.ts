@@ -128,6 +128,8 @@ export async function preGenerateImportedQuiz(
         event: "failed",
         videoId: imported.video.id,
         errorName: error instanceof Error ? error.name : "UnknownError",
+        errorMessage:
+          error instanceof Error ? error.message.slice(0, 240) : undefined,
         elapsedMs: Date.now() - startedAt,
       }),
     );

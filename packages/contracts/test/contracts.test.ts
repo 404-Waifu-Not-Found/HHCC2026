@@ -275,7 +275,14 @@ describe("generated questions", () => {
     ).toBe("0.2.0");
   });
 
-  it("binds rollout profiles to their exact extension contracts", () => {
+  it("accepts rolling patch requirements only when the wire contract matches", () => {
+    expect(
+      QuizGenerationProfileResponseSchema.safeParse({
+        generationProfile: "stable_non_thinking_v5_2",
+        minimumExtensionVersion: "0.8.30",
+        requiredCapability: "question-stream-v2",
+      }).success,
+    ).toBe(true);
     expect(
       QuizGenerationProfileResponseSchema.safeParse({
         generationProfile: "stable_non_thinking_v5_2",

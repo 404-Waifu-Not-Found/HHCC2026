@@ -6837,29 +6837,30 @@ async function readBoundedDeepSeekResponse(response) {
       "local_state_conflict",
     );
   }
-  if (!response.body) return "";
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  // Native Expo responses can expose a body object whose Web Streams reader
+  // is not compatible with the browser reader contract. Non-streaming calls
+  // already return one bounded JSON envelope, so use the universally
+  // supported text reader and verify its actual UTF-8 size afterwards.
+  const text = await response.text();
   let received = 0;
-  let text = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      received += value.byteLength;
-      if (received > MAX_RESPONSE_BYTES) {
-        await reader.cancel();
-        throw new GenerationFailure(
-          "DeepSeek returned more data than ClipQuest can process safely.",
-          "local_state_conflict",
-        );
-      }
-      text += decoder.decode(value, { stream: true });
+  for (const character of text) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    received +=
+      codePoint <= 0x7f
+        ? 1
+        : codePoint <= 0x7ff
+          ? 2
+          : codePoint <= 0xffff
+            ? 3
+            : 4;
+    if (received > MAX_RESPONSE_BYTES) {
+      throw new GenerationFailure(
+        "DeepSeek returned more data than ClipQuest can process safely.",
+        "local_state_conflict",
+      );
     }
-    return text + decoder.decode();
-  } finally {
-    reader.releaseLock();
   }
+  return text;
 }
 
 async function callDeepSeekJson(
@@ -6933,7 +6934,19 @@ async function callDeepSeekJson(
       },
     );
     await onDispatched();
-    const response = await responsePromise;
+    let response;
+    try {
+      response = await responsePromise;
+    } catch (error) {
+      if (error instanceof TypeError || error instanceof DOMException) {
+        throw new GenerationFailure(
+          "The DeepSeek connection was interrupted.",
+          "network_interrupted",
+          { transient: true },
+        );
+      }
+      throw error;
+    }
     if (!response.ok) {
       if (response.status === 408) {
         throw new GenerationFailure(
@@ -7031,13 +7044,11 @@ async function callDeepSeekJson(
       );
     }
     if (error instanceof GenerationFailure) throw error;
-    if (error instanceof TypeError || error instanceof DOMException) {
-      throw new GenerationFailure(
-        "The DeepSeek connection was interrupted.",
-        "network_interrupted",
-        { transient: true },
-      );
-    }
+    // A TypeError after fetch resolves is not evidence of a network failure.
+    // It can come from response decoding, validation, or the persistence
+    // callback. Preserve the real diagnostic and let the automatic repair
+    // policy classify it instead of repeating an identical HTTP request as a
+    // fake transport retry.
     throw new GenerationFailure(
       error instanceof Error ? error.message : "DeepSeek could not be reached.",
       "schema_invalid",
@@ -7737,32 +7748,49 @@ export async function generateQuizFromPlainText(
         acceptedQuestions: [...acceptedQuestions],
       };
       const validated = validateQuiz({ questions: [rawQuestion] }, singleInput);
-      const question = randomizeQuestionAtPosition(
-        validated.questions[0],
-        answerPositionByQuestion.get(globalIndex),
-      );
+      let question;
+      try {
+        question = randomizeQuestionAtPosition(
+          validated.questions[0],
+          answerPositionByQuestion.get(globalIndex),
+          input.secureRandom,
+        );
+      } catch (error) {
+        throw new GenerationFailure(
+          `Question randomization failed: ${error instanceof Error ? error.message : "unknown native error"}`,
+          "local_state_conflict",
+        );
+      }
       acceptedQuestions.push(question);
       const chunkTime = Date.now();
-      await onChunk({
-        ...metadata,
-        title: quizTitle,
-        startIndex: globalIndex,
-        totalQuestions: input.questionCount,
-        question,
-        metrics: {
-          aiCalls: legacyMode && firstQuestionInCall ? 1 : 0,
-          retryCount:
-            legacyMode &&
-            firstQuestionInCall &&
-            classification === "automatic_retry"
-              ? 1
-              : 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          reasoningTokens: 0,
-          elapsedMs: Math.max(1, chunkTime - lastChunkAt),
-        },
-      });
+      try {
+        await onChunk({
+          ...metadata,
+          title: quizTitle,
+          startIndex: globalIndex,
+          totalQuestions: input.questionCount,
+          question,
+          metrics: {
+            aiCalls: legacyMode && firstQuestionInCall ? 1 : 0,
+            retryCount:
+              legacyMode &&
+              firstQuestionInCall &&
+              classification === "automatic_retry"
+                ? 1
+                : 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            reasoningTokens: 0,
+            elapsedMs: Math.max(1, chunkTime - lastChunkAt),
+          },
+        });
+      } catch (error) {
+        acceptedQuestions.pop();
+        throw new GenerationFailure(
+          `Accepted question could not be stored: ${error instanceof Error ? error.message : "unknown persistence error"}`,
+          "local_state_conflict",
+        );
+      }
       firstQuestionInCall = false;
       lastChunkAt = chunkTime;
       const complete = acceptedQuestions.length === input.questionCount;
@@ -8181,31 +8209,47 @@ async function generateAutomaticQuiz({
           }
         : validateQuiz({ questions: [rawQuestion] }, chunkInput);
       publishedQuestionFingerprint = JSON.stringify(rawQuestion);
-      const question = randomizeQuestionAtPosition(
-        validated.questions[0],
-        answerPositionByQuestion.get(questionOffset),
-        input.secureRandom,
-      );
+      let question;
+      try {
+        question = randomizeQuestionAtPosition(
+          validated.questions[0],
+          answerPositionByQuestion.get(questionOffset),
+          input.secureRandom,
+        );
+      } catch (error) {
+        throw new GenerationFailure(
+          `Question randomization failed: ${error instanceof Error ? error.message : "unknown native error"}`,
+          "local_state_conflict",
+        );
+      }
       acceptedQuestions.push(question);
       const chunkTime = Date.now();
-      await onChunk({
-        ...metadata,
-        title: input.title,
-        startIndex: questionOffset,
-        totalQuestions: input.questionCount,
-        question,
-        metrics: {
-          aiCalls: 0,
-          retryCount: 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          reasoningTokens: 0,
-          elapsedMs: Math.max(1, chunkTime - lastChunkAt),
-          ...(input.sourceSelectionMetrics
-            ? { sourceSelection: input.sourceSelectionMetrics }
-            : {}),
-        },
-      });
+      try {
+        await onChunk({
+          ...metadata,
+          title: input.title,
+          startIndex: questionOffset,
+          totalQuestions: input.questionCount,
+          question,
+          metrics: {
+            aiCalls: 0,
+            retryCount: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            reasoningTokens: 0,
+            elapsedMs: Math.max(1, chunkTime - lastChunkAt),
+            ...(input.sourceSelectionMetrics
+              ? { sourceSelection: input.sourceSelectionMetrics }
+              : {}),
+          },
+        });
+      } catch (error) {
+        acceptedQuestions.pop();
+        throw new GenerationFailure(
+          `Accepted question could not be stored: ${error instanceof Error ? error.message : "unknown persistence error"}`,
+          "local_state_conflict",
+        );
+      }
       lastChunkAt = chunkTime;
     };
 

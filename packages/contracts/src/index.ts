@@ -658,29 +658,46 @@ export const QuizGenerationProfileResponseSchema = z
   })
   .strict()
   .superRefine((value, context) => {
-    const expected =
+    const expected: [readonly string[], string] =
       value.generationProfile === "prompt_first_auto_v5_12"
-        ? ["0.8.26", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        ? [["0.8.26"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
         : value.generationProfile === "prompt_first_auto_v5_11"
-          ? ["0.8.16", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+          ? [["0.8.16"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
           : value.generationProfile === "prompt_first_auto_v5_10"
-            ? ["0.8.15", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+            ? [["0.8.15"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
             : value.generationProfile === "prompt_first_auto_v5_9"
-              ? ["0.8.14", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+              ? [["0.8.14"], LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
               : value.generationProfile === "concept_first_auto_v5_8"
                 ? [
-                    "0.8.13",
+                    ["0.8.13"],
                     CONCEPT_FIRST_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
                   ]
                 : value.generationProfile === "evidence_grounded_auto_v5_4"
-                  ? ["0.8.7", GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                  ? [
+                      ["0.8.7"],
+                      GROUNDED_V5_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                    ]
                   : value.generationProfile === "stable_auto_recovery_v5_3"
-                    ? ["0.8.3", AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+                    ? [
+                        ["0.8.3"],
+                        AUTOMATIC_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                      ]
                     : value.generationProfile === "stable_non_thinking_v5_2"
-                      ? ["0.8.31", STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
-                      : ["0.8.0", LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY];
+                      ? [
+                          // 0.8.31 restored progressive delivery without
+                          // changing the v2 wire capability. Accept the last
+                          // compatible server requirement during a rolling
+                          // deployment so native clients are never blocked by
+                          // harmless extension patch-version skew.
+                          ["0.8.30", "0.8.31"],
+                          STABLE_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                        ]
+                      : [
+                          ["0.8.0"],
+                          LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
+                        ];
     if (
-      value.minimumExtensionVersion !== expected[0] ||
+      !expected[0].includes(value.minimumExtensionVersion) ||
       value.requiredCapability !== expected[1]
     ) {
       context.addIssue({
