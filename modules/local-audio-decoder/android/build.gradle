@@ -1,22 +1,15 @@
 plugins {
   id 'com.android.library'
-  id 'org.jetbrains.kotlin.android'
+  id 'expo-module-gradle-plugin'
 }
 
 group = 'cc.ccwu.clipquest.audio'
 version = '0.1.0'
 
-def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
-apply from: expoModulesCorePlugin
-applyKotlinExpoModulesCorePlugin()
-useCoreDependencies()
-useExpoPublishing()
+expoModule {
+  canBePublished false
+}
 
 android {
   namespace "cc.ccwu.clipquest.audio"
-  defaultConfig {
-    minSdkVersion 24
-    targetSdkVersion 36
-  }
 }
-
