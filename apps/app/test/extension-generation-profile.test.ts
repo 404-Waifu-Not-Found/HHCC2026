@@ -228,7 +228,8 @@ describe("extension generation profile compatibility", () => {
       "utf8",
     );
     expect(recovery).toContain("runAutomaticRecoveryUntilSettled");
-    expect(recovery).toContain("AUTOMATIC_RECOVERY_LOOP_MAX_PASSES");
+    expect(recovery).toContain("while (!signal.aborted)");
+    expect(recovery).not.toContain("AUTOMATIC_RECOVERY_LOOP_MAX_PASSES");
     expect(recovery).toContain("waitForAutomaticRecovery");
     expect(recovery).toContain('status.generation.state === "cooldown"');
     expect(recovery).toContain(

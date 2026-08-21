@@ -1,8 +1,8 @@
 import type { GenerationFailureCode } from "@clipquest/contracts";
 
 // A failed ordinal gets one primary call and at most two automatic repairs.
-// Keep the app-side policy aligned with the local engine and API so a stalled
-// browser cannot spend an unbounded amount of time retrying the same suffix.
+// Keep the app-side policy aligned with the local engine and API so each hot
+// retry round is bounded before the next cooldown-based refill round starts.
 export const GROUNDED_GENERATION_MAX_AUTOMATIC_RETRIES = 3;
 export const GROUNDED_GENERATION_MAX_ORDINAL_ATTEMPT = 3;
 export const CONCEPT_ONLY_GENERATION_MAX_AUTOMATIC_RETRIES = 3;
@@ -34,12 +34,12 @@ export function automaticRecoveryDisposition(
   ) {
     return "action_required";
   }
-  if (
-    reasonCode === "source_unavailable" ||
-    reasonCode === "non_instructional_source"
-  ) {
+  if (reasonCode === "non_instructional_source") {
     return "generation_failed";
   }
+  // Caption acquisition can fail transiently when the extension bridge or a
+  // signed YouTube track is late. Retry it in the same open quiz instead of
+  // making the learner click a continuation control.
   // `recovery_budget_exhausted` ends one hot model-call round, not the whole
   // quiz. The next round receives a fresh bounded budget after cooldown.
   return "cooldown";

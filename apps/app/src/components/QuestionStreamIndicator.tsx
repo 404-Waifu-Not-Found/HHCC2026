@@ -20,10 +20,12 @@ export function QuestionStreamIndicator({
   const { locale, theme } = useSettings();
   if (generation.state === "ready") return null;
   const count = `${generation.availableQuestions}/${generation.totalQuestions}`;
+  const automaticRecoveryPossible =
+    generation.retryAvailable === true ||
+    isAutomaticRecoveryReason(generation.reasonCode);
   const needsAttention =
     generation.state === "action_required" ||
-    (generation.state === "generation_failed" &&
-      generation.retryAvailable !== true);
+    (generation.state === "generation_failed" && !automaticRecoveryPossible);
   const label = generationLabel(generation, count, locale);
   const explanation = needsAttention
     ? generationReasonExplanation(
@@ -158,6 +160,20 @@ function generationLabel(
       : `Automatically generating the remaining questions · ${count} ready`;
   }
   return chinese ? `已就绪 ${count} 道题` : `${count} questions ready`;
+}
+
+function isAutomaticRecoveryReason(reasonCode: string | undefined): boolean {
+  return (
+    reasonCode !== undefined &&
+    ![
+      "credential_required",
+      "credential_invalid",
+      "credential_missing",
+      "billing_required",
+      "cost_limit_reached",
+      "non_instructional_source",
+    ].includes(reasonCode)
+  );
 }
 
 function generationReasonExplanation(

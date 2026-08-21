@@ -81,7 +81,6 @@ function recoverableFailureReason(reasonCode: string | undefined): boolean {
     "credential_invalid",
     "credential_missing",
     "billing_required",
-    "source_unavailable",
     "non_instructional_source",
     "cost_limit_reached",
   ]).has(reasonCode ?? "");

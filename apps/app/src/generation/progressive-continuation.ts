@@ -82,14 +82,18 @@ export function ensureProgressiveAttemptRecovery(
   ).completion;
 }
 
-const AUTOMATIC_RECOVERY_LOOP_MAX_PASSES = 12;
-
 async function runAutomaticRecoveryUntilSettled(
   attemptId: string,
   signal: AbortSignal,
   options: { allowActionRequired?: boolean; force?: boolean },
 ): Promise<void> {
-  for (let pass = 0; pass < AUTOMATIC_RECOVERY_LOOP_MAX_PASSES; pass += 1) {
+  // Every individual model-call round is bounded by the local engine's retry
+  // policy. The quiz-level loop must not add a second arbitrary cutoff: a
+  // transient formula/schema or caption failure should keep recovering while
+  // this quiz remains open. The coordinator aborts this loop when the screen
+  // unmounts, so this does not create a background task after the learner
+  // leaves the quiz.
+  while (!signal.aborted) {
     if (signal.aborted) return;
     await runAutomaticRecoveryOnce(attemptId, signal, options);
     if (signal.aborted) return;
@@ -120,6 +124,13 @@ async function runAutomaticRecoveryUntilSettled(
     }
 
     if (
+      status.generation.state === "generation_failed" &&
+      isPermanentAutomaticRecoveryFailure(status.generation.reasonCode)
+    ) {
+      return;
+    }
+
+    if (
       status.generation.state === "recovering" ||
       status.generation.state === "retrying" ||
       status.generation.state === "generation_failed"
@@ -129,6 +140,19 @@ async function runAutomaticRecoveryUntilSettled(
     }
     return;
   }
+}
+
+function isPermanentAutomaticRecoveryFailure(
+  reasonCode: string | undefined,
+): boolean {
+  return new Set([
+    "credential_required",
+    "credential_invalid",
+    "credential_missing",
+    "billing_required",
+    "cost_limit_reached",
+    "non_instructional_source",
+  ]).has(reasonCode ?? "");
 }
 
 async function waitForAutomaticRecovery(

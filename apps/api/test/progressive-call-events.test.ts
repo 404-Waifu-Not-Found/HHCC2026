@@ -2181,7 +2181,7 @@ describe("protocol-9 concept-first call lifecycles", () => {
     expect(nextRound.status).toBe(201);
   });
 
-  it("keeps a genuinely unavailable caption source unclaimable", async () => {
+  it("keeps a transiently unavailable caption source automatically claimable", async () => {
     const db = createConceptFirstDatabase();
     const bank = db.sqlite
       .prepare("SELECT quality_summary_json FROM quiz_banks WHERE id = ?")
@@ -2210,8 +2210,8 @@ describe("protocol-9 concept-first call lifecycles", () => {
     );
     expect(status.status).toBe(200);
     expect(await status.json()).toMatchObject({
-      generation: { retryAvailable: false },
-      continuation: { claim: { state: "not_required" } },
+      generation: { retryAvailable: true },
+      continuation: { claim: { state: "available" } },
     });
   });
 

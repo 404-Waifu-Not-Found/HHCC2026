@@ -38,16 +38,14 @@ describe("grounded automatic recovery policy", () => {
     expect(AUTOMATIC_REFILL_MAX_TRACKED_ORDINAL_ATTEMPT).toBe(24);
   });
 
-  it("stops only when AI generation is impossible without new source or account state", () => {
+  it("stops only when AI generation is impossible without account or content changes", () => {
     expect(automaticRecoveryDisposition("credential_required")).toBe(
       "action_required",
     );
     expect(automaticRecoveryDisposition("billing_required")).toBe(
       "action_required",
     );
-    expect(automaticRecoveryDisposition("source_unavailable")).toBe(
-      "generation_failed",
-    );
+    expect(automaticRecoveryDisposition("source_unavailable")).toBe("cooldown");
     expect(automaticRecoveryDisposition("non_instructional_source")).toBe(
       "generation_failed",
     );
