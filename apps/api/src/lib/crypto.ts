@@ -1,4 +1,5 @@
 import { ApiError } from "./errors";
+import { safeErrorName } from "./safe-error";
 
 function decodeBase64(value: string): Uint8Array<ArrayBuffer> {
   try {
@@ -70,7 +71,13 @@ export async function decryptJson(
     );
     return JSON.parse(new TextDecoder().decode(plaintext));
   } catch (error) {
-    console.error("Credential decryption failed", error);
+    console.error(
+      JSON.stringify({
+        scope: "youtube_credentials",
+        event: "decryption_failed",
+        errorName: safeErrorName(error),
+      }),
+    );
     throw new ApiError(
       500,
       "credentials_unreadable",

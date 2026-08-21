@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { safeErrorName } from "./safe-error";
 
 export class ApiError extends HTTPException {
   readonly code: string;
@@ -38,7 +39,13 @@ export function errorResponse(error: Error, c: Context): Response {
     );
   }
 
-  console.error("Unhandled API error", error);
+  console.error(
+    JSON.stringify({
+      scope: "api",
+      event: "unhandled_error",
+      errorName: safeErrorName(error),
+    }),
+  );
   return c.json(
     {
       error: {

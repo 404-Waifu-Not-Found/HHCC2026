@@ -1,4 +1,5 @@
 import type { AppEnv } from "../types";
+import { safeErrorName } from "./safe-error";
 
 export const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 export const THUMBNAIL_FETCH_TIMEOUT_MS = 5_000;
@@ -211,7 +212,7 @@ export async function cacheThumbnail(
         sourceVideoId: input.sourceVideoId,
         bytes: result.bytes.byteLength,
         elapsedMs: result.elapsedMs,
-        error: error instanceof Error ? error.message : String(error),
+        errorName: safeErrorName(error),
       }),
     );
     return uncached;

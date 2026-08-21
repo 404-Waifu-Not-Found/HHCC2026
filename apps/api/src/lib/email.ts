@@ -1,7 +1,5 @@
 import type { AppEnv } from "../types";
-import { fetchWithTimeout, readBoundedResponseText } from "./outbound-response";
-
-const EMAIL_RESPONSE_MAX_BYTES = 16 * 1024;
+import { fetchWithTimeout } from "./outbound-response";
 
 type EmailInput = {
   to: string;
@@ -49,12 +47,7 @@ export async function sendEmail(env: AppEnv, input: EmailInput): Promise<void> {
   );
 
   if (!response.ok) {
-    const body = await readBoundedResponseText(
-      response,
-      EMAIL_RESPONSE_MAX_BYTES,
-    ).catch(() => "Response body unavailable.");
-    throw new Error(
-      `Resend returned ${response.status}: ${body.slice(0, 300)}`,
-    );
+    await response.body?.cancel();
+    throw new Error(`Resend request failed with status ${response.status}.`);
   }
 }

@@ -9,6 +9,7 @@ import { classifyHistoryTitles } from "../lib/ai-services";
 import { decryptJson, encryptJson } from "../lib/crypto";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
+import { safeErrorName } from "../lib/safe-error";
 import {
   fetchWithTimeout,
   readBoundedResponseJson,
@@ -105,7 +106,13 @@ youtubeRouter.post("/device/start", async (c) => {
       201,
     );
   } catch (error) {
-    console.error("YouTube TV device flow failed", error);
+    console.error(
+      JSON.stringify({
+        scope: "youtube_history",
+        event: "device_flow_failed",
+        errorName: safeErrorName(error),
+      }),
+    );
     throw new ApiError(
       503,
       "youtube_demo_unavailable",
@@ -203,7 +210,13 @@ youtubeRouter.get("/device/status", async (c) => {
       credentials,
     );
   } catch (error) {
-    console.error("YouTube history import failed after authentication", error);
+    console.error(
+      JSON.stringify({
+        scope: "youtube_history",
+        event: "import_failed",
+        errorName: safeErrorName(error),
+      }),
+    );
     await c.env.DB.prepare("DELETE FROM youtube_connections WHERE user_id = ?")
       .bind(user.id)
       .run();
@@ -244,8 +257,11 @@ youtubeRouter.delete("/connection", async (c) => {
       await youtube.session.oauth.revokeCredentials();
     } catch (error) {
       console.warn(
-        "YouTube credential revocation failed; deleting the local credential anyway",
-        error,
+        JSON.stringify({
+          scope: "youtube_history",
+          event: "credential_revocation_failed",
+          errorName: safeErrorName(error),
+        }),
       );
     }
   }

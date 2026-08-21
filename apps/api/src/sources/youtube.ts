@@ -4,6 +4,7 @@ import {
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import { ApiError } from "../lib/errors";
+import { safeErrorName } from "../lib/safe-error";
 import {
   fetchWithTimeout,
   readBoundedResponseText,
@@ -536,7 +537,14 @@ export class YouTubeAdapter implements SourceAdapter {
         ...(preferredCaptionSourceUrl ? { preferredCaptionSourceUrl } : {}),
       };
     } catch (error) {
-      console.error("YouTube inspection failed", error);
+      console.error(
+        JSON.stringify({
+          scope: "youtube_source",
+          event: "inspection_failed",
+          sourceVideoId,
+          errorName: safeErrorName(error),
+        }),
+      );
       throw new ApiError(
         502,
         "youtube_unavailable",
@@ -624,7 +632,7 @@ export class YouTubeAdapter implements SourceAdapter {
           scope: "youtube_audio",
           event: "stream.failed",
           sourceVideoId,
-          errorName: error instanceof Error ? error.name : "UnknownError",
+          errorName: safeErrorName(error),
           elapsedMs: Date.now() - startedAt,
         }),
       );
