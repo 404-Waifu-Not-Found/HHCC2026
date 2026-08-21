@@ -72,6 +72,7 @@ const SOURCE_FRAMING_PREFIX_PATTERNS = [
 
 const SOURCE_REFERENCE_PATTERNS = [
   /^\s*according to\b/iu,
+  /\b(?:the )?(?:reference|reference material|material|evidence|excerpt|content)\s+(?:says?|states?|mentions?|lists?|shows?|describes?|provides?|indicates?)\b/iu,
   /\b(?:(?:according to|based on) (?:the )?(?:lesson|video|lecture|course|class|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)|(?:lesson|video|lecture|transcript|episode|presentation|presenter|instructor|teacher|professor|speaker|narrator)(?: (?:explicitly|directly|clearly|specifically|also))? (?:says?|states?|mentions?|explains?|shows?|demonstrates?|teaches?|covers?|lists?|listed|supports?|describes?))\b/iu,
   /\b(?:in|from) (?:this|the|that) (?:lesson|video|lecture|transcript|presentation)\b/iu,
   /\b(?:lesson|video|lecture|transcript|presentation|lecturer|presenter|narrator|speaker)['’]s\s+(?:account|example|explanation|description|discussion|demonstration|claim|wording|method|approach)\b/iu,
@@ -81,6 +82,11 @@ const SOURCE_REFERENCE_PATTERNS = [
   /\b(?:(?:according to|based on) (?:the )?source|the source (?:says?|states?|mentions?|explains?|shows?|describes?))\b/iu,
   /\b(?:according to (?:the )?described|(?:the )?(?:described|discussed|aforementioned) (?:mechanism|process|method|relationship|example)|as (?:described|discussed|shown|stated) (?:above|earlier|previously)|the (?:above|preceding|following) example|the evidence (?:says?|states?|shows?|supports?|indicates?))\b/iu,
   /(?:根据|按照|依照)(?:本|该|这个|这段)?(?:课|课程|视频|讲座|讲解|字幕|演示|老师|讲师|主讲人)|(?:课|课程|视频|讲座|讲解|老师|讲师|主讲人)(?:中|里)?(?:提到|说到|讲到|介绍|展示)/u,
+];
+
+const QUESTION_DEICTIC_PATTERNS = [
+  /^\s*(?:what|which|how)\b.{0,160}(?<![-\p{L}])(?:mentioned|listed|stated|discussed|shown|described|provided)\b/iu,
+  /^(?:什么|哪|如何|为什么).{0,80}(?:提到|列出|指出|讨论|展示|描述|提供)/u,
 ];
 
 const SEMANTIC_ALIASES = [
@@ -280,6 +286,9 @@ export function questionConceptFailure(candidate) {
   const question = String(candidate?.question ?? "").trim();
   if (!question) return "low_pedagogical_value";
   const inspected = learnerVisibleCandidateText(candidate);
+  if (QUESTION_DEICTIC_PATTERNS.some((pattern) => pattern.test(question))) {
+    return "source_framing_invalid";
+  }
   if (SOURCE_REFERENCE_PATTERNS.some((pattern) => pattern.test(inspected))) {
     return "source_framing_invalid";
   }

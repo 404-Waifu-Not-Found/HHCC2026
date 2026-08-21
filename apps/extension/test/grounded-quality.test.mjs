@@ -305,7 +305,15 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
 
   const sourceFraming = [
     { question: "According to the lesson, what defines continuity?" },
+    {
+      question:
+        "Which of the following is a method mentioned to reduce deforestation's environmental impact?",
+    },
     { explanation: "The transcript says that all three conditions must hold." },
+    {
+      explanation:
+        "The reference lists managing forest resources and planting new trees.",
+    },
     { answer: "According to the presenter, all three conditions hold." },
     { correctAnswer: "The answer stated in the video" },
     { choices: ["The lecturer's account", "A", "B", "C"] },
