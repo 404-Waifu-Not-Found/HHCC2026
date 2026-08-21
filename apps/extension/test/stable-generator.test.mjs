@@ -58,6 +58,27 @@ test("rejects a true true/false item whose explanation labels the statement fals
   );
 });
 
+test("stable v5.2 reconciles a false label whose correction repeats the prompt", () => {
+  const prompt =
+    "Increased dehydration can cause drops in energy, mood, and blood pressure.";
+  const normalized = normalizeGeneratedQuestion(
+    {
+      id: "q1",
+      type: "true_false",
+      concept: "dehydration effects",
+      question: prompt,
+      answer: false,
+      correction: `The correct statement is: ${prompt}`,
+      explanation: "Dehydration can cause all of these effects.",
+    },
+    { expectedId: "q1" },
+  );
+
+  assert.equal(normalized.answer, true);
+  assert.equal(normalized.correction, prompt);
+  assert.equal(normalized.question, prompt);
+});
+
 test("v5.12 evidence allocation avoids an already used narrative window", () => {
   const input = {
     promptFirstPrimaryClaims: [

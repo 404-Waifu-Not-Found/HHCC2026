@@ -516,7 +516,11 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
       gradingToken,
     );
 
-    if (!grade.correct && !attempt.retry_pending) {
+    if (
+      !grade.correct &&
+      !attempt.retry_pending &&
+      hasDistinctAdaptiveRetry(question)
+    ) {
       const results = await c.env.DB.batch([
         answerInsert,
         c.env.DB.prepare(
@@ -1545,6 +1549,20 @@ export function parseQuestionEvidence(
     z.array(z.string()),
     "question evidence",
   );
+}
+
+export function hasDistinctAdaptiveRetry(
+  question: Pick<QuestionRow, "prompt" | "reformulated_prompt">,
+): boolean {
+  const normalizePrompt = (value: string) =>
+    value
+      .normalize("NFKC")
+      .toLocaleLowerCase("en-US")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  const original = normalizePrompt(question.prompt);
+  const retry = normalizePrompt(question.reformulated_prompt);
+  return Boolean(original && retry && original !== retry);
 }
 
 async function adaptNextQuestion(

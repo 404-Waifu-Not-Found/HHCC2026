@@ -45,6 +45,19 @@ describe("extension mixed-question persistence", () => {
     expect(
       storedQuestionFields({
         ...common,
+        type: "true_false",
+        answer: false,
+        correction: `The correct statement is: ${common.question}`,
+      }),
+    ).toEqual({
+      optionsJson: null,
+      correctAnswerJson: "true",
+      rubricJson: null,
+      explanation: common.explanation,
+    });
+    expect(
+      storedQuestionFields({
+        ...common,
         type: "short_answer",
         answer: "Reference answer",
         rubricIdeas: ["Required idea"],

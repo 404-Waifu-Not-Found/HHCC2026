@@ -4397,10 +4397,23 @@ export function normalizeGeneratedQuestion(
     if (typeof answer === "string" && /^(true|false)$/i.test(answer)) {
       answer = answer.toLocaleLowerCase("en-US") === "true";
     }
+    let correction = cleanString(rawQuestion.correction);
+    // Stable v5.2 intentionally keeps the model's complete streamed question,
+    // but older responses can occasionally label a supported statement False
+    // while returning that exact same statement as the correction. Reconcile
+    // that high-confidence polarity contradiction locally instead of spending
+    // an automatic generation retry or presenting an impossible grade.
+    if (
+      answer === false &&
+      trueFalseCorrectionRestatesQuestion(questionText, correction)
+    ) {
+      answer = true;
+      correction = questionText;
+    }
     return {
       ...common,
       answer,
-      correction: cleanString(rawQuestion.correction),
+      correction,
     };
   }
   if (type === "short_answer") {
@@ -5737,6 +5750,28 @@ function normalizedAssertion(value) {
     .replace(/[^\p{L}\p{N}'+*/^=<>-]+/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
+}
+
+function normalizedTrueFalseCorrection(value) {
+  const unwrapped = String(value ?? "")
+    .normalize("NFKC")
+    .trim()
+    .replace(
+      /^(?:the\s+)?correct\s+(?:statement|claim)\s+is\s*[:：\-–—]?\s*/iu,
+      "",
+    )
+    .replace(/^正确(?:的)?(?:说法|陈述|表述)(?:是|为)\s*[:：\-–—]?\s*/u, "");
+  return normalizedAssertion(unwrapped);
+}
+
+function trueFalseCorrectionRestatesQuestion(question, correction) {
+  const normalizedQuestion = normalizedAssertion(question);
+  const normalizedCorrection = normalizedTrueFalseCorrection(correction);
+  return Boolean(
+    normalizedQuestion &&
+    normalizedCorrection &&
+    normalizedQuestion === normalizedCorrection,
+  );
 }
 
 function assertionWithoutBareNegation(value) {

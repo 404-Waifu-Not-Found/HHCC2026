@@ -2353,11 +2353,26 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
     };
   }
   if (question.type === "true_false") {
+    const normalizedPrompt = normalizeTrueFalseStatement(question.question);
+    const normalizedCorrection = normalizeTrueFalseCorrection(
+      question.correction,
+    );
+    // Defend the storage boundary as well as the shared generator. An older or
+    // not-yet-reloaded client may send an AI-generated item whose correction
+    // simply restates the displayed prompt while its boolean is false. Keeping
+    // the question and fixing that unambiguous polarity avoids both a false
+    // negative grade and an extra model request.
+    const answer =
+      question.answer === false &&
+      normalizedPrompt.length > 0 &&
+      normalizedPrompt === normalizedCorrection
+        ? true
+        : question.answer;
     return {
       optionsJson: null,
-      correctAnswerJson: JSON.stringify(question.answer),
+      correctAnswerJson: JSON.stringify(answer),
       rubricJson: null,
-      explanation: question.answer
+      explanation: answer
         ? question.explanation
         : `${question.correction} ${question.explanation}`,
     };
@@ -2372,6 +2387,27 @@ export function storedQuestionFields(question: LocalConceptQuizQuestion): {
     }),
     explanation: question.explanation,
   };
+}
+
+function normalizeTrueFalseStatement(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function normalizeTrueFalseCorrection(value: string): string {
+  return normalizeTrueFalseStatement(
+    value
+      .normalize("NFKC")
+      .trim()
+      .replace(
+        /^(?:the\s+)?correct\s+(?:statement|claim)\s+is\s*[:：\-–—]?\s*/iu,
+        "",
+      )
+      .replace(/^正确(?:的)?(?:说法|陈述|表述)(?:是|为)\s*[:：\-–—]?\s*/u, ""),
+  );
 }
 
 function assertGroundedQuestionIdentity(
