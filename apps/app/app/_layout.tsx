@@ -166,8 +166,11 @@ function NativeAccountBoundary() {
       );
       if (previousUserId && previousUserId !== currentUserId) {
         cancelPreGenerationForAccount(previousUserId);
+        // The API key is the only credential in the local cleanup set. Do not
+        // advance the observed-account marker until its deletion succeeds, so
+        // a later mount can retry instead of permanently forgetting the debt.
+        await removeLocalGenerationCredential(previousUserId);
         await Promise.allSettled([
-          removeLocalGenerationCredential(previousUserId),
           clearReviewReminderDeviceState(previousUserId),
           clearNativeGenerationOutboxes(previousUserId),
           clearAccountCreationState(previousUserId),

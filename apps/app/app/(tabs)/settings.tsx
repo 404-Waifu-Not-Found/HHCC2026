@@ -75,13 +75,15 @@ export default function SettingsScreen() {
     setError(undefined);
     try {
       const userId = session?.user.id;
-      if (userId) await disableReviewReminders(userId).catch(() => undefined);
+      if (userId && Platform.OS !== "web") {
+        await disableReviewReminders(userId);
+        await removeLocalGenerationCredential(userId);
+      }
       const result = await authClient.signOut();
       if (result.error)
         throw new Error(result.error.message ?? t("signOutFailed"));
       if (userId) cancelPreGenerationForAccount(userId);
       await Promise.allSettled([
-        userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
         userId ? clearAccountCreationState(userId) : Promise.resolve(),
         userId ? clearAccountAttemptState(userId) : Promise.resolve(),
@@ -101,13 +103,15 @@ export default function SettingsScreen() {
     setError(undefined);
     try {
       const userId = session?.user.id;
-      if (userId) await disableReviewReminders(userId).catch(() => undefined);
+      if (userId && Platform.OS !== "web") {
+        await disableReviewReminders(userId);
+        await removeLocalGenerationCredential(userId);
+      }
       const result = await authClient.deleteUser({ password: deletePassword });
       if (result.error)
         throw new Error(result.error.message ?? t("deleteAccountFailed"));
       if (userId) cancelPreGenerationForAccount(userId);
       await Promise.allSettled([
-        userId ? removeLocalGenerationCredential(userId) : Promise.resolve(),
         userId ? clearNativeGenerationOutboxes(userId) : Promise.resolve(),
         userId ? clearAccountCreationState(userId) : Promise.resolve(),
         userId ? clearAccountAttemptState(userId) : Promise.resolve(),

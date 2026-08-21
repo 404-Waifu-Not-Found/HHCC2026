@@ -43,10 +43,13 @@ describe("native account storage boundary", () => {
     }
     expect(settings).toContain("Promise.allSettled");
     expect(settings).toMatch(
-      /authClient\.signOut\(\)[\s\S]+result\.error[\s\S]+cancelPreGenerationForAccount/,
+      /disableReviewReminders\(userId\)[\s\S]+removeLocalGenerationCredential\(userId\)[\s\S]+authClient\.signOut\(\)[\s\S]+result\.error[\s\S]+cancelPreGenerationForAccount/,
     );
     expect(settings).toMatch(
-      /authClient\.deleteUser[\s\S]+result\.error[\s\S]+cancelPreGenerationForAccount/,
+      /disableReviewReminders\(userId\)[\s\S]+removeLocalGenerationCredential\(userId\)[\s\S]+authClient\.deleteUser[\s\S]+result\.error[\s\S]+cancelPreGenerationForAccount/,
+    );
+    expect(settings).not.toMatch(
+      /disableReviewReminders\(userId\)\.catch\(\(\) => undefined\)/,
     );
     expect(prework).toContain("initial.ownerUserId !== input.ownerUserId");
     expect(prework).toContain("current.ownerUserId !== input.ownerUserId");
@@ -61,7 +64,7 @@ describe("native account storage boundary", () => {
     expect(layout).toContain("createSerialTaskQueue()");
     expect(layout).toContain("nativeAccountBoundaryQueue.enqueue");
     expect(layout).toMatch(
-      /const currentUserId = session\?\.user\.id \?\? null;[\s\S]+nativeAccountBoundaryQueue\.enqueue[\s\S]+AsyncStorage\.setItem\(OBSERVED_NATIVE_USER_KEY, currentUserId\)/,
+      /const currentUserId = session\?\.user\.id \?\? null;[\s\S]+nativeAccountBoundaryQueue\.enqueue[\s\S]+removeLocalGenerationCredential\(previousUserId\)[\s\S]+AsyncStorage\.setItem\(OBSERVED_NATIVE_USER_KEY, currentUserId\)/,
     );
   });
 
