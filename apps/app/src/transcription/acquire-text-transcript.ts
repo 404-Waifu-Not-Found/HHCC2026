@@ -111,6 +111,10 @@ export async function acquireTextTranscript(
           event: "browser_extension.failed",
           sourceVideoId: imported.video.sourceVideoId,
           errorName: error instanceof Error ? error.name : "UnknownError",
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : "The browser extension returned an unknown error.",
         }),
       );
     }
