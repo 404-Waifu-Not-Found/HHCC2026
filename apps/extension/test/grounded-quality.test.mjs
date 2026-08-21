@@ -818,6 +818,7 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
     "How many devices used the older protocol?",
     "What is the estimated annual monetary value of the services that ecosystems provide for humanity, according to economic calculations?",
     "How does the estimated annual monetary value of ecosystem services compare to the annual output of the global economy?",
+    "What is the projected range of temperature increase by the end of the century?",
   ];
   for (const question of lowValue) {
     expectConceptFailure(
@@ -825,6 +826,14 @@ test("v5.7 reports precise framing, logistics, and low-value failures", () => {
       "low_pedagogical_value",
     );
   }
+  expectConceptFailure(
+    {
+      ...directConcept,
+      question:
+        "What method do many organizations advocate to reduce the impact of global warming?",
+    },
+    "source_framing_invalid",
+  );
   expectConceptFailure(
     { ...directConcept, question: "根据本课，连续的条件是什么？" },
     "source_framing_invalid",
@@ -1330,6 +1339,38 @@ test("resolved answer propositions block the live climate projection paraphrase"
           value: "condition for climate projections",
           cluster: "condition for climate projections",
         },
+      },
+      accepted,
+      5,
+    ),
+    true,
+  );
+});
+
+test("same climate-cause objective cannot pass under condition and relationship wording", () => {
+  const first = {
+    type: "multiple_choice",
+    concept: "cause of global warming",
+    question:
+      "What condition is identified as the cause of the recent rise in global temperatures?",
+    correctAnswer:
+      "human factories power plants and eventually cars have burned fossil fuels",
+  };
+  const accepted = [
+    {
+      ...first,
+      answer: first.correctAnswer,
+      claimKey: claimKeyForCandidate(first),
+      conceptCluster: conceptClusterForCandidate(first),
+    },
+  ];
+  assert.equal(
+    candidateDuplicatesAccepted(
+      {
+        type: "multiple_choice",
+        concept: "cause of global warming",
+        question: "What is driving the recent rise in global temperatures?",
+        correctAnswer: "human activity",
       },
       accepted,
       5,

@@ -353,7 +353,7 @@ const NUMERIC_RECALL_QUESTION_PATTERN =
 const NECESSARY_NUMERIC_OBJECTIVE_PATTERN =
   /\b(?:calculate|compute|derive|solve|formula|equation|law|threshold|limit|rate|ratio|minimum|required|maximum|mechanism|causes?|because|results? in|produces?)\b|(?:计算|推导|求解|公式|方程|定律|阈值|极限|速率|比率|最小|必须|最大|机制|导致|因为|产生)/iu;
 const NON_TRANSFERABLE_QUANTITATIVE_PATTERN =
-  /(?:\b(?:estimated|reported|surveyed|annual)\b.{0,60}\b(?:monetary|market|economic|financial)?\s*(?:value|worth|cost|price|output|total|amount|percentage|percent|count|frequency|figure|statistic)s?\b|\b(?:annual monetary value|monetary value|global economic output|market worth|economic estimate|survey percentage)\b|[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:trillion|billion|million|thousand)\s+(?:dollars?|euros?|pounds?|yen)\b|(?:估计|估算|报告|调查).{0,30}(?:货币价值|市场价值|经济产出|金额|百分比|数量|频率)|(?:货币价值|市场价值|经济产出).{0,30}(?:万亿|亿|万元|美元|人民币))/iu;
+  /(?:\b(?:estimated|reported|surveyed|annual)\b.{0,60}\b(?:monetary|market|economic|financial)?\s*(?:value|worth|cost|price|output|total|amount|percentage|percent|count|frequency|figure|statistic)s?\b|\b(?:projected|forecast|predicted|estimated|expected)\b.{0,90}\b(?:range|increase|decrease|change|temperature|amount|value|percentage|percent|count|frequency|figure|statistic)s?\b|\b(?:annual monetary value|monetary value|global economic output|market worth|economic estimate|survey percentage)\b|[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:trillion|billion|million|thousand)\s+(?:dollars?|euros?|pounds?|yen)\b|(?:估计|估算|报告|调查).{0,30}(?:货币价值|市场价值|经济产出|金额|百分比|数量|频率)|(?:货币价值|市场价值|经济产出).{0,30}(?:万亿|亿|万元|美元|人民币))/iu;
 const PRESENTATION_STATISTIC_ATTRIBUTION_PATTERN =
   /\baccording to\b.{0,80}\b(?:calculations?|estimates?|statistics?|surveys?|figures?|reported data)\b|(?:根据|按照).{0,30}(?:计算|估算|统计|调查|数据)/iu;
 const ATTRIBUTED_MEASUREMENT_SOURCE_PATTERN =
@@ -361,7 +361,9 @@ const ATTRIBUTED_MEASUREMENT_SOURCE_PATTERN =
 const NON_TRANSFERABLE_DATE_STATISTIC_SOURCE_PATTERN =
   /\b(?:the\s+year|in)\s+(?:1[5-9]|20)\d{2}\b.{0,120}\b(?:warmest|coldest|highest|lowest|largest|smallest|most|least|recorded|reported|observed|measured|record)\b/iu;
 const QUANTITATIVE_ANSWER_PATTERN =
-  /(?:[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:%|percent|trillion|billion|million|thousand|dollars?|euros?|pounds?|yen|years?|times|devices?|people)\b|^(?:it is |they are )?(?:less|greater|higher|lower|more|fewer|equal|about half|roughly twice)\b|(?:万亿|亿|万元|美元|人民币|百分之|更少|更多|更高|更低))/iu;
+  /(?:[$€£¥]\s*\d|\b\d+(?:\.\d+)?\s*(?:to|[-–—])\s*\d+(?:\.\d+)?\s*(?:degrees?(?:\s+(?:fahrenheit|celsius))?|°\s*[cf]|%|percent|years?|months?|days?|hours?|minutes?|seconds?)?\b|\b\d+(?:\.\d+)?\s*(?:degrees?(?:\s+(?:fahrenheit|celsius))?|°\s*[cf]|ppm|ppb|%|percent|trillion|billion|million|thousand|dollars?|euros?|pounds?|yen|years?|times|devices?|people)\b|^(?:it is |they are )?(?:less|greater|higher|lower|more|fewer|equal|about half|roughly twice)\b|(?:万亿|亿|万元|美元|人民币|百分之|更少|更多|更高|更低))/iu;
+const EXTERNAL_AUTHORITY_QUESTION_PATTERN =
+  /^\s*(?:what|which|how)\b.{0,120}\b(?:organizations?|agencies|experts?|scientists?|researchers?|analysts?)\b.{0,80}\b(?:advocate|recommend|suggest|say|state|report|predict|project|estimate)\b/iu;
 
 function isNonTransferableQuantitativeEvidence(value) {
   const text = String(value ?? "");
@@ -391,6 +393,9 @@ export function questionConceptFailure(candidate) {
   }
   if (LOGISTICS_PATTERNS.some((pattern) => pattern.test(inspected))) {
     return "course_logistics_invalid";
+  }
+  if (EXTERNAL_AUTHORITY_QUESTION_PATTERN.test(question)) {
+    return "source_framing_invalid";
   }
   if (
     FIGURATIVE_PRESENTATION_SCAFFOLD_PATTERNS.some((pattern) =>
@@ -898,6 +903,17 @@ export function candidateDuplicatesAccepted(
         question.claimKey &&
         conceptSimilarity(question.claimKey, claimKey) >= 0.65,
     )
+  ) {
+    return true;
+  }
+  if (
+    accepted.some((question) => {
+      const acceptedCluster = question.conceptCluster ?? question.concept ?? "";
+      return (
+        conceptSimilarity(acceptedCluster, cluster) >= 0.85 &&
+        conceptSimilarity(question.question, candidate.question) >= 0.5
+      );
+    })
   ) {
     return true;
   }
