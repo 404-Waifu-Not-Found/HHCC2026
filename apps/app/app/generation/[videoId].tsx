@@ -20,12 +20,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Mascot } from "../../src/components/Mascot";
-import {
-  ProcessingSteps,
-  type ProcessingStepState,
-} from "../../src/components/ProcessingSteps";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
-import { ProgressBar } from "../../src/components/ProgressBar";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, jsonBody } from "../../src/lib/api";
@@ -50,16 +45,17 @@ import {
   typography,
 } from "../../src/theme/tokens";
 
-type JourneyPhase = "video" | "transcript" | "ai" | "finalizing" | "complete";
-
 type JourneyStep = {
   id: string;
   label: string;
-  durationSeconds: number;
 };
 
-const JOURNEY_TICK_MS = 250;
-const MINIMUM_FINAL_STEP_MS = 550;
+const JOURNEY_DURATION_MS = 35_000;
+const JOURNEY_TICK_MS = 100;
+const LINEAR_PROGRESS_LIMIT = 0.99;
+const FINAL_SWEEP_MS = 500;
+const FINAL_SWEEP_TICK_MS = 25;
+const FINAL_SWEEP_ANIMATION_MS = FINAL_SWEEP_MS - FINAL_SWEEP_TICK_MS;
 
 export default function GenerationScreen() {
   const params = useLocalSearchParams<{
@@ -88,47 +84,19 @@ export default function GenerationScreen() {
     5 | 10 | 15;
   const journeySteps = useMemo<JourneyStep[]>(
     () => [
-      { id: "video", label: t("gettingVideo"), durationSeconds: 5 },
-      {
-        id: "transcript",
-        label: t("findingTranscript"),
-        durationSeconds: 10,
-      },
-      {
-        id: "lesson-text",
-        label: t("preparingLessonText"),
-        durationSeconds: 6,
-      },
-      {
-        id: "concepts",
-        label: t("mappingConcepts"),
-        durationSeconds:
-          questionCount === 5 ? 12 : questionCount === 10 ? 16 : 20,
-      },
-      {
-        id: "questions",
-        label: t("writingQuestions"),
-        durationSeconds:
-          questionCount === 5 ? 45 : questionCount === 10 ? 75 : 105,
-      },
-      {
-        id: "choices",
-        label: t("shufflingChoices"),
-        durationSeconds: 5,
-      },
-      {
-        id: "opening",
-        label: t("finalizingQuestions"),
-        durationSeconds: 6,
-      },
+      { id: "video", label: t("gettingVideo") },
+      { id: "captions", label: t("preparingAudio") },
+      { id: "model", label: t("downloadingModel") },
+      { id: "transcribing", label: t("transcribing") },
+      { id: "planning", label: t("planningQuestions") },
+      { id: "questions", label: t("creatingQuestions") },
+      { id: "opening", label: t("finalizingQuestions") },
     ],
-    [questionCount, t],
+    [t],
   );
   const [estimatedProgress, setEstimatedProgressState] = useState(0);
-  const [journeyPhase, setJourneyPhase] = useState<JourneyPhase>("video");
-  const [phaseOverdue, setPhaseOverdue] = useState(false);
   const estimatedProgressRef = useRef(0);
-  const journeyPhaseStartedAtRef = useRef(0);
+  const journeyStartedAtRef = useRef(0);
   const finishingPresentationRef = useRef(false);
 
   const setEstimatedProgress = useCallback((next: number) => {
@@ -140,77 +108,58 @@ export default function GenerationScreen() {
     setEstimatedProgressState(normalized);
   }, []);
 
-  const beginJourneyPhase = useCallback((next: JourneyPhase, reset = false) => {
-    journeyPhaseStartedAtRef.current = Date.now();
+  const beginJourney = useCallback(() => {
+    journeyStartedAtRef.current = Date.now();
     finishingPresentationRef.current = false;
-    setJourneyPhase(next);
-    setPhaseOverdue(false);
-    if (reset) {
-      estimatedProgressRef.current = 0;
-      setEstimatedProgressState(0);
-    }
+    estimatedProgressRef.current = 0;
+    setEstimatedProgressState(0);
   }, []);
 
   useEffect(() => {
     if (paused || error || finishingPresentationRef.current) return;
     const tick = () => {
-      const range = journeyPhaseRange(journeySteps, journeyPhase);
-      const elapsedSeconds =
-        (Date.now() - journeyPhaseStartedAtRef.current) / 1_000;
-      setPhaseOverdue(
-        journeyPhase !== "complete" && elapsedSeconds > range.durationSeconds,
-      );
-      const timedFraction = Math.min(
-        journeyPhase === "complete" ? 1 : 0.96,
-        elapsedSeconds / Math.max(1, range.durationSeconds),
-      );
-      const target = range.start + (range.end - range.start) * timedFraction;
-      const current = estimatedProgressRef.current;
-      const maxAdvance = reduceMotion ? 1 : 0.012;
+      if (journeyStartedAtRef.current === 0) return;
+      const elapsed = Date.now() - journeyStartedAtRef.current;
       setEstimatedProgress(
-        current + Math.min(maxAdvance, Math.max(0, target - current)),
+        Math.min(
+          LINEAR_PROGRESS_LIMIT,
+          (elapsed / JOURNEY_DURATION_MS) * LINEAR_PROGRESS_LIMIT,
+        ),
       );
     };
     tick();
     const timer = setInterval(tick, JOURNEY_TICK_MS);
     return () => clearInterval(timer);
-  }, [
-    error,
-    journeyPhase,
-    journeySteps,
-    paused,
-    reduceMotion,
-    setEstimatedProgress,
-  ]);
+  }, [error, paused, setEstimatedProgress]);
 
   const finishJourneyPresentation = useCallback(
     async (signal: AbortSignal) => {
       finishingPresentationRef.current = true;
-      setJourneyPhase("complete");
-      setPhaseOverdue(false);
-      const firstUnseenStep = journeyStepIndex(
-        journeySteps,
-        estimatedProgressRef.current,
-      );
-      for (
-        let index = firstUnseenStep;
-        index < journeySteps.length;
-        index += 1
-      ) {
-        const range = journeyStepRange(journeySteps, index);
-        setEstimatedProgress(range.start + (range.end - range.start) * 0.55);
-        if (!reduceMotion) {
-          await abortableDelay(MINIMUM_FINAL_STEP_MS, signal);
-        }
+      const initialProgress = estimatedProgressRef.current;
+      if (reduceMotion) {
+        setEstimatedProgress(1);
+        return;
+      }
+      const sweepStartedAt = Date.now();
+      while (Date.now() - sweepStartedAt < FINAL_SWEEP_ANIMATION_MS) {
+        const sweepProgress = Math.min(
+          1,
+          (Date.now() - sweepStartedAt) / FINAL_SWEEP_ANIMATION_MS,
+        );
+        setEstimatedProgress(
+          initialProgress + (1 - initialProgress) * sweepProgress,
+        );
+        await abortableDelay(FINAL_SWEEP_TICK_MS, signal);
       }
       setEstimatedProgress(1);
+      await abortableDelay(FINAL_SWEEP_TICK_MS, signal);
     },
-    [journeySteps, reduceMotion, setEstimatedProgress],
+    [reduceMotion, setEstimatedProgress],
   );
 
   const execute = useCallback(
     async (signal: AbortSignal) => {
-      beginJourneyPhase("video", true);
+      beginJourney();
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
       const storedGeneration = await loadGenerationState(params.videoId);
@@ -231,7 +180,6 @@ export default function GenerationScreen() {
       let completeness: TranscriptCompleteness | null = null;
       let language = imported.video.sourceLanguage ?? "und";
       setStage("preparing_audio");
-      beginJourneyPhase("transcript");
       const textTranscript = await acquireTextTranscript(
         imported,
         signal,
@@ -278,7 +226,6 @@ export default function GenerationScreen() {
         );
       }
       setStage("creating_questions");
-      beginJourneyPhase("ai");
       const context: LocalQuizContext = {
         protocolVersion: 1,
         jobId: idempotencyKey,
@@ -299,7 +246,6 @@ export default function GenerationScreen() {
         },
       );
       setStage("finalizing_questions");
-      beginJourneyPhase("finalizing");
       const importedQuiz = await apiRequest(
         "/api/quiz-imports",
         {
@@ -345,7 +291,7 @@ export default function GenerationScreen() {
       params.sessionLength,
       params.videoId,
       params.watched,
-      beginJourneyPhase,
+      beginJourney,
       finishJourneyPresentation,
       questionCount,
       questionTypes,
@@ -376,26 +322,15 @@ export default function GenerationScreen() {
   }, [execute, runNumber, t]);
 
   const failed = Boolean(error);
-  const activeIndex = journeyStepIndex(journeySteps, estimatedProgress);
+  const activeIndex = journeyStepIndex(estimatedProgress, journeySteps.length);
   const activeStep = journeySteps[activeIndex] ?? journeySteps[0]!;
-  const activeStepRange = journeyStepRange(journeySteps, activeIndex);
-  const activeStepFraction = Math.max(
+  const linearFraction = Math.max(
     0,
-    Math.min(
-      1,
-      (estimatedProgress - activeStepRange.start) /
-        Math.max(0.001, activeStepRange.end - activeStepRange.start),
-    ),
+    Math.min(1, estimatedProgress / LINEAR_PROGRESS_LIMIT),
   );
-  const estimatedSecondsLeft = journeySteps.reduce(
-    (total, item, index) =>
-      total +
-      (index < activeIndex
-        ? 0
-        : index === activeIndex
-          ? item.durationSeconds * (1 - activeStepFraction)
-          : item.durationSeconds),
+  const estimatedSecondsLeft = Math.max(
     0,
+    Math.ceil((JOURNEY_DURATION_MS / 1_000) * (1 - linearFraction)),
   );
   const compactFooter = width < breakpoints.compact;
   const stageTitle = failed
@@ -403,34 +338,6 @@ export default function GenerationScreen() {
     : paused
       ? t("paused")
       : activeStep.label;
-  const stepItems = journeySteps.map((item, index) => {
-    const current = index === activeIndex;
-    const complete = stage === "complete" || (!paused && index < activeIndex);
-    const state: ProcessingStepState =
-      failed && index === activeIndex
-        ? "error"
-        : current
-          ? "active"
-          : complete
-            ? "complete"
-            : "upcoming";
-    const stepRemaining = Math.max(
-      1,
-      Math.ceil(item.durationSeconds * (current ? 1 - activeStepFraction : 1)),
-    );
-    return {
-      label: item.label,
-      state,
-      detail:
-        state === "complete"
-          ? t("stepComplete")
-          : current && phaseOverdue
-            ? t("takingLonger")
-            : current
-              ? formatEstimatedRemaining(stepRemaining, locale)
-              : formatPlannedDuration(item.durationSeconds, locale),
-    };
-  });
 
   const pause = () => {
     controllerRef.current?.abort();
@@ -519,23 +426,23 @@ export default function GenerationScreen() {
                 {Math.round(estimatedProgress * 100)}%
               </Text>
             </View>
-            <ProgressBar
+            <LinearJourneyBar
               progress={estimatedProgress}
               accessibilityLabel={`${t("estimatedProgress")}: ${Math.round(estimatedProgress * 100)}%`}
-              tone={failed ? "secondary" : "primary"}
+              failed={failed}
+              segmentCount={journeySteps.length}
             />
             <View style={styles.detailRow}>
               <Text style={[styles.detail, { color: theme.textMuted }]}>
                 {t("estimatedProgress")}
               </Text>
               <Text style={[styles.detail, { color: theme.textMuted }]}>
-                {phaseOverdue
-                  ? t("takingLonger")
-                  : formatEstimatedRemaining(estimatedSecondsLeft, locale)}
+                {estimatedSecondsLeft > 0
+                  ? formatEstimatedRemaining(estimatedSecondsLeft, locale)
+                  : t("takingLonger")}
               </Text>
             </View>
           </View>
-          <ProcessingSteps steps={stepItems} />
         </Surface>
 
         <Surface tone="tinted" style={styles.privacySurface}>
@@ -579,6 +486,57 @@ export default function GenerationScreen() {
   );
 }
 
+function LinearJourneyBar({
+  progress,
+  accessibilityLabel,
+  failed,
+  segmentCount,
+}: {
+  progress: number;
+  accessibilityLabel: string;
+  failed: boolean;
+  segmentCount: number;
+}) {
+  const { theme } = useSettings();
+  const value = Math.max(0, Math.min(1, progress));
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}
+      style={[styles.journeyTrack, { backgroundColor: theme.surfaceSunken }]}
+    >
+      <View
+        style={[
+          styles.journeyFill,
+          {
+            width: `${value * 100}%`,
+            backgroundColor: failed ? theme.secondary : theme.primary,
+          },
+        ]}
+      >
+        <View style={styles.journeyHighlight} />
+      </View>
+      <View pointerEvents="none" style={styles.journeySegments}>
+        {Array.from({ length: segmentCount }, (_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.journeySegment,
+              index < segmentCount - 1
+                ? {
+                    borderRightColor: theme.surface,
+                    borderRightWidth: 2,
+                  }
+                : null,
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function formatGenerationError(cause: unknown, fallback: string): string {
   if (!(cause instanceof Error)) return fallback;
   return cause.message;
@@ -593,68 +551,15 @@ function isUuid(value: string | undefined): value is string {
   );
 }
 
-function journeyStepRange(
-  steps: readonly JourneyStep[],
-  index: number,
-): { start: number; end: number; durationSeconds: number } {
-  const total = steps.reduce((sum, item) => sum + item.durationSeconds, 0);
-  const startSeconds = steps
-    .slice(0, index)
-    .reduce((sum, item) => sum + item.durationSeconds, 0);
-  const durationSeconds = steps[index]?.durationSeconds ?? 0;
-  return {
-    start: startSeconds / total,
-    end: (startSeconds + durationSeconds) / total,
-    durationSeconds,
-  };
-}
-
-function journeyStepIndex(
-  steps: readonly JourneyStep[],
-  progress: number,
-): number {
-  if (progress >= 1) return steps.length - 1;
-  for (let index = 0; index < steps.length; index += 1) {
-    if (progress < journeyStepRange(steps, index).end) return index;
-  }
-  return steps.length - 1;
-}
-
-function journeyPhaseRange(
-  steps: readonly JourneyStep[],
-  phase: JourneyPhase,
-): { start: number; end: number; durationSeconds: number } {
-  const indexes =
-    phase === "video"
-      ? [0]
-      : phase === "transcript"
-        ? [1, 2]
-        : phase === "ai"
-          ? [3, 4, 5]
-          : phase === "finalizing"
-            ? [6]
-            : steps.map((_, index) => index);
-  const first = journeyStepRange(steps, indexes[0] ?? 0);
-  const last = journeyStepRange(steps, indexes[indexes.length - 1] ?? 0);
-  return {
-    start: first.start,
-    end: last.end,
-    durationSeconds: indexes.reduce(
-      (sum, index) => sum + (steps[index]?.durationSeconds ?? 0),
-      0,
+function journeyStepIndex(progress: number, stepCount: number): number {
+  if (stepCount <= 1) return 0;
+  return Math.min(
+    stepCount - 1,
+    Math.floor(
+      (Math.min(progress, LINEAR_PROGRESS_LIMIT) / LINEAR_PROGRESS_LIMIT) *
+        stepCount,
     ),
-  };
-}
-
-function formatPlannedDuration(
-  seconds: number,
-  locale: "en" | "zh-CN",
-): string {
-  if (seconds < 60) {
-    return locale === "zh-CN" ? `约 ${seconds} 秒` : `~${seconds} sec`;
-  }
-  const minutes = Math.ceil(seconds / 60);
-  return locale === "zh-CN" ? `约 ${minutes} 分钟` : `~${minutes} min`;
+  );
 }
 
 function formatEstimatedRemaining(
@@ -719,6 +624,36 @@ const styles = StyleSheet.create({
     fontSize: typography.size.titleSmall,
     lineHeight: typography.lineHeight.titleSmall,
   },
+  journeyTrack: {
+    position: "relative",
+    height: 12,
+    overflow: "hidden",
+    borderRadius: radii.pill,
+  },
+  journeyFill: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    overflow: "hidden",
+    borderRadius: radii.pill,
+  },
+  journeyHighlight: {
+    height: 3,
+    marginHorizontal: 5,
+    marginTop: 2,
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(255,255,255,0.38)",
+  },
+  journeySegments: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    flexDirection: "row",
+  },
+  journeySegment: { flex: 1 },
   detailRow: {
     flexDirection: "row",
     flexWrap: "wrap",
