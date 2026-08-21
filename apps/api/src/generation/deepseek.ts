@@ -2,10 +2,12 @@ import {
   ConceptSchema,
   GeneratedQuestionSchema,
   QuizGenerationSchema,
+  TranscriptCompletenessSchema,
   TranscriptSegmentSchema,
   questionLimitForSession,
   type Concept,
   type GeneratedQuestion,
+  type QuizQuestionType,
   type QuizGeneration,
   type TranscriptSegment,
 } from "@clipquest/contracts";
@@ -65,17 +67,6 @@ const GeneratedQuizItemDraftSchema = z.object({
       correctAnswer: z.boolean(),
     }),
     QuestionDraftBaseSchema.extend({
-      type: z.literal("ordering"),
-      items: z.array(z.string().min(1).max(300)).min(2).max(7),
-      correctAnswer: z.array(z.number().int().nonnegative()).min(2).max(7),
-    }).refine(
-      (question) =>
-        question.correctAnswer.length === question.items.length &&
-        new Set(question.correctAnswer).size === question.items.length &&
-        question.correctAnswer.every((index) => index < question.items.length),
-      { message: "correctAnswer must be a permutation of item indexes" },
-    ),
-    QuestionDraftBaseSchema.extend({
       type: z.literal("short_answer"),
       rubric: z.object({
         requiredIdeas: z.array(z.string().min(1).max(300)).min(1).max(6),
@@ -85,13 +76,9 @@ const GeneratedQuizItemDraftSchema = z.object({
   ]),
 });
 
-const QuestionTypes = [
-  "multiple_choice",
-  "true_false",
-  "ordering",
-  "short_answer",
-] as const;
-type QuestionType = (typeof QuestionTypes)[number];
+const GeneratedQuizBatchResponseSchema = z.object({
+  items: z.array(z.unknown()).min(1).max(5),
+});
 
 type DeepSeekMessage = {
   role: "system" | "user";
@@ -262,15 +249,34 @@ function serializeTranscript(
   segments: TranscriptSegment[],
   maximumCharacters = 500_000,
 ): string {
-  let used = 0;
-  const lines: string[] = [];
-  for (const segment of segments) {
-    const line = `[${segment.id}] ${segment.text.replaceAll("\n", " ").trim()}`;
-    if (used + line.length > maximumCharacters) break;
-    lines.push(line);
-    used += line.length + 1;
+  const lines = segments.map(
+    (segment) => `[${segment.id}] ${segment.text.replaceAll("\n", " ").trim()}`,
+  );
+  if (lines.join("\n").length <= maximumCharacters) return lines.join("\n");
+
+  const selected: string[] = [];
+  const maximumLines = Math.max(
+    2,
+    Math.min(lines.length, Math.floor(maximumCharacters / 180)),
+  );
+  const perLine = Math.max(40, Math.floor(maximumCharacters / maximumLines));
+  for (let index = 0; index < maximumLines; index += 1) {
+    const sourceIndex = Math.round(
+      (index * (lines.length - 1)) / Math.max(1, maximumLines - 1),
+    );
+    const line = lines[sourceIndex];
+    if (line) selected.push(line.slice(0, perLine - 1));
   }
-  return lines.join("\n");
+  return selected.join("\n").slice(0, maximumCharacters);
+}
+
+export function serializeFullSubtitles(segments: TranscriptSegment[]): string {
+  return segments
+    .map(
+      (segment, index) =>
+        `[${index + 1}|${segment.id}|${segment.startMs}-${segment.endMs}] ${segment.text.replaceAll("\n", " ").trim()}`,
+    )
+    .join("\n");
 }
 
 export async function classifyTranscript(
@@ -278,6 +284,7 @@ export async function classifyTranscript(
   title: string,
   segments: TranscriptSegment[],
 ) {
+  const fullSubtitles = serializeFullSubtitles(segments);
   try {
     return await requestJson(
       env,
@@ -289,7 +296,7 @@ export async function classifyTranscript(
         },
         {
           role: "user",
-          content: `Title: ${title}\n\nTranscript sample:\n${serializeTranscript(segments, 6_000)}`,
+          content: `Title: ${title}\n\nComplete subtitle transcript (all ${segments.length} segments):\n${fullSubtitles}`,
         },
       ],
       EducationClassificationSchema,
@@ -328,9 +335,11 @@ export async function generateQuiz(
     sessionLength: "short" | "medium" | "long";
     watched: boolean;
     segments: TranscriptSegment[];
+    questionTypes: QuizQuestionType[];
   },
 ): Promise<QuizGeneration> {
   const questionCount = questionLimitForSession(input.sessionLength);
+  const fullSubtitles = serializeFullSubtitles(input.segments);
   const generatedItems: Array<{
     concept: Concept;
     question: GeneratedQuestion;
@@ -342,21 +351,21 @@ export async function generateQuiz(
   for (let offset = 0; offset < questionCount; offset += 5) {
     const batchNumber = batches.length + 1;
     const batchStartedAt = Date.now();
+    const indexes = Array.from(
+      { length: Math.min(5, questionCount - offset) },
+      (_, batchIndex) => offset + batchIndex,
+    );
     batches.push(
-      Promise.all(
-        Array.from(
-          { length: Math.min(5, questionCount - offset) },
-          (_, batchIndex) =>
-            generateQuizItem(env, input, offset + batchIndex, questionCount),
-        ),
-      ).then((items) => {
-        logDeepSeek("batch.completed", {
-          batchNumber,
-          questionCount: items.length,
-          elapsedMs: Date.now() - batchStartedAt,
-        });
-        return items;
-      }),
+      generateQuizBatch(env, input, indexes, questionCount, fullSubtitles).then(
+        (items) => {
+          logDeepSeek("batch.completed", {
+            batchNumber,
+            questionCount: items.length,
+            elapsedMs: Date.now() - batchStartedAt,
+          });
+          return items;
+        },
+      ),
     );
   }
   generatedItems.push(...(await Promise.all(batches)).flat());
@@ -380,12 +389,17 @@ export async function generateQuiz(
   logDeepSeek("quiz.completed", {
     questionCount,
     batchCount: batches.length,
+    questionTypes: input.questionTypes,
+    transcriptSegmentCount: input.segments.length,
+    fullSubtitleCharacters: fullSubtitles.length,
+    firstTranscriptMs: input.segments.at(0)?.startMs ?? null,
+    lastTranscriptMs: input.segments.at(-1)?.endMs ?? null,
     elapsedMs: Date.now() - startedAt,
   });
   return generated;
 }
 
-async function generateQuizItem(
+async function generateQuizBatch(
   env: AppEnv,
   input: {
     title: string;
@@ -393,59 +407,123 @@ async function generateQuizItem(
     sessionLength: "short" | "medium" | "long";
     watched: boolean;
     segments: TranscriptSegment[];
+    questionTypes: QuizQuestionType[];
   },
-  index: number,
+  indexes: number[],
   questionCount: number,
-): Promise<{ concept: Concept; question: GeneratedQuestion }> {
-  const questionType =
-    QuestionTypes[index % QuestionTypes.length] ?? "multiple_choice";
-  const evidence = selectEvidenceWindow(input.segments, index, questionCount);
+  fullSubtitles: string,
+): Promise<Array<{ concept: Concept; question: GeneratedQuestion }>> {
+  const requirements = indexes.map((index, position) => {
+    const questionType =
+      input.questionTypes[index % input.questionTypes.length] ??
+      "multiple_choice";
+    const evidence = selectEvidenceWindow(input.segments, index, questionCount);
+    const evidenceStartLine =
+      Math.floor((index * input.segments.length) / questionCount) + 1;
+    const evidenceEndLine = Math.floor(
+      ((index + 1) * input.segments.length) / questionCount,
+    );
+    return {
+      index,
+      position,
+      questionType,
+      evidence,
+      prompt: `Item ${position + 1}\nRequired question type: ${questionType}\nRequired evidence lines from the complete transcript: ${evidenceStartLine}-${Math.max(evidenceStartLine, evidenceEndLine)}`,
+    };
+  });
+  logDeepSeek("batch.started", {
+    questionIndexes: indexes.map((index) => index + 1),
+    transcriptCoverage: "complete",
+    transcriptSegmentCount: input.segments.length,
+    fullSubtitleCharacters: fullSubtitles.length,
+    firstTranscriptMs: input.segments.at(0)?.startMs ?? null,
+    lastTranscriptMs: input.segments.at(-1)?.endMs ?? null,
+  });
   try {
-    const draft = await requestJson(
+    const response = await requestJson(
       env,
       [
         {
           role: "system",
-          content: `Create one concise evidence-grounded quiz item. Return JSON with concept {title, summary} and question. Question keys: type, prompt, explanation, difficulty (1-5), reformulatedPrompt. For multiple_choice add options and zero-based correctAnswer; for true_false add boolean correctAnswer; for ordering add items and a zero-based permutation correctAnswer; for short_answer add rubric {requiredIdeas, acceptableAlternatives}. Use only supplied evidence, keep explanations to one sentence, and use question type ${questionType}.`,
+          content:
+            "Create the requested concise evidence-grounded quiz items after reading every line of the complete subtitle transcript. Return JSON exactly as {items: [{concept: {title, summary}, question: {...}}]} in the same order as the requested items. Question keys: type, prompt, explanation, difficulty (1-5), reformulatedPrompt. For multiple_choice add options and zero-based correctAnswer; for true_false add boolean correctAnswer; for short_answer add rubric {requiredIdeas, acceptableAlternatives}. Use the entire transcript for lesson context, ground each question and answer in its required line range, and keep explanations to one sentence.",
         },
         {
           role: "user",
-          content: `Video: ${input.title}\nLanguage: ${input.language}\nQuestion type: ${questionType}\nEvidence:\n${serializeTranscript(evidence, 4_000)}`,
+          content: `Video: ${input.title}\nLanguage: ${input.language}\n\nComplete subtitle transcript (all ${input.segments.length} segments):\n${fullSubtitles}\n\nRequested items:\n${requirements.map((requirement) => requirement.prompt).join("\n\n")}`,
         },
       ],
-      GeneratedQuizItemDraftSchema,
+      GeneratedQuizBatchResponseSchema,
       {
-        operation: `generate_question_${index + 1}`,
-        maximumOutputTokens: 900,
+        operation: `generate_questions_${indexes[0]! + 1}_${indexes.at(-1)! + 1}`,
+        maximumOutputTokens: 4_800,
         maximumAttempts: 1,
         timeoutMs: 7_500,
       },
     );
-    if (draft.question.type !== questionType)
-      throw new Error("DeepSeek returned the wrong question type");
-    return materializeQuizItem(draft, evidence, index);
+    return requirements.map((requirement) => {
+      const parsed = GeneratedQuizItemDraftSchema.safeParse(
+        response.items[requirement.position],
+      );
+      if (
+        parsed.success &&
+        parsed.data.question.type === requirement.questionType
+      ) {
+        return materializeQuizItem(
+          parsed.data,
+          requirement.evidence,
+          requirement.index,
+        );
+      }
+      logDeepSeek(
+        "question.fallback",
+        {
+          questionIndex: requirement.index + 1,
+          questionType: requirement.questionType,
+          reason: parsed.success ? "wrong_type" : "invalid_item",
+        },
+        "warn",
+      );
+      return fallbackQuizItem(
+        requirement.evidence,
+        requirement.index,
+        requirement.questionType,
+        input.language,
+      );
+    });
   } catch {
-    logDeepSeek(
-      "question.fallback",
-      { questionIndex: index + 1, questionType },
-      "warn",
-    );
-    return fallbackQuizItem(evidence, index, questionType, input.language);
+    return requirements.map((requirement) => {
+      logDeepSeek(
+        "question.fallback",
+        {
+          questionIndex: requirement.index + 1,
+          questionType: requirement.questionType,
+          reason: "batch_failed",
+        },
+        "warn",
+      );
+      return fallbackQuizItem(
+        requirement.evidence,
+        requirement.index,
+        requirement.questionType,
+        input.language,
+      );
+    });
   }
 }
 
-function selectEvidenceWindow(
+export function selectEvidenceWindow(
   segments: TranscriptSegment[],
   index: number,
   questionCount: number,
 ): TranscriptSegment[] {
-  const usable = segments.filter((segment) => segment.text.trim().length >= 12);
-  const source = usable.length >= 12 ? usable : segments;
-  const center = Math.floor(
-    ((index + 1) / (questionCount + 1)) * source.length,
+  if (segments.length === 0) return [];
+  const start = Math.floor((index * segments.length) / questionCount);
+  const end = Math.max(
+    start + 1,
+    Math.floor(((index + 1) * segments.length) / questionCount),
   );
-  const start = Math.max(0, Math.min(source.length - 12, center - 6));
-  return source.slice(start, start + 12);
+  return segments.slice(start, end);
 }
 
 function materializeQuizItem(
@@ -473,7 +551,7 @@ function materializeQuizItem(
 function fallbackQuizItem(
   evidence: TranscriptSegment[],
   index: number,
-  questionType: QuestionType,
+  questionType: QuizQuestionType,
   language: "en" | "zh-CN",
 ): { concept: Concept; question: GeneratedQuestion } {
   const conceptId = `concept-${index + 1}`;
@@ -482,10 +560,6 @@ function fallbackQuizItem(
     .slice(0, 3)
     .map((segment) => segment.text.trim().slice(0, 240));
   const focus = sourceStatements[0] ?? "the topic in this section";
-  const statements =
-    sourceStatements.length >= 2
-      ? sourceStatements
-      : [focus, `A related point: ${focus}`];
   const common = {
     id: `question-${index + 1}`,
     conceptId,
@@ -522,26 +596,15 @@ function fallbackQuizItem(
                 : `True or false: ${focus}`,
             correctAnswer: true,
           }
-        : questionType === "ordering"
-          ? {
-              ...common,
-              type: questionType,
-              prompt:
-                language === "zh-CN"
-                  ? "按照视频中的出现顺序排列这些观点。"
-                  : "Put these ideas in the order presented in the video.",
-              items: statements,
-              correctAnswer: statements.map((_, itemIndex) => itemIndex),
-            }
-          : {
-              ...common,
-              type: questionType,
-              prompt:
-                language === "zh-CN"
-                  ? "视频对这一观点给出了怎样的解释？"
-                  : "How does the video explain this idea?",
-              rubric: { requiredIdeas: [focus], acceptableAlternatives: [] },
-            };
+        : {
+            ...common,
+            type: questionType,
+            prompt:
+              language === "zh-CN"
+                ? "视频对这一观点给出了怎样的解释？"
+                : "How does the video explain this idea?",
+            rubric: { requiredIdeas: [focus], acceptableAlternatives: [] },
+          };
   return {
     concept: ConceptSchema.parse({
       id: conceptId,
@@ -644,7 +707,8 @@ export const StoredTranscriptSchema = z.object({
   version: z.literal(1),
   videoId: z.string().uuid(),
   language: z.string(),
-  origin: z.enum(["captions", "device_whisper"]),
+  origin: z.enum(["captions", "device_whisper", "browser_tab_capture"]),
+  completeness: TranscriptCompletenessSchema,
   segments: z.array(TranscriptSegmentSchema).min(1),
 });
 
@@ -654,8 +718,7 @@ export function questionStorageFields(question: GeneratedQuestion) {
       question.type === "multiple_choice"
         ? JSON.stringify(question.options)
         : null,
-    itemsJson:
-      question.type === "ordering" ? JSON.stringify(question.items) : null,
+    itemsJson: null,
     correctAnswerJson:
       question.type === "short_answer"
         ? null

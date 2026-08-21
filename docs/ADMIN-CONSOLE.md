@@ -1,5 +1,7 @@
 # ClipQuest Operations Console
 
+Status reviewed: 2026-08-04. This document describes the current operations surface; release-level implementation and verification state is recorded in [the current handoff](./HANDOFF-2026-08-04.md).
+
 The private operations console lives at `/admin`. It uses ClipQuest's existing Expo application and visual system, but it is deliberately isolated from the learner navigation.
 
 ## Access model
@@ -36,6 +38,8 @@ Migration `apps/api/migrations/0006_admin_console.sql` adds:
 
 Migration `0007_admin_audit_retention.sql` changes the audit actor foreign key to `ON DELETE SET NULL`. Existing ClipQuest self-deletion therefore remains available; historical events show an anonymized deleted-operator identity instead of retaining account PII.
 
+Migration `0008_question_types.sql` is not an admin-schema change, but it must be applied in the same release. It records each generation job's user-selected question types so retries and operator-triggered recovery preserve the original quiz contract.
+
 Verify locally:
 
 ```bash
@@ -71,7 +75,7 @@ The safe order is:
 6. Sign in as the owner, open `/admin`, verify read-only views, then perform one reversible test action and confirm its audit entry.
 7. Promote additional operators from the console only when needed.
 
-Do not deploy the new Worker before migrations `0006` and `0007` are present. The new auth/session queries expect the role and ban columns, and `0007` preserves existing account deletion behavior.
+Do not deploy the current Worker before migrations `0006`, `0007`, and `0008` are present. The auth/session queries expect the role and ban columns, `0007` preserves existing account deletion behavior, and generation recovery expects `question_types_json` from `0008`.
 
 ## Safety behavior
 

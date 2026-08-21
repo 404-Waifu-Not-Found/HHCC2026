@@ -1,7 +1,9 @@
-import type { TranscriptSegment } from "@clipquest/contracts";
+import {
+  compactTranscriptSegments,
+  type TranscriptSegment,
+} from "@clipquest/contracts";
 
 const MAX_CAPTION_BYTES = 8 * 1024 * 1024;
-const MAX_TRANSCRIPT_SEGMENTS = 12_000;
 const TRANSCRIPT_PROVIDER_ORIGIN = "https://youtube-transcript.ai";
 const TRANSCRIPT_PROVIDER_ATTEMPTS = 2;
 const TRANSCRIPT_PROVIDER_TIMEOUT_MS = 4_000;
@@ -14,37 +16,72 @@ type TimedTextPayload = {
   }[];
 };
 
-export function parseYouTubeTimedText(
+type CompleteCaptionDocument = {
+  segments: TranscriptSegment[];
+  sourceSegmentCount: number;
+};
+
+function splitCaptionText(text: string): string[] {
+  const normalized = text.replaceAll("\n", " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return [];
+  if (normalized.length <= 2_000) return [normalized];
+  const pieces: string[] = [];
+  let remaining = normalized;
+  while (remaining.length > 2_000) {
+    const splitAt = remaining.lastIndexOf(" ", 1_900);
+    if (splitAt < 1) {
+      throw new Error(
+        "A YouTube caption event is too large to preserve safely.",
+      );
+    }
+    pieces.push(remaining.slice(0, splitAt));
+    remaining = remaining.slice(splitAt + 1);
+  }
+  if (remaining) pieces.push(remaining);
+  return pieces;
+}
+
+export function parseYouTubeTimedTextDocument(
   payload: TimedTextPayload,
-): TranscriptSegment[] {
-  const segments = (payload.events ?? [])
-    .slice(0, 12_000)
-    .map((event, index) => {
-      const startMs = Math.max(0, Math.floor(event.tStartMs ?? 0));
-      const text = (event.segs ?? [])
-        .map((segment) => segment.utf8 ?? "")
-        .join("")
-        .replaceAll("\n", " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      return {
-        id: `youtube-${index}-${startMs}`,
-        startMs,
-        endMs: startMs + Math.max(1, Math.floor(event.dDurationMs ?? 3_000)),
-        text,
-      };
-    })
-    .filter((segment) => segment.text.length > 0);
+): CompleteCaptionDocument {
+  const rawSegments = (payload.events ?? []).flatMap((event, eventIndex) => {
+    const startMs = Math.max(0, Math.floor(event.tStartMs ?? 0));
+    const endMs = startMs + Math.max(1, Math.floor(event.dDurationMs ?? 3_000));
+    const text = (event.segs ?? [])
+      .map((segment) => segment.utf8 ?? "")
+      .join("");
+    const pieces = splitCaptionText(text);
+    return pieces.map((piece, pieceIndex) => ({
+      id:
+        pieces.length === 1
+          ? `youtube-${eventIndex}-${startMs}`
+          : `youtube-${eventIndex}-${pieceIndex}-${startMs}`,
+      startMs: startMs + pieceIndex,
+      endMs: Math.max(startMs + pieceIndex + 1, endMs),
+      text: piece,
+    }));
+  });
+  const segments = compactTranscriptSegments(rawSegments);
   const characters = segments.reduce(
     (total, segment) => total + segment.text.length,
     0,
   );
-  return characters >= 20 ? segments : [];
+  return {
+    segments: characters >= 20 ? segments : [],
+    sourceSegmentCount: rawSegments.length,
+  };
+}
+
+export function parseYouTubeTimedText(
+  payload: TimedTextPayload,
+): TranscriptSegment[] {
+  return parseYouTubeTimedTextDocument(payload).segments;
 }
 
 type BrowserTranscript = {
   language: string;
   segments: TranscriptSegment[];
+  sourceSegmentCount: number;
 };
 
 function timestampMs(first: string, second: string, third?: string): number {
@@ -134,42 +171,31 @@ export function parseBrowserTranscript(
   }
   const language =
     body.match(/^Language:\s*([A-Za-z0-9-]{2,35})(?:\s|$)/m)?.[1] ?? "und";
-  const parsed = body
-    .split(/\r?\n/)
-    .flatMap((line) => {
-      const match = line.match(
-        /^\[(\d{1,3}):([0-5]\d)(?::([0-5]\d))?\]\s+(.+)$/,
-      );
-      if (!match?.[1] || !match[2] || !match[4]) return [];
-      const text = collapseAdjacentCaptionRepeats(match[4]);
-      if (!text) return [];
-      return [{ startMs: timestampMs(match[1], match[2], match[3]), text }];
-    })
-    .slice(0, MAX_TRANSCRIPT_SEGMENTS);
-  const segments = parsed.flatMap((segment, index) => {
+  const parsed = body.split(/\r?\n/).flatMap((line) => {
+    const match = line.match(/^\[(\d{1,3}):([0-5]\d)(?::([0-5]\d))?\]\s+(.+)$/);
+    if (!match?.[1] || !match[2] || !match[4]) return [];
+    const text = collapseAdjacentCaptionRepeats(match[4]);
+    if (!text) return [];
+    return [{ startMs: timestampMs(match[1], match[2], match[3]), text }];
+  });
+  const rawSegments = parsed.flatMap((segment, index) => {
     const nextStartMs = parsed[index + 1]?.startMs;
     const endMs = Math.max(
       segment.startMs + 1,
       nextStartMs ?? segment.startMs + 30_000,
     );
-    if (segment.text.length <= 2_000) {
-      return [
-        {
-          id: `youtube-text-${index}-${segment.startMs}`,
-          startMs: segment.startMs,
-          endMs,
-          text: segment.text,
-        },
-      ];
-    }
-    const pieces = segment.text.match(/.{1,1900}(?:\s|$)/g) ?? [];
+    const pieces = splitCaptionText(segment.text);
     return pieces.map((piece, pieceIndex) => ({
-      id: `youtube-text-${index}-${pieceIndex}-${segment.startMs}`,
+      id:
+        pieces.length === 1
+          ? `youtube-text-${index}-${segment.startMs}`
+          : `youtube-text-${index}-${pieceIndex}-${segment.startMs}`,
       startMs: segment.startMs + pieceIndex,
       endMs: Math.max(segment.startMs + pieceIndex + 1, endMs),
-      text: piece.trim(),
+      text: piece,
     }));
   });
+  const segments = compactTranscriptSegments(rawSegments);
   const characters = segments.reduce(
     (total, segment) => total + segment.text.length,
     0,
@@ -177,7 +203,7 @@ export function parseBrowserTranscript(
   if (segments.length === 0 || characters < 20) {
     throw new Error("The transcript provider returned empty captions.");
   }
-  return { language, segments };
+  return { language, segments, sourceSegmentCount: rawSegments.length };
 }
 
 async function fetchBrowserTranscript(
@@ -260,7 +286,7 @@ export async function downloadBrowserYouTubeTranscript(
 export async function downloadYouTubeCaptions(
   captionUrl: string,
   signal: AbortSignal,
-): Promise<TranscriptSegment[]> {
+): Promise<CompleteCaptionDocument> {
   const url = new URL(captionUrl);
   if (
     url.protocol !== "https:" ||
@@ -285,7 +311,10 @@ export async function downloadYouTubeCaptions(
   if (new TextEncoder().encode(body).byteLength > MAX_CAPTION_BYTES) {
     throw new Error("YouTube captions exceeded the safe size limit.");
   }
-  const segments = parseYouTubeTimedText(JSON.parse(body) as TimedTextPayload);
-  if (!segments.length) throw new Error("YouTube returned empty captions.");
-  return segments;
+  const document = parseYouTubeTimedTextDocument(
+    JSON.parse(body) as TimedTextPayload,
+  );
+  if (!document.segments.length)
+    throw new Error("YouTube returned empty captions.");
+  return document;
 }

@@ -60,6 +60,11 @@ export const messages = {
     watchedYes: "Yes, quiz me",
     watchedNo: "Not yet",
     quizLanguage: "Quiz language",
+    questionTypes: "Question types",
+    questionTypesHelp:
+      "Choose one or more. ClipQuest starts preparing the full quiz as soon as the link is imported.",
+    multipleChoice: "Multiple choice",
+    trueFalse: "True / false",
     sessionLength: "Session length",
     short: "Short · 5",
     medium: "Medium · 10",
@@ -248,6 +253,11 @@ export const messages = {
     watchedYes: "看过，考考我",
     watchedNo: "还没有",
     quizLanguage: "测验语言",
+    questionTypes: "题目类型",
+    questionTypesHelp:
+      "可选择一种或多种。导入链接后，ClipQuest 会立即预生成完整测验。",
+    multipleChoice: "选择题",
+    trueFalse: "判断题",
     sessionLength: "题目数量",
     short: "短 · 5 题",
     medium: "中 · 10 题",

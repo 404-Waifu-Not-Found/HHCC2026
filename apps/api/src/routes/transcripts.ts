@@ -1,8 +1,10 @@
 import {
   GenerationStageSchema,
   GenerationStatusSchema,
+  MAX_COMPLETE_TRANSCRIPT_CHARACTERS,
   TranscriptUploadRequestSchema,
   TranscriptUploadResponseSchema,
+  transcriptCompletenessMatches,
 } from "@clipquest/contracts";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
@@ -18,7 +20,6 @@ import { parseJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 import type { AppEnv, GenerationQueueMessage } from "../types";
 
-const MAX_TRANSCRIPT_CHARACTERS = 750_000;
 const MAX_DEVICE_TRANSCRIPT_MS = 90 * 60 * 1_000;
 
 type JobRow = {
@@ -81,11 +82,24 @@ transcriptsRouter.post("/", async (c) => {
 
   const input = await parseJson(c, TranscriptUploadRequestSchema);
   const video = await c.env.DB.prepare(
-    "SELECT id FROM videos WHERE id = ? AND owner_id = ?",
+    "SELECT id, duration_seconds FROM videos WHERE id = ? AND owner_id = ?",
   )
     .bind(input.videoId, user.id)
-    .first<{ id: string }>();
+    .first<{ id: string; duration_seconds: number }>();
   if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
+  if (
+    !transcriptCompletenessMatches(
+      input.completeness,
+      input.segments,
+      video.duration_seconds,
+    )
+  ) {
+    throw new ApiError(
+      422,
+      "incomplete_transcript",
+      "The complete-transcript manifest did not match the uploaded subtitles.",
+    );
+  }
 
   const ids = new Set<string>();
   let characterCount = 0;
@@ -120,7 +134,7 @@ transcriptsRouter.post("/", async (c) => {
     previousStart = segment.startMs;
     characterCount += segment.text.length;
   }
-  if (characterCount > MAX_TRANSCRIPT_CHARACTERS) {
+  if (characterCount > MAX_COMPLETE_TRANSCRIPT_CHARACTERS) {
     throw new ApiError(
       413,
       "transcript_too_large",
@@ -139,6 +153,7 @@ transcriptsRouter.post("/", async (c) => {
       language: input.language,
       origin: input.origin,
       acquisition: input.acquisition,
+      completeness: input.completeness,
       segments: input.segments,
     }),
     {
@@ -158,15 +173,22 @@ transcriptsRouter.post("/", async (c) => {
       jobId,
       origin: input.origin,
       acquisition: input.acquisition ?? "unspecified",
+      transcriptComplete: true,
+      sourceSegmentCount: input.completeness.sourceSegmentCount,
       segmentCount: input.segments.length,
-      characterCount,
+      characterCount: input.completeness.characterCount,
+      firstTranscriptMs: input.completeness.firstStartMs,
+      lastTranscriptMs: input.completeness.lastEndMs,
+      expectedDurationMs: input.completeness.expectedDurationMs,
+      textFingerprint: input.completeness.textFingerprint,
+      questionTypes: input.questionTypes,
       elapsedMs: Date.now() - uploadStartedAt,
     }),
   );
   try {
     await c.env.DB.batch([
       c.env.DB.prepare(
-        "INSERT INTO generation_jobs (id, user_id, video_id, state, stage, progress, quiz_language, session_length, watched, transcript_key, idempotency_key, created_at, updated_at) VALUES (?, ?, ?, 'queued', 'creating_questions', 0, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO generation_jobs (id, user_id, video_id, state, stage, progress, quiz_language, session_length, watched, transcript_key, question_types_json, idempotency_key, created_at, updated_at) VALUES (?, ?, ?, 'queued', 'creating_questions', 0, ?, ?, ?, ?, ?, ?, ?, ?)",
       ).bind(
         jobId,
         user.id,
@@ -175,6 +197,7 @@ transcriptsRouter.post("/", async (c) => {
         input.sessionLength,
         input.watched ? 1 : 0,
         transcriptKey,
+        JSON.stringify(input.questionTypes),
         idempotencyKey.data,
         timestamp,
         timestamp,

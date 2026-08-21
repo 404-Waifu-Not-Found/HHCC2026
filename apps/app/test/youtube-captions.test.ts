@@ -47,6 +47,7 @@ describe("YouTube browser captions", () => {
       ),
     ).toEqual({
       language: "en",
+      sourceSegmentCount: 2,
       segments: [
         {
           id: "youtube-text-0-2000",
@@ -79,5 +80,38 @@ describe("YouTube browser captions", () => {
         "differential equations unit seven differential equations unit seven differential equations unit seven very very useful",
       ),
     ).toBe("differential equations unit seven very very useful");
+  });
+
+  it("preserves every timed-text event beyond the old 12,000-event cutoff", () => {
+    const eventCount = 12_005;
+    const segments = parseYouTubeTimedText({
+      events: Array.from({ length: eventCount }, (_, index) => ({
+        tStartMs: index * 1_000,
+        dDurationMs: 1_000,
+        segs: [{ utf8: `complete caption ${index + 1}` }],
+      })),
+    });
+
+    expect(segments).toHaveLength(eventCount);
+    expect(segments.at(-1)?.text).toBe(`complete caption ${eventCount}`);
+  });
+
+  it("preserves every browser transcript line beyond the old 12,000-line cutoff", () => {
+    const lineCount = 12_005;
+    const lines = Array.from(
+      { length: lineCount },
+      (_, index) =>
+        `[${Math.floor(index / 60)}:${String(index % 60).padStart(2, "0")}] full subtitle line ${index + 1}`,
+    ).join("\n");
+    const transcript = parseBrowserTranscript(
+      `Source video: https://www.youtube.com/watch?v=TTsLhDHWopI\nLanguage: en\n${lines}`,
+      "TTsLhDHWopI",
+    );
+
+    expect(transcript.sourceSegmentCount).toBe(lineCount);
+    expect(transcript.segments).toHaveLength(lineCount);
+    expect(transcript.segments.at(-1)?.text).toBe(
+      `full subtitle line ${lineCount}`,
+    );
   });
 });

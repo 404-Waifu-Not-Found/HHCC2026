@@ -183,6 +183,11 @@ videosRouter.post("/import", async (c) => {
       available: captionsAvailable,
       tracks: inspected.captionTracks,
       ...(preferredSegments?.length ? { preferredSegments } : {}),
+      ...(preferredSegments?.length && inspected.preferredCaptionCompleteness
+        ? {
+            preferredCompleteness: inspected.preferredCaptionCompleteness,
+          }
+        : {}),
       browserSourceAvailable: browserCaptionLookup,
       browserLookupAvailable: browserTextLookupAvailable,
     },

@@ -1,15 +1,30 @@
 import {
+  DEFAULT_QUIZ_QUESTION_TYPES,
+  LanguageSchema,
+  QuizQuestionTypesSchema,
   VideoImportResponseSchema,
+  type AppLanguage,
+  type QuizQuestionType,
   type VideoImportResponse,
 } from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const keyFor = (videoId: string) => `clipquest:creation:${videoId}`;
 const generationKeyFor = (videoId: string) => `clipquest:generation:${videoId}`;
+const preferencesKeyFor = (videoId: string) =>
+  `clipquest:preferences:${videoId}`;
+
+export type QuestPreferences = {
+  quizLanguage: AppLanguage;
+  questionTypes: QuizQuestionType[];
+};
 
 export type StoredGeneration = {
   idempotencyKey: string;
   jobId?: string;
+  quizLanguage?: AppLanguage;
+  questionTypes?: QuizQuestionType[];
+  preworkStatus?: "running" | "ready" | "unavailable" | "failed";
 };
 
 export async function saveImportedVideo(
@@ -32,10 +47,7 @@ export async function loadImportedVideo(
     return VideoImportResponseSchema.parse({
       ...stored,
       transcriptionMode:
-        stored.transcriptionMode ??
-        (hasCaptions
-          ? "captions"
-          : "device_media"),
+        stored.transcriptionMode ?? (hasCaptions ? "captions" : "device_media"),
       capture:
         stored.capture ??
         ({
@@ -50,7 +62,50 @@ export async function loadImportedVideo(
 }
 
 export async function clearImportedVideo(videoId: string): Promise<void> {
-  await AsyncStorage.multiRemove([keyFor(videoId), generationKeyFor(videoId)]);
+  await AsyncStorage.multiRemove([
+    keyFor(videoId),
+    generationKeyFor(videoId),
+    preferencesKeyFor(videoId),
+  ]);
+}
+
+export async function saveQuestPreferences(
+  videoId: string,
+  value: QuestPreferences,
+): Promise<void> {
+  const parsed = {
+    quizLanguage: LanguageSchema.parse(value.quizLanguage),
+    questionTypes: QuizQuestionTypesSchema.parse(value.questionTypes),
+  };
+  await AsyncStorage.setItem(
+    preferencesKeyFor(videoId),
+    JSON.stringify(parsed),
+  );
+}
+
+export async function loadQuestPreferences(
+  videoId: string,
+): Promise<QuestPreferences> {
+  const raw = await AsyncStorage.getItem(preferencesKeyFor(videoId));
+  if (!raw) {
+    return {
+      quizLanguage: "en",
+      questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
+    };
+  }
+  try {
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      quizLanguage: LanguageSchema.parse(value.quizLanguage),
+      questionTypes: QuizQuestionTypesSchema.parse(value.questionTypes),
+    };
+  } catch {
+    await AsyncStorage.removeItem(preferencesKeyFor(videoId));
+    return {
+      quizLanguage: "en",
+      questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
+    };
+  }
 }
 
 export async function loadGenerationState(
@@ -62,7 +117,11 @@ export async function loadGenerationState(
     const value = JSON.parse(raw) as Partial<StoredGeneration>;
     if (
       typeof value.idempotencyKey !== "string" ||
-      (value.jobId !== undefined && typeof value.jobId !== "string")
+      (value.jobId !== undefined && typeof value.jobId !== "string") ||
+      (value.quizLanguage !== undefined &&
+        !LanguageSchema.safeParse(value.quizLanguage).success) ||
+      (value.questionTypes !== undefined &&
+        !QuizQuestionTypesSchema.safeParse(value.questionTypes).success)
     ) {
       throw new Error("Invalid generation state");
     }

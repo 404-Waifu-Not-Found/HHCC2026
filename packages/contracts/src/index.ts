@@ -11,6 +11,25 @@ export type AppLanguage = z.infer<typeof LanguageSchema>;
 export const SessionLengthSchema = z.enum(["short", "medium", "long"]);
 export type SessionLength = z.infer<typeof SessionLengthSchema>;
 
+export const QuizQuestionTypeSchema = z.enum([
+  "multiple_choice",
+  "true_false",
+  "short_answer",
+]);
+export type QuizQuestionType = z.infer<typeof QuizQuestionTypeSchema>;
+export const DEFAULT_QUIZ_QUESTION_TYPES: QuizQuestionType[] = [
+  "multiple_choice",
+  "true_false",
+  "short_answer",
+];
+export const QuizQuestionTypesSchema = z
+  .array(QuizQuestionTypeSchema)
+  .min(1)
+  .max(DEFAULT_QUIZ_QUESTION_TYPES.length)
+  .refine((types) => new Set(types).size === types.length, {
+    message: "Question types must be unique",
+  });
+
 export const MasteryStateSchema = z.enum([
   "not_started",
   "learning",
@@ -40,6 +59,132 @@ export const TranscriptSegmentSchema = z
     message: "endMs must be greater than startMs",
   });
 export type TranscriptSegment = z.infer<typeof TranscriptSegmentSchema>;
+
+export const MAX_COMPLETE_TRANSCRIPT_SEGMENTS = 60_000;
+export const MAX_COMPLETE_TRANSCRIPT_CHARACTERS = 750_000;
+
+export const TranscriptCompletenessSchema = z.object({
+  status: z.literal("complete"),
+  truncated: z.literal(false),
+  sourceSegmentCount: z.number().int().positive(),
+  segmentCount: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
+  characterCount: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_COMPLETE_TRANSCRIPT_CHARACTERS),
+  textFingerprint: z.string().regex(/^[a-f0-9]{8}$/),
+  firstStartMs: z.number().int().nonnegative(),
+  lastEndMs: z.number().int().positive(),
+  expectedDurationMs: z.number().int().nonnegative(),
+});
+export type TranscriptCompleteness = z.infer<
+  typeof TranscriptCompletenessSchema
+>;
+
+function canonicalTranscriptText(segments: TranscriptSegment[]): string {
+  return segments
+    .map((segment) => segment.text.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+export function transcriptTextFingerprint(
+  segments: TranscriptSegment[],
+): string {
+  const text = canonicalTranscriptText(segments);
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+export function createTranscriptCompleteness(
+  segments: TranscriptSegment[],
+  expectedDurationSeconds: number,
+  sourceSegmentCount = segments.length,
+): TranscriptCompleteness {
+  const first = segments.at(0);
+  const last = segments.at(-1);
+  if (!first || !last)
+    throw new Error("A complete transcript cannot be empty.");
+  return TranscriptCompletenessSchema.parse({
+    status: "complete",
+    truncated: false,
+    sourceSegmentCount,
+    segmentCount: segments.length,
+    characterCount: canonicalTranscriptText(segments).length,
+    textFingerprint: transcriptTextFingerprint(segments),
+    firstStartMs: first.startMs,
+    lastEndMs: last.endMs,
+    expectedDurationMs: Math.max(
+      0,
+      Math.round(expectedDurationSeconds * 1_000),
+    ),
+  });
+}
+
+export function transcriptCompletenessMatches(
+  completeness: TranscriptCompleteness,
+  segments: TranscriptSegment[],
+  expectedDurationSeconds: number,
+): boolean {
+  if (segments.length === 0) return false;
+  const calculated = createTranscriptCompleteness(
+    segments,
+    expectedDurationSeconds,
+    completeness.sourceSegmentCount,
+  );
+  return (
+    completeness.status === calculated.status &&
+    completeness.truncated === calculated.truncated &&
+    completeness.segmentCount === calculated.segmentCount &&
+    completeness.characterCount === calculated.characterCount &&
+    completeness.textFingerprint === calculated.textFingerprint &&
+    completeness.firstStartMs === calculated.firstStartMs &&
+    completeness.lastEndMs === calculated.lastEndMs &&
+    completeness.expectedDurationMs === calculated.expectedDurationMs
+  );
+}
+
+export function compactTranscriptSegments(
+  input: TranscriptSegment[],
+): TranscriptSegment[] {
+  const source = input.map((segment) => TranscriptSegmentSchema.parse(segment));
+  if (source.length <= MAX_COMPLETE_TRANSCRIPT_SEGMENTS) {
+    return source.map((segment) => ({ ...segment }));
+  }
+  const output: TranscriptSegment[] = [];
+  for (const segment of source) {
+    const previous = output.at(-1);
+    const combinedText = previous ? `${previous.text} ${segment.text}` : "";
+    if (
+      previous &&
+      combinedText.length <= 1_800 &&
+      segment.startMs - previous.startMs <= 30_000
+    ) {
+      previous.text = combinedText;
+      previous.endMs = Math.max(previous.endMs, segment.endMs);
+      continue;
+    }
+    output.push({ ...segment });
+  }
+  if (output.length > MAX_COMPLETE_TRANSCRIPT_SEGMENTS) {
+    throw new Error(
+      "The complete transcript contains too many segments to upload safely.",
+    );
+  }
+  if (transcriptTextFingerprint(source) !== transcriptTextFingerprint(output)) {
+    throw new Error("Transcript compaction changed the subtitle text.");
+  }
+  return output;
+}
 
 export const CaptionTrackSchema = z.object({
   language: z.string().min(2).max(35),
@@ -71,30 +216,61 @@ export const VideoImportRequestSchema = z.object({
 });
 export type VideoImportRequest = z.infer<typeof VideoImportRequestSchema>;
 
-export const VideoImportResponseSchema = z.object({
-  video: z.object({
-    id: z.string(),
-    source: SourceSchema,
-    sourceVideoId: z.string(),
-    title: z.string(),
-    thumbnailUrl: z.string().url(),
-    durationSeconds: z.number().int().nonnegative(),
-    sourceLanguage: z.string().nullable(),
-  }),
-  captions: z.object({
-    available: z.boolean(),
-    tracks: z.array(CaptionTrackSchema),
-    preferredSegments: z.array(TranscriptSegmentSchema).optional(),
-    browserSourceAvailable: z.boolean().optional(),
-    browserLookupAvailable: z.boolean().optional(),
-  }),
-  transcriptionMode: TranscriptionModeSchema,
-  capture: z.object({
-    expectedDurationSeconds: z.number().int().nonnegative(),
-    requiresUserGesture: z.boolean(),
-  }),
-  requiresLocalTranscription: z.boolean(),
-});
+export const VideoImportResponseSchema = z
+  .object({
+    video: z.object({
+      id: z.string(),
+      source: SourceSchema,
+      sourceVideoId: z.string(),
+      title: z.string(),
+      thumbnailUrl: z.string().url(),
+      durationSeconds: z.number().int().nonnegative(),
+      sourceLanguage: z.string().nullable(),
+    }),
+    captions: z.object({
+      available: z.boolean(),
+      tracks: z.array(CaptionTrackSchema),
+      preferredSegments: z.array(TranscriptSegmentSchema).optional(),
+      preferredCompleteness: TranscriptCompletenessSchema.optional(),
+      browserSourceAvailable: z.boolean().optional(),
+      browserLookupAvailable: z.boolean().optional(),
+    }),
+    transcriptionMode: TranscriptionModeSchema,
+    capture: z.object({
+      expectedDurationSeconds: z.number().int().nonnegative(),
+      requiresUserGesture: z.boolean(),
+    }),
+    requiresLocalTranscription: z.boolean(),
+  })
+  .superRefine((value, context) => {
+    const segments = value.captions.preferredSegments;
+    const completeness = value.captions.preferredCompleteness;
+    if (Boolean(segments?.length) !== Boolean(completeness)) {
+      context.addIssue({
+        code: "custom",
+        path: ["captions", "preferredCompleteness"],
+        message:
+          "Preferred captions and their complete-transcript manifest must be provided together.",
+      });
+      return;
+    }
+    if (
+      segments?.length &&
+      completeness &&
+      !transcriptCompletenessMatches(
+        completeness,
+        segments,
+        value.video.durationSeconds,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["captions", "preferredCompleteness"],
+        message:
+          "Preferred captions did not match their completeness manifest.",
+      });
+    }
+  });
 export type VideoImportResponse = z.infer<typeof VideoImportResponseSchema>;
 
 export const CaptionResolveResponseSchema = z.object({
@@ -118,23 +294,44 @@ export const MediaResolveResponseSchema = z.object({
 });
 export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 
-export const TranscriptUploadRequestSchema = z.object({
-  videoId: z.string().uuid(),
-  language: z.string().min(2).max(35),
-  origin: z.enum(["captions", "device_whisper", "browser_tab_capture"]),
-  acquisition: z
-    .enum([
-      "server_captions",
-      "youtube_signed_captions",
-      "youtube_text_provider",
-      "device_whisper",
-    ])
-    .optional(),
-  segments: z.array(TranscriptSegmentSchema).min(1).max(12_000),
-  quizLanguage: LanguageSchema,
-  sessionLength: SessionLengthSchema,
-  watched: z.boolean(),
-});
+export const TranscriptUploadRequestSchema = z
+  .object({
+    videoId: z.string().uuid(),
+    language: z.string().min(2).max(35),
+    origin: z.enum(["captions", "device_whisper", "browser_tab_capture"]),
+    acquisition: z
+      .enum([
+        "server_captions",
+        "youtube_signed_captions",
+        "youtube_text_provider",
+        "device_whisper",
+      ])
+      .optional(),
+    completeness: TranscriptCompletenessSchema,
+    segments: z
+      .array(TranscriptSegmentSchema)
+      .min(1)
+      .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
+    quizLanguage: LanguageSchema,
+    sessionLength: SessionLengthSchema,
+    watched: z.boolean(),
+    questionTypes: QuizQuestionTypesSchema.default(DEFAULT_QUIZ_QUESTION_TYPES),
+  })
+  .superRefine((value, context) => {
+    if (
+      !transcriptCompletenessMatches(
+        value.completeness,
+        value.segments,
+        value.completeness.expectedDurationMs / 1_000,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["completeness"],
+        message: "The transcript did not match its completeness manifest.",
+      });
+    }
+  });
 export type TranscriptUploadRequest = z.infer<
   typeof TranscriptUploadRequestSchema
 >;
@@ -174,7 +371,10 @@ const QuestionBaseSchema = z.object({
   conceptId: z.string().min(1).max(80),
   prompt: z.string().min(4).max(1_200),
   explanation: z.string().min(4).max(600),
-  evidenceSegmentIds: z.array(z.string()).min(1).max(12),
+  evidenceSegmentIds: z
+    .array(z.string())
+    .min(1)
+    .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
   difficulty: z.number().int().min(1).max(5),
   reformulatedPrompt: z.string().min(4).max(1_200),
 });
@@ -215,7 +415,6 @@ export const ShortAnswerQuestionSchema = QuestionBaseSchema.extend({
 export const GeneratedQuestionSchema = z.discriminatedUnion("type", [
   MultipleChoiceQuestionSchema,
   TrueFalseQuestionSchema,
-  OrderingQuestionSchema,
   ShortAnswerQuestionSchema,
 ]);
 export type GeneratedQuestion = z.infer<typeof GeneratedQuestionSchema>;
@@ -233,6 +432,8 @@ export type QuizGeneration = z.infer<typeof QuizGenerationSchema>;
 export const QuizStartRequestSchema = z.object({
   mode: z.enum(["learn", "review"]).default("learn"),
   sessionLength: SessionLengthSchema,
+  questionTypes: QuizQuestionTypesSchema.default(DEFAULT_QUIZ_QUESTION_TYPES),
+  watched: z.boolean().optional(),
 });
 export type QuizStartRequest = z.infer<typeof QuizStartRequestSchema>;
 

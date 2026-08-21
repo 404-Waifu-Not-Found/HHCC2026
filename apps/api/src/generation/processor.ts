@@ -1,4 +1,8 @@
-import { LanguageSchema, SessionLengthSchema } from "@clipquest/contracts";
+import {
+  LanguageSchema,
+  QuizQuestionTypesSchema,
+  SessionLengthSchema,
+} from "@clipquest/contracts";
 import { z } from "zod";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
@@ -19,6 +23,7 @@ const JobSchema = z.object({
   watched: z.number().int(),
   title: z.string(),
   transcript_key: z.string().min(1),
+  question_types_json: z.string().min(1),
 });
 
 function logGeneration(
@@ -87,7 +92,7 @@ export async function processGeneration(
     elapsedMs: Date.now() - startedAt,
   });
   const row = await env.DB.prepare(
-    "SELECT j.id, j.user_id, j.video_id, j.quiz_language, j.session_length, j.watched, j.transcript_key, v.title FROM generation_jobs j JOIN videos v ON v.id = j.video_id WHERE j.id = ? AND j.user_id = ? AND j.video_id = ?",
+    "SELECT j.id, j.user_id, j.video_id, j.quiz_language, j.session_length, j.watched, j.transcript_key, j.question_types_json, v.title FROM generation_jobs j JOIN videos v ON v.id = j.video_id WHERE j.id = ? AND j.user_id = ? AND j.video_id = ?",
   )
     .bind(message.jobId, message.userId, message.videoId)
     .first();
@@ -118,10 +123,31 @@ export async function processGeneration(
       "The private transcript failed integrity checks.",
     );
   }
+  let storedQuestionTypes: unknown;
+  try {
+    storedQuestionTypes = JSON.parse(job.data.question_types_json);
+  } catch {
+    storedQuestionTypes = null;
+  }
+  const questionTypes = QuizQuestionTypesSchema.safeParse(storedQuestionTypes);
+  if (!questionTypes.success) {
+    throw new ApiError(
+      500,
+      "question_types_invalid",
+      "The selected quiz question types failed integrity checks.",
+    );
+  }
   logGeneration("transcript.loaded", message.jobId, {
     elapsedMs: Date.now() - startedAt,
     origin: transcript.data.origin,
+    transcriptComplete: true,
+    sourceSegmentCount: transcript.data.completeness.sourceSegmentCount,
     segmentCount: transcript.data.segments.length,
+    characterCount: transcript.data.completeness.characterCount,
+    firstTranscriptMs: transcript.data.completeness.firstStartMs,
+    lastTranscriptMs: transcript.data.completeness.lastEndMs,
+    expectedDurationMs: transcript.data.completeness.expectedDurationMs,
+    textFingerprint: transcript.data.completeness.textFingerprint,
   });
 
   if (
@@ -136,6 +162,7 @@ export async function processGeneration(
   logGeneration("model.started", message.jobId, {
     language: job.data.quiz_language,
     sessionLength: job.data.session_length,
+    questionTypes: questionTypes.data,
   });
   const [classification, generation] = await Promise.all([
     classifyTranscript(env, job.data.title, transcript.data.segments),
@@ -145,6 +172,7 @@ export async function processGeneration(
       sessionLength: job.data.session_length,
       watched: Boolean(job.data.watched),
       segments: transcript.data.segments,
+      questionTypes: questionTypes.data,
     }),
   ]);
   logGeneration("model.completed", message.jobId, {

@@ -1,6 +1,9 @@
 import { Innertube } from "youtubei.js/cf-worker";
 import { z } from "zod";
-import type { TranscriptSegment } from "@clipquest/contracts";
+import {
+  compactTranscriptSegments,
+  type TranscriptSegment,
+} from "@clipquest/contracts";
 import { ApiError } from "../lib/errors";
 import type { SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
@@ -375,24 +378,40 @@ export function selectPreferredYouTubeCaptionTrack<
 export function parseYouTubeTimedText(
   payload: TimedTextPayload,
 ): TranscriptSegment[] {
-  const segments = (payload.events ?? [])
-    .slice(0, 12_000)
-    .map((event, index) => {
-      const startMs = Math.max(0, Math.floor(event.tStartMs ?? 0));
-      const text = (event.segs ?? [])
-        .map((segment) => segment.utf8 ?? "")
-        .join("")
-        .replaceAll("\n", " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      return {
-        id: `youtube-${index}-${startMs}`,
-        startMs,
-        endMs: startMs + Math.max(1, Math.floor(event.dDurationMs ?? 3_000)),
-        text,
-      };
-    })
-    .filter((segment) => segment.text.length > 0);
+  const rawSegments = (payload.events ?? []).flatMap((event, eventIndex) => {
+    const startMs = Math.max(0, Math.floor(event.tStartMs ?? 0));
+    const text = (event.segs ?? [])
+      .map((segment) => segment.utf8 ?? "")
+      .join("")
+      .replaceAll("\n", " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) return [];
+    const pieces: string[] = [];
+    let remaining = text;
+    while (remaining.length > 2_000) {
+      const splitAt = remaining.lastIndexOf(" ", 1_900);
+      if (splitAt < 1) {
+        throw new Error(
+          "A YouTube caption event is too large to preserve safely.",
+        );
+      }
+      pieces.push(remaining.slice(0, splitAt));
+      remaining = remaining.slice(splitAt + 1);
+    }
+    if (remaining) pieces.push(remaining);
+    const endMs = startMs + Math.max(1, Math.floor(event.dDurationMs ?? 3_000));
+    return pieces.map((piece, pieceIndex) => ({
+      id:
+        pieces.length === 1
+          ? `youtube-${eventIndex}-${startMs}`
+          : `youtube-${eventIndex}-${pieceIndex}-${startMs}`,
+      startMs: startMs + pieceIndex,
+      endMs: Math.max(startMs + pieceIndex + 1, endMs),
+      text: piece,
+    }));
+  });
+  const segments = compactTranscriptSegments(rawSegments);
   const characters = segments.reduce(
     (total, segment) => total + segment.text.length,
     0,

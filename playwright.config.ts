@@ -24,7 +24,7 @@ export default defineConfig({
   webServer: {
     command: "npm run web:e2e -w @clipquest/app",
     url: baseURL,
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
     timeout: 120_000,
     env: {
       ...process.env,

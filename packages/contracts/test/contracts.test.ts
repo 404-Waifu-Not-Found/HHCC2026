@@ -3,6 +3,9 @@ import {
   AdminMeResponseSchema,
   AdminSystemResponseSchema,
   GeneratedQuestionSchema,
+  QuizQuestionTypesSchema,
+  TranscriptUploadRequestSchema,
+  createTranscriptCompleteness,
   identifyVideoSource,
   questionLimitForSession,
 } from "../src/index";
@@ -83,5 +86,83 @@ describe("generated questions", () => {
       correctAnswer: 2,
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it("does not accept ordering as a generated question type", () => {
+    expect(
+      GeneratedQuestionSchema.safeParse({
+        id: "q1",
+        conceptId: "c1",
+        type: "ordering",
+        prompt: "Put these ideas in order.",
+        reformulatedPrompt: "Order the ideas.",
+        explanation: "The order follows the video.",
+        evidenceSegmentIds: ["s1"],
+        difficulty: 2,
+        items: ["A", "B"],
+        correctAnswer: [0, 1],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires at least one unique supported question type", () => {
+    expect(QuizQuestionTypesSchema.safeParse([]).success).toBe(false);
+    expect(
+      QuizQuestionTypesSchema.safeParse(["multiple_choice", "multiple_choice"])
+        .success,
+    ).toBe(false);
+    expect(
+      QuizQuestionTypesSchema.parse(["multiple_choice", "short_answer"]),
+    ).toEqual(["multiple_choice", "short_answer"]);
+  });
+});
+
+describe("complete transcript contract", () => {
+  const segments = [
+    {
+      id: "s1",
+      startMs: 0,
+      endMs: 1_000,
+      text: "Every subtitle line is included.",
+    },
+    {
+      id: "s2",
+      startMs: 1_000,
+      endMs: 2_000,
+      text: "Nothing is silently sampled or cut.",
+    },
+  ];
+
+  it("accepts an exact complete-transcript manifest", () => {
+    expect(
+      TranscriptUploadRequestSchema.safeParse({
+        videoId: "11111111-1111-4111-8111-111111111111",
+        language: "en",
+        origin: "captions",
+        acquisition: "youtube_signed_captions",
+        completeness: createTranscriptCompleteness(segments, 2),
+        segments,
+        quizLanguage: "en",
+        sessionLength: "long",
+        watched: true,
+        questionTypes: ["multiple_choice"],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects changed or partial text against the completeness manifest", () => {
+    expect(
+      TranscriptUploadRequestSchema.safeParse({
+        videoId: "11111111-1111-4111-8111-111111111111",
+        language: "en",
+        origin: "captions",
+        completeness: createTranscriptCompleteness(segments, 2),
+        segments: segments.slice(0, 1),
+        quizLanguage: "en",
+        sessionLength: "long",
+        watched: true,
+        questionTypes: ["multiple_choice"],
+      }).success,
+    ).toBe(false);
   });
 });

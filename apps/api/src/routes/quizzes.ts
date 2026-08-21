@@ -10,10 +10,14 @@ import {
   questionLimitForSession,
   type MasteryState,
   type PublicQuestion,
+  type QuizQuestionType,
 } from "@clipquest/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
-import { gradeWrittenAnswer, StoredTranscriptSchema } from "../generation/deepseek";
+import {
+  gradeWrittenAnswer,
+  StoredTranscriptSchema,
+} from "../generation/deepseek";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
 import { calculateMastery } from "../lib/mastery";
@@ -21,7 +25,12 @@ import { enforceRateLimit } from "../lib/rate-limit";
 import { parseJson, parseStoredJson } from "../lib/validation";
 import type { ApiBindings } from "../middleware/authenticated";
 
-const QuestionTypeSchema = z.enum(["multiple_choice", "true_false", "ordering", "short_answer"]);
+const QuestionTypeSchema = z.enum([
+  "multiple_choice",
+  "true_false",
+  "ordering",
+  "short_answer",
+]);
 const QuestionRowSchema = z.object({
   id: z.string().uuid(),
   quiz_id: z.string().uuid(),
@@ -92,7 +101,11 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
       .bind(user.id, quiz.video_id)
       .first<{ initial_passed_at: number | null }>();
     if (!mastery?.initial_passed_at) {
-      throw new ApiError(409, "review_not_ready", "Complete an 80% learning session before starting a mastery review.");
+      throw new ApiError(
+        409,
+        "review_not_ready",
+        "Complete an 80% learning session before starting a mastery review.",
+      );
     }
   }
 
@@ -101,27 +114,43 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
   )
     .bind(quiz.id)
     .all();
-  const questions = z.array(QuestionRowSchema).safeParse(questionResult.results);
+  const questions = z
+    .array(QuestionRowSchema)
+    .safeParse(questionResult.results);
   if (!questions.success || questions.data.length < 1) {
     throw new ApiError(500, "quiz_empty", "This quiz has no valid questions.");
   }
 
+  const eligibleQuestions = selectEligibleQuestions(
+    questions.data,
+    input.questionTypes,
+  );
   const desired = questionLimitForSession(input.sessionLength);
-  const selected = selectVariedQuestions(questions.data, Math.min(desired, questions.data.length));
+  const selected = selectVariedQuestions(
+    eligibleQuestions,
+    Math.min(desired, eligibleQuestions.length),
+  );
   const firstQuestion = selected.at(0);
-  if (!firstQuestion) throw new ApiError(500, "quiz_empty", "This quiz has no valid questions.");
+  if (!firstQuestion)
+    throw new ApiError(500, "quiz_empty", "This quiz has no valid questions.");
   const attemptId = createId();
   const timestamp = now();
   await c.env.DB.batch([
     c.env.DB.prepare(
       "INSERT INTO attempts (id, user_id, quiz_id, mode, status, current_index, current_variant, retry_pending, target_difficulty, correct_count, total_answered, item_count, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', 0, 0, 0, 2, 0, 0, ?, ?, ?)",
-    ).bind(attemptId, user.id, quiz.id, input.mode, selected.length, timestamp, timestamp),
+    ).bind(
+      attemptId,
+      user.id,
+      quiz.id,
+      input.mode,
+      selected.length,
+      timestamp,
+      timestamp,
+    ),
     ...selected.map((question, index) =>
-      c.env.DB.prepare("INSERT INTO attempt_items (attempt_id, ordinal, question_id) VALUES (?, ?, ?)").bind(
-        attemptId,
-        index,
-        question.id,
-      ),
+      c.env.DB.prepare(
+        "INSERT INTO attempt_items (attempt_id, ordinal, question_id) VALUES (?, ?, ?)",
+      ).bind(attemptId, index, question.id),
     ),
     c.env.DB.prepare(
       "INSERT INTO mastery (user_id, video_id, state, updated_at) VALUES (?, ?, 'learning', ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = CASE WHEN mastery.state = 'not_started' THEN 'learning' ELSE mastery.state END, updated_at = excluded.updated_at",
@@ -131,7 +160,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
   return c.json(
     QuizStartResponseSchema.parse({
       attemptId,
-      primer: quiz.watched ? null : quiz.primer,
+      primer: (input.watched ?? Boolean(quiz.watched)) ? null : quiz.primer,
       question: toPublicQuestion(firstQuestion, 0, selected.length, false),
     }),
     201,
@@ -149,11 +178,23 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
   const input = await parseJson(c, AttemptAnswerRequestSchema);
   const attempt = await getAttempt(c.env.DB, c.req.param("attemptId"), user.id);
   if (attempt.status === "complete") {
-    throw new ApiError(409, "attempt_complete", "This quiz is already complete.");
+    throw new ApiError(
+      409,
+      "attempt_complete",
+      "This quiz is already complete.",
+    );
   }
-  const question = await getAttemptQuestion(c.env.DB, attempt.id, attempt.current_index);
+  const question = await getAttemptQuestion(
+    c.env.DB,
+    attempt.id,
+    attempt.current_index,
+  );
   if (!question || question.id !== input.questionId) {
-    throw new ApiError(409, "answer_out_of_sequence", "This answer is no longer current. Resume the quiz to continue.");
+    throw new ApiError(
+      409,
+      "answer_out_of_sequence",
+      "This answer is no longer current. Resume the quiz to continue.",
+    );
   }
 
   const grade = await gradeAnswer(c.env, attempt, question, input.answer);
@@ -183,7 +224,12 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
         correct: false,
         explanation: grade.feedback,
         evidenceSegmentIds: parseEvidence(question),
-        nextQuestion: toPublicQuestion(question, attempt.current_index, attempt.item_count, true),
+        nextQuestion: toPublicQuestion(
+          question,
+          attempt.current_index,
+          attempt.item_count,
+          true,
+        ),
         completed: false,
         score: null,
         mastery: null,
@@ -193,7 +239,10 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
 
   const nextIndex = attempt.current_index + 1;
   const nextCorrectCount = attempt.correct_count + (grade.correct ? 1 : 0);
-  const nextTargetDifficulty = Math.min(5, Math.max(1, attempt.target_difficulty + (grade.correct ? 0.5 : -0.5)));
+  const nextTargetDifficulty = Math.min(
+    5,
+    Math.max(1, attempt.target_difficulty + (grade.correct ? 0.5 : -0.5)),
+  );
   const completed = nextIndex >= attempt.item_count;
   if (completed) {
     const score = Math.round((nextCorrectCount / attempt.item_count) * 100);
@@ -237,17 +286,43 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
     answerInsert,
     c.env.DB.prepare(
       "UPDATE attempts SET current_index = ?, current_variant = 0, retry_pending = 0, correct_count = ?, total_answered = total_answered + 1, target_difficulty = ?, updated_at = ? WHERE id = ? AND user_id = ?",
-    ).bind(nextIndex, nextCorrectCount, nextTargetDifficulty, timestamp, attempt.id, user.id),
+    ).bind(
+      nextIndex,
+      nextCorrectCount,
+      nextTargetDifficulty,
+      timestamp,
+      attempt.id,
+      user.id,
+    ),
   ]);
-  await adaptNextQuestion(c.env.DB, attempt.id, nextIndex, nextTargetDifficulty);
-  const nextQuestion = await getAttemptQuestion(c.env.DB, attempt.id, nextIndex);
-  if (!nextQuestion) throw new ApiError(500, "attempt_corrupt", "The next quiz question is missing.");
+  await adaptNextQuestion(
+    c.env.DB,
+    attempt.id,
+    nextIndex,
+    nextTargetDifficulty,
+  );
+  const nextQuestion = await getAttemptQuestion(
+    c.env.DB,
+    attempt.id,
+    nextIndex,
+  );
+  if (!nextQuestion)
+    throw new ApiError(
+      500,
+      "attempt_corrupt",
+      "The next quiz question is missing.",
+    );
   return c.json(
     AttemptAnswerResponseSchema.parse({
       correct: grade.correct,
       explanation: grade.feedback,
       evidenceSegmentIds: parseEvidence(question),
-      nextQuestion: toPublicQuestion(nextQuestion, nextIndex, attempt.item_count, false),
+      nextQuestion: toPublicQuestion(
+        nextQuestion,
+        nextIndex,
+        attempt.item_count,
+        false,
+      ),
       completed: false,
       score: null,
       mastery: null,
@@ -269,8 +344,17 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
       }),
     );
   }
-  const question = await getAttemptQuestion(c.env.DB, attempt.id, attempt.current_index);
-  if (!question) throw new ApiError(500, "attempt_corrupt", "The current quiz question is missing.");
+  const question = await getAttemptQuestion(
+    c.env.DB,
+    attempt.id,
+    attempt.current_index,
+  );
+  if (!question)
+    throw new ApiError(
+      500,
+      "attempt_corrupt",
+      "The current quiz question is missing.",
+    );
   return c.json(
     AttemptResumeResponseSchema.parse({
       attemptId: attempt.id,
@@ -287,19 +371,33 @@ quizzesRouter.get("/attempts/:attemptId/resume", async (c) => {
   );
 });
 
-function selectVariedQuestions(questions: QuestionRow[], count: number): QuestionRow[] {
-  const selected: QuestionRow[] = [];
-  const remaining = [...questions];
-  const usedConcepts = new Set<string>();
-  while (selected.length < count && remaining.length > 0) {
-    const index = remaining.findIndex((question) => !usedConcepts.has(question.concept_id));
-    const [question] = remaining.splice(index >= 0 ? index : 0, 1);
-    if (!question) break;
-    selected.push(question);
-    usedConcepts.add(question.concept_id);
-    if (usedConcepts.size >= new Set(questions.map((item) => item.concept_id)).size) usedConcepts.clear();
-  }
-  return selected;
+export function selectVariedQuestions(
+  questions: QuestionRow[],
+  count: number,
+): QuestionRow[] {
+  const timeline = [...questions].sort(
+    (left, right) => left.ordinal - right.ordinal,
+  );
+  if (count >= timeline.length) return timeline;
+  if (count <= 0) return [];
+  if (count === 1) return timeline.length ? [timeline[0]!] : [];
+  return Array.from({ length: count }, (_, index) => {
+    const sourceIndex = Math.round(
+      (index * (timeline.length - 1)) / (count - 1),
+    );
+    return timeline[sourceIndex]!;
+  });
+}
+
+export function selectEligibleQuestions(
+  questions: QuestionRow[],
+  requestedTypes: QuizQuestionType[],
+): QuestionRow[] {
+  const allowedTypes = new Set(requestedTypes);
+  return questions.filter(
+    (question) =>
+      question.type !== "ordering" && allowedTypes.has(question.type),
+  );
 }
 
 function toPublicQuestion(
@@ -313,10 +411,22 @@ function toPublicQuestion(
     type: question.type,
     prompt: isRetry ? question.reformulated_prompt : question.prompt,
     ...(question.options_json
-      ? { options: parseStoredJson(question.options_json, z.array(z.string()).min(2), "question options") }
+      ? {
+          options: parseStoredJson(
+            question.options_json,
+            z.array(z.string()).min(2),
+            "question options",
+          ),
+        }
       : {}),
     ...(question.items_json
-      ? { items: parseStoredJson(question.items_json, z.array(z.string()).min(2), "ordering items") }
+      ? {
+          items: parseStoredJson(
+            question.items_json,
+            z.array(z.string()).min(2),
+            "ordering items",
+          ),
+        }
       : {}),
     difficulty: question.difficulty,
     position: zeroBasedPosition + 1,
@@ -325,7 +435,11 @@ function toPublicQuestion(
   });
 }
 
-async function getAttempt(db: D1Database, attemptId: string, userId: string): Promise<AttemptRow> {
+async function getAttempt(
+  db: D1Database,
+  attemptId: string,
+  userId: string,
+): Promise<AttemptRow> {
   const row = await db
     .prepare(
       "SELECT a.id, a.user_id, a.quiz_id, q.video_id, a.mode, a.status, a.current_index, a.current_variant, a.retry_pending, a.target_difficulty, a.correct_count, a.total_answered, a.item_count, a.score, m.state AS mastery_state, (SELECT gj.transcript_key FROM generation_jobs gj WHERE gj.quiz_id = a.quiz_id ORDER BY gj.updated_at DESC LIMIT 1) AS transcript_key FROM attempts a JOIN quiz_banks q ON q.id = a.quiz_id LEFT JOIN mastery m ON m.user_id = a.user_id AND m.video_id = q.video_id WHERE a.id = ? AND a.user_id = ?",
@@ -333,11 +447,16 @@ async function getAttempt(db: D1Database, attemptId: string, userId: string): Pr
     .bind(attemptId, userId)
     .first();
   const parsed = AttemptRowSchema.safeParse(row);
-  if (!parsed.success) throw new ApiError(404, "attempt_not_found", "Quiz attempt not found.");
+  if (!parsed.success)
+    throw new ApiError(404, "attempt_not_found", "Quiz attempt not found.");
   return parsed.data;
 }
 
-async function getAttemptQuestion(db: D1Database, attemptId: string, ordinal: number): Promise<QuestionRow | null> {
+async function getAttemptQuestion(
+  db: D1Database,
+  attemptId: string,
+  ordinal: number,
+): Promise<QuestionRow | null> {
   const row = await db
     .prepare(
       "SELECT q.id, q.quiz_id, q.ordinal, q.type, q.concept_id, q.prompt, q.reformulated_prompt, q.options_json, q.items_json, q.correct_answer_json, q.rubric_json, q.explanation, q.evidence_segment_ids_json, q.difficulty FROM attempt_items ai JOIN questions q ON q.id = ai.question_id WHERE ai.attempt_id = ? AND ai.ordinal = ?",
@@ -346,7 +465,12 @@ async function getAttemptQuestion(db: D1Database, attemptId: string, ordinal: nu
     .first();
   if (!row) return null;
   const parsed = QuestionRowSchema.safeParse(row);
-  if (!parsed.success) throw new ApiError(500, "question_corrupt", "A quiz question failed integrity checks.");
+  if (!parsed.success)
+    throw new ApiError(
+      500,
+      "question_corrupt",
+      "A quiz question failed integrity checks.",
+    );
   return parsed.data;
 }
 
@@ -358,30 +482,63 @@ async function gradeAnswer(
 ): Promise<{ correct: boolean; feedback: string }> {
   if (question.type === "short_answer") {
     if (typeof answer !== "string") {
-      throw new ApiError(422, "answer_type_mismatch", "Write a short answer for this question.");
+      throw new ApiError(
+        422,
+        "answer_type_mismatch",
+        "Write a short answer for this question.",
+      );
     }
-    const rubric = parseStoredJson(question.rubric_json, RubricSchema, "short-answer rubric");
-    const transcriptObject = await env.PRIVATE_BUCKET.get(
-      attempt.transcript_key ?? `transcripts/${attempt.user_id}/${attempt.video_id}.json`,
+    const rubric = parseStoredJson(
+      question.rubric_json,
+      RubricSchema,
+      "short-answer rubric",
     );
-    if (!transcriptObject) throw new ApiError(500, "transcript_missing", "Video evidence is unavailable.");
-    const transcript = StoredTranscriptSchema.safeParse(await transcriptObject.json());
-    if (!transcript.success) throw new ApiError(500, "transcript_invalid", "Video evidence failed integrity checks.");
+    const transcriptObject = await env.PRIVATE_BUCKET.get(
+      attempt.transcript_key ??
+        `transcripts/${attempt.user_id}/${attempt.video_id}.json`,
+    );
+    if (!transcriptObject)
+      throw new ApiError(
+        500,
+        "transcript_missing",
+        "Video evidence is unavailable.",
+      );
+    const transcript = StoredTranscriptSchema.safeParse(
+      await transcriptObject.json(),
+    );
+    if (!transcript.success)
+      throw new ApiError(
+        500,
+        "transcript_invalid",
+        "Video evidence failed integrity checks.",
+      );
     const evidenceIds = new Set(parseEvidence(question));
     return gradeWrittenAnswer(env, {
-      prompt: attempt.current_variant ? question.reformulated_prompt : question.prompt,
+      prompt: attempt.current_variant
+        ? question.reformulated_prompt
+        : question.prompt,
       answer,
       requiredIdeas: rubric.requiredIdeas,
       acceptableAlternatives: rubric.acceptableAlternatives,
-      evidence: transcript.data.segments.filter((segment) => evidenceIds.has(segment.id)),
+      evidence: transcript.data.segments.filter((segment) =>
+        evidenceIds.has(segment.id),
+      ),
     });
   }
 
-  const expected = parseStoredJson(question.correct_answer_json, AnswerValueSchema, "correct answer");
+  const expected = parseStoredJson(
+    question.correct_answer_json,
+    AnswerValueSchema,
+    "correct answer",
+  );
   let correct = false;
   if (question.type === "multiple_choice") {
     if (typeof answer !== "number" || typeof expected !== "number") {
-      throw new ApiError(422, "answer_type_mismatch", "Choose one answer option.");
+      throw new ApiError(
+        422,
+        "answer_type_mismatch",
+        "Choose one answer option.",
+      );
     }
     correct = answer === expected;
   } else if (question.type === "true_false") {
@@ -391,9 +548,15 @@ async function gradeAnswer(
     correct = answer === expected;
   } else {
     if (!Array.isArray(answer) || !Array.isArray(expected)) {
-      throw new ApiError(422, "answer_type_mismatch", "Put every item in order.");
+      throw new ApiError(
+        422,
+        "answer_type_mismatch",
+        "Put every item in order.",
+      );
     }
-    correct = answer.length === expected.length && answer.every((value, index) => value === expected[index]);
+    correct =
+      answer.length === expected.length &&
+      answer.every((value, index) => value === expected[index]);
   }
   return { correct, feedback: question.explanation };
 }
@@ -420,19 +583,21 @@ async function adaptNextQuestion(
     .first<{ ordinal: number }>();
   if (!candidate || candidate.ordinal === nextIndex) return;
   await db.batch([
-    db.prepare("UPDATE attempt_items SET ordinal = -1 WHERE attempt_id = ? AND ordinal = ?").bind(
-      attemptId,
-      nextIndex,
-    ),
-    db.prepare("UPDATE attempt_items SET ordinal = ? WHERE attempt_id = ? AND ordinal = ?").bind(
-      nextIndex,
-      attemptId,
-      candidate.ordinal,
-    ),
-    db.prepare("UPDATE attempt_items SET ordinal = ? WHERE attempt_id = ? AND ordinal = -1").bind(
-      candidate.ordinal,
-      attemptId,
-    ),
+    db
+      .prepare(
+        "UPDATE attempt_items SET ordinal = -1 WHERE attempt_id = ? AND ordinal = ?",
+      )
+      .bind(attemptId, nextIndex),
+    db
+      .prepare(
+        "UPDATE attempt_items SET ordinal = ? WHERE attempt_id = ? AND ordinal = ?",
+      )
+      .bind(nextIndex, attemptId, candidate.ordinal),
+    db
+      .prepare(
+        "UPDATE attempt_items SET ordinal = ? WHERE attempt_id = ? AND ordinal = -1",
+      )
+      .bind(candidate.ordinal, attemptId),
   ]);
 }
 
@@ -456,7 +621,13 @@ async function updateMastery(
   const parsed = MasteryRowSchema.safeParse(row);
   const current = parsed.success
     ? parsed.data
-    : { state: "not_started" as const, best_score: null, initial_passed_at: null, review_passed_at: null, next_review_at: null };
+    : {
+        state: "not_started" as const,
+        best_score: null,
+        initial_passed_at: null,
+        review_passed_at: null,
+        next_review_at: null,
+      };
   const next = calculateMastery(
     {
       state: current.state,
@@ -468,27 +639,40 @@ async function updateMastery(
     input,
   );
   const statements = [
-    db.prepare(
-      "INSERT INTO mastery (user_id, video_id, state, best_score, initial_passed_at, review_passed_at, next_review_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = excluded.state, best_score = excluded.best_score, initial_passed_at = excluded.initial_passed_at, review_passed_at = excluded.review_passed_at, next_review_at = excluded.next_review_at, updated_at = excluded.updated_at",
-    ).bind(
-      input.userId,
-      input.videoId,
-      next.state,
-      next.bestScore,
-      next.initialPassedAt,
-      next.reviewPassedAt,
-      next.nextReviewAt,
-      input.timestamp,
-    ),
-    db.prepare(
-      "UPDATE reviews SET completed_at = ? WHERE user_id = ? AND video_id = ? AND completed_at IS NULL",
-    ).bind(input.timestamp, input.userId, input.videoId),
+    db
+      .prepare(
+        "INSERT INTO mastery (user_id, video_id, state, best_score, initial_passed_at, review_passed_at, next_review_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, video_id) DO UPDATE SET state = excluded.state, best_score = excluded.best_score, initial_passed_at = excluded.initial_passed_at, review_passed_at = excluded.review_passed_at, next_review_at = excluded.next_review_at, updated_at = excluded.updated_at",
+      )
+      .bind(
+        input.userId,
+        input.videoId,
+        next.state,
+        next.bestScore,
+        next.initialPassedAt,
+        next.reviewPassedAt,
+        next.nextReviewAt,
+        input.timestamp,
+      ),
+    db
+      .prepare(
+        "UPDATE reviews SET completed_at = ? WHERE user_id = ? AND video_id = ? AND completed_at IS NULL",
+      )
+      .bind(input.timestamp, input.userId, input.videoId),
   ];
   if (next.nextReviewAt) {
     statements.push(
-      db.prepare(
-        "INSERT INTO reviews (id, user_id, video_id, attempt_id, score, scheduled_for, completed_at) VALUES (?, ?, ?, ?, ?, ?, NULL)",
-      ).bind(createId(), input.userId, input.videoId, input.attemptId, input.score, next.nextReviewAt),
+      db
+        .prepare(
+          "INSERT INTO reviews (id, user_id, video_id, attempt_id, score, scheduled_for, completed_at) VALUES (?, ?, ?, ?, ?, ?, NULL)",
+        )
+        .bind(
+          createId(),
+          input.userId,
+          input.videoId,
+          input.attemptId,
+          input.score,
+          next.nextReviewAt,
+        ),
     );
   }
   await db.batch(statements);

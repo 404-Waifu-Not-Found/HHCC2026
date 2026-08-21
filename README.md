@@ -43,9 +43,9 @@
 
 <p align="center">
   <strong>Project guides:</strong>
-  <a href="./docs/HANDOFF-2026-07-31-UI-REBUILD.md">Current handoff</a> ·
+  <a href="./docs/HANDOFF-2026-08-04.md">Current handoff</a> ·
   <a href="./docs/duolingo-ui-research.md">UI research</a> ·
-  <a href="./docs/LIVE-QA-2026-07-31.md">Live QA</a>
+  <a href="./docs/QA-YOUTUBE-BROWSER-10X-2026-08-03.md">Browser QA</a>
 </p>
 
 ---
@@ -54,15 +54,15 @@
 
 ## 🧭 Product overview
 
-ClipQuest turns public educational videos into focused learning sessions. A learner pastes a supported YouTube or bilibili URL, reviews the detected video, and starts a generated quest. Existing English or Chinese captions are preferred. If captions are unavailable, Whisper Tiny transcribes the audio on the learner's own device before timestamped transcript text reaches the backend.
+ClipQuest turns public educational videos into focused learning sessions. A learner pastes a supported YouTube or bilibili URL, chooses multiple-choice, true/false, and/or short-answer questions, reviews the detected video, and starts a generated quest. ClipQuest checks fresh captions first and retains the complete accepted subtitle stream. If captions are unavailable, Whisper Tiny can transcribe transient audio on the learner's device before timestamped transcript text reaches the backend.
 
-DeepSeek generates questions that must cite transcript evidence. The learner then completes a tactile, keyboard-accessible lesson with dedicated choice, true/false, ordering, and written-answer interactions. Answers are validated by the server, and supported progress is saved for resume and later review.
+Transcript uploads carry a completeness manifest containing source and normalized segment counts, canonical character count, timing coverage, expected duration, and a text fingerprint. The server rejects a partial or changed upload. DeepSeek classification and every generation batch receive the complete accepted transcript, and every generated question must cite transcript evidence. The learner then completes a tactile, keyboard-accessible lesson; answers are validated by the server, and supported progress is saved for resume and later review.
 
 ```text
 public YouTube / bilibili URL
               │
               ▼
-     metadata + caption check
+ metadata + full-caption check
         ┌─────┴───────────┐
         │ captions        │ no captions
         ▼                 ▼
@@ -72,14 +72,14 @@ timestamped text   transient no-store audio stream
                  on-device decode + Whisper
         └─────────────┬─────────────┘
                       ▼
-        evidence-backed DeepSeek questions
+ complete-transcript question batches
                       │
                       ▼
        tactile lesson → feedback → review/mastery
 ```
 
 > [!IMPORTANT]
-> YouTube or Google account access is not required. ClipQuest begins with a public link, does not fetch watch history, and keeps its experimental YouTube device flow disabled by default.
+> YouTube or Google account access is not required. ClipQuest begins with a public link, does not fetch watch history, and keeps its experimental YouTube device flow disabled by default. Private, deleted, geo-restricted, active-live, and otherwise unplayable sources fail explicitly instead of producing a quiz from partial text.
 
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
@@ -95,17 +95,17 @@ The URL field is the primary action on desktop, tablet, and mobile. ClipQuest va
 
 The detected-video screen presents available title, creator, duration, language, platform, and thumbnail information before processing starts.
 
-### 3. Build the transcript privately
+### 3. Acquire and prove the complete transcript
 
-ClipQuest uses open-source YouTube.js to check a fresh YouTube caption track first. If none exists, the Worker resolves and relays an audio-only format through a short-lived user-bound, `no-store` response. The browser keeps the response in memory, decodes it to 16 kHz mono PCM, and runs WebGPU/WASM Whisper locally. Audio is never written to KV, R2, D1, Cache Storage, or application logs.
+ClipQuest uses open-source YouTube.js plus a browser text provider to check fresh YouTube captions, and uses the native bilibili subtitle endpoint for bilibili. It parses every returned caption event without a first-segment or 12,000-segment slice. Oversized individual events are losslessly split, and extremely large or malformed responses are rejected rather than truncated. If no caption track is available, the existing transient `no-store` audio path decodes to 16 kHz mono PCM and runs WebGPU/WASM Whisper locally. Audio is never written to KV, R2, D1, Cache Storage, or application logs.
 
 ### 4. Generate an evidence-backed quest
 
-The Cloudflare Worker stores the timestamped transcript privately, asks DeepSeek for structured questions, validates the response with shared Zod schemas, and rejects unsupported educational claims.
+Caption acquisition and long-session quiz pre-generation start as soon as a valid link is imported. The Cloudflare Worker validates the completeness manifest, stores the timestamped text privately, passes the complete transcript to concurrent DeepSeek batches of at most five questions, validates each response, and fills invalid or timed-out results with deterministic evidence-grounded questions. The learner's selected question types are enforced during generation and attempt creation.
 
 ### 5. Learn with immediate feedback
 
-Large answer controls, a prominent progress bar, disabled/selected/correct/incorrect states, a lower feedback panel, and a clear Check → Continue rhythm keep each lesson focused.
+Large answer controls, a prominent progress bar, disabled/selected/correct/incorrect states, a lower feedback panel, and a clear Check → Continue rhythm keep each lesson focused. New quizzes use only multiple choice, true/false, and short answer; ordering questions are not generated or served.
 
 > [!NOTE]
 > Processing uses named stages rather than fabricated percentages. Retry, pause, cancellation, durable idempotency, and resume continue to use server-authoritative state.
@@ -151,17 +151,17 @@ The lesson keeps the question readable while the lower action region changes sta
 
 ## 🧩 Tech stack
 
-| Layer                 | Technology                                                                    | Purpose                                                                                          |
-| --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Cross-platform client | Expo 57, Expo Router, React 19, React Native 0.86                             | Web, iOS, and Android routes from one application architecture                                   |
-| Interface system      | React Native StyleSheet, semantic tokens, Fredoka, DM Sans, Expo Vector Icons | Responsive layouts, tactile states, accessible typography, and original ClipQuest presentation   |
-| Edge API              | Cloudflare Workers, Queues, scheduled triggers                                | Authentication endpoints, source processing, generation jobs, retries, and reminders             |
-| Data and assets       | D1, KV, private R2                                                            | Accounts, lessons, attempts, rate limits, media tokens, transcripts, thumbnails, and model files |
-| Authentication        | Better Auth                                                                   | Username/email sign-in, verification, recovery, and user-scoped data                             |
-| AI and transcription  | DeepSeek, Transformers.js, WebGPU/WASM, `whisper.rn`                          | Evidence-backed question generation and private local speech recognition                         |
-| Contracts             | TypeScript, Zod                                                               | Shared request/response schemas and generated-question validation                                |
-| Quality               | Vitest, Playwright, ESLint, Prettier                                          | Unit/contract coverage, responsive browser journeys, linting, and formatting                     |
-| Delivery              | Expo static export, Wrangler                                                  | Web assets and API deployed together through the ClipQuest Worker                                |
+| Layer                 | Technology                                                                    | Purpose                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Cross-platform client | Expo 57, Expo Router, React 19, React Native 0.86                             | Web, iOS, and Android routes from one application architecture                                  |
+| Interface system      | React Native StyleSheet, semantic tokens, Fredoka, DM Sans, Expo Vector Icons | Responsive layouts, tactile states, accessible typography, and original ClipQuest presentation  |
+| Edge API              | Cloudflare Workers, Queues, scheduled triggers                                | Authentication endpoints, source processing, generation jobs, retries, and reminders            |
+| Data and assets       | D1, KV, private R2                                                            | Accounts, lessons, attempts, rate limits, complete transcript text, thumbnails, and model files |
+| Authentication        | Better Auth                                                                   | Username/email sign-in, verification, recovery, and user-scoped data                            |
+| AI and transcription  | DeepSeek, Transformers.js, WebGPU/WASM, `whisper.rn`                          | Evidence-backed question generation and private local speech recognition                        |
+| Contracts             | TypeScript, Zod                                                               | Shared request/response schemas and generated-question validation                               |
+| Quality               | Vitest, Playwright, ESLint, Prettier                                          | Unit/contract coverage, responsive browser journeys, linting, and formatting                    |
+| Delivery              | Expo static export, Wrangler                                                  | Web assets and API deployed together through the ClipQuest Worker                               |
 
 > [!NOTE]
 > Fredoka and DM Sans are licensed Google Fonts. The ClipQuest explorer and interface assets are original; no Duolingo logo, mascot, proprietary font, illustration, or branded copy is included.
@@ -180,7 +180,7 @@ Best starting points: [routes](./apps/app/app/) · [components](./apps/app/src/c
 
 ### 2. [Cloudflare Worker API](./apps/api/)
 
-The server boundary for Better Auth, source metadata, caption/media delivery, private transcript persistence, DeepSeek generation, answer validation, review scheduling, and static asset serving.
+The server boundary for Better Auth, source metadata, caption acquisition, private transcript persistence and verification, DeepSeek generation, answer validation, review scheduling, and static asset serving.
 
 Best starting points: [Worker source](./apps/api/src/) · [Wrangler configuration](./apps/api/wrangler.jsonc) · [migrations](./apps/api/migrations/)
 
@@ -194,7 +194,7 @@ The native bridge used to turn source media into Whisper-compatible PCM without 
 
 ### 5. [Documentation and browser QA](./docs/)
 
-The [current admin handoff](./docs/HANDOFF-2026-07-31-ADMIN-CONSOLE.md) and [UI handoff](./docs/HANDOFF-2026-07-31-UI-REBUILD.md) record architecture and honest acceptance status. [Playwright journeys](./e2e/clipquest.spec.ts) cover the primary visual, responsive, validation, retry, feedback, completion, and operations states.
+The single [current handoff](./docs/HANDOFF-2026-08-04.md) records architecture, validation evidence, deployment state, and remaining risks. [Browser QA](./docs/QA-YOUTUBE-BROWSER-10X-2026-08-03.md) preserves the dated production run, while [Playwright journeys](./e2e/clipquest.spec.ts) cover the primary visual, responsive, validation, retry, feedback, completion, and operations states.
 
 ### 6. [Private operations console](./docs/ADMIN-CONSOLE.md)
 
@@ -216,7 +216,7 @@ ClipQuest/
 ├─ modules/
 │  └─ local-audio-decoder/     # Native PCM decoding module
 ├─ e2e/                        # Playwright browser journeys
-├─ docs/                       # Handoffs, research, QA notes, screenshots
+├─ docs/                       # Current handoff, research, QA notes, screenshots
 └─ scripts/                    # Whisper model preparation and upload
 ```
 
@@ -275,7 +275,7 @@ npm run test:e2e
 npm run build
 ```
 
-The current verified baseline is 43 Vitest tests and seven Playwright journeys. Browser coverage includes YouTube/bilibili link validation, unavailable media, processing retry, keyboard answer selection, correct/incorrect feedback, completion, operations authorization/actions, horizontal overflow, and target desktop/tablet/mobile viewports.
+The 2026-08-04 full-subtitle implementation passes 66 Vitest tests: 33 API, 23 app, and 10 shared-contract tests. Regression coverage proves that a 12,005-event caption stream preserves its final event, exact completeness manifests reject changed or partial uploads, bilibili keeps every subtitle item, selected question types exclude ordering, and every DeepSeek generation batch receives the complete transcript. The existing Playwright journeys cover YouTube/bilibili link validation, processing retry, keyboard answer selection, feedback, completion, operations authorization/actions, horizontal overflow, and target desktop/tablet/mobile viewports.
 
 Prepare native projects after native dependency changes:
 
@@ -331,7 +331,7 @@ npm run cf:deploy
 ```
 
 > [!NOTE]
-> The app and Worker share one deployment. Build the Expo export before deploying so `apps/app/dist` contains the intended static routes and assets.
+> The app and Worker share one deployment. Apply migration `0008_question_types.sql`, then build the Expo export before deploying so `apps/app/dist` contains the intended static routes and assets.
 
 > [!CAUTION]
 > YouTube caption and audio acquisition uses open-source YouTube.js. Ordinary webpages cannot read YouTube audio cross-origin, so captionless audio is relayed transiently through the Worker with caching disabled. Smoke-test Cloudflare egress with supported public videos; never collect browser cookies or persist media.
@@ -343,12 +343,12 @@ npm run cf:deploy
 ## 🛡️ Privacy and security boundary
 
 - Captionless YouTube audio is relayed through a short-lived user-bound `no-store` response, decoded in browser memory, and discarded after transcription. It is never persisted by ClipQuest.
-- Only timestamped transcript segments—not raw audio—are uploaded for private storage and question generation.
+- Only timestamped transcript segments—not raw audio—are uploaded for private storage and question generation. Accepted uploads must match their complete-transcript manifest exactly.
 - DeepSeek and Resend credentials remain Worker-only and never enter Expo or web bundles.
 - D1 queries and R2/KV objects are scoped to authenticated ClipQuest users and server-side authorization.
 - Operations roles are stored server-side; learners receive no management permissions, operators cannot elevate roles, and owners are protected from self-lockout.
 - Privileged account/job changes require a reason and write an audit record. Generic Better Auth admin endpoints are blocked so they cannot bypass ClipQuest auditing.
-- Generated questions must pass shared schema, answer, evidence, and transcript-segment validation.
+- Generated questions must pass shared schema, answer, selected-type, evidence, and transcript-segment validation. Complete-transcript generation requests are bounded to 60,000 normalized segments and 750,000 canonical characters; inputs over the safety envelope fail instead of being silently shortened.
 - YouTube OAuth, watch-history imports, subscriptions, playlists, liked videos, and personalized account feeds are outside the core product and disabled.
 - The experimental YouTube device connection remains behind `ENABLE_YOUTUBE_DEMO_HISTORY=false`; it is not required to create a quest.
 - Do not commit `.env`, `.dev.vars`, credentials, private transcripts, model caches, or QA-user secrets.
