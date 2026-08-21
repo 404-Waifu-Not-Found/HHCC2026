@@ -6,6 +6,23 @@ export type NativeDeepLinkRoute =
   | "/(tabs)/library"
   | `/quiz/${string}`;
 
+export function createRecentNativeEventGate(windowMs = 1_500) {
+  if (!Number.isFinite(windowMs) || windowMs <= 0) {
+    throw new Error("Native event deduplication requires a positive window.");
+  }
+  let lastKey: string | undefined;
+  let lastHandledAt = Number.NEGATIVE_INFINITY;
+  return (key: string, handledAt = Date.now()): boolean => {
+    const elapsed = handledAt - lastHandledAt;
+    const immediateDuplicate =
+      key === lastKey && elapsed >= 0 && elapsed < windowMs;
+    if (immediateDuplicate) return false;
+    lastKey = key;
+    lastHandledAt = handledAt;
+    return true;
+  };
+}
+
 export function nativeRouteForUrl(rawUrl: string): NativeDeepLinkRoute | null {
   let url: URL;
   try {

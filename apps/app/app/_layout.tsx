@@ -30,7 +30,10 @@ import { clearReviewReminderDeviceState } from "../src/notifications/review-remi
 import { clearAccountCreationState } from "../src/state/creation";
 import { clearAccountAttemptState } from "../src/state/attempt";
 import { cancelPreGenerationForAccount } from "../src/generation/prework";
-import { nativeRouteForUrl } from "../src/navigation/native-deep-links";
+import {
+  createRecentNativeEventGate,
+  nativeRouteForUrl,
+} from "../src/navigation/native-deep-links";
 import { createSerialTaskQueue } from "../src/lib/serial-task-queue";
 
 const SITE_TITLE = "ClipQuest — Paste a YouTube video, build mastery";
@@ -56,29 +59,48 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === "web") return;
+    let active = true;
     let subscription: { remove(): void } | undefined;
-    void import("expo-notifications").then((Notifications) => {
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowBanner: true,
-          shouldShowList: true,
-          shouldPlaySound: false,
-          shouldSetBadge: false,
-        }),
-      });
-      const openResponse = (
-        response: import("expo-notifications").NotificationResponse,
-      ) => {
-        const route = response.notification.request.content.data?.route;
-        if (route === "/library") router.push("/(tabs)/library" as never);
-      };
-      subscription =
-        Notifications.addNotificationResponseReceivedListener(openResponse);
-      void Notifications.getLastNotificationResponseAsync().then((response) => {
-        if (response) openResponse(response);
-      });
-    });
-    return () => subscription?.remove();
+    const shouldHandle = createRecentNativeEventGate();
+    void import("expo-notifications")
+      .then((Notifications) => {
+        if (!active) return;
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowBanner: true,
+            shouldShowList: true,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+          }),
+        });
+        const openResponse = (
+          response: import("expo-notifications").NotificationResponse,
+        ) => {
+          if (!active) return;
+          const route = response.notification.request.content.data?.route;
+          const identifier = response.notification.request.identifier;
+          if (
+            route === "/library" &&
+            shouldHandle(`notification:${identifier}:${route}`)
+          ) {
+            router.push("/(tabs)/library" as never);
+          }
+        };
+        subscription =
+          Notifications.addNotificationResponseReceivedListener(openResponse);
+        void Notifications.getLastNotificationResponseAsync()
+          .then(async (response) => {
+            if (!active || !response) return;
+            openResponse(response);
+            await Notifications.clearLastNotificationResponseAsync();
+          })
+          .catch(() => undefined);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      subscription?.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -107,20 +129,21 @@ function NativeDeepLinkBoundary() {
   useEffect(() => {
     if (Platform.OS === "web") return;
     let active = true;
-    let lastUrl: string | undefined;
+    const shouldHandle = createRecentNativeEventGate();
     const open = (url: string) => {
-      if (!active || url === lastUrl) return;
+      if (!active || !shouldHandle(url)) return;
       const route = nativeRouteForUrl(url);
       if (!route) return;
-      lastUrl = url;
       router.replace(route as never);
     };
     const subscription = Linking.addEventListener("url", ({ url }) =>
       open(url),
     );
-    void Linking.getInitialURL().then((url) => {
-      if (url) open(url);
-    });
+    void Linking.getInitialURL()
+      .then((url) => {
+        if (url) open(url);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
       subscription.remove();
