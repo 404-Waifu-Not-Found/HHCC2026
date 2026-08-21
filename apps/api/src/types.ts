@@ -5,7 +5,10 @@ export type AppSecrets = {
   YOUTUBE_CREDENTIALS_ENCRYPTION_KEY: string;
 };
 
-export type AppEnv = Env & AppSecrets;
+export type AppEnv = Omit<Env, "ENABLE_YOUTUBE_DEMO_HISTORY"> &
+  AppSecrets & {
+    ENABLE_YOUTUBE_DEMO_HISTORY: string;
+  };
 
 export type AuthUser = {
   id: string;
@@ -25,4 +28,3 @@ export type MediaToken = {
   videoId: string;
   expiresAt: number;
 };
-

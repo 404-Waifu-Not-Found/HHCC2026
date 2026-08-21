@@ -49,6 +49,9 @@
       }
     ]
   },
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
   "vars": {
     "APP_ORIGIN": "https://clipquest.ccwu.cc",
     "BETTER_AUTH_URL": "https://clipquest.ccwu.cc",
@@ -62,4 +65,3 @@
     "head_sampling_rate": 1
   }
 }
-

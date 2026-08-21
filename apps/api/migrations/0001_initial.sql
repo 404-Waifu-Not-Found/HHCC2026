@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS videos (
   thumbnail_remote_url TEXT NOT NULL,
   duration_seconds INTEGER NOT NULL DEFAULT 0,
   source_language TEXT,
+  origin TEXT NOT NULL DEFAULT 'paste' CHECK(origin IN ('paste', 'youtube_history')),
   education_status TEXT NOT NULL DEFAULT 'unknown' CHECK(education_status IN ('unknown', 'educational', 'rejected')),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS quiz_banks (
   session_length TEXT NOT NULL,
   primer TEXT NOT NULL,
   concepts_json TEXT NOT NULL,
+  watched INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS quiz_banks_video_idx ON quiz_banks(user_id, video_id, created_at DESC);
@@ -130,6 +132,7 @@ CREATE TABLE IF NOT EXISTS attempts (
   current_index INTEGER NOT NULL DEFAULT 0,
   current_variant INTEGER NOT NULL DEFAULT 0,
   retry_pending INTEGER NOT NULL DEFAULT 0,
+  target_difficulty REAL NOT NULL DEFAULT 2,
   correct_count INTEGER NOT NULL DEFAULT 0,
   total_answered INTEGER NOT NULL DEFAULT 0,
   item_count INTEGER NOT NULL,
@@ -179,6 +182,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   attempt_id TEXT REFERENCES attempts(id) ON DELETE SET NULL,
   score REAL,
   scheduled_for INTEGER NOT NULL,
+  notified_at INTEGER,
   completed_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS reviews_due_idx ON reviews(user_id, scheduled_for, completed_at);
@@ -214,4 +218,3 @@ CREATE TABLE IF NOT EXISTS youtube_candidates (
   UNIQUE(user_id, source_video_id)
 );
 CREATE INDEX IF NOT EXISTS youtube_candidates_user_idx ON youtube_candidates(user_id, selected, created_at DESC);
-
