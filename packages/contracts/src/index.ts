@@ -635,6 +635,7 @@ export const QuizGenerationProfileResponseSchema = z
       "0.8.15",
       "0.8.16",
       "0.8.17",
+      "0.8.24",
     ]),
     requiredCapability: z.enum([
       LEGACY_LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
@@ -669,7 +670,7 @@ export const QuizGenerationProfileResponseSchema = z
   .superRefine((value, context) => {
     const expected =
       value.generationProfile === "prompt_first_auto_v5_12"
-        ? ["0.8.17", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
+        ? ["0.8.24", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
         : value.generationProfile === "prompt_first_auto_v5_11"
           ? ["0.8.16", LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY]
           : value.generationProfile === "prompt_first_auto_v5_10"
@@ -1753,6 +1754,7 @@ const LocalQuestionBaseSchema = z
     id: z.string().regex(/^q(?:[1-9]|1[0-5])$/),
     concept: z.string().trim().min(1).max(200),
     question: z.string().trim().min(1).max(700),
+    retryQuestion: z.string().trim().min(1).max(700).optional(),
     explanation: z.string().trim().min(1).max(1_500),
     claimKey: z.string().trim().min(1).max(300).optional(),
     conceptCluster: z.string().trim().min(1).max(200).optional(),

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { questionConceptFailure } from "../src/grounded-quality.js";
-import { promptFirstLearnerQualityFailure } from "../src/local-generator.js";
+import {
+  promptFirstLearnerQualityFailure,
+  promptFirstRetryQuestionFailure,
+} from "../src/local-generator.js";
 
 test("learner-facing quality rejects presentation characterization wording", () => {
   assert.equal(
@@ -39,7 +42,8 @@ test("prompt-first grounding rejects an unrelated domain but keeps a supported p
       {
         type: "short_answer",
         concept: "package tracking frequency",
-        question: "How often do package-tracking systems update their location?",
+        question:
+          "How often do package-tracking systems update their location?",
         answer: "Every few minutes.",
       },
       context,
@@ -60,6 +64,62 @@ test("prompt-first grounding rejects an unrelated domain but keeps a supported p
       primary,
       true,
     ),
+    null,
+  );
+});
+
+test("prompt-first quality rejects compound true-false claims and consequences", () => {
+  const evidence =
+    "Newton expressed physical motion as universal mathematical laws. Religious explanations continued to exist alongside scientific ones.";
+  assert.equal(
+    promptFirstLearnerQualityFailure(
+      {
+        type: "true_false",
+        concept: "Newtonian laws",
+        question:
+          "Newton established mathematical laws, replacing the idea of a divine hand at work.",
+        correction: "Newton established mathematical laws of motion.",
+        explanation: "The laws describe physical and celestial motion.",
+        answer: true,
+      },
+      evidence,
+      evidence,
+      true,
+    ),
+    "true_false_compound_claim",
+  );
+  assert.equal(
+    promptFirstLearnerQualityFailure(
+      {
+        type: "true_false",
+        concept: "Newtonian laws",
+        question: "Newton expressed physical motion as mathematical laws.",
+        correction: "Newton expressed physical motion as mathematical laws.",
+        explanation: "The laws describe physical motion mathematically.",
+        answer: true,
+      },
+      evidence,
+      evidence,
+      true,
+    ),
+    null,
+  );
+});
+
+test("adaptive retries require a genuinely different AI-generated prompt", () => {
+  assert.equal(
+    promptFirstRetryQuestionFailure({
+      question: "What does induction mean?",
+      retryQuestion: "What does induction mean!",
+    }),
+    "retry_question_invalid",
+  );
+  assert.equal(
+    promptFirstRetryQuestionFailure({
+      question: "What does induction mean?",
+      retryQuestion:
+        "Which reasoning process draws a general conclusion from examples?",
+    }),
     null,
   );
 });

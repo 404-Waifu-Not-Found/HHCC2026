@@ -155,11 +155,11 @@ app.get("/health", (c) => {
       supportedValidatorVersion: LOCAL_QUIZ_VALIDATOR_VERSION,
       rolloutMode,
       effectiveDefaultProfile: effectiveDefaultProfile.generationProfile,
-      requiredExtensionVersion: "0.8.17",
+      requiredExtensionVersion: "0.8.24",
       requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
       clients: {
         chromeExtension: {
-          minimumVersion: "0.8.17",
+          minimumVersion: "0.8.24",
           requiredCapability: LOCAL_QUIZ_QUESTION_STREAM_CAPABILITY,
         },
         androidApp: {

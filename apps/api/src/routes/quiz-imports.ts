@@ -78,7 +78,7 @@ function versionAtLeast(actual: string, minimum: string): boolean {
 function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
   if (!chunk.client) return;
   const native = chunk.client.kind !== "chrome_extension";
-  const minimum = native ? "0.2.0" : "0.8.17";
+  const minimum = native ? "0.2.0" : "0.8.24";
   const clientName =
     chunk.client.kind === "android_app"
       ? "Android"
@@ -90,6 +90,31 @@ function assertNewGenerationClient(chunk: LocalConceptQuizQuestionChunk): void {
       403,
       "local_generation_client_outdated",
       `ClipQuest ${clientName} ${minimum} or newer is required.`,
+    );
+  }
+}
+
+export function assertCurrentRetryQuestion(
+  chunk: LocalConceptQuizQuestionChunk,
+): void {
+  if (chunk.promptVersion !== "quiz-local-json-stream-v5.12") {
+    return;
+  }
+  const normalizePrompt = (value: string) =>
+    value
+      .normalize("NFKC")
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  const original = normalizePrompt(chunk.question.question);
+  const retry = chunk.question.retryQuestion
+    ? normalizePrompt(chunk.question.retryQuestion)
+    : "";
+  if (!retry || retry === original) {
+    throw new ApiError(
+      422,
+      "quiz_retry_question_invalid",
+      "The AI-generated adaptive retry prompt must be present and distinct.",
     );
   }
 }
@@ -398,6 +423,7 @@ quizImportsRouter.put("/:quizId/questions", async (c) => {
     .normalize("NFKC")
     .toLocaleLowerCase()
     .trim();
+  assertCurrentRetryQuestion(input.chunk);
   if (
     !isPromptFirstProfile(summary.generationProfile) &&
     summary.acceptedQuestionSummaries.some(
@@ -1196,6 +1222,7 @@ async function persistProgressiveQuiz(input: {
   const timestamp = now();
   const chunk = input.input.chunk;
   const question = chunk.question;
+  assertCurrentRetryQuestion(chunk);
   if (
     chunk.generationProfile === "evidence_grounded_auto_v5_4" ||
     chunk.generationProfile === "concept_first_auto_v5_8"
@@ -2240,6 +2267,17 @@ function questionInsert(
 ): D1PreparedStatement {
   const stored = storedQuestionFields(question);
   const difficulty = structuralDifficulty(question);
+  const reformulatedPrompt =
+    metadata.promptVersion === "quiz-local-json-stream-v5.12"
+      ? question.retryQuestion
+      : (question.retryQuestion ?? question.question);
+  if (!reformulatedPrompt) {
+    throw new ApiError(
+      422,
+      "quiz_retry_question_invalid",
+      "The AI-generated adaptive retry prompt must be present and distinct.",
+    );
+  }
   const columns = `(id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)`;
   const placeholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', ?, ?`;
   const statement = liveClaim
@@ -2261,7 +2299,7 @@ function questionInsert(
     question.type,
     question.id,
     question.question,
-    question.question,
+    reformulatedPrompt,
     stored.optionsJson,
     stored.correctAnswerJson,
     stored.rubricJson,

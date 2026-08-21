@@ -2614,6 +2614,10 @@ function promptFirstTaskFromRequest(request) {
 
 function promptFirstResponse(request, mutate = (value) => value) {
   const task = promptFirstTaskFromRequest(request);
+  const supportedTrueStatement = (
+    task.primaryClaim ??
+    `Pathway ${task.ordinal} transfers energy between the states.`
+  ).replace(/,\s*(?:and|replacing|causing|leading|resulting)\b[\s\S]*$/iu, ".");
   const common = {
     type: task.type,
     concept: `energy pathway ${task.ordinal}`,
@@ -2638,21 +2642,14 @@ function promptFirstResponse(request, mutate = (value) => value) {
               ? {
                   type: common.type,
                   concept: common.concept,
-                  supportedStatement:
-                    task.primaryClaim ??
-                    `Pathway ${task.ordinal} transfers energy between the states.`,
+                  supportedStatement: supportedTrueStatement,
                   explanation: `Pathway ${task.ordinal} transfers energy because the route couples the defined states.`,
                 }
               : {
                   type: common.type,
                   concept: common.concept,
-                  supportedStatement:
-                    task.primaryClaim ??
-                    `Pathway ${task.ordinal} transfers energy between the states.`,
-                  falseStatement: (
-                    task.primaryClaim ??
-                    `Pathway ${task.ordinal} transfers energy between the states.`
-                  ).replace(
+                  supportedStatement: supportedTrueStatement,
+                  falseStatement: supportedTrueStatement.replace(
                     /\b(?:transfers?|enters?|connects?|carries|relays|routes?|occurs?|increases?)\b/iu,
                     (value) =>
                       /^enter/iu.test(value)
@@ -2720,6 +2717,16 @@ function promptFirstResponse(request, mutate = (value) => value) {
                 acceptableAnswers: [],
                 requiredItems: [],
               };
+  if (task.task.includes('"retryQuestion"')) {
+    question.retryQuestion =
+      task.type === "multiple_choice"
+        ? `Which mechanism carries energy through pathway ${task.ordinal}?`
+        : task.type === "true_false"
+          ? task.polarity
+            ? `Energy moves between the defined states through pathway ${task.ordinal}.`
+            : `Pathway ${task.ordinal} prevents energy movement between the defined states.`
+          : `Which response describes energy transfer through pathway ${task.ordinal}?`;
+  }
   return completionResponse(mutate({ questions: [question] }, task));
 }
 
@@ -3678,6 +3685,22 @@ test("v5.12 sends the grading-consistent local-polarity contract", async (contex
   assert.equal(result.validatorVersion, "validator-minimal-gradeability-v5.3");
   assert.equal(result.importVersion, "extension-progressive-import-v8");
   assert.equal(result.generationProfile, "prompt_first_auto_v5_12");
+  const invalidRetryQuestions = result.quiz.questions.filter(
+    (question) =>
+      typeof question.retryQuestion !== "string" ||
+      question.retryQuestion.trim().length === 0 ||
+      question.retryQuestion
+        .normalize("NFKC")
+        .toLocaleLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim() ===
+        question.question
+          .normalize("NFKC")
+          .toLocaleLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, " ")
+          .trim(),
+  );
+  assert.deepEqual(invalidRetryQuestions, []);
   assert.equal(requests.length, 5);
   assert.equal(
     calls.filter((event) => event.lifecycleState === "started").length,
@@ -4788,6 +4811,7 @@ test("v5.11 recovers a complete singleton emitted after a leaked non-thinking tr
       type: "multiple_choice",
       concept: "energy pathway",
       question: "How does the pathway transfer energy?",
+      retryQuestion: "Which mechanism carries energy through the pathway?",
       explanation: "The pathway transfers energy between defined states.",
       correctAnswer: "Through the defined route",
       distractors: [

@@ -911,12 +911,16 @@ function promptFirstQuestionSchemaForType(
     explicitPolarityFields = false,
     polarity = true,
     requiredShortAnswerMode,
+    requireRetryQuestion = false,
   } = {},
 ) {
   const common = {
     type: { const: type },
     concept: { type: "string", minLength: 1 },
     question: { type: "string", minLength: 1 },
+    ...(requireRetryQuestion
+      ? { retryQuestion: { type: "string", minLength: 1 } }
+      : {}),
     explanation: { type: "string", minLength: 1 },
   };
   if (type === "multiple_choice") {
@@ -927,6 +931,7 @@ function promptFirstQuestionSchemaForType(
         "type",
         "concept",
         "question",
+        ...(requireRetryQuestion ? ["retryQuestion"] : []),
         "explanation",
         "correctAnswer",
         "distractors",
@@ -953,6 +958,7 @@ function promptFirstQuestionSchemaForType(
             "type",
             "concept",
             "supportedStatement",
+            ...(requireRetryQuestion ? ["retryQuestion"] : []),
             "explanation",
             ...(polarity ? [] : []),
           ],
@@ -960,6 +966,9 @@ function promptFirstQuestionSchemaForType(
             type: { const: type },
             concept: { type: "string", minLength: 1 },
             supportedStatement: { type: "string", minLength: 1 },
+            ...(requireRetryQuestion
+              ? { retryQuestion: { type: "string", minLength: 1 } }
+              : {}),
             explanation: { type: "string", minLength: 1 },
             ...(polarity
               ? {}
@@ -974,6 +983,7 @@ function promptFirstQuestionSchemaForType(
           "type",
           "concept",
           "question",
+          ...(requireRetryQuestion ? ["retryQuestion"] : []),
           "explanation",
           ...(polarity ? [] : []),
         ],
@@ -1012,6 +1022,7 @@ function promptFirstQuestionSchemaForType(
       "type",
       "concept",
       "question",
+      ...(requireRetryQuestion ? ["retryQuestion"] : []),
       "explanation",
       "answer",
       "gradingMode",
@@ -2716,12 +2727,24 @@ function promptFirstV512ExampleQuestion(
   requiredShortAnswerMode,
 ) {
   if (type !== "true_false") {
-    return promptFirstV511ExampleQuestion(
+    const example = promptFirstV511ExampleQuestion(
       type,
       polarity,
       objective,
       requiredShortAnswerMode,
     );
+    const retryQuestion =
+      type === "multiple_choice"
+        ? "Which option states the same supported relationship?"
+        : objective === "formula"
+          ? "Which equation expresses the relationship among distance, rate, and time?"
+          : objective === "method"
+            ? "How can the two outcomes be checked for agreement?"
+            : objective === "condition" ||
+                requiredShortAnswerMode === "proposition"
+              ? "When does the process begin?"
+              : "What relationship connects the input and output?";
+    return { ...example, retryQuestion };
   }
   if (polarity) {
     return {
@@ -2729,6 +2752,8 @@ function promptFirstV512ExampleQuestion(
       concept: "state relationship",
       supportedStatement:
         "Increasing the input increases the output under the stated condition.",
+      retryQuestion:
+        "Under the stated condition, a larger input produces a larger output.",
       explanation:
         "The input controls the output because the stated condition couples their changes.",
     };
@@ -2740,6 +2765,8 @@ function promptFirstV512ExampleQuestion(
       "Increasing the input increases the output under the stated condition.",
     falseStatement:
       "Increasing the input decreases the output under the stated condition.",
+    retryQuestion:
+      "Under the stated condition, a larger input produces a smaller output.",
     explanation:
       "The false statement reverses the direction: the output increases rather than decreases when the input rises.",
   };
@@ -3047,6 +3074,8 @@ function generationMessagesV512(input) {
     ' Never assess a claim that the internal context labels as an oversimplification, simplification, generalization, analogy, argument, myth, misconception, disputed interpretation, confusing convention, or casual fundamental-category claim; choose another direct literal fact from the current context. Never assess worked-example narration, an incidental unit conversion, a broad prevalence claim, or a historical aside. Avoid broad only, unique, most, and least claims unless they are the exact defining relationship. A calculation item must include every input and ask the learner to calculate; never ask whether a source-specific result is true. Never refer to unseen inputs as "the eight numbers," "the values above," "the given data," or "this example." Never ask merely for a starting or example value; use that value as an explicit calculation input or choose another concept. If every input cannot fit in the learner-visible question, select a nonnumeric relationship. A definition target must use What, Which, or Define rather than How. A mechanism answer must state the actual process instead of restating the outcome. A False correction must directly restore the single changed relationship. Never manufacture a False item by replacing, duplicating, or omitting one member of a list; choose a single relationship instead. Preserve grouped conditions role by role: shortages apply to resources or habitat, while predators are present or absent. Never reuse a blocked assessment family, even with another type or example. In force questions, never say an action-reaction pair acts on or balances one object; the paired forces act on different objects. Never attribute a fact to a speaker, narrator, source, lesson, or context; state the educational reason directly. The phrases "as described in the context," "as described in the material," "private content," "internal content," "provided information," and "given material" are forbidden in every learner-visible field. Return clean complete sentences with valid punctuation.';
   typeInstruction +=
     " FINAL OUTPUT DECISION: If the assigned fact is a named anecdote, personal routine, quotation, graph axis, matrix cell, table row, diagram label, example-specific count, or a claim that depends on an unseen visual, do not quiz that detail. Extract the general definition, relationship, mechanism, method, or institutional rule that the example teaches, or select another complete fact from the additional context. A matrix item must state a general row, column, entry, or direction rule unless every required matrix value appears in the learner-visible stem. A history or civics item must test a durable cause, consequence, institution, power, constraint, or viewpoint—not who said a quote, which administration faced a condition, or a date by itself. Do not repeat any blocked grading target. No learner-visible field may contain 'the context specifies,' 'as described in the context,' 'the material says,' or any source attribution.";
+  typeInstruction +=
+    " REQUIRED ADAPTIVE RETRY: return retryQuestion as a second learner-visible prompt for exactly the same grading target. It must be genuinely different wording, not an exact copy or punctuation-only edit. It may not add a new fact, change the answer, reverse True/False polarity, or depend on unseen context. For True/False, retryQuestion must preserve the same assigned truth value as the first learner-visible statement. A True/False item must contain one independently judgeable claim; do not join a historical fact to a second claim or consequence with comma-and, replacing, causing, leading, resulting, or similar wording.";
   const schema = {
     type: "object",
     additionalProperties: false,
@@ -3062,6 +3091,7 @@ function generationMessagesV512(input) {
             explicitPolarityFields: true,
             polarity,
             requiredShortAnswerMode,
+            requireRetryQuestion: true,
           }),
         ],
         items: false,
@@ -4125,6 +4155,15 @@ export function normalizeGeneratedQuestion(
     type,
     concept,
     question: questionText,
+    ...(promptFirstV512Mode
+      ? {
+          retryQuestion: promptFirstV512LearnerText(
+            rawQuestion.retryQuestion,
+            true,
+            false,
+          ),
+        }
+      : {}),
     explanation: conceptMasteryMode
       ? stripQuestionSourceFraming(cleanString(rawQuestion.explanation))
       : promptFirstV512ExplanationText(
@@ -4932,6 +4971,9 @@ function promptFirstShortAnswerCandidate(question, gradeabilityMode = false) {
     type: question.type,
     concept: question.concept,
     question: question.question,
+    ...(nonEmptyString(question.retryQuestion, 700)
+      ? { retryQuestion: question.retryQuestion }
+      : {}),
     explanation: question.explanation,
     answer,
     shortAnswerMode: mode,
@@ -5346,6 +5388,16 @@ function validateQuiz(quiz, input) {
           `Question ${index + 1} is not a complete, softly worded learner-facing assessment.`,
           qualityFailure,
           repairContextForCandidate(question, qualityFailure),
+        );
+      }
+      const retryQuestionFailure = input.promptFirstV512Mode
+        ? promptFirstRetryQuestionFailure(question)
+        : null;
+      if (retryQuestionFailure) {
+        validationFailure(
+          `Question ${index + 1} must include a distinct AI-generated adaptive retry prompt.`,
+          retryQuestionFailure,
+          repairContextForCandidate(question, retryQuestionFailure),
         );
       }
     }
@@ -5789,6 +5841,16 @@ export function promptFirstLearnerQualityFailure(
   const evidence = normalize(`${focusExcerpt ?? ""} ${primaryClaim ?? ""}`);
   if (!prompt || !target) return null;
 
+  if (
+    enforceSourceGrounding &&
+    question.type === "true_false" &&
+    /,\s*(?:and|replacing|causing|leading|resulting)\b/iu.test(
+      String(question.question ?? ""),
+    )
+  ) {
+    return "true_false_compound_claim";
+  }
+
   const explanationPolarityFailure =
     promptFirstTrueFalseExplanationPolarityFailure(question);
   if (explanationPolarityFailure) return explanationPolarityFailure;
@@ -5876,6 +5938,15 @@ export function promptFirstLearnerQualityFailure(
       (word) => !evidence.includes(word.toLocaleLowerCase("en-US")),
     );
     if (unsupported) return "unsupported_absolute_claim";
+  }
+  return null;
+}
+
+export function promptFirstRetryQuestionFailure(question) {
+  const questionText = normalize(question?.question ?? "");
+  const retryQuestion = normalize(question?.retryQuestion ?? "");
+  if (!questionText || !retryQuestion || questionText === retryQuestion) {
+    return "retry_question_invalid";
   }
   return null;
 }
@@ -5997,6 +6068,16 @@ function validatePromptFirstQuiz(quiz, input) {
       repairContextForCandidate(question, qualityFailure),
     );
   }
+  const retryQuestionFailure = input.promptFirstV512Mode
+    ? promptFirstRetryQuestionFailure(question)
+    : null;
+  if (retryQuestionFailure) {
+    validationFailure(
+      "The learner-facing adaptive retry prompt is missing or duplicates the original question.",
+      retryQuestionFailure,
+      repairContextForCandidate(question, retryQuestionFailure),
+    );
+  }
   if (question.type === "multiple_choice") {
     const correctAnswer = question.correctAnswer;
     const distractors = question.distractors;
@@ -6031,6 +6112,9 @@ function validatePromptFirstQuiz(quiz, input) {
         type: question.type,
         concept: question.concept,
         question: question.question,
+        ...(input.promptFirstV512Mode
+          ? { retryQuestion: question.retryQuestion }
+          : {}),
         explanation: question.explanation,
         choices,
         answerIndex: 0,
@@ -6098,6 +6182,9 @@ function validatePromptFirstQuiz(quiz, input) {
         type: question.type,
         concept: question.concept,
         question: question.question,
+        ...(input.promptFirstV512Mode
+          ? { retryQuestion: question.retryQuestion }
+          : {}),
         explanation: question.explanation,
         answer: question.answer,
         correction: question.correction,
@@ -8273,6 +8360,8 @@ function automaticRetryKindForFailure(reasonCode, promptFirstV59Mode = false) {
       "question_tautology_invalid",
       "quiz_language_mismatch",
       "source_grounding_invalid",
+      "retry_question_invalid",
+      "true_false_compound_claim",
     ].includes(reasonCode)
   ) {
     return "content_repair";
@@ -8361,6 +8450,10 @@ function retryGuidanceFor(retryKind, acceptedQuestions = [], failureReason) {
       "Return a complete learner-facing answer. Do not end with a dangling conjunction or use placeholders such as 'another effect' or 'something'. Keep the answer concise but grammatically complete.",
     unsupported_absolute_claim:
       "Remove absolute wording such as always, never, all, none, every, or must unless the assigned evidence explicitly supports that exact absolute claim. Keep the wording evidence-bounded and softer.",
+    retry_question_invalid:
+      "Return a genuinely different retryQuestion that tests exactly the same answer or True/False polarity. Do not make a punctuation-only edit, add a new fact, or copy the original prompt.",
+    true_false_compound_claim:
+      "Rewrite the True/False item as one independently judgeable factual claim. Remove any second historical claim, appended consequence, or causal clause introduced with comma-and, replacing, causing, leading, resulting, or similar wording.",
     quiz_language_mismatch:
       "Keep the supported objective and private evidence fields, but rewrite every learner-visible field entirely in the selected quiz language. For multiple choice, translate answerText and all distractors; keep evidenceQuote and answerSpan as exact private source evidence.",
   };

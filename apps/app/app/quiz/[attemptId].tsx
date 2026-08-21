@@ -212,6 +212,41 @@ export default function QuizScreen() {
     return () => clearTimeout(timeout);
   }, [question, questionActivation]);
 
+  const syncCheatSheet = useCallback(async () => {
+    if (cheatSheetId) return;
+    if (cheatSheetSyncRef.current) {
+      await cheatSheetSyncRef.current;
+      return;
+    }
+    const pending = pendingCheatSheetRef.current;
+    if (!pending) return;
+    const task = (async () => {
+      let failed = false;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const uploaded = await uploadCheatSheet(pending);
+          setCheatSheetId(uploaded.id);
+          return;
+        } catch {
+          failed = true;
+          if (attempt < 2)
+            await new Promise((resolve) =>
+              setTimeout(resolve, [500, 1_500][attempt]),
+            );
+        }
+      }
+      if (failed) setCheatSheetStatus("failed");
+    })();
+    cheatSheetSyncRef.current = task;
+    try {
+      await task;
+    } finally {
+      if (cheatSheetSyncRef.current === task) {
+        cheatSheetSyncRef.current = undefined;
+      }
+    }
+  }, [cheatSheetId]);
+
   const applyResume = useCallback(
     async (resumed: AttemptResumeResponse) => {
       setFeedback(undefined);
@@ -257,7 +292,7 @@ export default function QuizScreen() {
       if (userId)
         await saveAttemptQuestion(userId, attemptId, resumed.question);
     },
-    [activateQuestion, attemptId, t, updateGeneration, userId],
+    [activateQuestion, attemptId, syncCheatSheet, t, updateGeneration, userId],
   );
 
   async function prepareCheatSheet(quizId: string, videoId: string) {
@@ -290,41 +325,6 @@ export default function QuizScreen() {
       });
   }
 
-  async function syncCheatSheet() {
-    if (cheatSheetId) return;
-    if (cheatSheetSyncRef.current) {
-      await cheatSheetSyncRef.current;
-      return;
-    }
-    const pending = pendingCheatSheetRef.current;
-    if (!pending) return;
-    const task = (async () => {
-      let failed = false;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          const uploaded = await uploadCheatSheet(pending);
-          setCheatSheetId(uploaded.id);
-          return;
-        } catch {
-          failed = true;
-          if (attempt < 2)
-            await new Promise((resolve) =>
-              setTimeout(resolve, [500, 1_500][attempt]),
-            );
-        }
-      }
-      if (failed) setCheatSheetStatus("failed");
-    })();
-    cheatSheetSyncRef.current = task;
-    try {
-      await task;
-    } finally {
-      if (cheatSheetSyncRef.current === task) {
-        cheatSheetSyncRef.current = undefined;
-      }
-    }
-  }
-
   useEffect(() => {
     if (
       showCompletion &&
@@ -334,7 +334,7 @@ export default function QuizScreen() {
     ) {
       void syncCheatSheet();
     }
-  }, [cheatSheetId, cheatSheetStatus, showCompletion]);
+  }, [cheatSheetId, cheatSheetStatus, showCompletion, syncCheatSheet]);
 
   const resume = useCallback(async () => {
     const resumed = await apiRequest(
