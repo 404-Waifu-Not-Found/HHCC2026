@@ -55,7 +55,7 @@ export function AuthShell({
               {t("authShellTagline")}
             </Text>
             <Text style={[styles.detail, { color: theme.textMuted }]}>
-              Turn one useful video into a focused lesson you can finish.
+              {t("authShellDetail")}
             </Text>
           </View>
         </View>
@@ -123,10 +123,10 @@ const styles = StyleSheet.create({
   },
   tagline: {
     maxWidth: 420,
-    fontFamily: typography.display,
-    fontSize: typography.size.displaySmall,
-    lineHeight: typography.lineHeight.displaySmall,
-    letterSpacing: typography.tracking.tight,
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.title,
+    lineHeight: typography.lineHeight.title,
+    letterSpacing: -0.4,
   },
   detail: {
     maxWidth: 420,

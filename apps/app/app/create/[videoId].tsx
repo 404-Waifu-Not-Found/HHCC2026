@@ -1,7 +1,9 @@
-import type {
-  AppLanguage,
-  SessionLength,
-  VideoImportResponse,
+import {
+  DEFAULT_QUIZ_QUESTION_TYPES,
+  type AppLanguage,
+  type QuizQuestionType,
+  type SessionLength,
+  type VideoImportResponse,
 } from "@clipquest/contracts";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -18,11 +20,16 @@ import {
 } from "react-native";
 import { Mascot } from "../../src/components/Mascot";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
 import { Screen } from "../../src/components/Screen";
 import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { Surface } from "../../src/components/Surface";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { loadImportedVideo } from "../../src/state/creation";
+import {
+  loadImportedVideo,
+  loadQuestPreferences,
+  saveQuestPreferences,
+} from "../../src/state/creation";
 import {
   borders,
   breakpoints,
@@ -43,12 +50,21 @@ export default function CreateQuestScreen() {
   const [watched, setWatched] = useState(true);
   const [quizLanguage, setQuizLanguage] = useState<AppLanguage>(locale);
   const [sessionLength, setSessionLength] = useState<SessionLength>("medium");
+  const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
+    ...DEFAULT_QUIZ_QUESTION_TYPES,
+  ]);
 
   useEffect(() => {
     if (!videoId) return;
-    void loadImportedVideo(videoId).then((value) => {
-      if (value) setVideo(value);
-      else setError(t("videoSetupExpired"));
+    void Promise.all([
+      loadImportedVideo(videoId),
+      loadQuestPreferences(videoId),
+    ]).then(([value, preferences]) => {
+      if (value) {
+        setVideo(value);
+        setQuizLanguage(preferences.quizLanguage);
+        setQuestionTypes(preferences.questionTypes);
+      } else setError(t("videoSetupExpired"));
     });
   }, [t, videoId]);
 
@@ -89,8 +105,12 @@ export default function CreateQuestScreen() {
       ? t("localTranscript")
       : t("sourceCaptions")
   ).replace(/[—–]/g, "-");
-  const proceed = () => {
+  const proceed = async () => {
     blurActiveWebElement();
+    await saveQuestPreferences(video.video.id, {
+      quizLanguage,
+      questionTypes,
+    });
     router.push({
       pathname: "/generation/[videoId]",
       params: {
@@ -98,6 +118,7 @@ export default function CreateQuestScreen() {
         watched: String(watched),
         quizLanguage,
         sessionLength,
+        questionTypes: questionTypes.join(","),
       },
     });
   };
@@ -107,7 +128,10 @@ export default function CreateQuestScreen() {
       contentWidth="wide"
       footer={
         <View style={styles.footerInner}>
-          <PrimaryButton disabled={tooLong || tooLongForWeb} onPress={proceed}>
+          <PrimaryButton
+            disabled={tooLong || tooLongForWeb}
+            onPress={() => void proceed()}
+          >
             {t("generate")}
           </PrimaryButton>
         </View>
@@ -223,6 +247,16 @@ export default function CreateQuestScreen() {
                   { value: "long", label: t("long") },
                 ] as const
               }
+            />
+          </SettingGroup>
+          <SettingGroup
+            divided
+            title={t("questionTypes")}
+            help={t("questionTypesHelp")}
+          >
+            <QuestionTypeSelector
+              value={questionTypes}
+              onChange={setQuestionTypes}
             />
           </SettingGroup>
         </Surface>

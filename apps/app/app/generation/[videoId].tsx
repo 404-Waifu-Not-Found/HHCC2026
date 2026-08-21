@@ -1,11 +1,16 @@
 import {
+  DEFAULT_QUIZ_QUESTION_TYPES,
   GenerationStatusSchema,
   MediaResolveResponseSchema,
+  QuizQuestionTypesSchema,
   QuizStartResponseSchema,
   TranscriptUploadResponseSchema,
+  createTranscriptCompleteness,
   type AppLanguage,
   type GenerationStage,
+  type QuizQuestionType,
   type SessionLength,
+  type TranscriptCompleteness,
   type TranscriptSegment,
 } from "@clipquest/contracts";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -35,6 +40,7 @@ import {
 } from "../../src/state/creation";
 import { transcribeLocally } from "../../src/transcription/local-transcriber";
 import { TranscriptionPausedError } from "../../src/transcription/types";
+import { acquireTextTranscript } from "../../src/transcription/acquire-text-transcript";
 import {
   breakpoints,
   layout,
@@ -49,12 +55,41 @@ type ProgressDetail = {
   cached?: boolean;
 };
 
+function sameQuestionTypes(
+  stored: QuizQuestionType[] | undefined,
+  requested: QuizQuestionType[],
+): boolean {
+  return (
+    stored?.length === requested.length &&
+    stored.every((type, index) => type === requested[index])
+  );
+}
+
+function waitFor(milliseconds: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const abort = () => {
+      clearTimeout(timeout);
+      reject(signal.reason);
+    };
+    const timeout = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, milliseconds);
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}
+
 export default function GenerationScreen() {
   const params = useLocalSearchParams<{
     videoId: string;
     watched: string;
     quizLanguage: AppLanguage;
     sessionLength: SessionLength;
+    questionTypes?: string;
   }>();
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
@@ -68,19 +103,46 @@ export default function GenerationScreen() {
   const [cancelling, setCancelling] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const [localTranscription, setLocalTranscription] = useState(false);
+  const importedRef =
+    useRef<Awaited<ReturnType<typeof loadImportedVideo>>>(null);
+  const questionTypes = useMemo<QuizQuestionType[]>(() => {
+    const parsed = QuizQuestionTypesSchema.safeParse(
+      params.questionTypes?.split(",").filter(Boolean),
+    );
+    return parsed.success ? parsed.data : [...DEFAULT_QUIZ_QUESTION_TYPES];
+  }, [params.questionTypes]);
 
   const execute = useCallback(
     async (signal: AbortSignal, retryExisting: boolean) => {
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
-      setLocalTranscription(!imported.captions.preferredSegments?.length);
+      importedRef.current = imported;
+      setLocalTranscription(imported.transcriptionMode === "device_media");
       let storedGeneration = await loadGenerationState(imported.video.id);
-      if (!storedGeneration) {
-        storedGeneration = { idempotencyKey: Crypto.randomUUID() };
+      if (
+        !storedGeneration ||
+        storedGeneration.quizLanguage !== params.quizLanguage ||
+        !sameQuestionTypes(storedGeneration.questionTypes, questionTypes)
+      ) {
+        storedGeneration = {
+          idempotencyKey: Crypto.randomUUID(),
+          quizLanguage: params.quizLanguage,
+          questionTypes,
+        };
         await saveGenerationState(imported.video.id, storedGeneration);
       }
 
       let queuedJobId = storedGeneration.jobId;
+      if (!queuedJobId && storedGeneration.preworkStatus === "running") {
+        for (let attempt = 0; attempt < 6 && !queuedJobId; attempt += 1) {
+          await waitFor(250, signal);
+          const latest = await loadGenerationState(imported.video.id);
+          if (latest?.idempotencyKey !== storedGeneration.idempotencyKey) break;
+          storedGeneration = latest;
+          queuedJobId = latest.jobId;
+          if (latest.preworkStatus !== "running") break;
+        }
+      }
       if (!queuedJobId) {
         try {
           const found = await apiRequest(
@@ -122,14 +184,30 @@ export default function GenerationScreen() {
 
       setStage("getting_video");
       setProgress(1);
-      let segments: TranscriptSegment[];
+      let segments: TranscriptSegment[] = [];
+      let completeness: TranscriptCompleteness | null = null;
       let language = imported.video.sourceLanguage ?? "und";
       let origin: "captions" | "device_whisper" = "captions";
-      if (imported.captions.preferredSegments?.length) {
-        setStage("preparing_audio");
+      let acquisition:
+        | "server_captions"
+        | "youtube_signed_captions"
+        | "youtube_text_provider"
+        | "device_whisper" = "server_captions";
+      setStage("preparing_audio");
+      const textTranscript = await acquireTextTranscript(
+        imported,
+        signal,
+        setProgress,
+      );
+      if (textTranscript) {
+        segments = textTranscript.segments;
+        language = textTranscript.language;
+        acquisition = textTranscript.acquisition;
+        completeness = textTranscript.completeness;
         setProgress(1);
-        segments = imported.captions.preferredSegments;
-      } else {
+      }
+      if (!segments.length) {
+        setLocalTranscription(true);
         const media = await apiRequest(
           "/api/media/resolve",
           {
@@ -156,9 +234,19 @@ export default function GenerationScreen() {
         });
         language = result.language;
         segments = result.segments;
+        completeness = createTranscriptCompleteness(
+          segments,
+          imported.video.durationSeconds,
+        );
         origin = "device_whisper";
+        acquisition = "device_whisper";
       }
       if (signal.aborted) throw new TranscriptionPausedError();
+      if (!completeness) {
+        throw new Error(
+          "ClipQuest could not verify a complete transcript for this video.",
+        );
+      }
       setStage("creating_questions");
       setProgress(0.04);
       setDetail(undefined);
@@ -172,10 +260,13 @@ export default function GenerationScreen() {
             videoId: imported.video.id,
             language,
             origin,
+            acquisition,
+            completeness,
             segments,
             quizLanguage: params.quizLanguage,
-            sessionLength: params.sessionLength,
+            sessionLength: "long",
             watched: params.watched === "true",
+            questionTypes,
           }),
         },
         TranscriptUploadResponseSchema,
@@ -206,6 +297,8 @@ export default function GenerationScreen() {
             body: jsonBody({
               mode: "learn",
               sessionLength: params.sessionLength,
+              questionTypes,
+              watched: params.watched === "true",
             }),
           },
           QuizStartResponseSchema,
@@ -225,6 +318,7 @@ export default function GenerationScreen() {
       params.sessionLength,
       params.videoId,
       params.watched,
+      questionTypes,
       t,
     ],
   );
@@ -475,7 +569,7 @@ async function pollGeneration(
     if (status.stage === "complete" && status.quizId) return status.quizId;
     if (status.stage === "failed")
       throw new Error(status.error?.message ?? timeoutMessage);
-    await wait(1_500, signal);
+    await wait(500, signal);
   }
   throw new TranscriptionPausedError();
 }

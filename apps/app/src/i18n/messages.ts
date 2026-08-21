@@ -31,7 +31,9 @@ export const messages = {
       "Your progress stays synced across web, iPhone, and Android.",
     welcomeSubtitle:
       "Turn the videos you already watch into a focused, evidence-based learning quest.",
-    authShellTagline: "Paste a video → quiz → build mastery",
+    authShellTagline: "Turn serious videos into lasting knowledge",
+    authShellDetail:
+      "Build an evidence-backed lesson from any public YouTube or bilibili link.",
     ageConfirmation: "I confirm I am at least 13 years old.",
     verifyEmail: "Check your email",
     verifyEmailBody:
@@ -58,13 +60,18 @@ export const messages = {
     watchedYes: "Yes, quiz me",
     watchedNo: "Not yet",
     quizLanguage: "Quiz language",
+    questionTypes: "Question types",
+    questionTypesHelp:
+      "Choose one or more. ClipQuest starts preparing the full quiz as soon as the link is imported.",
+    multipleChoice: "Multiple choice",
+    trueFalse: "True / false",
     sessionLength: "Session length",
     short: "Short · 5",
     medium: "Medium · 10",
     long: "Long · 15",
     generate: "Create my quiz",
     gettingVideo: "Getting video",
-    preparingAudio: "Preparing audio",
+    preparingAudio: "Checking captions / downloading audio",
     downloadingModel: "Downloading speech model",
     transcribing: "Transcribing on this device",
     creatingQuestions: "Creating questions",
@@ -109,7 +116,8 @@ export const messages = {
     notFoundBody:
       "That page does not exist. Head home to start or continue a video quest.",
     videoReady: "Video ready",
-    sourceCaptions: "Captions found — no model download needed.",
+    sourceCaptions:
+      "Captions will be checked in this browser — no extension needed.",
     localTranscript:
       "No usable captions. Audio will be transcribed privately on this device.",
     modelSize: "Speech model · about 45 MB",
@@ -145,7 +153,7 @@ export const messages = {
     cancelGenerationFailed: "Could not cancel quiz creation. Please try again.",
     tryAgain: "Try again",
     privateTranscription:
-      "Raw audio and speech recognition stay on this device. Only transcript text is uploaded.",
+      "ClipQuest downloads caption text in this browser first. If none exists, audio is streamed without caching and transcribed on this device. Only transcript text is stored.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube or bilibili link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -218,7 +226,8 @@ export const messages = {
     alreadyHaveAccount: "已有账户？",
     authCrossDevice: "学习进度会在网页、iPhone 和 Android 设备间同步。",
     welcomeSubtitle: "把你正在观看的视频变成专注、基于证据的学习任务。",
-    authShellTagline: "粘贴视频 → 完成测验 → 真正掌握",
+    authShellTagline: "把严谨视频转化为真正掌握的知识",
+    authShellDetail: "通过公开的 YouTube 或哔哩哔哩链接生成基于证据的课程。",
     ageConfirmation: "我确认自己已满 13 岁。",
     verifyEmail: "请查看邮箱",
     verifyEmailBody: "验证链接已发送。打开链接后回到 ClipQuest。",
@@ -244,13 +253,18 @@ export const messages = {
     watchedYes: "看过，考考我",
     watchedNo: "还没有",
     quizLanguage: "测验语言",
+    questionTypes: "题目类型",
+    questionTypesHelp:
+      "可选择一种或多种。导入链接后，ClipQuest 会立即预生成完整测验。",
+    multipleChoice: "选择题",
+    trueFalse: "判断题",
     sessionLength: "题目数量",
     short: "短 · 5 题",
     medium: "中 · 10 题",
     long: "长 · 15 题",
     generate: "生成测验",
     gettingVideo: "正在获取视频",
-    preparingAudio: "正在准备音频",
+    preparingAudio: "正在检查字幕 / 下载音频",
     downloadingModel: "正在下载语音模型",
     transcribing: "正在此设备上转写",
     creatingQuestions: "正在生成题目",
@@ -292,7 +306,7 @@ export const messages = {
     notFoundTitle: "这个学习任务走丢了",
     notFoundBody: "该页面不存在。返回首页开始或继续视频学习任务。",
     videoReady: "视频已准备好",
-    sourceCaptions: "已找到字幕，无需下载模型。",
+    sourceCaptions: "将在此浏览器中检查字幕，无需安装扩展。",
     localTranscript: "没有可用字幕，音频将在此设备上私密转写。",
     modelSize: "语音模型 · 约 45 MB",
     removeModelConfirm: "已从此设备删除语音模型。",
@@ -324,7 +338,8 @@ export const messages = {
     generationTimeout: "测验生成时间超出预期，请重试以继续此任务。",
     cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
-    privateTranscription: "原始音频和语音识别仅留在此设备，只上传转写文本。",
+    privateTranscription:
+      "ClipQuest 会先在此浏览器中下载字幕文本；没有字幕时才无缓存地传输音频并在此设备转写。只存储转写文本。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 或哔哩哔哩链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",

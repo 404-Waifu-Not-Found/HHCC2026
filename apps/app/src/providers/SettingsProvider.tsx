@@ -9,9 +9,20 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AccessibilityInfo, useColorScheme } from "react-native";
+import { AccessibilityInfo, Platform, useColorScheme } from "react-native";
 import { messages, type Locale, type MessageKey } from "../i18n/messages";
-import { darkTheme, lightTheme, type AppTheme, type ThemeMode } from "../theme/tokens";
+import {
+  deviceClassForWidth,
+  parseStoredSettings,
+  resolveThemeMode,
+  SETTINGS_KEY,
+} from "../lib/settings";
+import {
+  darkTheme,
+  lightTheme,
+  type AppTheme,
+  type ThemeMode,
+} from "../theme/tokens";
 
 type SettingsContextValue = {
   locale: Locale;
@@ -21,12 +32,11 @@ type SettingsContextValue = {
   theme: AppTheme;
   reduceMotion: boolean;
   setReduceMotion(value: boolean): void;
+  ready: boolean;
   t(key: MessageKey): string;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
-
-const SETTINGS_KEY = "clipquest:settings:v1";
 
 export function SettingsProvider({ children }: PropsWithChildren) {
   const systemScheme = useColorScheme();
@@ -35,33 +45,50 @@ export function SettingsProvider({ children }: PropsWithChildren) {
   );
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
   const [reduceMotion, setReduceMotionState] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    void AsyncStorage.getItem(SETTINGS_KEY).then((stored) => {
-      if (!stored) return;
-      try {
-        const parsed = JSON.parse(stored) as Partial<{
-          locale: Locale;
-          themeMode: ThemeMode;
-          reduceMotion: boolean;
-        }>;
-        if (parsed.locale === "en" || parsed.locale === "zh-CN") setLocaleState(parsed.locale);
-        if (["light", "dark", "system"].includes(parsed.themeMode ?? "")) {
-          setThemeModeState(parsed.themeMode ?? "system");
-        }
-        if (typeof parsed.reduceMotion === "boolean") setReduceMotionState(parsed.reduceMotion);
-      } catch {
-        // Ignore obsolete local settings.
+    let cancelled = false;
+    let revealFrame: number | undefined;
+    void Promise.all([
+      AsyncStorage.getItem(SETTINGS_KEY).catch(() => null),
+      AccessibilityInfo.isReduceMotionEnabled().catch(() => false),
+    ]).then(([stored, systemReduceMotion]) => {
+      if (cancelled) return;
+      const parsed = parseStoredSettings(stored);
+      if (parsed.locale) setLocaleState(parsed.locale);
+      if (parsed.themeMode) setThemeModeState(parsed.themeMode);
+      if (parsed.reduceMotion || systemReduceMotion) setReduceMotionState(true);
+
+      const reveal = () => {
+        if (!cancelled) setReady(true);
+      };
+      if (
+        Platform.OS === "web" &&
+        typeof requestAnimationFrame === "function"
+      ) {
+        revealFrame = requestAnimationFrame(reveal);
+      } else {
+        reveal();
       }
     });
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (enabled) setReduceMotionState(true);
-    });
+    return () => {
+      cancelled = true;
+      if (
+        revealFrame !== undefined &&
+        typeof cancelAnimationFrame === "function"
+      ) {
+        cancelAnimationFrame(revealFrame);
+      }
+    };
   }, []);
 
-  const persist = useCallback((next: { locale: Locale; themeMode: ThemeMode; reduceMotion: boolean }) => {
-    void AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-  }, []);
+  const persist = useCallback(
+    (next: { locale: Locale; themeMode: ThemeMode; reduceMotion: boolean }) => {
+      void AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    },
+    [],
+  );
 
   const setLocale = useCallback(
     (next: Locale) => {
@@ -85,7 +112,34 @@ export function SettingsProvider({ children }: PropsWithChildren) {
     [locale, persist, themeMode],
   );
 
-  const resolvedDark = themeMode === "dark" || (themeMode === "system" && systemScheme === "dark");
+  const resolvedMode = resolveThemeMode(themeMode, systemScheme === "dark");
+  const resolvedDark = resolvedMode === "dark";
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    const root = document.documentElement;
+    const applyDeviceClass = () => {
+      root.dataset.cqDevice = deviceClassForWidth(window.innerWidth);
+    };
+    root.dataset.cqTheme = resolvedMode;
+    root.style.colorScheme = resolvedMode;
+    root.style.backgroundColor = resolvedDark
+      ? darkTheme.background
+      : lightTheme.background;
+    document.body.style.backgroundColor = resolvedDark
+      ? darkTheme.background
+      : lightTheme.background;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute(
+        "content",
+        resolvedDark ? darkTheme.background : lightTheme.background,
+      );
+    applyDeviceClass();
+    window.addEventListener("resize", applyDeviceClass);
+    return () => window.removeEventListener("resize", applyDeviceClass);
+  }, [resolvedDark, resolvedMode]);
+
   const value = useMemo<SettingsContextValue>(
     () => ({
       locale,
@@ -95,16 +149,30 @@ export function SettingsProvider({ children }: PropsWithChildren) {
       theme: resolvedDark ? darkTheme : lightTheme,
       reduceMotion,
       setReduceMotion,
+      ready,
       t: (key) => messages[locale][key],
     }),
-    [locale, reduceMotion, resolvedDark, setLocale, setReduceMotion, setThemeMode, themeMode],
+    [
+      locale,
+      ready,
+      reduceMotion,
+      resolvedDark,
+      setLocale,
+      setReduceMotion,
+      setThemeMode,
+      themeMode,
+    ],
   );
-  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+  return (
+    <SettingsContext.Provider value={value}>
+      {children}
+    </SettingsContext.Provider>
+  );
 }
 
 export function useSettings(): SettingsContextValue {
   const value = useContext(SettingsContext);
-  if (!value) throw new Error("useSettings must be used inside SettingsProvider");
+  if (!value)
+    throw new Error("useSettings must be used inside SettingsProvider");
   return value;
 }
-

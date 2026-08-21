@@ -80,6 +80,7 @@ export default function SignUpScreen() {
     >
       <AppTextInput
         label={t("username")}
+        labelPlacement="inside"
         value={username}
         onChangeText={setUsername}
         leading={
@@ -96,6 +97,7 @@ export default function SignUpScreen() {
       />
       <AppTextInput
         label={t("email")}
+        labelPlacement="inside"
         value={email}
         onChangeText={setEmail}
         leading={
@@ -112,6 +114,7 @@ export default function SignUpScreen() {
       />
       <AppTextInput
         label={t("password")}
+        labelPlacement="inside"
         value={password}
         onChangeText={setPassword}
         leading={

@@ -8,7 +8,7 @@
     "prepare:web": "node scripts/prepare-web-runtime.mjs",
     "web": "npm run prepare:web && expo start --web",
     "web:e2e": "npm run prepare:web && expo start --web --localhost --port 8081",
-    "build": "npm run prepare:web && expo export --platform web && node scripts/finalize-web-output.mjs",
+    "build": "npm run prepare:web && expo export --platform web --clear && node scripts/finalize-web-output.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "native:prebuild": "expo prebuild",

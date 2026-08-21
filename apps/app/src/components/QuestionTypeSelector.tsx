@@ -1,0 +1,97 @@
+import {
+  DEFAULT_QUIZ_QUESTION_TYPES,
+  type QuizQuestionType,
+} from "@clipquest/contracts";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSettings } from "../providers/SettingsProvider";
+import { borders, radii, spacing, typography } from "../theme/tokens";
+
+const choices = [
+  { type: "multiple_choice", label: "multipleChoice" },
+  { type: "true_false", label: "trueFalse" },
+  { type: "short_answer", label: "shortAnswer" },
+] as const;
+
+export function QuestionTypeSelector({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: QuizQuestionType[];
+  onChange(value: QuizQuestionType[]): void;
+  disabled?: boolean;
+}) {
+  const { t, theme } = useSettings();
+  const selected = new Set(value);
+  return (
+    <View
+      accessibilityRole="list"
+      accessibilityLabel={t("questionTypes")}
+      style={styles.row}
+    >
+      {choices.map((choice) => {
+        const active = selected.has(choice.type);
+        return (
+          <Pressable
+            key={choice.type}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: active, disabled }}
+            disabled={disabled}
+            onPress={() => {
+              if (active && value.length === 1) return;
+              const next = active
+                ? value.filter((type) => type !== choice.type)
+                : DEFAULT_QUIZ_QUESTION_TYPES.filter(
+                    (type) => selected.has(type) || type === choice.type,
+                  );
+              onChange(next);
+            }}
+            style={({ pressed }) => [
+              styles.choice,
+              {
+                backgroundColor: active
+                  ? theme.primarySoft
+                  : theme.surfaceSunken,
+                borderColor: active ? theme.primary : theme.border,
+              },
+              pressed && styles.pressed,
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={
+                active
+                  ? "checkbox-marked-circle"
+                  : "checkbox-blank-circle-outline"
+              }
+              size={21}
+              color={active ? theme.primary : theme.textMuted}
+            />
+            <Text style={[styles.label, { color: theme.text }]}>
+              {t(choice.label)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  choice: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    borderWidth: borders.standard,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[3],
+  },
+  pressed: { opacity: 0.72 },
+  label: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+});

@@ -1,12 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  DEFAULT_QUIZ_QUESTION_TYPES,
   LibraryResponseSchema,
   VideoImportResponseSchema,
   identifyVideoSource,
   type LibraryCard,
   type LibraryResponse,
+  type QuizQuestionType,
 } from "@clipquest/contracts";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Crypto from "expo-crypto";
 import { router, useFocusEffect } from "expo-router";
 import {
   useCallback,
@@ -28,6 +31,7 @@ import { AppTextInput } from "../../src/components/AppTextInput";
 import { EmptyState } from "../../src/components/EmptyState";
 import { Mascot } from "../../src/components/Mascot";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
 import { Screen } from "../../src/components/Screen";
 import { SectionHeader } from "../../src/components/SectionHeader";
 import { Surface } from "../../src/components/Surface";
@@ -36,7 +40,12 @@ import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest, jsonBody } from "../../src/lib/api";
 import { useAppSession } from "../../src/lib/auth-client";
 import { useSettings } from "../../src/providers/SettingsProvider";
-import { saveImportedVideo } from "../../src/state/creation";
+import { preGenerateImportedQuiz } from "../../src/generation/prework";
+import {
+  saveGenerationState,
+  saveImportedVideo,
+  saveQuestPreferences,
+} from "../../src/state/creation";
 import {
   borders,
   breakpoints,
@@ -51,17 +60,21 @@ const emptyLibrary: VisibleLibrary = { dueReviews: [], saved: [] };
 const PENDING_URL_KEY = "clipquest:pending-url:v1";
 
 export default function HomeScreen() {
-  const { t, theme } = useSettings();
+  const { t, theme, locale } = useSettings();
   const { data: session } = useAppSession();
   const { width } = useWindowDimensions();
   const compact = width < breakpoints.tablet;
   const narrow = width < breakpoints.compact;
   const userEditedUrl = useRef(false);
+  const importingRef = useRef(false);
   const [url, setUrl] = useState("");
   const [library, setLibrary] = useState<VisibleLibrary>(emptyLibrary);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string>();
+  const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
+    ...DEFAULT_QUIZ_QUESTION_TYPES,
+  ]);
   const [libraryError, setLibraryError] = useState<string>();
   const { open, openingId, error: openError } = useOpenVideoCard();
 
@@ -103,13 +116,15 @@ export default function HomeScreen() {
     }, [refresh]),
   );
 
-  const importVideo = async () => {
-    const trimmed = url.trim();
+  const importVideo = async (rawUrl = url) => {
+    if (importingRef.current) return;
+    const trimmed = rawUrl.trim();
     if (!identifyVideoSource(trimmed)) {
       setImportError(t("pasteError"));
       return;
     }
 
+    importingRef.current = true;
     setImporting(true);
     setImportError(undefined);
     try {
@@ -118,7 +133,25 @@ export default function HomeScreen() {
         { method: "POST", body: jsonBody({ url: trimmed }) },
         VideoImportResponseSchema,
       );
-      await saveImportedVideo(imported);
+      const idempotencyKey = Crypto.randomUUID();
+      await Promise.all([
+        saveImportedVideo(imported),
+        saveQuestPreferences(imported.video.id, {
+          quizLanguage: locale,
+          questionTypes,
+        }),
+        saveGenerationState(imported.video.id, {
+          idempotencyKey,
+          quizLanguage: locale,
+          questionTypes,
+          preworkStatus: "running",
+        }),
+      ]);
+      void preGenerateImportedQuiz(imported, {
+        idempotencyKey,
+        quizLanguage: locale,
+        questionTypes,
+      });
       await AsyncStorage.removeItem(PENDING_URL_KEY);
       setUrl("");
       router.push({
@@ -130,6 +163,7 @@ export default function HomeScreen() {
         cause instanceof Error ? cause.message : t("videoImportFailed"),
       );
     } finally {
+      importingRef.current = false;
       setImporting(false);
     }
   };
@@ -176,6 +210,20 @@ export default function HomeScreen() {
           <PlatformBadge icon="television-play" label="bilibili" />
         </View>
 
+        <View style={styles.questionTypeSetup}>
+          <Text style={[styles.questionTypeTitle, { color: theme.text }]}>
+            {t("questionTypes")}
+          </Text>
+          <Text style={[styles.questionTypeHelp, { color: theme.textMuted }]}>
+            {t("questionTypesHelp")}
+          </Text>
+          <QuestionTypeSelector
+            value={questionTypes}
+            onChange={setQuestionTypes}
+            disabled={importing}
+          />
+        </View>
+
         <AppTextInput
           large
           label={t("pastePlaceholder")}
@@ -190,9 +238,13 @@ export default function HomeScreen() {
             />
           }
           onChangeText={(value) => {
+            const pastedSupportedLink =
+              value.length - url.length > 8 &&
+              Boolean(identifyVideoSource(value.trim()));
             userEditedUrl.current = true;
             setUrl(value);
             setImportError(undefined);
+            if (pastedSupportedLink) void importVideo(value);
           }}
           autoCapitalize="none"
           autoCorrect={false}
@@ -414,6 +466,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing[2],
+  },
+  questionTypeSetup: { gap: spacing[2] },
+  questionTypeTitle: {
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.titleSmall,
+    lineHeight: typography.lineHeight.titleSmall,
+  },
+  questionTypeHelp: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
   },
   platformBadge: {
     minHeight: 36,

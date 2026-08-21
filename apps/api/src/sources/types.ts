@@ -1,4 +1,9 @@
-import type { CaptionTrack, TranscriptSegment, VideoSource } from "@clipquest/contracts";
+import type {
+  CaptionTrack,
+  TranscriptCompleteness,
+  TranscriptSegment,
+  VideoSource,
+} from "@clipquest/contracts";
 
 export type SourceVideo = {
   source: VideoSource;
@@ -10,6 +15,8 @@ export type SourceVideo = {
   sourceLanguage: string | null;
   captionTracks: CaptionTrack[];
   preferredCaptionSegments?: TranscriptSegment[];
+  preferredCaptionCompleteness?: TranscriptCompleteness;
+  preferredCaptionSourceUrl?: string;
 };
 
 export type AudioStream = {
@@ -24,4 +31,3 @@ export interface SourceAdapter {
   inspect(url: URL): Promise<SourceVideo>;
   streamAudio(sourceVideoId: string, request: Request): Promise<AudioStream>;
 }
-

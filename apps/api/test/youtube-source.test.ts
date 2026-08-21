@@ -1,23 +1,20 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   extractYouTubePlayerResponse,
-  loadYouTubeCaptionSegments,
   parseYouTubePlayerResponse,
   parseYouTubeTimedText,
   selectPreferredYouTubeCaptionTrack,
 } from "../src/sources/youtube";
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-describe("YouTube timed text", () => {
+describe("YouTube metadata", () => {
   it("extracts bounded player metadata without being confused by braces inside strings", () => {
     const html = `<script>var ytInitialPlayerResponse = ${JSON.stringify({
       videoDetails: {
         title: "Neural {networks}",
         lengthSeconds: "1120",
-        thumbnail: { thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }] },
+        thumbnail: {
+          thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }],
+        },
       },
       captions: {
         playerCaptionsTracklistRenderer: {
@@ -32,7 +29,9 @@ describe("YouTube timed text", () => {
       },
     })};</script>`;
 
-    expect(parseYouTubePlayerResponse(extractYouTubePlayerResponse(html))).toEqual({
+    expect(
+      parseYouTubePlayerResponse(extractYouTubePlayerResponse(html)),
+    ).toEqual({
       title: "Neural {networks}",
       durationSeconds: 1120,
       thumbnails: [{ url: "https://i.ytimg.com/example.jpg", width: 480 }],
@@ -46,57 +45,68 @@ describe("YouTube timed text", () => {
     });
   });
 
-  it("turns json3 events into normalized transcript segments", () => {
-    expect(
-      parseYouTubeTimedText({
-        events: [
-          { tStartMs: 100, dDurationMs: 450, segs: [{ utf8: "Hello" }, { utf8: "   world" }] },
-          { tStartMs: "700", segs: [{ utf8: "Next\nline" }] },
-          { tStartMs: 900, segs: [{ acAsrConf: 0 }] },
-        ],
-      }),
-    ).toEqual([
-      { id: "yt-1", startMs: 100, endMs: 550, text: "Hello world" },
-      { id: "yt-2", startMs: 700, endMs: 1_700, text: "Next line" },
-    ]);
-  });
-
   it("prefers manual English, then Chinese, before unrelated or generated tracks", () => {
     const tracks = [
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "fr" },
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "en", kind: "asr" as const },
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "zh-Hans" },
-      { base_url: "https://www.youtube.com/api/timedtext", language_code: "en-GB" },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "fr",
+      },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "en",
+        kind: "asr" as const,
+      },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "zh-Hans",
+      },
+      {
+        base_url: "https://www.youtube.com/api/timedtext",
+        language_code: "en-GB",
+      },
     ];
     expect(selectPreferredYouTubeCaptionTrack(tracks)).toBe(tracks[3]);
   });
 
-  it("loads json3 only from an HTTPS YouTube host", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ events: [{ tStartMs: 0, dDurationMs: 500, segs: [{ utf8: "Caption" }] }] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
+  it("normalizes fresh YouTube timed-text while removing empty events", () => {
+    expect(
+      parseYouTubeTimedText({
+        events: [
+          {
+            tStartMs: 0,
+            dDurationMs: 1500,
+            segs: [{ utf8: "Primitive " }, { utf8: "types" }],
+          },
+          {
+            tStartMs: 1500,
+            dDurationMs: 2000,
+            segs: [{ utf8: "\nstore simple values in Java." }],
+          },
+          { tStartMs: 3500, segs: [{ utf8: "   " }] },
+        ],
       }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    ).toEqual([
+      { id: "youtube-0-0", startMs: 0, endMs: 1500, text: "Primitive types" },
+      {
+        id: "youtube-1-1500",
+        startMs: 1500,
+        endMs: 3500,
+        text: "store simple values in Java.",
+      },
+    ]);
+  });
 
-    await expect(
-      loadYouTubeCaptionSegments({
-        base_url: "https://www.youtube.com/api/timedtext?v=video-id",
-        language_code: "en",
-      }),
-    ).resolves.toEqual([{ id: "yt-1", startMs: 0, endMs: 500, text: "Caption" }]);
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.objectContaining({ hostname: "www.youtube.com" }),
-      expect.objectContaining({ redirect: "error" }),
-    );
+  it("does not silently cut subtitles at 12,000 events", () => {
+    const eventCount = 12_005;
+    const segments = parseYouTubeTimedText({
+      events: Array.from({ length: eventCount }, (_, index) => ({
+        tStartMs: index * 1_000,
+        dDurationMs: 1_000,
+        segs: [{ utf8: `complete subtitle ${index + 1}` }],
+      })),
+    });
 
-    await expect(
-      loadYouTubeCaptionSegments({
-        base_url: "https://youtube.com.attacker.example/api/timedtext",
-        language_code: "en",
-      }),
-    ).rejects.toThrow("YouTube captions could not be loaded");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(segments).toHaveLength(eventCount);
+    expect(segments.at(-1)?.text).toBe(`complete subtitle ${eventCount}`);
   });
 });

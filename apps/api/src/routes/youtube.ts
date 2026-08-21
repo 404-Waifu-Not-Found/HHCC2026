@@ -9,7 +9,7 @@ import {
   type OAuth2ClientID,
   type OAuth2Tokens,
 } from "youtubei.js/cf-worker";
-import { classifyHistoryTitles } from "../generation/deepseek";
+import { classifyHistoryTitles } from "../lib/ai-services";
 import { decryptJson, encryptJson } from "../lib/crypto";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
@@ -117,12 +117,20 @@ youtubeRouter.get("/device/status", async (c) => {
   const user = c.get("user");
   const flowId = c.req.query("flowId");
   if (!flowId || !z.string().uuid().safeParse(flowId).success) {
-    throw new ApiError(422, "invalid_flow_id", "A valid YouTube device flow ID is required.");
+    throw new ApiError(
+      422,
+      "invalid_flow_id",
+      "A valid YouTube device flow ID is required.",
+    );
   }
   const flowRaw = await c.env.CACHE.get(`youtube-flow:${flowId}`, "json");
   const flowParsed = DeviceFlowSchema.safeParse(flowRaw);
   if (!flowParsed.success || flowParsed.data.userId !== user.id) {
-    throw new ApiError(404, "youtube_flow_not_found", "This YouTube connection request expired.");
+    throw new ApiError(
+      404,
+      "youtube_flow_not_found",
+      "This YouTube connection request expired.",
+    );
   }
   const flow = flowParsed.data;
   if (flow.state === "connected") {
@@ -142,10 +150,16 @@ youtubeRouter.get("/device/status", async (c) => {
 
   const token = await pollDeviceToken(flow);
   if ("error" in token) {
-    if (token.error === "authorization_pending" || token.error === "slow_down") {
+    if (
+      token.error === "authorization_pending" ||
+      token.error === "slow_down"
+    ) {
       await saveFlow(c.env.CACHE, {
         ...flow,
-        nextPollAt: now() + (flow.intervalSeconds + (token.error === "slow_down" ? 5 : 0)) * 1_000,
+        nextPollAt:
+          now() +
+          (flow.intervalSeconds + (token.error === "slow_down" ? 5 : 0)) *
+            1_000,
       });
       return c.json(YouTubeDeviceStatusSchema.parse({ state: "pending" }));
     }
@@ -167,7 +181,10 @@ youtubeRouter.get("/device/status", async (c) => {
     ...(token.token_type ? { token_type: token.token_type } : {}),
     client: flow.client,
   };
-  const encrypted = await encryptJson(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY, credentials);
+  const encrypted = await encryptJson(
+    c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY,
+    credentials,
+  );
   const timestamp = now();
   await c.env.DB.prepare(
     "INSERT INTO youtube_connections (user_id, encrypted_credentials, credential_iv, connected_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET encrypted_credentials = excluded.encrypted_credentials, credential_iv = excluded.credential_iv, updated_at = excluded.updated_at",
@@ -177,18 +194,31 @@ youtubeRouter.get("/device/status", async (c) => {
 
   let importedCandidates = 0;
   try {
-    importedCandidates = await importLearningHistory(c.env, c.executionCtx, user.id, credentials);
+    importedCandidates = await importLearningHistory(
+      c.env,
+      c.executionCtx,
+      user.id,
+      credentials,
+    );
   } catch (error) {
     console.error("YouTube history import failed after authentication", error);
-    await c.env.DB.prepare("DELETE FROM youtube_connections WHERE user_id = ?").bind(user.id).run();
+    await c.env.DB.prepare("DELETE FROM youtube_connections WHERE user_id = ?")
+      .bind(user.id)
+      .run();
     throw new ApiError(
       503,
       "youtube_history_unavailable",
       "YouTube connected, but its private history API failed. The integration has been hidden and no credentials were kept.",
     );
   }
-  await saveFlow(c.env.CACHE, { ...flow, state: "connected", importedCandidates });
-  return c.json(YouTubeDeviceStatusSchema.parse({ state: "connected", importedCandidates }));
+  await saveFlow(c.env.CACHE, {
+    ...flow,
+    state: "connected",
+    importedCandidates,
+  });
+  return c.json(
+    YouTubeDeviceStatusSchema.parse({ state: "connected", importedCandidates }),
+  );
 });
 
 youtubeRouter.delete("/connection", async (c) => {
@@ -211,19 +241,30 @@ youtubeRouter.delete("/connection", async (c) => {
       await youtube.session.signIn(credentials);
       await youtube.session.oauth.revokeCredentials();
     } catch (error) {
-      console.warn("YouTube credential revocation failed; deleting the local credential anyway", error);
+      console.warn(
+        "YouTube credential revocation failed; deleting the local credential anyway",
+        error,
+      );
     }
   }
   await c.env.DB.batch([
-    c.env.DB.prepare("DELETE FROM youtube_connections WHERE user_id = ?").bind(user.id),
-    c.env.DB.prepare("DELETE FROM youtube_candidates WHERE user_id = ?").bind(user.id),
+    c.env.DB.prepare("DELETE FROM youtube_connections WHERE user_id = ?").bind(
+      user.id,
+    ),
+    c.env.DB.prepare("DELETE FROM youtube_candidates WHERE user_id = ?").bind(
+      user.id,
+    ),
   ]);
   return c.json({ disconnected: true });
 });
 
 function assertFeatureEnabled(flag: string): void {
   if (flag !== "true") {
-    throw new ApiError(404, "feature_disabled", "YouTube history is not enabled for this demo.");
+    throw new ApiError(
+      404,
+      "feature_disabled",
+      "YouTube history is not enabled for this demo.",
+    );
   }
 }
 
@@ -237,7 +278,9 @@ async function createYouTube(retrievePlayer: boolean): Promise<Innertube> {
   });
 }
 
-async function pollDeviceToken(flow: DeviceFlow): Promise<z.infer<typeof TokenResponseSchema>> {
+async function pollDeviceToken(
+  flow: DeviceFlow,
+): Promise<z.infer<typeof TokenResponseSchema>> {
   const response = await fetch("https://www.youtube.com/o/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -250,14 +293,23 @@ async function pollDeviceToken(flow: DeviceFlow): Promise<z.infer<typeof TokenRe
   });
   const parsed = TokenResponseSchema.safeParse(await response.json());
   if (!parsed.success) {
-    throw new ApiError(503, "youtube_demo_unavailable", "YouTube returned an unexpected device response.");
+    throw new ApiError(
+      503,
+      "youtube_demo_unavailable",
+      "YouTube returned an unexpected device response.",
+    );
   }
   return parsed.data;
 }
 
 async function saveFlow(kv: KVNamespace, flow: DeviceFlow): Promise<void> {
-  const remainingSeconds = Math.max(60, Math.ceil((flow.expiresAt - now()) / 1_000));
-  await kv.put(`youtube-flow:${flow.flowId}`, JSON.stringify(flow), { expirationTtl: remainingSeconds });
+  const remainingSeconds = Math.max(
+    60,
+    Math.ceil((flow.expiresAt - now()) / 1_000),
+  );
+  await kv.put(`youtube-flow:${flow.flowId}`, JSON.stringify(flow), {
+    expirationTtl: remainingSeconds,
+  });
 }
 
 async function importLearningHistory(
@@ -273,7 +325,11 @@ async function importLearningHistory(
   while (candidates.length < 200) {
     for (const item of history.videos) {
       const candidate = readHistoryCandidate(item);
-      if (candidate && !candidates.some((existing) => existing.id === candidate.id)) candidates.push(candidate);
+      if (
+        candidate &&
+        !candidates.some((existing) => existing.id === candidate.id)
+      )
+        candidates.push(candidate);
       if (candidates.length >= 200) break;
     }
     if (candidates.length >= 200 || !history.has_continuation) break;
@@ -284,7 +340,9 @@ async function importLearningHistory(
     env,
     candidates.map(({ id, title }) => ({ id, title })),
   );
-  const retained = candidates.filter((candidate) => educational.has(candidate.id));
+  const retained = candidates.filter((candidate) =>
+    educational.has(candidate.id),
+  );
   for (let offset = 0; offset < retained.length; offset += 40) {
     const chunk = retained.slice(offset, offset + 40);
     const timestamp = now();
@@ -328,12 +386,18 @@ function readHistoryCandidate(item: object): HistoryCandidate | null {
   const title = "title" in item ? String(item.title).trim() : "";
   if (!title) return null;
   let thumbnailUrl = `https://i.ytimg.com/vi/${item.video_id}/hqdefault.jpg`;
-  if ("best_thumbnail" in item && isThumbnail(item.best_thumbnail)) thumbnailUrl = item.best_thumbnail.url;
+  if ("best_thumbnail" in item && isThumbnail(item.best_thumbnail))
+    thumbnailUrl = item.best_thumbnail.url;
   return { id: item.video_id, title, thumbnailUrl };
 }
 
 function isThumbnail(value: unknown): value is { url: string } {
-  return typeof value === "object" && value !== null && "url" in value && typeof value.url === "string";
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "url" in value &&
+    typeof value.url === "string"
+  );
 }
 
 async function cacheHistoryThumbnails(

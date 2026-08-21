@@ -10,17 +10,15 @@ export type AppEnv = Omit<Env, "ENABLE_YOUTUBE_DEMO_HISTORY"> &
     ENABLE_YOUTUBE_DEMO_HISTORY: string;
   };
 
+import type { AdminRole } from "@clipquest/contracts";
+
 export type AuthUser = {
   id: string;
   email: string;
   name: string;
   username?: string | null;
-};
-
-export type GenerationQueueMessage = {
-  jobId: string;
-  userId: string;
-  videoId: string;
+  role: AdminRole;
+  banned: boolean;
 };
 
 export type MediaToken = {

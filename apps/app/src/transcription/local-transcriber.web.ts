@@ -20,7 +20,7 @@ const checkpointKey = (videoId: string) => `clipquest:transcript-checkpoint:${vi
 
 export async function transcribeLocally(options: LocalTranscriptionOptions): Promise<LocalTranscriptionResult> {
   if (!canTranscribeInBrowser(options.durationSeconds)) {
-    throw new Error("Captionless videos can be at most 20 minutes in a browser. Use the mobile app for longer videos.");
+    throw new Error("Captionless videos can be at most 90 minutes in a browser. Use the mobile app for longer videos.");
   }
   const manifest = await getSpeechModelManifest();
   options.onPhase("preparing_audio");

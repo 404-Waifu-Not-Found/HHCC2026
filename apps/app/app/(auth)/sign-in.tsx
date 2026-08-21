@@ -63,6 +63,7 @@ export default function SignInScreen() {
     >
       <AppTextInput
         label={`${t("email")} / ${t("username")}`}
+        labelPlacement="inside"
         value={identifier}
         onChangeText={setIdentifier}
         leading={
@@ -79,6 +80,7 @@ export default function SignInScreen() {
       />
       <AppTextInput
         label={t("password")}
+        labelPlacement="inside"
         value={password}
         onChangeText={setPassword}
         leading={

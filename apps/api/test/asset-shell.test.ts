@@ -6,11 +6,15 @@ describe("public route asset shells", () => {
     expect(publicAssetShell("/")).toBe("/index.html");
     expect(publicAssetShell("/welcome")).toBe("/welcome.html");
     expect(publicAssetShell("/sign-up/")).toBe("/sign-up.html");
+    expect(publicAssetShell("/admin")).toBe("/admin/index.html");
+    expect(publicAssetShell("/admin/users/")).toBe("/admin/users.html");
   });
 
   it("maps dynamic navigation URLs to their exported Expo shells", () => {
     expect(publicAssetShell("/create/video-id")).toBe("/create/[videoId].html");
-    expect(publicAssetShell("/generation/video-id/")).toBe("/generation/[videoId].html");
+    expect(publicAssetShell("/generation/video-id/")).toBe(
+      "/generation/[videoId].html",
+    );
     expect(publicAssetShell("/quiz/attempt-id")).toBe("/quiz/[attemptId].html");
   });
 

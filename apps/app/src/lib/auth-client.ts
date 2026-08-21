@@ -2,7 +2,10 @@ import { expoClient } from "@better-auth/expo/client";
 import * as SecureStore from "expo-secure-store";
 import { createAuthClient } from "better-auth/react";
 import type { BetterAuthClientPlugin } from "better-auth/client";
-import { inferAdditionalFields, usernameClient } from "better-auth/client/plugins";
+import {
+  inferAdditionalFields,
+  usernameClient,
+} from "better-auth/client/plugins";
 import { Platform } from "react-native";
 import { API_ORIGIN } from "./config";
 import { usesNativeAuthCookies } from "./request-cookie";
@@ -33,7 +36,15 @@ export const authClient = createAuthClient({
 });
 
 export type AppSession = {
-  user: { id: string; name: string; email: string; emailVerified: boolean; image?: string | null };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    image?: string | null;
+    role?: "user" | "admin" | "owner";
+    banned?: boolean;
+  };
   session: { id: string; userId: string; expiresAt: Date };
 };
 
