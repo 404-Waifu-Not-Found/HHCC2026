@@ -3277,14 +3277,18 @@ async function generateAutomaticQuiz({
         input.plainText,
         questionOffset,
         input.questionCount,
-        input.strictConceptMode &&
-          [
-            "source_framing_invalid",
-            "rubric_invalid",
-            "quiz_language_mismatch",
-          ].includes(lastFailureReason)
-          ? 0
-          : Math.max(0, ordinalAttempt - 1),
+        Math.max(
+          0,
+          ordinalAttempt -
+            (input.strictConceptMode &&
+            [
+              "source_framing_invalid",
+              "rubric_invalid",
+              "quiz_language_mismatch",
+            ].includes(lastFailureReason)
+              ? 2
+              : 1),
+        ),
         {
           strict: input.strictConceptMode === true,
           conceptFirstV58: input.conceptFirstV58Mode === true,

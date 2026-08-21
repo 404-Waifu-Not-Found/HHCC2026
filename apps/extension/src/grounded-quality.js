@@ -485,7 +485,11 @@ export function buildConceptFirstInstructionalSelection(
 
   const safeByIndex = new Map(safe.map((entry) => [entry.index, entry]));
   const windows = safe.map((entry) => {
-    const neighbors = [-1, 0, 1]
+    // Lead with the scored center sentence so the model sees the selected
+    // objective before its supporting context. Neighboring sentences remain
+    // available for evidence, but cannot accidentally become the repeated
+    // headline claim of adjacent windows.
+    const neighbors = [0, -1, 1]
       .map((offset) => safeByIndex.get(entry.index + offset))
       .filter(Boolean);
     const text = neighbors
@@ -632,11 +636,25 @@ export function focusExcerptForOrdinal(
 ) {
   const excerpts = buildInstructionalExcerpts(plainText, options);
   if (!excerpts.length) return "";
-  if (options.conceptFirstV58 || options.strict) {
-    const repairStride = options.conceptFirstV58
-      ? Math.max(1, totalQuestions)
-      : 1;
-    const index = (ordinal + repairCycle * repairStride) % excerpts.length;
+  if (options.conceptFirstV58) {
+    // q1 keeps the strongest-ranked window. Spread later primary questions
+    // across the complete safe evidence set instead of walking adjacent
+    // high-scoring windows, which often describe the same objective. Repairs
+    // move by one quiz-length so they cannot consume the next ordinal's
+    // primary focus.
+    const primaryIndex = Math.min(
+      excerpts.length - 1,
+      Math.floor(
+        (Math.max(0, ordinal) / Math.max(1, totalQuestions)) * excerpts.length,
+      ),
+    );
+    const index =
+      (primaryIndex + repairCycle * Math.max(1, totalQuestions)) %
+      excerpts.length;
+    return excerpts[index].slice(0, 2_400).trim();
+  }
+  if (options.strict) {
+    const index = (ordinal + repairCycle) % excerpts.length;
     return excerpts[index].slice(0, 2_400).trim();
   }
   const base = Math.min(

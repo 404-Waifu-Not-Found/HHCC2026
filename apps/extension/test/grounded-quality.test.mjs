@@ -192,6 +192,22 @@ test("v5.8 repair windows do not consume the next ordinal's primary focus", () =
   assert.notEqual(repairedQ1, primaryQ2);
 });
 
+test("v5.8 spreads primary ordinals across the ranked evidence set", () => {
+  const transcript = Array.from(
+    { length: 30 },
+    (_, index) =>
+      `Mechanism ${index + 1} transfers energy through pathway${index + 1} because its distinct condition changes output ${index + 20}.`,
+  ).join(" ");
+  const options = { conceptFirstV58: true, topicHint: "Energy mechanisms" };
+  const primaryFocuses = Array.from({ length: 5 }, (_, ordinal) =>
+    focusExcerptForOrdinal(transcript, ordinal, 5, 0, options),
+  );
+  assert.equal(new Set(primaryFocuses).size, 5);
+  for (let index = 1; index < primaryFocuses.length; index += 1) {
+    assert.notEqual(primaryFocuses[index], primaryFocuses[index - 1]);
+  }
+});
+
 test("v5.8 constructs true-false polarity locally from one supported fact", () => {
   const evidence =
     "Increasing the resistance decreases current when voltage remains fixed.";
