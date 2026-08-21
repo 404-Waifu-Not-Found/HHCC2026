@@ -7,6 +7,7 @@ import {
   QuizStartResponseSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
+  VerifiedVideoMetadataResponseSchema,
   createTranscriptCompleteness,
   questionLimitForSession,
   type AppLanguage,
@@ -94,12 +95,16 @@ const LINEAR_PROGRESS_LIMIT = 0.99;
 function isAutomaticGenerationProfile(profile: string | undefined): boolean {
   return (
     profile === "stable_auto_recovery_v5_3" ||
-    profile === "evidence_grounded_auto_v5_4"
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
   );
 }
 
 function isGroundedGenerationProfile(profile: string | undefined): boolean {
-  return profile === "evidence_grounded_auto_v5_4";
+  return (
+    profile === "evidence_grounded_auto_v5_4" ||
+    profile === "concept_first_auto_v5_8"
+  );
 }
 
 export default function GenerationScreen() {
@@ -144,8 +149,14 @@ export default function GenerationScreen() {
       estimatedFirstQuestionDurationMs({
         captionWordCount,
         videoDurationSeconds,
+        focusWindowWordCount:
+          captionWordCount === undefined
+            ? undefined
+            : Math.min(520, Math.max(220, Math.round(captionWordCount * 0.08))),
         questionCount,
         firstQuestionType,
+        prefixCacheState: "unknown",
+        recentLatencyBucket: "unknown",
       }),
     [captionWordCount, firstQuestionType, questionCount, videoDurationSeconds],
   );
@@ -363,6 +374,9 @@ export default function GenerationScreen() {
       let segments: TranscriptSegment[] = [];
       let completeness: TranscriptCompleteness | null = null;
       let language = imported.video.sourceLanguage ?? "und";
+      let verifiedDurationSeconds = imported.video.durationSeconds;
+      let captionSourceCategory:
+        "manual" | "automatic" | "local_transcription" | "unknown" = "unknown";
       updateStage("preparing_audio");
       const textTranscript = await acquireTextTranscript(
         imported,
@@ -373,6 +387,8 @@ export default function GenerationScreen() {
         segments = textTranscript.segments;
         language = textTranscript.language;
         completeness = textTranscript.completeness;
+        verifiedDurationSeconds = textTranscript.verifiedDurationSeconds;
+        captionSourceCategory = textTranscript.captionSourceCategory;
       }
       if (!segments.length) {
         setLocalTranscription(true);
@@ -400,6 +416,8 @@ export default function GenerationScreen() {
           segments,
           imported.video.durationSeconds,
         );
+        verifiedDurationSeconds = imported.video.durationSeconds;
+        captionSourceCategory = "local_transcription";
       }
       if (signal.aborted) throw new TranscriptionPausedError();
       if (!completeness) {
@@ -408,15 +426,46 @@ export default function GenerationScreen() {
         );
       }
 
+      if (
+        !Number.isInteger(verifiedDurationSeconds) ||
+        verifiedDurationSeconds < 1
+      ) {
+        throw new Error(
+          "ClipQuest could not verify the source duration for this video.",
+        );
+      }
+
       const completeCaptionWordCount = countCaptionWords(segments);
+      await apiRequest(
+        `/api/videos/${encodeURIComponent(imported.video.id)}/source-metadata`,
+        {
+          method: "PATCH",
+          body: jsonBody({
+            durationSeconds: verifiedDurationSeconds,
+            sourceLanguage: language || "und",
+            captionSourceCategory,
+            captionSegmentCount: segments.length,
+            captionWordCount: completeCaptionWordCount,
+          }),
+          signal,
+        },
+        VerifiedVideoMetadataResponseSchema,
+      );
       beginJourney();
       setCaptionWordCount(completeCaptionWordCount);
+      setVideoDurationSeconds(verifiedDurationSeconds);
       updateStage("creating_questions");
       const retryBaseEstimateMs = estimatedFirstQuestionDurationMs({
         captionWordCount: completeCaptionWordCount,
-        videoDurationSeconds: imported.video.durationSeconds || undefined,
+        videoDurationSeconds: verifiedDurationSeconds,
+        focusWindowWordCount: Math.min(
+          520,
+          Math.max(220, Math.round(completeCaptionWordCount * 0.08)),
+        ),
         questionCount,
         firstQuestionType,
+        prefixCacheState: "unknown",
+        recentLatencyBucket: "unknown",
       });
       const context: LocalQuizContext = {
         protocolVersion: 1,
@@ -462,7 +511,8 @@ export default function GenerationScreen() {
           ),
           ...((generationRecord.version === 3 ||
             generationRecord.version === 4) &&
-          event.classification === "automatic_retry"
+          event.classification === "automatic_retry" &&
+          (!("lifecycleState" in event) || event.lifecycleState === "started")
             ? {
                 automaticRetryCount: Math.min(
                   generationRecord.version === 4 ? 48 : 12,
@@ -560,7 +610,8 @@ export default function GenerationScreen() {
               ? await saveGenerationRecord({
                   ...commonRecord,
                   version: 4,
-                  generationProfile: "evidence_grounded_auto_v5_4",
+                  generationProfile: rolloutProfile.generationProfile as
+                    "evidence_grounded_auto_v5_4" | "concept_first_auto_v5_8",
                   recoveryCycle: 0,
                 })
               : await saveGenerationRecord({
@@ -614,7 +665,9 @@ export default function GenerationScreen() {
                       ordinalAttempt: detail.ordinalAttempt,
                       retryKind: detail.retryKind,
                       retryDelayMs: detail.retryDelayMs,
+                      reasonCode: detail.reasonCode,
                       recoverySessionId,
+                      recoveryPhase: "preparing",
                     }
                   : { state: "retrying" },
               ),

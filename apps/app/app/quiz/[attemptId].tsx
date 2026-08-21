@@ -656,6 +656,9 @@ export default function QuizScreen() {
       />
       <MotionView
         key={`${question.position}-${displayPrompt}`}
+        testID="clipquest-question-ready"
+        accessibilityLabel={`Interactive question ${question.position} of ${question.total}`}
+        accessibilityState={{ disabled: Boolean(feedback) || submitting }}
         preset="from-right"
         style={styles.quizBody}
       >

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   countCaptionWords,
   estimatedFirstQuestionDurationMs,
+  firstQuestionEtaBreakdown,
   firstQuestionRetryRemainingMs,
   updateFirstQuestionRetryEtaPhase,
 } from "../src/generation/eta";
@@ -91,6 +92,32 @@ describe("first-question ETA", () => {
         firstQuestionType: "multiple_choice",
       }),
     ).toBe(15_500);
+  });
+
+  it("models focus size, answer mode, cache state, and recent latency without private text", () => {
+    const breakdown = firstQuestionEtaBreakdown({
+      captionWordCount: 4_000,
+      focusWindowWordCount: 400,
+      questionCount: 10,
+      firstQuestionType: "short_answer",
+      shortAnswerMode: "atomic_term",
+      prefixCacheState: "hot",
+      recentLatencyBucket: "fast",
+    });
+
+    expect(breakdown).toMatchObject({
+      captionInputMs: 800,
+      focusWindowMs: 1_000,
+      planningMs: 2_000,
+      questionTypeMs: 12_500,
+      shortAnswerModeMs: -2_000,
+      prefixCacheMs: -2_500,
+      recentLatencyMs: -1_500,
+      estimatedDurationMs: 22_300,
+    });
+    expect(JSON.stringify(breakdown)).not.toMatch(
+      /transcript|prompt|sourceText|captionText/i,
+    );
   });
 });
 

@@ -5,8 +5,25 @@ export type SupportedQuestionCount = 5 | 10 | 15;
 export type FirstQuestionEtaInput = {
   captionWordCount?: number;
   videoDurationSeconds?: number;
+  focusWindowWordCount?: number;
   questionCount: SupportedQuestionCount;
   firstQuestionType: QuizQuestionType;
+  shortAnswerMode?:
+    "atomic_term" | "proposition" | "enumeration" | "formula" | "unknown";
+  prefixCacheState?: "hot" | "cold" | "unknown";
+  recentLatencyBucket?: "fast" | "typical" | "slow" | "unknown";
+};
+
+export type FirstQuestionEtaBreakdown = {
+  baseMs: number;
+  captionInputMs: number;
+  focusWindowMs: number;
+  planningMs: number;
+  questionTypeMs: number;
+  shortAnswerModeMs: number;
+  prefixCacheMs: number;
+  recentLatencyMs: number;
+  estimatedDurationMs: number;
 };
 
 export type FirstQuestionRetryEtaPhase = {
@@ -26,6 +43,7 @@ type FirstQuestionRetryProgress = {
 const DEFAULT_CAPTION_WORD_COUNT = 2_500;
 const ESTIMATED_CAPTION_WORDS_PER_MINUTE = 155;
 const MAX_CALIBRATED_CAPTION_WORD_COUNT = 12_000;
+const MAX_FOCUS_WINDOW_WORD_COUNT = 800;
 const MIN_FIRST_QUESTION_ETA_MS = 15_000;
 const MAX_FIRST_QUESTION_ETA_MS = 35_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
@@ -35,6 +53,27 @@ const FIRST_QUESTION_TYPE_ADJUSTMENT_MS: Record<QuizQuestionType, number> = {
   multiple_choice: 3_500,
   short_answer: 12_500,
 };
+
+const SHORT_ANSWER_MODE_ADJUSTMENT_MS = {
+  atomic_term: -2_000,
+  proposition: 1_000,
+  enumeration: 2_000,
+  formula: 3_500,
+  unknown: 0,
+} as const;
+
+const PREFIX_CACHE_ADJUSTMENT_MS = {
+  hot: -2_500,
+  cold: 2_000,
+  unknown: 0,
+} as const;
+
+const RECENT_LATENCY_ADJUSTMENT_MS = {
+  fast: -1_500,
+  typical: 0,
+  slow: 4_000,
+  unknown: 0,
+} as const;
 
 const CJK_CHARACTER_PATTERN =
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu;
@@ -75,22 +114,67 @@ export function countCaptionWords(
 export function estimatedFirstQuestionDurationMs(
   input: FirstQuestionEtaInput,
 ): number {
+  return firstQuestionEtaBreakdown(input).estimatedDurationMs;
+}
+
+/**
+ * Returns the privacy-safe factors behind the q1 estimate so browser QA can
+ * compare predictions with observed readiness without retaining captions.
+ */
+export function firstQuestionEtaBreakdown(
+  input: FirstQuestionEtaInput,
+): FirstQuestionEtaBreakdown {
   const captionWordCount = resolveCaptionWordCount(input);
   const captionInputMs =
     (Math.min(captionWordCount, MAX_CALIBRATED_CAPTION_WORD_COUNT) / 1_000) *
     200;
-  const additionalBatchPlanningMs = ((input.questionCount - 5) / 5) * 2_000;
-  const typeAdjustmentMs =
+  const focusWindowMs = Number.isFinite(input.focusWindowWordCount)
+    ? (Math.min(
+        Math.max(0, input.focusWindowWordCount ?? 0),
+        MAX_FOCUS_WINDOW_WORD_COUNT,
+      ) /
+        100) *
+      250
+    : 0;
+  const planningMs = ((input.questionCount - 5) / 5) * 2_000;
+  const questionTypeMs =
     FIRST_QUESTION_TYPE_ADJUSTMENT_MS[input.firstQuestionType];
-  const estimateMs =
-    12_000 + captionInputMs + additionalBatchPlanningMs + typeAdjustmentMs;
-
-  return Math.round(
+  const shortAnswerModeMs =
+    input.firstQuestionType === "short_answer"
+      ? SHORT_ANSWER_MODE_ADJUSTMENT_MS[input.shortAnswerMode ?? "unknown"]
+      : 0;
+  const prefixCacheMs =
+    PREFIX_CACHE_ADJUSTMENT_MS[input.prefixCacheState ?? "unknown"];
+  const recentLatencyMs =
+    RECENT_LATENCY_ADJUSTMENT_MS[input.recentLatencyBucket ?? "unknown"];
+  const baseMs = 12_000;
+  const rawEstimateMs =
+    baseMs +
+    captionInputMs +
+    focusWindowMs +
+    planningMs +
+    questionTypeMs +
+    shortAnswerModeMs +
+    prefixCacheMs +
+    recentLatencyMs;
+  const estimatedDurationMs = Math.round(
     Math.max(
       MIN_FIRST_QUESTION_ETA_MS,
-      Math.min(MAX_FIRST_QUESTION_ETA_MS, estimateMs),
+      Math.min(MAX_FIRST_QUESTION_ETA_MS, rawEstimateMs),
     ),
   );
+
+  return {
+    baseMs,
+    captionInputMs,
+    focusWindowMs,
+    planningMs,
+    questionTypeMs,
+    shortAnswerModeMs,
+    prefixCacheMs,
+    recentLatencyMs,
+    estimatedDurationMs,
+  };
 }
 
 /**
