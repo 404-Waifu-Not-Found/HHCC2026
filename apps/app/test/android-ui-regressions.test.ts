@@ -141,4 +141,10 @@ describe("Android UI regressions", () => {
     expect(quiz).toContain('t("preparingPdf")');
     expect(quiz).toContain('t("retryPdf")');
   });
+
+  it("omits empty AI sections from exported cheat sheets", () => {
+    const cheatSheet = source("src/lib/cheat-sheet.ts");
+
+    expect(cheatSheet).toContain("if (section[1].length === 0) continue;");
+  });
 });

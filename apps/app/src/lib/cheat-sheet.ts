@@ -78,6 +78,7 @@ export async function renderCheatSheetPdf(
     ["Formulas / math", document.formulas.map((value) => `• ${value}`)],
     ["Remember this", document.rememberThis.map((value) => `• ${value}`)],
   ] as const) {
+    if (section[1].length === 0) continue;
     write(section[0], 15, true, rgb(0.1, 0.25, 0.16));
     for (const item of section[1]) write(item, 11);
     y -= 8;
