@@ -3,6 +3,7 @@ import {
   formatMathText,
   isMathExpressionText,
   isStandaloneMathExpressionText,
+  segmentMathText,
 } from "../src/lib/math-text";
 
 describe("math text presentation", () => {
@@ -37,5 +38,16 @@ describe("math text presentation", () => {
     const question = "The transformed value is x^2 * y.";
     expect(formatMathText(question)).toBe("The transformed value is x² · y.");
     expect(isStandaloneMathExpressionText(question)).toBe(false);
+  });
+
+  it("keeps prose in the display face and isolates only inline formulas", () => {
+    const question =
+      "For f on a to b, the average rate is (f(b)-f(a))/(b-a), the secant slope.";
+    const segments = segmentMathText(question);
+    expect(segments.map((segment) => segment.text).join("")).toBe(question);
+    expect(segments.filter((segment) => segment.mathematical)).toEqual([
+      { text: "(f(b)-f(a))/(b-a)", mathematical: true },
+    ]);
+    expect(segments[0]?.mathematical).toBe(false);
   });
 });

@@ -93,6 +93,11 @@ function generationLabel(
       ? `正在此标签页恢复 · 已就绪 ${count}`
       : `Recovering this quiz in this tab · ${count} ready`;
   }
+  if (generation.state === "cooldown") {
+    return chinese
+      ? `自动修复正在冷却 · 已就绪 ${count}`
+      : `Automatic repair is cooling down · ${count} ready`;
+  }
   if (generation.state === "action_required") {
     return chinese
       ? `需要 DeepSeek 配置 · 已就绪 ${count}`

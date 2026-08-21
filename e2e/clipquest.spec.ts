@@ -44,6 +44,7 @@ type Scenario = {
     | "generating"
     | "retrying"
     | "recovering"
+    | "cooldown"
     | "retry_required"
     | "action_required"
     | "generation_failed"
@@ -195,7 +196,7 @@ test.beforeEach(async ({ page }) => {
             channel: "clipquest:captions:v1",
             source: "clipquest-extension",
             type: "ready",
-            version: outdated ? "0.7.9" : "0.8.3",
+            version: outdated ? "0.7.9" : "0.8.4",
             configured: true,
             capabilities: outdated
               ? []
@@ -203,6 +204,7 @@ test.beforeEach(async ({ page }) => {
                   "question-stream-v1",
                   "question-stream-v2",
                   "question-stream-v3",
+                  "question-stream-v4",
                   "ensure-source-ready-v1",
                 ],
           },
@@ -211,7 +213,8 @@ test.beforeEach(async ({ page }) => {
       }
       if (event.data.type === "generate") {
         const automatic =
-          event.data.context?.generationProfile === "stable_auto_recovery_v5_3";
+          event.data.context?.generationProfile ===
+          "evidence_grounded_auto_v5_4";
         const questionCount = event.data.context?.questionCount ?? 10;
         const generatedStartIndex =
           event.data.context?.continuation?.startIndex ?? 0;
@@ -235,6 +238,12 @@ test.beforeEach(async ({ page }) => {
             concept: `Concept ${index + 1}`,
             question: `How does concept ${index + 1} apply?`,
             explanation: `Concept ${index + 1} supports this answer.`,
+            ...(automatic
+              ? {
+                  claimKey: `concept ${index + 1} supports answer ${index + 1}`,
+                  conceptCluster: `concept ${index + 1}`,
+                }
+              : {}),
           };
           if (type === "true_false") {
             const answer = trueFalseIndex % 2 === 0;
@@ -270,14 +279,14 @@ test.beforeEach(async ({ page }) => {
         });
         const metadata = automatic
           ? {
-              protocolVersion: 7,
+              protocolVersion: 8,
               pipelineVersion: 9,
               model: "deepseek-v4-flash",
               reasoningEffort: "none",
-              promptVersion: "quiz-local-json-stream-v5.3",
-              validatorVersion: "validator-local-progressive-v4.2",
-              importVersion: "extension-progressive-import-v5",
-              generationProfile: "stable_auto_recovery_v5_3",
+              promptVersion: "quiz-local-json-stream-v5.4",
+              validatorVersion: "validator-local-progressive-v4.3",
+              importVersion: "extension-progressive-import-v6",
+              generationProfile: "evidence_grounded_auto_v5_4",
               generationId: event.data.context.generationId,
               generationSessionId: event.data.context.generationSessionId,
               recoverySessionId: event.data.context.recoverySessionId,
@@ -334,7 +343,8 @@ test.beforeEach(async ({ page }) => {
                 type: "generation-call",
                 requestId: event.data.requestId,
                 event: {
-                  protocolVersion: 7,
+                  protocolVersion: 8,
+                  purpose: "generation",
                   generationSessionId: event.data.context.generationSessionId,
                   recoverySessionId: event.data.context.recoverySessionId,
                   callIndex: initialCallIndex + relativeCallIndex,
@@ -665,7 +675,7 @@ test("an older extension is gated until question streaming is available", async 
     page.getByRole("heading", { name: "Update ClipQuest Local AI" }),
   ).toBeVisible();
   await expect(
-    page.getByText("0.8.3 or newer", { exact: false }),
+    page.getByText("0.8.4 or newer", { exact: false }),
   ).toBeVisible();
 
   await page.evaluate(() =>
@@ -1520,7 +1530,7 @@ test("admin operations console is responsive and uses real management contracts"
   await expect(page.getByRole("heading", { name: "System" })).toBeVisible();
   await expect(page.getByText("Disabled by design")).toBeVisible();
   await expect(
-    page.getByText("0018_automatic_generation_recovery.sql"),
+    page.getByText("0019_grounded_generation_telemetry.sql"),
   ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1833,7 +1843,7 @@ async function installMocks(page: Page): Promise<Scenario> {
         model: "deepseek-v4-flash",
         jobs: { queued: 4, running: 3, complete: 3755, failed: 3 },
         database: {
-          migration: "0018_automatic_generation_recovery.sql",
+          migration: "0019_grounded_generation_telemetry.sql",
           auditEnabled: true,
         },
         generation: {
@@ -1843,13 +1853,14 @@ async function installMocks(page: Page): Promise<Scenario> {
           extensionRequired: true,
           model: "deepseek-v4-flash",
           pipelineVersion: 9,
-          promptVersion: "quiz-local-json-stream-v5.3",
-          validatorVersion: "validator-local-progressive-v4.2",
+          promptVersion: "quiz-local-json-stream-v5.4",
+          validatorVersion: "validator-local-progressive-v4.3",
           rolloutMode: "disabled",
           states: {
             generating: 2,
             retrying: 1,
             recovering: 0,
+            cooldown: 0,
             retryRequired: 3,
             actionRequired: 0,
             generationFailed: 0,
@@ -1938,9 +1949,9 @@ async function installMocks(page: Page): Promise<Scenario> {
     }
     if (path === "/api/local-ai/profile" && request.method() === "GET") {
       await json(route, {
-        generationProfile: "stable_auto_recovery_v5_3",
-        minimumExtensionVersion: "0.8.3",
-        requiredCapability: "question-stream-v3",
+        generationProfile: "evidence_grounded_auto_v5_4",
+        minimumExtensionVersion: "0.8.4",
+        requiredCapability: "question-stream-v4",
       });
       return;
     }

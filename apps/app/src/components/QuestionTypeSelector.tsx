@@ -42,6 +42,8 @@ export function QuestionTypeSelector({
             <MotionPressable
               accessibilityRole="checkbox"
               accessibilityState={{ checked: active, disabled }}
+              aria-checked={active}
+              aria-disabled={disabled}
               disabled={disabled}
               onPress={() => {
                 if (active && value.length === 1) return;
