@@ -11,12 +11,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib/dist/pdf-lib.esm.js";
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import {
-  apiBinaryRequest,
-  apiRequest,
-  ClientApiError,
-  jsonBody,
-} from "./api";
+import { apiBinaryRequest, apiRequest, ClientApiError, jsonBody } from "./api";
 import { requestLocalCheatSheet } from "../generation/local-generation-client";
 
 export async function generateCheatSheetDocumentWithLocalAi(

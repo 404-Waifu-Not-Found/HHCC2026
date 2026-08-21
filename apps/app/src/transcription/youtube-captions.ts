@@ -118,9 +118,7 @@ export function normalizeTranscriptLanguage(
   };
   const alias = aliases[normalized];
   if (alias) return alias;
-  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/iu.test(value)
-    ? value
-    : "und";
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/iu.test(value) ? value : "und";
 }
 
 function timestampMs(first: string, second: string, third?: string): number {
