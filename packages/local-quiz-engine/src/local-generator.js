@@ -4016,6 +4016,7 @@ export function normalizeGeneratedQuestion(
     promptFirstV510Mode = false,
     promptFirstV511Mode = false,
     promptFirstV512Mode = false,
+    promptFirstPrimaryClaim,
     expectedTrueFalseAnswer,
   } = {},
 ) {
@@ -4074,6 +4075,26 @@ export function normalizeGeneratedQuestion(
             : rawQuestion.question,
         promptFirstV512Mode,
         promptFirstV511Mode,
+      );
+  // v5.11 did not yet require a separate supportedStatement field. When the
+  // model echoes the assigned (true) fact for a slot whose locally assigned
+  // polarity is false, trusting the slot polarity would persist the exact
+  // contradiction the learner sees. The primary claim is the authoritative
+  // fact selected by the local pipeline, so keep that fact true locally and
+  // let the validator accept the safe polarity fallback.
+  const promptFirstV511TrueFactFallback =
+    promptFirstV511Mode &&
+    !promptFirstV512Mode &&
+    expectedTrueFalseAnswer === false &&
+    nonEmptyString(promptFirstPrimaryClaim, 700) &&
+    type === "true_false" &&
+    normalizedAssertion(questionText) ===
+      normalizedAssertion(
+        promptFirstV512LearnerText(
+          promptFirstPrimaryClaim,
+          false,
+          promptFirstV511Mode,
+        ),
       );
   const objectiveCategory = cleanString(rawQuestion.objectiveCategory);
   const common = {
@@ -4223,7 +4244,7 @@ export function normalizeGeneratedQuestion(
           ? expectedTrueFalseAnswer === false && hasSafeFalseStatement
             ? false
             : true
-          : collapsedV511FalseItem
+          : collapsedV511FalseItem || promptFirstV511TrueFactFallback
             ? true
             : expectedTrueFalseAnswer;
         const localPolarityFallback =
@@ -4240,7 +4261,7 @@ export function normalizeGeneratedQuestion(
           answer,
           correction: promptFirstV512Mode
             ? promptFirstV512TrueStatement
-            : collapsedV511FalseItem
+            : collapsedV511FalseItem || promptFirstV511TrueFactFallback
               ? questionText
               : answer === true
                 ? questionText
@@ -5196,6 +5217,13 @@ function validateQuiz(quiz, input) {
       groundedMode: input.groundedMode,
       conceptMasteryMode: input.conceptMasteryMode && !input.strictConceptMode,
       conceptFirstV58Mode: input.conceptFirstV58Mode,
+      promptFirstV511Mode: input.promptFirstV511Mode === true,
+      promptFirstV512Mode: input.promptFirstV512Mode === true,
+      promptFirstPrimaryClaim:
+        input.promptFirstV512Mode || input.promptFirstV511Mode
+          ? input.promptFirstPrimaryClaims?.[index]
+          : undefined,
+      expectedTrueFalseAnswer: input.trueFalseAnswerPlan?.[index],
     });
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       validationFailure(`Question ${index + 1} is not a JSON object.`);
@@ -5751,6 +5779,7 @@ function validatePromptFirstQuiz(quiz, input) {
     promptFirstV510Mode: input.promptFirstV510Mode === true,
     promptFirstV511Mode: input.promptFirstV511Mode === true,
     promptFirstV512Mode: input.promptFirstV512Mode === true,
+    promptFirstPrimaryClaim: input.promptFirstPrimaryClaim,
     expectedTrueFalseAnswer: input.trueFalseAnswerPlan[0],
     conceptMasteryMode: input.promptFirstV510Mode === true,
   });

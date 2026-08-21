@@ -4526,6 +4526,35 @@ test("v5.11 assigns false polarity locally without a changed-detail contract", a
   );
 });
 
+test("v5.11 keeps an echoed supported fact true instead of persisting a false contradiction", () => {
+  const supportedStatement =
+    "A femboy is a male-presenting person who adopts feminine attributes while still identifying as male.";
+  const question = normalizeGeneratedQuestion(
+    {
+      type: "true_false",
+      concept: "femboy definition",
+      question: supportedStatement,
+      correction:
+        "A femboy is a female-presenting person who adopts masculine attributes while still identifying as female.",
+      explanation:
+        "The definition specifies a male-presenting person who retains a male identity.",
+    },
+    {
+      expectedId: "q2",
+      automaticMode: true,
+      promptFirstV59Mode: true,
+      promptFirstV511Mode: true,
+      promptFirstPrimaryClaim: supportedStatement,
+      expectedTrueFalseAnswer: false,
+    },
+  );
+
+  assert.equal(question.question, supportedStatement);
+  assert.equal(question.answer, true);
+  assert.equal(question.correction, supportedStatement);
+  assert.equal(question.localPolarityFallback, true);
+});
+
 test("v5.11 keeps a collapsed false candidate as a supported true item without retrying", async (context) => {
   const originalFetch = globalThis.fetch;
   let requests = 0;
