@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   createTranscriptCompleteness,
+  type PublicQuestion,
 } from "@clipquest/contracts";
 
 const BASE_URL = "http://localhost:8081";
@@ -14,7 +15,8 @@ const QUESTION_ID = "66666666-6666-4666-8666-666666666666";
 const NEXT_QUESTION_ID = "77777777-7777-4777-8777-777777777777";
 const JOB_ID = "88888888-8888-4888-8888-888888888888";
 const THUMBNAIL_URL = `${BASE_URL}/test-thumbnail.svg`;
-const SCREENSHOT_DIR = "docs/screenshots/final";
+const SCREENSHOT_DIR =
+  process.env.CLIPQUEST_SCREENSHOT_DIR ?? "docs/screenshots/final";
 const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
 
 type Scenario = {
@@ -27,6 +29,7 @@ type Scenario = {
   requestedPaths: string[];
   quizImportBodies: unknown[];
   quizImportKeys: (string | null)[];
+  question: PublicQuestion;
 };
 
 const baseQuestion = {
@@ -53,6 +56,22 @@ const nextQuestion = {
   position: 2,
   total: 5,
   isRetry: false,
+};
+
+const trueFalseQuestion: PublicQuestion = {
+  ...baseQuestion,
+  id: "67676767-6767-4767-8767-676767676767",
+  type: "true_false",
+  prompt: "Retrieval practice is the same as passively rereading notes.",
+  options: undefined,
+};
+
+const shortAnswerQuestion: PublicQuestion = {
+  ...baseQuestion,
+  id: "68686868-6868-4868-8868-686868686868",
+  type: "short_answer",
+  prompt: "Name one reason spaced retrieval improves long-term memory.",
+  options: undefined,
 };
 
 const captionSegments = [
@@ -115,10 +134,16 @@ const savedCard = {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem(
-      "clipquest:settings:v1",
-      JSON.stringify({ locale: "en", themeMode: "light", reduceMotion: true }),
-    );
+    if (window.sessionStorage.getItem("clipquest:e2e-preserve-theme") !== "1") {
+      window.localStorage.setItem(
+        "clipquest:settings:v1",
+        JSON.stringify({
+          locale: "en",
+          themeMode: "light",
+          reduceMotion: true,
+        }),
+      );
+    }
     window.addEventListener("message", (event) => {
       if (
         event.source !== window ||
@@ -456,6 +481,88 @@ test("mobile link, processing, lesson feedback, and completion", async ({
   ).toEqual([]);
 });
 
+test("all generated question types keep the tactile learning layout", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  const scenario = await installMocks(page);
+  await page.goto("/");
+
+  scenario.question = trueFalseQuestion;
+  await seedAttempt(page, ATTEMPT_ID, trueFalseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: trueFalseQuestion.prompt }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "True" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "False" })).toBeVisible();
+  await capture(page, "tablet-quiz-true-false");
+
+  scenario.question = shortAnswerQuestion;
+  await seedAttempt(page, ATTEMPT_ID, shortAnswerQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: shortAnswerQuestion.prompt }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Short answer")).toBeVisible();
+  await capture(page, "tablet-quiz-short-answer");
+});
+
+test("dark theme stays polished across learner, auth, settings, and admin shells", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  const scenario = await installMocks(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    window.sessionStorage.setItem("clipquest:e2e-preserve-theme", "1");
+    window.localStorage.setItem(
+      "clipquest:settings:v1",
+      JSON.stringify({ locale: "en", themeMode: "dark", reduceMotion: true }),
+    );
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "What do you want to master?" }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator("body")
+        .evaluate((body) => getComputedStyle(body).backgroundColor),
+    )
+    .toBe("rgb(16, 27, 21)");
+  await capture(page, "dark-desktop-home");
+
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await capture(page, "dark-desktop-settings");
+
+  scenario.question = trueFalseQuestion;
+  await seedAttempt(page, ATTEMPT_ID, trueFalseQuestion);
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: trueFalseQuestion.prompt }),
+  ).toBeVisible();
+  await capture(page, "dark-desktop-quiz");
+
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await capture(page, "dark-desktop-admin");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/welcome");
+  await expect(
+    page.getByRole("heading", { name: "Paste a video. Build real mastery." }),
+  ).toBeVisible();
+  await capture(page, "dark-mobile-welcome");
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "What do you want to master?" }),
+  ).toBeVisible();
+  await capture(page, "dark-mobile-home");
+});
+
 test("tablet layout and target viewport sweep remain link-first without overflow", async ({
   page,
 }) => {
@@ -601,6 +708,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     requestedPaths: [],
     quizImportBodies: [],
     quizImportKeys: [],
+    question: baseQuestion,
   };
 
   await page.route("**/test-thumbnail.svg", async (route) => {
@@ -885,7 +993,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     ) {
       await json(
         route,
-        { attemptId: ATTEMPT_ID, primer: null, question: baseQuestion },
+        { attemptId: ATTEMPT_ID, primer: null, question: scenario.question },
         201,
       );
       return;
@@ -895,7 +1003,7 @@ async function installMocks(page: Page): Promise<Scenario> {
         scenario.completedAttempt || path.includes(COMPLETE_ATTEMPT_ID);
       await json(route, {
         attemptId: completed ? COMPLETE_ATTEMPT_ID : ATTEMPT_ID,
-        question: completed ? null : baseQuestion,
+        question: completed ? null : scenario.question,
         completed,
         score: completed ? 88 : null,
         mastery: completed ? "mastered" : null,
@@ -940,7 +1048,7 @@ async function seed(page: Page, key: string, value: unknown): Promise<void> {
 async function seedAttempt(
   page: Page,
   attemptId: string,
-  question: typeof baseQuestion,
+  question: PublicQuestion,
 ): Promise<void> {
   await seed(page, `clipquest:attempt:${attemptId}`, {
     attemptId,
