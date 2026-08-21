@@ -1,18 +1,10 @@
-import {
-  CaptionTrackSchema,
-  TranscriptSegmentSchema,
-  type TranscriptSegment,
-} from "@clipquest/contracts";
 import { Innertube } from "youtubei.js/cf-worker";
 import { z } from "zod";
 import { ApiError } from "../lib/errors";
-import type { AudioStream, SourceAdapter, SourceVideo } from "./types";
+import type { SourceAdapter, SourceVideo } from "./types";
 import { parseYouTubeId } from "./url";
 
 const YOUTUBE_INFO_CLIENT = "IOS" as const;
-const YOUTUBE_AUDIO_CLIENT = "IOS" as const;
-const MAX_TIMED_TEXT_BYTES = 8 * 1024 * 1024;
-const YOUTUBE_SOURCE_CACHE_PREFIX = "source-cache/youtube";
 const MAX_WATCH_PAGE_BYTES = 4 * 1024 * 1024;
 const MAX_OEMBED_BYTES = 64 * 1024;
 
@@ -29,18 +21,6 @@ type YouTubeInspectionData = {
   thumbnails: Array<{ url: string; width?: number }>;
   tracks: YouTubeCaptionTrack[];
 };
-
-type YouTubeTimedTextEvent = {
-  tStartMs?: unknown;
-  dDurationMs?: unknown;
-  segs?: unknown;
-};
-
-class YouTubeCaptionLoadError extends Error {
-  constructor(readonly reason: string) {
-    super("YouTube captions could not be loaded.");
-  }
-}
 
 class YouTubeMetadataLoadError extends Error {
   constructor(readonly reason: string) {
@@ -326,160 +306,6 @@ function mergeYouTubeInspection(
   };
 }
 
-function toFiniteMilliseconds(value: unknown): number | null {
-  const parsed =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-        ? Number.parseFloat(value)
-        : Number.NaN;
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
-}
-
-export function parseYouTubeTimedText(value: unknown): TranscriptSegment[] {
-  if (
-    !value ||
-    typeof value !== "object" ||
-    !("events" in value) ||
-    !Array.isArray(value.events)
-  )
-    return [];
-
-  const parsed = value.events.flatMap((candidate, index) => {
-    if (!candidate || typeof candidate !== "object") return [];
-    const event = candidate as YouTubeTimedTextEvent;
-    const startMs = toFiniteMilliseconds(event.tStartMs);
-    if (startMs === null || !Array.isArray(event.segs)) return [];
-    const text = event.segs
-      .flatMap((segment) => {
-        if (
-          !segment ||
-          typeof segment !== "object" ||
-          !("utf8" in segment) ||
-          typeof segment.utf8 !== "string"
-        ) {
-          return [];
-        }
-        return [segment.utf8];
-      })
-      .join("")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!text) return [];
-    return [
-      {
-        index,
-        startMs,
-        durationMs: toFiniteMilliseconds(event.dDurationMs),
-        text,
-      },
-    ];
-  });
-
-  return parsed.map((event, index) => {
-    const nextStartMs = parsed[index + 1]?.startMs;
-    const durationEndMs =
-      event.durationMs && event.durationMs > 0
-        ? event.startMs + event.durationMs
-        : null;
-    const endMs = Math.max(
-      event.startMs + 1,
-      durationEndMs ??
-        (nextStartMs && nextStartMs > event.startMs
-          ? nextStartMs
-          : event.startMs + 1_000),
-    );
-    return {
-      id: `yt-${event.index + 1}`,
-      startMs: event.startMs,
-      endMs,
-      text: event.text,
-    };
-  });
-}
-
-const CachedYouTubeSourceV1Schema = z.object({
-  sourceVideoId: z.string().regex(/^[a-zA-Z0-9_-]{6,20}$/),
-  title: z.string().trim().min(1).max(500),
-  durationSeconds: z.number().int().nonnegative(),
-  captionTrack: CaptionTrackSchema,
-  timedText: z.unknown(),
-});
-
-const CachedYouTubeSourceV2Schema = z.object({
-  version: z.literal(2),
-  sourceVideoId: z.string().regex(/^[a-zA-Z0-9_-]{6,20}$/),
-  title: z.string().trim().min(1).max(500),
-  durationSeconds: z.number().int().nonnegative(),
-  captionTracks: z.array(CaptionTrackSchema).min(1).max(100),
-  preferredCaptionSegments: z.array(TranscriptSegmentSchema).min(1).max(12_000),
-});
-
-const CachedYouTubeSourceSchema = z.union([
-  CachedYouTubeSourceV2Schema,
-  CachedYouTubeSourceV1Schema,
-]);
-
-export function createCachedYouTubeSourcePayload(source: SourceVideo): unknown {
-  if (
-    source.source !== "youtube" ||
-    !source.preferredCaptionSegments?.length ||
-    !source.captionTracks.length
-  ) {
-    throw new Error("A YouTube source with captions is required for caching.");
-  }
-  return CachedYouTubeSourceV2Schema.parse({
-    version: 2,
-    sourceVideoId: source.sourceVideoId,
-    title: source.title,
-    durationSeconds: source.durationSeconds,
-    captionTracks: source.captionTracks,
-    preferredCaptionSegments: source.preferredCaptionSegments,
-  });
-}
-
-export async function loadCachedYouTubeSource(
-  bucket: R2Bucket,
-  url: URL,
-): Promise<SourceVideo | null> {
-  const sourceVideoId = parseYouTubeId(url);
-  const object = await bucket.get(
-    `${YOUTUBE_SOURCE_CACHE_PREFIX}/${sourceVideoId}.json`,
-  );
-  if (!object || object.size > MAX_TIMED_TEXT_BYTES) return null;
-
-  try {
-    const cached = CachedYouTubeSourceSchema.safeParse(
-      await object.json<unknown>(),
-    );
-    if (!cached.success || cached.data.sourceVideoId !== sourceVideoId)
-      return null;
-    const segments =
-      "version" in cached.data
-        ? cached.data.preferredCaptionSegments
-        : parseYouTubeTimedText(cached.data.timedText);
-    if (!segments.length) return null;
-    const captionTracks =
-      "version" in cached.data
-        ? cached.data.captionTracks
-        : [cached.data.captionTrack];
-
-    return {
-      source: "youtube",
-      sourceVideoId,
-      canonicalUrl: `https://www.youtube.com/watch?v=${sourceVideoId}`,
-      title: cached.data.title,
-      thumbnailUrl: `https://i.ytimg.com/vi/${sourceVideoId}/hqdefault.jpg`,
-      durationSeconds: cached.data.durationSeconds,
-      sourceLanguage: captionTracks[0]?.language ?? null,
-      captionTracks,
-      preferredCaptionSegments: segments,
-    };
-  } catch {
-    return null;
-  }
-}
-
 export function selectPreferredYouTubeCaptionTrack<
   T extends YouTubeCaptionTrack,
 >(tracks: T[]): T | undefined {
@@ -495,62 +321,6 @@ export function selectPreferredYouTubeCaptionTrack<
     if (languageDifference !== 0) return languageDifference;
     return Number(a.kind === "asr") - Number(b.kind === "asr");
   })[0];
-}
-
-function isYouTubeTimedTextUrl(url: URL): boolean {
-  return (
-    url.protocol === "https:" &&
-    (url.hostname === "youtube.com" || url.hostname.endsWith(".youtube.com"))
-  );
-}
-
-export async function loadYouTubeCaptionSegments(
-  track: YouTubeCaptionTrack,
-): Promise<TranscriptSegment[]> {
-  let url: URL;
-  try {
-    url = new URL(track.base_url);
-  } catch {
-    throw new YouTubeCaptionLoadError("invalid_url");
-  }
-  if (!isYouTubeTimedTextUrl(url))
-    throw new YouTubeCaptionLoadError("untrusted_url");
-  url.searchParams.set("fmt", "json3");
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      headers: { Accept: "application/json" },
-      redirect: "manual",
-    });
-  } catch {
-    throw new YouTubeCaptionLoadError("fetch_failed");
-  }
-  if (!response.ok)
-    throw new YouTubeCaptionLoadError(`http_${response.status}`);
-  const declaredLength = Number.parseInt(
-    response.headers.get("content-length") ?? "",
-    10,
-  );
-  if (
-    Number.isFinite(declaredLength) &&
-    declaredLength > MAX_TIMED_TEXT_BYTES
-  ) {
-    throw new YouTubeCaptionLoadError("oversize");
-  }
-  const body = await response.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_TIMED_TEXT_BYTES) {
-    throw new YouTubeCaptionLoadError("oversize");
-  }
-  let payload: unknown;
-  try {
-    payload = JSON.parse(body);
-  } catch {
-    throw new YouTubeCaptionLoadError("malformed_json");
-  }
-  const segments = parseYouTubeTimedText(payload);
-  if (segments.length === 0)
-    throw new YouTubeCaptionLoadError("empty_segments");
-  return segments;
 }
 
 export class YouTubeAdapter implements SourceAdapter {
@@ -588,43 +358,7 @@ export class YouTubeAdapter implements SourceAdapter {
         }
       }
 
-      let preferredCaptionSegments: TranscriptSegment[] | undefined;
       let preferredTrack = selectPreferredYouTubeCaptionTrack(inspected.tracks);
-      if (preferredTrack) {
-        try {
-          preferredCaptionSegments =
-            await loadYouTubeCaptionSegments(preferredTrack);
-        } catch (error) {
-          try {
-            watchPageInspection ??= await fetchYouTubeWatchPage(sourceVideoId);
-            inspected = mergeYouTubeInspection(inspected, watchPageInspection);
-            preferredTrack = selectPreferredYouTubeCaptionTrack(
-              watchPageInspection.tracks,
-            );
-            if (!preferredTrack) throw error;
-            preferredCaptionSegments =
-              await loadYouTubeCaptionSegments(preferredTrack);
-          } catch (fallbackError) {
-            console.warn(
-              "YouTube captions were listed but could not be loaded",
-              {
-                sourceVideoId,
-                watchPageFailureReason:
-                  fallbackError instanceof YouTubeMetadataLoadError
-                    ? fallbackError.reason
-                    : watchPageFailureReason,
-                reason:
-                  fallbackError instanceof YouTubeCaptionLoadError
-                    ? fallbackError.reason
-                    : error instanceof YouTubeCaptionLoadError
-                      ? error.reason
-                      : "unexpected_error",
-              },
-            );
-            // The client can still fall back to on-device transcription.
-          }
-        }
-      }
       const captionTracks = inspected.tracks.map((track) => ({
         language: track.language_code,
         label: track.label || track.language_code,
@@ -644,9 +378,6 @@ export class YouTubeAdapter implements SourceAdapter {
           inspected.tracks[0]?.language_code ??
           null,
         captionTracks,
-        ...(preferredCaptionSegments?.length
-          ? { preferredCaptionSegments }
-          : {}),
       };
     } catch (error) {
       console.error("YouTube inspection failed", error);
@@ -658,45 +389,11 @@ export class YouTubeAdapter implements SourceAdapter {
     }
   }
 
-  async streamAudio(
-    sourceVideoId: string,
-    request: Request,
-  ): Promise<AudioStream> {
-    try {
-      const client = await createYouTubeClient(true);
-      const range = parseRange(request.headers.get("range"));
-      const body = await client.download(sourceVideoId, {
-        client: YOUTUBE_AUDIO_CLIENT,
-        type: "audio",
-        quality: "bestefficiency",
-        format: "any",
-        ...(range ? { range } : {}),
-      });
-      return {
-        body,
-        contentType: "audio/mp4",
-        acceptRanges: "bytes",
-      };
-    } catch (error) {
-      console.error("YouTube audio stream failed", error);
-      throw new ApiError(
-        502,
-        "audio_stream_unavailable",
-        "YouTube temporarily blocked audio delivery. Retry shortly or try another video.",
-      );
-    }
+  async streamAudio(): Promise<never> {
+    throw new ApiError(
+      409,
+      "browser_capture_required",
+      "YouTube audio must be captured and transcribed privately in your browser.",
+    );
   }
-}
-
-function parseRange(
-  value: string | null,
-): { start: number; end: number } | undefined {
-  if (!value) return undefined;
-  const match = value.match(/^bytes=(\d+)-(\d+)$/);
-  if (!match?.[1] || !match[2]) return undefined;
-  const start = Number.parseInt(match[1], 10);
-  const end = Number.parseInt(match[2], 10);
-  return Number.isFinite(start) && Number.isFinite(end) && end >= start
-    ? { start, end }
-    : undefined;
 }

@@ -17,7 +17,17 @@ export function createAuth(env: AppEnv) {
     appName: "ClipQuest",
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [env.APP_ORIGIN, "clipquest://", "clipquest://*"],
+    trustedOrigins: [
+      env.APP_ORIGIN,
+      "http://localhost",
+      "http://localhost:8081",
+      "http://localhost:8787",
+      "http://localhost:19006",
+      "http://127.0.0.1:8081",
+      "http://127.0.0.1",
+      "clipquest://",
+      "clipquest://*",
+    ],
     database: drizzleAdapter(database, {
       provider: "sqlite",
       schema: authSchema,

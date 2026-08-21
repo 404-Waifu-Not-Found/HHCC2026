@@ -220,6 +220,11 @@ export async function processGeneration(
       "UPDATE generation_jobs SET state = 'complete', stage = 'complete', progress = 1, quiz_id = ?, error_code = NULL, error_message = NULL, updated_at = ? WHERE id = ? AND state = 'running' AND cancel_requested = 0",
     ).bind(quizId, timestamp, message.jobId),
   ];
+  const commitStartedAt = Date.now();
+  logGeneration("d1.commit_started", message.jobId, {
+    statementCount: statements.length,
+    questionCount: generation.questions.length,
+  });
   const results = await env.DB.batch(statements);
   if (!results.at(-1)?.meta.changes) {
     await env.DB.prepare("DELETE FROM quiz_banks WHERE id = ?")
@@ -233,6 +238,10 @@ export async function processGeneration(
     );
     return;
   }
+  logGeneration("d1.commit_completed", message.jobId, {
+    elapsedMs: Date.now() - commitStartedAt,
+    statementCount: statements.length,
+  });
   logGeneration("job.completed", message.jobId, {
     elapsedMs: Date.now() - startedAt,
     quizId,

@@ -148,6 +148,14 @@ export const messages = {
     tryAgain: "Try again",
     privateTranscription:
       "Raw audio and speech recognition stay on this device. Only transcript text is uploaded.",
+    startTabCapture: "Start private tab capture",
+    chooseCaptureTab: "Choose a tab in Chrome…",
+    finishCapture: "Finish capture",
+    openYouTubeCapture: "Open video on YouTube",
+    resumeCaptureAt:
+      "Resume playback at {time}; earlier transcript text is already saved.",
+    tabCaptureInstruction:
+      "Play the video below, then start capture and choose the playing ClipQuest or YouTube tab with Share tab audio enabled. If YouTube opens separately, finish capture when playback ends.",
     youtubeAuthNotRequired:
       "Pasting a public YouTube or bilibili link never requires access to your YouTube account or watch history.",
     notifications: "Review reminders",
@@ -328,6 +336,13 @@ export const messages = {
     cancelGenerationFailed: "无法取消测验生成，请重试。",
     tryAgain: "重试",
     privateTranscription: "原始音频和语音识别仅留在此设备，只上传转写文本。",
+    startTabCapture: "开始私密标签页采集",
+    chooseCaptureTab: "请在 Chrome 中选择标签页…",
+    finishCapture: "结束采集",
+    openYouTubeCapture: "在 YouTube 打开视频",
+    resumeCaptureAt: "请从 {time} 继续播放；之前的转写文本已保存。",
+    tabCaptureInstruction:
+      "先播放下方视频，再开始采集；请选择正在播放的 ClipQuest 或 YouTube 标签页并开启共享标签页音频。如果视频在 YouTube 单独打开，请在播放结束后手动结束采集。",
     youtubeAuthNotRequired:
       "粘贴公开的 YouTube 或哔哩哔哩链接无需访问你的 YouTube 账号或观看记录。",
     notifications: "复习提醒",

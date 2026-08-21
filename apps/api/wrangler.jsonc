@@ -79,6 +79,7 @@
     "BETTER_AUTH_URL": "https://clipquest.ccwu.cc",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
     "ENABLE_YOUTUBE_DEMO_HISTORY": "false",
+    "YOUTUBE_BROWSER_PIPELINE_V2": "5",
     "MODEL_MANIFEST_KEY": "models/whisper-tiny/manifest.json",
     "RESEND_FROM": "ClipQuest <hello@clipquest.ccwu.cc>"
   },

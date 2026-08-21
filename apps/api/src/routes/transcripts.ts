@@ -38,6 +38,8 @@ export const transcriptsRouter = new Hono<ApiBindings>();
 export const generationRouter = new Hono<ApiBindings>();
 
 transcriptsRouter.post("/", async (c) => {
+  const uploadStartedAt = Date.now();
+  const requestId = crypto.randomUUID();
   const user = c.get("user");
   const idempotencyKey = IdempotencyKeySchema.safeParse(
     c.req.header("idempotency-key"),
@@ -104,7 +106,8 @@ transcriptsRouter.post("/", async (c) => {
       );
     }
     if (
-      input.origin === "device_whisper" &&
+      (input.origin === "device_whisper" ||
+        input.origin === "browser_tab_capture") &&
       segment.endMs > MAX_DEVICE_TRANSCRIPT_MS
     ) {
       throw new ApiError(
@@ -145,6 +148,18 @@ transcriptsRouter.post("/", async (c) => {
         origin: input.origin,
       },
     },
+  );
+  console.info(
+    JSON.stringify({
+      scope: "transcript_upload",
+      event: "text_stored",
+      requestId,
+      jobId,
+      origin: input.origin,
+      segmentCount: input.segments.length,
+      characterCount,
+      elapsedMs: Date.now() - uploadStartedAt,
+    }),
   );
   try {
     await c.env.DB.batch([
@@ -189,6 +204,15 @@ transcriptsRouter.post("/", async (c) => {
     stage: "creating_questions",
   });
   startGeneration(c, { jobId, userId: user.id, videoId: input.videoId });
+  console.info(
+    JSON.stringify({
+      scope: "transcript_upload",
+      event: "generation_started",
+      requestId,
+      jobId,
+      elapsedMs: Date.now() - uploadStartedAt,
+    }),
+  );
   return c.json(status, 202);
 });
 

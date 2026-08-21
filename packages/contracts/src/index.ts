@@ -48,6 +48,13 @@ export const CaptionTrackSchema = z.object({
 });
 export type CaptionTrack = z.infer<typeof CaptionTrackSchema>;
 
+export const TranscriptionModeSchema = z.enum([
+  "captions",
+  "browser_tab_capture",
+  "device_media",
+]);
+export type TranscriptionMode = z.infer<typeof TranscriptionModeSchema>;
+
 const httpUrl = z
   .string()
   .url()
@@ -79,6 +86,11 @@ export const VideoImportResponseSchema = z.object({
     tracks: z.array(CaptionTrackSchema),
     preferredSegments: z.array(TranscriptSegmentSchema).optional(),
   }),
+  transcriptionMode: TranscriptionModeSchema,
+  capture: z.object({
+    expectedDurationSeconds: z.number().int().nonnegative(),
+    requiresUserGesture: z.boolean(),
+  }),
   requiresLocalTranscription: z.boolean(),
 });
 export type VideoImportResponse = z.infer<typeof VideoImportResponseSchema>;
@@ -98,7 +110,7 @@ export type MediaResolveResponse = z.infer<typeof MediaResolveResponseSchema>;
 export const TranscriptUploadRequestSchema = z.object({
   videoId: z.string().uuid(),
   language: z.string().min(2).max(35),
-  origin: z.enum(["captions", "device_whisper"]),
+  origin: z.enum(["captions", "device_whisper", "browser_tab_capture"]),
   segments: z.array(TranscriptSegmentSchema).min(1).max(12_000),
   quizLanguage: LanguageSchema,
   sessionLength: SessionLengthSchema,

@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("DeepSeek quiz generation", () => {
-  it("starts all five short-session questions concurrently", async () => {
+  it("starts every five-question batch concurrently", async () => {
     let releaseRequests: (() => void) | undefined;
     const released = new Promise<void>((resolve) => {
       releaseRequests = resolve;
@@ -58,22 +58,18 @@ describe("DeepSeek quiz generation", () => {
     const generationPromise = generateQuiz(env, {
       title: "Primitive Types",
       language: "en",
-      sessionLength: "short",
+      sessionLength: "long",
       watched: true,
       segments,
     });
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(15));
     releaseRequests?.();
     const generation = await generationPromise;
 
-    expect(generation.questions).toHaveLength(5);
-    expect(generation.questions.map((question) => question.type)).toEqual([
-      "multiple_choice",
-      "true_false",
-      "ordering",
-      "short_answer",
-      "multiple_choice",
-    ]);
+    expect(generation.questions).toHaveLength(15);
+    expect(
+      generation.questions.slice(0, 4).map((question) => question.type),
+    ).toEqual(["multiple_choice", "true_false", "ordering", "short_answer"]);
   });
 
   it("falls back to grounded local questions when model JSON is invalid", async () => {

@@ -24,6 +24,16 @@ type MediaVideoRow = {
 
 export const mediaRouter = new Hono<ApiBindings>();
 
+export function assertMediaSourceAllowed(source: VideoSource): void {
+  if (source === "youtube") {
+    throw new ApiError(
+      409,
+      "browser_capture_required",
+      "YouTube audio must be captured and transcribed privately in your browser.",
+    );
+  }
+}
+
 mediaRouter.post("/resolve", async (c) => {
   const user = c.get("user");
   await enforceRateLimit(c.env.DB, {
@@ -41,6 +51,17 @@ mediaRouter.post("/resolve", async (c) => {
   if (!video || !SourceSchema.safeParse(video.source).success) {
     throw new ApiError(404, "video_not_found", "Video not found.");
   }
+  if (video.source === "youtube") {
+    console.warn(
+      JSON.stringify({
+        scope: "media_boundary",
+        event: "youtube_media_blocked",
+        requestId: crypto.randomUUID(),
+        videoId: video.id,
+      }),
+    );
+    assertMediaSourceAllowed(video.source);
+  }
   if (video.duration_seconds > MAX_CAPTIONLESS_DURATION_SECONDS) {
     throw new ApiError(
       422,
@@ -51,8 +72,14 @@ mediaRouter.post("/resolve", async (c) => {
 
   const token = crypto.randomUUID().replaceAll("-", "");
   const expiresAt = Date.now() + MEDIA_TTL_SECONDS * 1_000;
-  const tokenData: MediaToken = { userId: user.id, videoId: video.id, expiresAt };
-  await c.env.CACHE.put(`media:${token}`, JSON.stringify(tokenData), { expirationTtl: MEDIA_TTL_SECONDS });
+  const tokenData: MediaToken = {
+    userId: user.id,
+    videoId: video.id,
+    expiresAt,
+  };
+  await c.env.CACHE.put(`media:${token}`, JSON.stringify(tokenData), {
+    expirationTtl: MEDIA_TTL_SECONDS,
+  });
   return c.json(
     MediaResolveResponseSchema.parse({
       mediaUrl: `${c.env.APP_ORIGIN}/api/media/${token}`,
@@ -65,16 +92,29 @@ mediaRouter.post("/resolve", async (c) => {
 mediaRouter.get("/:token", async (c) => {
   const user = c.get("user");
   const raw = await c.env.CACHE.get(`media:${c.req.param("token")}`);
-  if (!raw) throw new ApiError(404, "media_token_expired", "This media link expired. Request a new one.");
+  if (!raw)
+    throw new ApiError(
+      404,
+      "media_token_expired",
+      "This media link expired. Request a new one.",
+    );
 
   let token: MediaToken;
   try {
     token = JSON.parse(raw) as MediaToken;
   } catch {
-    throw new ApiError(404, "media_token_expired", "This media link is invalid.");
+    throw new ApiError(
+      404,
+      "media_token_expired",
+      "This media link is invalid.",
+    );
   }
   if (token.userId !== user.id || token.expiresAt < Date.now()) {
-    throw new ApiError(403, "media_token_forbidden", "This media link belongs to another session or expired.");
+    throw new ApiError(
+      403,
+      "media_token_forbidden",
+      "This media link belongs to another session or expired.",
+    );
   }
   const video = await c.env.DB.prepare(
     "SELECT id, source, source_video_id, duration_seconds FROM videos WHERE id = ? AND owner_id = ?",
@@ -83,7 +123,11 @@ mediaRouter.get("/:token", async (c) => {
     .first<MediaVideoRow>();
   if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
   const source = SourceSchema.parse(video.source);
-  const stream = await getSourceAdapter(source).streamAudio(video.source_video_id, c.req.raw);
+  assertMediaSourceAllowed(source);
+  const stream = await getSourceAdapter(source).streamAudio(
+    video.source_video_id,
+    c.req.raw,
+  );
   const headers = new Headers({
     "Content-Type": stream.contentType,
     "Cache-Control": "private, no-store",

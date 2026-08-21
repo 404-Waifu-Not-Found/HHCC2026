@@ -33,7 +33,7 @@ const app = new Hono<ApiBindings>();
 app.use(
   "*",
   secureHeaders({
-    crossOriginEmbedderPolicy: "require-corp",
+    crossOriginEmbedderPolicy: "credentialless",
     crossOriginOpenerPolicy: "same-origin",
     crossOriginResourcePolicy: "same-origin",
     referrerPolicy: "strict-origin-when-cross-origin",
@@ -44,20 +44,35 @@ app.use(
 
 app.use("*", async (c, next) => {
   const origin = c.req.header("origin");
+  const requestHostname = new URL(c.req.url).hostname;
+  const localWranglerRequest =
+    requestHostname === "localhost" || requestHostname === "127.0.0.1";
   const allowedOrigins = new Set([
     c.env.APP_ORIGIN,
     "http://localhost:8081",
     "http://localhost:19006",
     "http://127.0.0.1:8081",
+    ...(localWranglerRequest
+      ? [
+          "http://localhost",
+          "http://localhost:8787",
+          "http://127.0.0.1",
+          "http://127.0.0.1:8787",
+        ]
+      : []),
   ]);
   const allowed =
     !origin || allowedOrigins.has(origin) || origin.startsWith("clipquest://");
-  if (origin && !allowed)
+  if (origin && !allowed) {
+    console.warn(
+      JSON.stringify({ scope: "request_origin", event: "rejected", origin }),
+    );
     throw new ApiError(
       403,
       "origin_forbidden",
       "This request origin is not allowed.",
     );
+  }
   if (c.req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -99,15 +114,24 @@ app.get("/health", (c) => {
     generation: Boolean(c.env.DEEPSEEK_API_KEY),
     email: Boolean(c.env.RESEND_API_KEY),
     youtubeEncryption: Boolean(c.env.YOUTUBE_CREDENTIALS_ENCRYPTION_KEY),
+    brightDataCaptions: Boolean(c.env.BRIGHT_DATA_API_KEY),
+    supadataCaptions: Boolean(c.env.SUPADATA_API_KEY),
+    youtubeBrowserPipeline: c.env.YOUTUBE_BROWSER_PIPELINE_V2,
   };
+  const youtubePipelineEnabled =
+    Number.parseInt(configuration.youtubeBrowserPipeline, 10) > 0;
+  const captionProvidersReady =
+    configuration.brightDataCaptions && configuration.supadataCaptions;
   return c.json({
     ok:
       configuration.authentication &&
       configuration.generation &&
-      configuration.email,
+      configuration.email &&
+      (!youtubePipelineEnabled || captionProvidersReady),
     service: "clipquest",
     model: c.env.DEEPSEEK_MODEL,
     configuration,
+    captionProvidersReady,
     youtubeDemoHistory: c.env.ENABLE_YOUTUBE_DEMO_HISTORY === "true",
   });
 });

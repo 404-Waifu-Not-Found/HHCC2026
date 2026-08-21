@@ -335,16 +335,31 @@ export async function generateQuiz(
     concept: Concept;
     question: GeneratedQuestion;
   }> = [];
+  const startedAt = Date.now();
+  const batches: Array<
+    Promise<Array<{ concept: Concept; question: GeneratedQuestion }>>
+  > = [];
   for (let offset = 0; offset < questionCount; offset += 5) {
-    const batch = Array.from(
-      { length: Math.min(5, questionCount - offset) },
-      (_, batchIndex) => {
-        const index = offset + batchIndex;
-        return generateQuizItem(env, input, index, questionCount);
-      },
+    const batchNumber = batches.length + 1;
+    const batchStartedAt = Date.now();
+    batches.push(
+      Promise.all(
+        Array.from(
+          { length: Math.min(5, questionCount - offset) },
+          (_, batchIndex) =>
+            generateQuizItem(env, input, offset + batchIndex, questionCount),
+        ),
+      ).then((items) => {
+        logDeepSeek("batch.completed", {
+          batchNumber,
+          questionCount: items.length,
+          elapsedMs: Date.now() - batchStartedAt,
+        });
+        return items;
+      }),
     );
-    generatedItems.push(...(await Promise.all(batch)));
   }
+  generatedItems.push(...(await Promise.all(batches)).flat());
   const conceptTitles = generatedItems
     .slice(0, 4)
     .map((item) => item.concept.title)
@@ -362,6 +377,11 @@ export async function generateQuiz(
     questions: generatedItems.map((item) => item.question),
   });
   validateEvidence(generated, input.segments);
+  logDeepSeek("quiz.completed", {
+    questionCount,
+    batchCount: batches.length,
+    elapsedMs: Date.now() - startedAt,
+  });
   return generated;
 }
 
