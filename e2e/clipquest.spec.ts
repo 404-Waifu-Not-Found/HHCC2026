@@ -151,34 +151,58 @@ test.beforeEach(async ({ page }) => {
             response: {
               ok: true,
               result: {
-                protocolVersion: 2,
-                pipelineVersion: 6,
+                protocolVersion: 3,
+                pipelineVersion: 7,
                 model: "deepseek-v4-flash",
                 reasoningEffort: "high",
-                promptVersion: "quiz-local-tool-v1.0",
-                validatorVersion: "validator-local-tool-v1.0",
+                promptVersion: "quiz-local-tool-v2.0",
+                validatorVersion: "validator-local-tool-v2.0",
                 quiz: {
                   title: "Local concept quiz",
                   questions: Array.from(
                     { length: questionCount },
-                    (_, index) => ({
-                      id: `q${index + 1}`,
-                      concept: `Concept ${index + 1}`,
-                      question: `How does concept ${index + 1} apply?`,
-                      choices: [
-                        `Correct ${index + 1}`,
-                        `Distractor A ${index + 1}`,
-                        `Distractor B ${index + 1}`,
-                        `Distractor C ${index + 1}`,
-                      ],
-                      answerIndex: 0,
-                      answer: `Correct ${index + 1}`,
-                      explanation: `Concept ${index + 1} supports this answer.`,
-                    }),
+                    (_, index) => {
+                      const common = {
+                        id: `q${index + 1}`,
+                        concept: `Concept ${index + 1}`,
+                        question: `How does concept ${index + 1} apply?`,
+                        explanation: `Concept ${index + 1} supports this answer.`,
+                      };
+                      if (index % 3 === 1) {
+                        return {
+                          ...common,
+                          type: "true_false",
+                          answer: index % 2 === 0,
+                          correction: `Concept ${index + 1} is corrected here.`,
+                        };
+                      }
+                      if (index % 3 === 2) {
+                        return {
+                          ...common,
+                          type: "short_answer",
+                          answer: `Reference answer ${index + 1}`,
+                          rubricIdeas: [`Concept ${index + 1}`],
+                          acceptableAnswers: [`Equivalent answer ${index + 1}`],
+                        };
+                      }
+                      return {
+                        ...common,
+                        type: "multiple_choice",
+                        choices: [
+                          `Correct ${index + 1}`,
+                          `Distractor A ${index + 1}`,
+                          `Distractor B ${index + 1}`,
+                          `Distractor C ${index + 1}`,
+                        ],
+                        answerIndex: 0,
+                        answer: `Correct ${index + 1}`,
+                      };
+                    },
                   ),
                 },
                 metrics: {
                   aiCalls: 1,
+                  retryCount: 0,
                   inputTokens: 100,
                   outputTokens: 200,
                   reasoningTokens: 50,

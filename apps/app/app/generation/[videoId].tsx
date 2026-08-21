@@ -50,14 +50,16 @@ import {
   typography,
 } from "../../src/theme/tokens";
 
-type ProgressDetail = {
-  loadedBytes?: number;
-  totalBytes?: number;
-  cached?: boolean;
-  attempt?: number;
-  maxAttempts?: number;
-  retrying?: boolean;
+type JourneyPhase = "video" | "transcript" | "ai" | "finalizing" | "complete";
+
+type JourneyStep = {
+  id: string;
+  label: string;
+  durationSeconds: number;
 };
+
+const JOURNEY_TICK_MS = 250;
+const MINIMUM_FINAL_STEP_MS = 550;
 
 export default function GenerationScreen() {
   const params = useLocalSearchParams<{
@@ -67,11 +69,9 @@ export default function GenerationScreen() {
     sessionLength: SessionLength;
     questionTypes?: string;
   }>();
-  const { t, theme } = useSettings();
+  const { locale, reduceMotion, t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const [stage, setStage] = useState<GenerationStage>("getting_video");
-  const [progress, setProgress] = useState(0);
-  const [detail, setDetail] = useState<ProgressDetail>();
   const [error, setError] = useState<string>();
   const [paused, setPaused] = useState(false);
   const [runNumber, setRunNumber] = useState(0);
@@ -84,9 +84,133 @@ export default function GenerationScreen() {
     );
     return parsed.success ? parsed.data : [...DEFAULT_QUIZ_QUESTION_TYPES];
   }, [params.questionTypes]);
+  const questionCount = questionLimitForSession(params.sessionLength) as
+    5 | 10 | 15;
+  const journeySteps = useMemo<JourneyStep[]>(
+    () => [
+      { id: "video", label: t("gettingVideo"), durationSeconds: 5 },
+      {
+        id: "transcript",
+        label: t("findingTranscript"),
+        durationSeconds: 10,
+      },
+      {
+        id: "lesson-text",
+        label: t("preparingLessonText"),
+        durationSeconds: 6,
+      },
+      {
+        id: "concepts",
+        label: t("mappingConcepts"),
+        durationSeconds:
+          questionCount === 5 ? 12 : questionCount === 10 ? 16 : 20,
+      },
+      {
+        id: "questions",
+        label: t("writingQuestions"),
+        durationSeconds:
+          questionCount === 5 ? 45 : questionCount === 10 ? 75 : 105,
+      },
+      {
+        id: "choices",
+        label: t("shufflingChoices"),
+        durationSeconds: 5,
+      },
+      {
+        id: "opening",
+        label: t("finalizingQuestions"),
+        durationSeconds: 6,
+      },
+    ],
+    [questionCount, t],
+  );
+  const [estimatedProgress, setEstimatedProgressState] = useState(0);
+  const [journeyPhase, setJourneyPhase] = useState<JourneyPhase>("video");
+  const [phaseOverdue, setPhaseOverdue] = useState(false);
+  const estimatedProgressRef = useRef(0);
+  const journeyPhaseStartedAtRef = useRef(0);
+  const finishingPresentationRef = useRef(false);
+
+  const setEstimatedProgress = useCallback((next: number) => {
+    const normalized = Math.max(
+      estimatedProgressRef.current,
+      Math.min(1, next),
+    );
+    estimatedProgressRef.current = normalized;
+    setEstimatedProgressState(normalized);
+  }, []);
+
+  const beginJourneyPhase = useCallback((next: JourneyPhase, reset = false) => {
+    journeyPhaseStartedAtRef.current = Date.now();
+    finishingPresentationRef.current = false;
+    setJourneyPhase(next);
+    setPhaseOverdue(false);
+    if (reset) {
+      estimatedProgressRef.current = 0;
+      setEstimatedProgressState(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (paused || error || finishingPresentationRef.current) return;
+    const tick = () => {
+      const range = journeyPhaseRange(journeySteps, journeyPhase);
+      const elapsedSeconds =
+        (Date.now() - journeyPhaseStartedAtRef.current) / 1_000;
+      setPhaseOverdue(
+        journeyPhase !== "complete" && elapsedSeconds > range.durationSeconds,
+      );
+      const timedFraction = Math.min(
+        journeyPhase === "complete" ? 1 : 0.96,
+        elapsedSeconds / Math.max(1, range.durationSeconds),
+      );
+      const target = range.start + (range.end - range.start) * timedFraction;
+      const current = estimatedProgressRef.current;
+      const maxAdvance = reduceMotion ? 1 : 0.012;
+      setEstimatedProgress(
+        current + Math.min(maxAdvance, Math.max(0, target - current)),
+      );
+    };
+    tick();
+    const timer = setInterval(tick, JOURNEY_TICK_MS);
+    return () => clearInterval(timer);
+  }, [
+    error,
+    journeyPhase,
+    journeySteps,
+    paused,
+    reduceMotion,
+    setEstimatedProgress,
+  ]);
+
+  const finishJourneyPresentation = useCallback(
+    async (signal: AbortSignal) => {
+      finishingPresentationRef.current = true;
+      setJourneyPhase("complete");
+      setPhaseOverdue(false);
+      const firstUnseenStep = journeyStepIndex(
+        journeySteps,
+        estimatedProgressRef.current,
+      );
+      for (
+        let index = firstUnseenStep;
+        index < journeySteps.length;
+        index += 1
+      ) {
+        const range = journeyStepRange(journeySteps, index);
+        setEstimatedProgress(range.start + (range.end - range.start) * 0.55);
+        if (!reduceMotion) {
+          await abortableDelay(MINIMUM_FINAL_STEP_MS, signal);
+        }
+      }
+      setEstimatedProgress(1);
+    },
+    [journeySteps, reduceMotion, setEstimatedProgress],
+  );
 
   const execute = useCallback(
     async (signal: AbortSignal) => {
+      beginJourneyPhase("video", true);
       const imported = await loadImportedVideo(params.videoId);
       if (!imported) throw new Error(t("generationSetupExpired"));
       const storedGeneration = await loadGenerationState(params.videoId);
@@ -103,21 +227,20 @@ export default function GenerationScreen() {
       }
       setLocalTranscription(imported.transcriptionMode === "device_media");
       setStage("getting_video");
-      setProgress(1);
       let segments: TranscriptSegment[] = [];
       let completeness: TranscriptCompleteness | null = null;
       let language = imported.video.sourceLanguage ?? "und";
       setStage("preparing_audio");
+      beginJourneyPhase("transcript");
       const textTranscript = await acquireTextTranscript(
         imported,
         signal,
-        setProgress,
+        () => undefined,
       );
       if (textTranscript) {
         segments = textTranscript.segments;
         language = textTranscript.language;
         completeness = textTranscript.completeness;
-        setProgress(1);
       }
       if (!segments.length) {
         setLocalTranscription(true);
@@ -138,12 +261,8 @@ export default function GenerationScreen() {
           signal,
           onPhase: (phase) => {
             setStage(phase);
-            setProgress(0);
           },
-          onProgress: (value, nextDetail) => {
-            setProgress(value);
-            setDetail(nextDetail);
-          },
+          onProgress: () => undefined,
         });
         language = result.language;
         segments = result.segments;
@@ -159,8 +278,7 @@ export default function GenerationScreen() {
         );
       }
       setStage("creating_questions");
-      setProgress(0.15);
-      setDetail(undefined);
+      beginJourneyPhase("ai");
       const context: LocalQuizContext = {
         protocolVersion: 1,
         jobId: idempotencyKey,
@@ -168,8 +286,7 @@ export default function GenerationScreen() {
         title: imported.video.title,
         quizLanguage: params.quizLanguage,
         questionTypes,
-        questionCount: questionLimitForSession(params.sessionLength) as
-          5 | 10 | 15,
+        questionCount,
         transcriptFingerprint: completeness.textFingerprint,
         transcriptLanguage: language,
         segments,
@@ -177,18 +294,12 @@ export default function GenerationScreen() {
       const result = await requestExtensionLocalQuiz(
         context,
         signal,
-        (nextStage, value, nextDetail) => {
+        (nextStage) => {
           setStage(nextStage);
-          setProgress(value);
-          setDetail({
-            attempt: nextDetail.attempt,
-            maxAttempts: nextDetail.maxAttempts,
-            retrying: nextDetail.status === "retrying",
-          });
         },
       );
       setStage("finalizing_questions");
-      setProgress(0.96);
+      beginJourneyPhase("finalizing");
       const importedQuiz = await apiRequest(
         "/api/quiz-imports",
         {
@@ -222,8 +333,8 @@ export default function GenerationScreen() {
       );
       await saveAttemptStart(start);
       await clearImportedVideo(imported.video.id);
+      await finishJourneyPresentation(signal);
       setStage("complete");
-      setProgress(1);
       router.replace({
         pathname: "/quiz/[attemptId]",
         params: { attemptId: start.attemptId },
@@ -234,6 +345,9 @@ export default function GenerationScreen() {
       params.sessionLength,
       params.videoId,
       params.watched,
+      beginJourneyPhase,
+      finishJourneyPresentation,
+      questionCount,
       questionTypes,
       t,
     ],
@@ -261,43 +375,37 @@ export default function GenerationScreen() {
     return () => controller.abort();
   }, [execute, runNumber, t]);
 
-  const stages = useMemo(
-    () => [
-      { id: "getting_video" as const, label: t("gettingVideo") },
-      { id: "preparing_audio" as const, label: t("preparingAudio") },
-      { id: "downloading_model" as const, label: t("downloadingModel") },
-      { id: "transcribing_device" as const, label: t("transcribing") },
-      { id: "planning_questions" as const, label: t("planningQuestions") },
-      { id: "creating_questions" as const, label: t("creatingQuestions") },
-      { id: "finalizing_questions" as const, label: t("finalizingQuestions") },
-    ],
-    [t],
-  );
   const failed = Boolean(error);
-  const displayedStage = stage;
-  const activeIndex = Math.max(
+  const activeIndex = journeyStepIndex(journeySteps, estimatedProgress);
+  const activeStep = journeySteps[activeIndex] ?? journeySteps[0]!;
+  const activeStepRange = journeyStepRange(journeySteps, activeIndex);
+  const activeStepFraction = Math.max(
     0,
-    stages.findIndex((item) => item.id === displayedStage),
+    Math.min(
+      1,
+      (estimatedProgress - activeStepRange.start) /
+        Math.max(0.001, activeStepRange.end - activeStepRange.start),
+    ),
   );
-  const bytes =
-    detail?.loadedBytes !== undefined && detail.totalBytes !== undefined
-      ? `${formatBytes(detail.loadedBytes)} / ${formatBytes(detail.totalBytes)}`
-      : null;
-  const aiAttempt =
-    detail?.attempt && detail.maxAttempts
-      ? `${detail.retrying ? t("retryingGeneration") : t("generationAttempt")} ${detail.attempt}/${detail.maxAttempts}`
-      : null;
+  const estimatedSecondsLeft = journeySteps.reduce(
+    (total, item, index) =>
+      total +
+      (index < activeIndex
+        ? 0
+        : index === activeIndex
+          ? item.durationSeconds * (1 - activeStepFraction)
+          : item.durationSeconds),
+    0,
+  );
   const compactFooter = width < breakpoints.compact;
   const stageTitle = failed
     ? t("generationFailed")
     : paused
       ? t("paused")
-      : (stages[activeIndex]?.label ?? t("creatingQuestions"));
-  const stepItems = stages.map((item, index) => {
-    const current = item.id === displayedStage;
-    const complete =
-      stage === "complete" ||
-      (!paused && stage !== "failed" && index < activeIndex);
+      : activeStep.label;
+  const stepItems = journeySteps.map((item, index) => {
+    const current = index === activeIndex;
+    const complete = stage === "complete" || (!paused && index < activeIndex);
     const state: ProcessingStepState =
       failed && index === activeIndex
         ? "error"
@@ -306,7 +414,22 @@ export default function GenerationScreen() {
           : complete
             ? "complete"
             : "upcoming";
-    return { label: item.label, state };
+    const stepRemaining = Math.max(
+      1,
+      Math.ceil(item.durationSeconds * (current ? 1 - activeStepFraction : 1)),
+    );
+    return {
+      label: item.label,
+      state,
+      detail:
+        state === "complete"
+          ? t("stepComplete")
+          : current && phaseOverdue
+            ? t("takingLonger")
+            : current
+              ? formatEstimatedRemaining(stepRemaining, locale)
+              : formatPlannedDuration(item.durationSeconds, locale),
+    };
   });
 
   const pause = () => {
@@ -390,38 +513,27 @@ export default function GenerationScreen() {
           <View style={styles.progressSummary}>
             <View style={styles.progressCopy}>
               <Text style={[styles.progressLabel, { color: theme.text }]}>
-                {stages[activeIndex]?.label ?? t("creatingQuestions")}
+                {activeStep.label} · {activeIndex + 1}/{journeySteps.length}
               </Text>
               <Text style={[styles.progressPercent, { color: theme.primary }]}>
-                {Math.round(progress * 100)}%
+                {Math.round(estimatedProgress * 100)}%
               </Text>
             </View>
             <ProgressBar
-              progress={progress}
-              accessibilityLabel={
-                stages[activeIndex]?.label ?? t("creatingQuestions")
-              }
+              progress={estimatedProgress}
+              accessibilityLabel={`${t("estimatedProgress")}: ${Math.round(estimatedProgress * 100)}%`}
               tone={failed ? "secondary" : "primary"}
             />
-            {detail?.cached || bytes || aiAttempt ? (
-              <View style={styles.detailRow}>
-                {detail?.cached ? (
-                  <Text style={[styles.cached, { color: theme.success }]}>
-                    {t("cached")}
-                  </Text>
-                ) : null}
-                {bytes ? (
-                  <Text style={[styles.detail, { color: theme.textMuted }]}>
-                    {bytes}
-                  </Text>
-                ) : null}
-                {aiAttempt ? (
-                  <Text style={[styles.detail, { color: theme.textMuted }]}>
-                    {aiAttempt}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
+            <View style={styles.detailRow}>
+              <Text style={[styles.detail, { color: theme.textMuted }]}>
+                {t("estimatedProgress")}
+              </Text>
+              <Text style={[styles.detail, { color: theme.textMuted }]}>
+                {phaseOverdue
+                  ? t("takingLonger")
+                  : formatEstimatedRemaining(estimatedSecondsLeft, locale)}
+              </Text>
+            </View>
           </View>
           <ProcessingSteps steps={stepItems} />
         </Surface>
@@ -472,12 +584,6 @@ function formatGenerationError(cause: unknown, fallback: string): string {
   return cause.message;
 }
 
-function formatBytes(bytes: number): string {
-  return bytes >= 1_000_000
-    ? `${(bytes / 1_000_000).toFixed(1)} MB`
-    : `${Math.round(bytes / 1_000)} KB`;
-}
-
 function isUuid(value: string | undefined): value is string {
   return Boolean(
     value &&
@@ -485,6 +591,104 @@ function isUuid(value: string | undefined): value is string {
       value,
     ),
   );
+}
+
+function journeyStepRange(
+  steps: readonly JourneyStep[],
+  index: number,
+): { start: number; end: number; durationSeconds: number } {
+  const total = steps.reduce((sum, item) => sum + item.durationSeconds, 0);
+  const startSeconds = steps
+    .slice(0, index)
+    .reduce((sum, item) => sum + item.durationSeconds, 0);
+  const durationSeconds = steps[index]?.durationSeconds ?? 0;
+  return {
+    start: startSeconds / total,
+    end: (startSeconds + durationSeconds) / total,
+    durationSeconds,
+  };
+}
+
+function journeyStepIndex(
+  steps: readonly JourneyStep[],
+  progress: number,
+): number {
+  if (progress >= 1) return steps.length - 1;
+  for (let index = 0; index < steps.length; index += 1) {
+    if (progress < journeyStepRange(steps, index).end) return index;
+  }
+  return steps.length - 1;
+}
+
+function journeyPhaseRange(
+  steps: readonly JourneyStep[],
+  phase: JourneyPhase,
+): { start: number; end: number; durationSeconds: number } {
+  const indexes =
+    phase === "video"
+      ? [0]
+      : phase === "transcript"
+        ? [1, 2]
+        : phase === "ai"
+          ? [3, 4, 5]
+          : phase === "finalizing"
+            ? [6]
+            : steps.map((_, index) => index);
+  const first = journeyStepRange(steps, indexes[0] ?? 0);
+  const last = journeyStepRange(steps, indexes[indexes.length - 1] ?? 0);
+  return {
+    start: first.start,
+    end: last.end,
+    durationSeconds: indexes.reduce(
+      (sum, index) => sum + (steps[index]?.durationSeconds ?? 0),
+      0,
+    ),
+  };
+}
+
+function formatPlannedDuration(
+  seconds: number,
+  locale: "en" | "zh-CN",
+): string {
+  if (seconds < 60) {
+    return locale === "zh-CN" ? `约 ${seconds} 秒` : `~${seconds} sec`;
+  }
+  const minutes = Math.ceil(seconds / 60);
+  return locale === "zh-CN" ? `约 ${minutes} 分钟` : `~${minutes} min`;
+}
+
+function formatEstimatedRemaining(
+  seconds: number,
+  locale: "en" | "zh-CN",
+): string {
+  if (seconds < 60) {
+    const roundedSeconds = Math.max(5, Math.ceil(seconds / 5) * 5);
+    return locale === "zh-CN"
+      ? `预计还需约 ${roundedSeconds} 秒`
+      : `About ${roundedSeconds} sec left`;
+  }
+  const minutes = Math.ceil(seconds / 60);
+  return locale === "zh-CN"
+    ? `预计还需约 ${minutes} 分钟`
+    : `About ${minutes} min left`;
+}
+
+function abortableDelay(
+  milliseconds: number,
+  signal: AbortSignal,
+): Promise<void> {
+  if (signal.aborted) return Promise.reject(new TranscriptionPausedError());
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, milliseconds);
+    const abort = () => {
+      clearTimeout(timeout);
+      reject(new TranscriptionPausedError());
+    };
+    signal.addEventListener("abort", abort, { once: true });
+  });
 }
 
 const styles = StyleSheet.create({
@@ -519,15 +723,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
   },
   detail: {
     fontFamily: typography.bodyMedium,
-    fontSize: typography.size.caption,
-    lineHeight: typography.lineHeight.caption,
-  },
-  cached: {
-    fontFamily: typography.bodyBold,
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
   },
