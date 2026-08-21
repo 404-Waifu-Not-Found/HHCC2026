@@ -116,7 +116,7 @@ try {
   evidence.previewUrl = previewUrl;
   evidence.steps.push({ name: "version_upload", ok: true, previewUrl });
 
-  const previewProbe = await probeWorkerAssetShells({
+  const previewProbe = await retryWorkerAssetProbe({
     origin: previewUrl,
     versionId: newVersion,
   });

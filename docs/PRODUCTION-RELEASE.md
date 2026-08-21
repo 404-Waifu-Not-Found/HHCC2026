@@ -98,7 +98,7 @@ The runner uses the workspace-pinned Wrangler through `npx` and performs these g
 2. Recursively verify that every generated HTML shell references files present in the final asset directory.
 3. Run `npx wrangler deploy --dry-run`.
 4. Record the single version currently receiving 100% of production traffic.
-5. Upload the pushed Git SHA with `npx wrangler versions upload` and smoke-test its preview URL.
+5. Upload the pushed Git SHA with `npx wrangler versions upload` and smoke-test its preview URL with the same bounded propagation retry used for version overrides. A newly allocated `workers.dev` hostname can briefly time out before Cloudflare begins accepting connections; production remains untouched until this probe passes.
 6. Create a deployment with the old version at 100% and the candidate at 0%.
 7. Probe every production shell and entry asset with `Cloudflare-Workers-Version-Overrides` on every request, while verifying the version-affinity transform rule.
 8. Promote the verified candidate directly to 100%.
