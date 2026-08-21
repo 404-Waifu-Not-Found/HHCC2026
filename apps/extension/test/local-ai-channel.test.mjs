@@ -113,7 +113,7 @@ test("long local generation uses a heartbeat port", () => {
   assert.match(bridge, /setInterval\([\s\S]*type: "heartbeat"/);
   assert.match(
     bridge,
-    /capabilities: \["question-stream-v1", "question-stream-v2"\]/,
+    /"question-stream-v1",[\s\S]*"question-stream-v2",[\s\S]*"question-stream-v3",[\s\S]*"ensure-source-ready-v1"/,
   );
   assert.match(bridge, /type: "generation-call"/);
   assert.match(background, /type: "call"/);
@@ -172,6 +172,18 @@ test("release builds preserve the loaded unpacked extension directory", () => {
   assert.match(bridge, /async function announce\(\) \{\s+try \{/);
 });
 
+test("release builds include every background module dependency", async () => {
+  assert.match(background, /\.\/generation-outbox\.js/);
+  assert.match(buildScript, /"generation-outbox\.js"/);
+  assert.match(
+    await readFile(
+      new URL("../src/generation-outbox.js", import.meta.url),
+      "utf8",
+    ),
+    /replayGenerationOutboxEntries/,
+  );
+});
+
 test("release ZIPs normalize metadata for reproducible matching artifacts", () => {
   assert.match(buildScript, /new Date\("2020-01-01T00:00:00\.000Z"\)/u);
   assert.match(buildScript, /\["-X", "-q", archive, \.\.\.archiveFiles\]/u);
@@ -179,7 +191,7 @@ test("release ZIPs normalize metadata for reproducible matching artifacts", () =
 });
 
 test("the popup exposes only DeepSeek configuration", () => {
-  assert.equal(manifest.version, "0.8.2");
+  assert.equal(manifest.version, "0.8.3");
   assert.match(popupHtml, /DeepSeek configuration/);
   assert.match(popupHtml, /DeepSeek API key/);
   assert.match(popupHtml, /Save &amp; test/);
@@ -194,7 +206,8 @@ test("the popup exposes only DeepSeek configuration", () => {
   assert.match(background, /captionsToPlainText/);
 });
 
-test("release 0.8.2 uses prompt v5.2 with canonical formula guidance", () => {
+test("release 0.8.3 uses prompt v5.3 and retains v5.2 compatibility", () => {
+  assert.match(generator, /quiz-local-json-stream-v5\.3/);
   assert.match(generator, /quiz-local-json-stream-v5\.2/);
   assert.match(generator, /standalone canonical formula/);
   assert.match(generator, /notation variants/);
@@ -206,17 +219,27 @@ test("retry delays honor backoff and Retry-After within a safe bound", () => {
   assert.equal(boundedRetryDelayMilliseconds(3, 900_000), 300_000);
 });
 
-test("caption acquisition never creates a visible fetch tab", () => {
+test("source readiness uses a temporary background tab and a 24-hour local cache", () => {
   assert.ok(!manifest.permissions.includes("offscreen"));
-  assert.doesNotMatch(background, /chrome\.tabs\.create/);
-  assert.doesNotMatch(background, /chrome\.tabs\.remove/);
+  assert.match(background, /chrome\.tabs\.create\(\{[\s\S]*active: false/);
+  assert.match(background, /chrome\.tabs\.remove/);
+  assert.match(background, /TRANSCRIPT_CACHE_TTL_MS = 24 \* 60 \* 60 \* 1_000/);
+  assert.match(background, /chrome\.scripting\.executeScript/);
   assert.match(background, /matchingYouTubeTab/);
   assert.match(background, /chrome\.tabs\.query/);
-  assert.match(
-    background,
-    /Keep this YouTube video open in a tab while ClipQuest prepares the quiz/,
-  );
+  assert.match(background, /clipquest\.source\.ensure\.v1/);
   assert.doesNotMatch(buildScript, /youtube-background-captions\.js/);
+});
+
+test("verified key changes wake automatic recovery without exposing the key", () => {
+  assert.ok(
+    popup.indexOf('type: "clipquest.key.test.v1"') <
+      popup.indexOf('type: "clipquest.key.save.v1"'),
+  );
+  assert.match(background, /notifyClipQuestConfigurationChanged/);
+  assert.match(background, /clipquest\.configuration\.changed\.v1/);
+  assert.match(bridge, /clipquest\.configuration\.changed\.v1/);
+  assert.doesNotMatch(bridge, /deepseekApiKey[\s\S]*post\(/);
 });
 
 test("YouTube watch pages embed a quick ClipQuest handoff", () => {

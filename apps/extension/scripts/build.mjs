@@ -37,6 +37,7 @@ for (const file of [
   "caption-core.js",
   "caption-text.js",
   "clipquest-bridge.js",
+  "generation-outbox.js",
   "local-generator.js",
   "origin-policy.js",
   "popup.css",

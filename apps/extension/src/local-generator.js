@@ -1,16 +1,20 @@
 import { captionsToPlainText } from "./caption-text.js";
 
 const MODEL = "deepseek-v4-flash";
-const PROTOCOL_VERSION = 6;
+const PROTOCOL_VERSION = 7;
 const PIPELINE_VERSION = 9;
-const PROMPT_VERSION = "quiz-local-json-stream-v5.2";
-const VALIDATOR_VERSION = "validator-local-progressive-v4.1";
-const IMPORT_VERSION = "extension-progressive-import-v4";
-const GENERATION_PROFILE = "stable_non_thinking_v5_2";
+const PROMPT_VERSION = "quiz-local-json-stream-v5.3";
+const VALIDATOR_VERSION = "validator-local-progressive-v4.2";
+const IMPORT_VERSION = "extension-progressive-import-v5";
+const GENERATION_PROFILE = "stable_auto_recovery_v5_3";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 const MAX_TRANSCRIPT_CHARACTERS = 320_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1_000;
-const MAX_GENERATION_ATTEMPTS = 2;
+const MAX_TRANSPORT_RETRIES_PER_ORDINAL = 4;
+const MAX_CONTENT_RETRIES_PER_ORDINAL = 2;
+const MAX_AUTOMATIC_RETRIES = 12;
+const MAX_ACTIVE_RECOVERY_MS = 15 * 60 * 1_000;
+const LEGACY_MAX_GENERATION_ATTEMPTS = 2;
 const SUPPORTED_QUESTION_TYPES = [
   "multiple_choice",
   "true_false",
@@ -41,10 +45,13 @@ function retryAfterMilliseconds(value, now = Date.now()) {
 }
 
 export function boundedRetryDelayMilliseconds(
-  _consecutiveFailures,
+  consecutiveFailures,
   retryAfterMs = 0,
+  random = () => 0.5,
 ) {
-  const exponentialDelay = 750;
+  const exponent = Math.max(0, Math.min(6, consecutiveFailures - 1));
+  const jitter = 0.75 + Math.max(0, Math.min(1, random())) * 0.5;
+  const exponentialDelay = Math.ceil(750 * 2 ** exponent * jitter);
   return Math.min(
     MAX_RETRY_DELAY_MS,
     Math.max(exponentialDelay, Math.max(0, retryAfterMs)),
@@ -85,7 +92,30 @@ function normalize(value) {
     .trim();
 }
 
-function questionSchemaForType(type, id) {
+const FORMULA_TOKEN_KINDS = new Set([
+  "identifier",
+  "number",
+  "operator",
+  "left_paren",
+  "right_paren",
+  "comma",
+  "prime",
+]);
+const FORMULA_OPERATORS = new Set(["+", "-", "*", "/", "^", "="]);
+
+function formulaTokenSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["kind", "value"],
+    properties: {
+      kind: { enum: [...FORMULA_TOKEN_KINDS] },
+      value: { type: "string" },
+    },
+  };
+}
+
+function questionSchemaForType(type, id, automaticMode = false) {
   const properties = {
     id: { const: id },
     type: { const: type },
@@ -95,17 +125,34 @@ function questionSchemaForType(type, id) {
   };
   const required = ["id", "type", "concept", "question", "explanation"];
   if (type === "multiple_choice") {
-    Object.assign(properties, {
-      choices: {
-        type: "array",
-        minItems: 4,
-        maxItems: 4,
-        items: { type: "string" },
-      },
-      answerIndex: { type: "integer", minimum: 0, maximum: 3 },
-      answer: { type: "string" },
-    });
-    required.push("choices", "answerIndex", "answer");
+    Object.assign(
+      properties,
+      automaticMode
+        ? {
+            correctAnswer: { type: "string" },
+            distractors: {
+              type: "array",
+              minItems: 3,
+              maxItems: 3,
+              items: { type: "string" },
+            },
+          }
+        : {
+            choices: {
+              type: "array",
+              minItems: 4,
+              maxItems: 4,
+              items: { type: "string" },
+            },
+            answerIndex: { type: "integer", minimum: 0, maximum: 3 },
+            answer: { type: "string" },
+          },
+    );
+    if (automaticMode) {
+      required.push("correctAnswer", "distractors");
+    } else {
+      required.push("choices", "answerIndex", "answer");
+    }
   } else if (type === "true_false") {
     Object.assign(properties, {
       answer: { type: "boolean" },
@@ -126,6 +173,12 @@ function questionSchemaForType(type, id) {
         maxItems: 8,
         items: { type: "string" },
       },
+      formulaTokens: {
+        type: "array",
+        minItems: 1,
+        maxItems: 96,
+        items: formulaTokenSchema(),
+      },
     });
     required.push("answer", "rubricIdeas", "acceptableAnswers");
   }
@@ -143,7 +196,11 @@ function quizResponseSchema(input) {
         minItems: input.questionCount,
         maxItems: input.questionCount,
         prefixItems: input.questionTypePlan.map((type, index) =>
-          questionSchemaForType(type, `q${input.questionOffset + index + 1}`),
+          questionSchemaForType(
+            type,
+            `q${input.questionOffset + index + 1}`,
+            input.automaticMode,
+          ),
         ),
         items: false,
       },
@@ -151,7 +208,7 @@ function quizResponseSchema(input) {
   };
 }
 
-function exampleQuestion(type, id, polarity) {
+function exampleQuestion(type, id, polarity, automaticMode = false) {
   const common = {
     id,
     type,
@@ -160,6 +217,13 @@ function exampleQuestion(type, id, polarity) {
     explanation: "A concise lesson-grounded explanation.",
   };
   if (type === "multiple_choice") {
+    if (automaticMode) {
+      return {
+        ...common,
+        correctAnswer: "supported answer",
+        distractors: ["distractor A", "distractor B", "distractor C"],
+      };
+    }
     return {
       ...common,
       choices: [
@@ -211,15 +275,19 @@ function generationMessages(input, isTransientRetry) {
         type,
         `q${input.questionOffset + index + 1}`,
         input.trueFalseAnswerPlan[index],
+        input.automaticMode,
       ),
     ),
   };
+  const requestPurpose = isTransientRetry
+    ? "an automatic repair request for"
+    : "the primary request for";
   return [
     {
       role: "system",
       content: `You create rigorous quizzes from a supplied lesson transcript. Use only claims explicitly supported by that transcript. Ignore greetings, promotions, jokes, repeated filler, and transcription noise. Never infer unseen visuals or add outside facts. Questions must be self-contained, specific, pedagogically useful, and must not mention captions, timestamps, or the video.
 
-Return JSON only: one JSON object containing a questions array. Finish each question object before starting the next. Multiple-choice questions need four unique plausible choices, exactly one supported answer, and answer must equal choices[answerIndex]. True/false questions need the assigned polarity and a correction or confirmation. Short answers need a complete answer, every required rubric idea, and optional equivalent answers. A formula answer must be a standalone canonical formula with explicit operators and parenthesized numerators and denominators, for example (f(b)-f(a))/(b-a); put notation variants in acceptableAnswers. Never include fields for another question type.`,
+Return JSON only: one JSON object containing a questions array. Finish each question object before starting the next. ${input.automaticMode ? "For multiple choice, return one correctAnswer and exactly three unique distractors; ClipQuest assigns the stored choice order and answer index locally." : "Multiple-choice questions need four unique plausible choices, exactly one supported answer, and answer must equal choices[answerIndex]."} True/false questions need the assigned polarity and a correction or confirmation. Short answers need a complete answer, every required rubric idea, and optional equivalent answers. A formula answer must be a standalone canonical formula. For a formula question, also return formulaTokens: a bounded ordered token list using identifier, number, operator, left_paren, right_paren, comma, and prime; its locally serialized expression must exactly match answer after Unicode operator normalization. Use explicit * and ^ operators and parenthesize both sides of division, for example (f(b)-f(a))/(b-a). Put notation variants only in acceptableAnswers. Omit formulaTokens for prose answers. Never include fields for another question type.`,
     },
     {
       role: "user",
@@ -227,7 +295,7 @@ Return JSON only: one JSON object containing a questions array. Finish each ques
     },
     {
       role: "user",
-      content: `Create exactly ${input.questionCount} consecutive questions for this JSON task. This is ${isTransientRetry ? "the single transport retry for" : "the primary request for"} positions q${input.questionOffset + 1} through q${input.questionOffset + input.questionCount} of ${input.totalQuestionCount}.
+      content: `Create exactly ${input.questionCount} consecutive questions for this JSON task. This is ${requestPurpose} position q${input.questionOffset + 1} of ${input.totalQuestionCount}.${input.repairGuidance ? ` Repair requirement: ${input.repairGuidance}` : ""}
 
 Mandatory slot plan:\n${slotPlan}\n\nAlready accepted questions; do not repeat or closely paraphrase their prompts:\n${accepted}\n\nExact JSON schema:\n${JSON.stringify(quizResponseSchema(input))}\n\nValid shape example:\n${JSON.stringify(example)}\n\nBegin with {\"questions\":[ and return no Markdown or prose.`,
     },
@@ -243,7 +311,24 @@ function cleanStringArray(value, optional = false) {
   return Array.isArray(value) ? value.map(cleanString) : value;
 }
 
-export function normalizeGeneratedQuestion(rawQuestion) {
+function normalizeFormulaTokens(value) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) return value;
+  return value.map((rawToken) => {
+    if (!rawToken || typeof rawToken !== "object" || Array.isArray(rawToken)) {
+      return rawToken;
+    }
+    return {
+      kind: cleanString(rawToken.kind),
+      value: cleanString(rawToken.value),
+    };
+  });
+}
+
+export function normalizeGeneratedQuestion(
+  rawQuestion,
+  { expectedId, automaticMode = false } = {},
+) {
   if (
     !rawQuestion ||
     typeof rawQuestion !== "object" ||
@@ -253,13 +338,40 @@ export function normalizeGeneratedQuestion(rawQuestion) {
   }
   const type = cleanString(rawQuestion.type);
   const common = {
-    id: cleanString(rawQuestion.id),
+    id: automaticMode && expectedId ? expectedId : cleanString(rawQuestion.id),
     type,
     concept: cleanString(rawQuestion.concept),
     question: cleanString(rawQuestion.question),
     explanation: cleanString(rawQuestion.explanation),
   };
   if (type === "multiple_choice") {
+    if (automaticMode) {
+      const legacyChoices = cleanStringArray(rawQuestion.choices);
+      const legacyAnswer = cleanString(rawQuestion.answer);
+      const legacyMatches = Array.isArray(legacyChoices)
+        ? legacyChoices.filter(
+            (choice) =>
+              typeof choice === "string" &&
+              typeof legacyAnswer === "string" &&
+              normalize(choice) === normalize(legacyAnswer),
+          )
+        : [];
+      const correctAnswer =
+        cleanString(rawQuestion.correctAnswer) ??
+        (legacyMatches.length === 1 ? legacyMatches[0] : undefined);
+      const distractors = Array.isArray(rawQuestion.distractors)
+        ? cleanStringArray(rawQuestion.distractors)
+        : Array.isArray(legacyChoices) && correctAnswer
+          ? legacyChoices.filter(
+              (choice) => normalize(choice) !== normalize(correctAnswer),
+            )
+          : rawQuestion.distractors;
+      return {
+        ...common,
+        correctAnswer,
+        distractors,
+      };
+    }
     const choices = cleanStringArray(rawQuestion.choices);
     let answerIndex = rawQuestion.answerIndex;
     if (/^[0-3]$/.test(answerIndex)) answerIndex = Number(answerIndex);
@@ -290,6 +402,7 @@ export function normalizeGeneratedQuestion(rawQuestion) {
       answer: cleanString(rawQuestion.answer),
       rubricIdeas: cleanStringArray(rawQuestion.rubricIdeas),
       acceptableAnswers: cleanStringArray(rawQuestion.acceptableAnswers, true),
+      formulaTokens: normalizeFormulaTokens(rawQuestion.formulaTokens),
     };
   }
   return common;
@@ -333,25 +446,97 @@ function hasBalancedDelimiters(value) {
   return stack.length === 0;
 }
 
-function isCanonicalFormulaQuestion(question) {
+function requiresCanonicalFormula(question) {
   const prompt = question.question.toLocaleLowerCase("en-US");
-  if (
-    !/formula|equation|expression|derivative|rate of change|公式|方程|导数/.test(
-      prompt,
-    )
-  ) {
-    return true;
+  return /formula|equation|expression|derivative|rate of change|公式|方程|导数/.test(
+    prompt,
+  );
+}
+
+function normalizedFormulaText(value) {
+  return value
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+/g, (superscript) => {
+      const mapped = {
+        "⁰": "0",
+        "¹": "1",
+        "²": "2",
+        "³": "3",
+        "⁴": "4",
+        "⁵": "5",
+        "⁶": "6",
+        "⁷": "7",
+        "⁸": "8",
+        "⁹": "9",
+        "⁺": "+",
+        "⁻": "-",
+      };
+      return `^${[...superscript].map((character) => mapped[character]).join("")}`;
+    })
+    .normalize("NFKC")
+    .replace(/[−–—]/g, "-")
+    .replace(/[×·⋅]/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/[′’]/g, "'")
+    .replace(/[\[\{［【]/g, "(")
+    .replace(/[\]\}］】]/g, ")")
+    .replace(/\s+/g, "");
+}
+
+export function serializeFormulaTokens(tokens) {
+  if (!Array.isArray(tokens) || tokens.length < 1 || tokens.length > 96) {
+    return null;
   }
-  const answer = question.answer.replace(/\s+/g, "");
-  if (
-    !/[=+\-*/^]|[×÷]/.test(answer) ||
-    !hasBalancedDelimiters(answer) ||
-    !/^[\p{L}\p{N}_'()[\]{}.,=+\-*/^×÷]+$/u.test(answer)
-  ) {
-    return false;
+  const values = [];
+  let depth = 0;
+  for (const token of tokens) {
+    if (
+      !token ||
+      typeof token !== "object" ||
+      Array.isArray(token) ||
+      !FORMULA_TOKEN_KINDS.has(token.kind) ||
+      typeof token.value !== "string"
+    ) {
+      return null;
+    }
+    const value = normalizedFormulaText(token.value);
+    if (
+      (token.kind === "identifier" &&
+        !/^[\p{L}_][\p{L}\p{N}_]*$/u.test(value)) ||
+      (token.kind === "number" && !/^\d+(?:\.\d+)?$/.test(value)) ||
+      (token.kind === "operator" && !FORMULA_OPERATORS.has(value)) ||
+      (token.kind === "left_paren" && value !== "(") ||
+      (token.kind === "right_paren" && value !== ")") ||
+      (token.kind === "comma" && value !== ",") ||
+      (token.kind === "prime" && value !== "'")
+    ) {
+      return null;
+    }
+    if (token.kind === "left_paren") depth += 1;
+    if (token.kind === "right_paren" && --depth < 0) return null;
+    values.push(value);
   }
-  if (answer.includes("/") && !/^\(.+\)\/\(.+\)$/.test(answer)) return false;
-  return true;
+  if (depth !== 0) return null;
+  const expression = values.join("");
+  if (
+    !expression ||
+    !hasBalancedDelimiters(expression) ||
+    !/[=+\-*/^']/.test(expression) ||
+    /^[+*/^=,)]/.test(expression) ||
+    /[+\-*/^=,(]$/.test(expression) ||
+    /(?:[+*/^=,]){2}|(?:[-]){2,}/.test(expression) ||
+    /\(\)/.test(expression)
+  ) {
+    return null;
+  }
+  for (let index = 0; index < expression.length; index += 1) {
+    if (
+      expression[index] === "/" &&
+      (expression[index - 1] !== ")" || expression[index + 1] !== "(")
+    ) {
+      return null;
+    }
+  }
+  return expression;
 }
 
 function validateQuiz(quiz, input) {
@@ -371,14 +556,18 @@ function validateQuiz(quiz, input) {
   const ids = new Set(accepted.map((question) => question.id));
   const prompts = accepted.map((question) => question.question);
   const questions = quiz.questions.map((rawQuestion, index) => {
-    const question = normalizeGeneratedQuestion(rawQuestion);
+    const expectedId = `q${input.questionOffset + index + 1}`;
+    const question = normalizeGeneratedQuestion(rawQuestion, {
+      expectedId,
+      automaticMode: input.automaticMode,
+    });
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       validationFailure(`Question ${index + 1} is not a JSON object.`);
     }
     const expectedType = input.questionTypePlan[index];
     if (
       question.type !== expectedType ||
-      question.id !== `q${input.questionOffset + index + 1}` ||
+      question.id !== expectedId ||
       ids.has(question.id)
     ) {
       validationFailure(
@@ -408,6 +597,31 @@ function validateQuiz(quiz, input) {
     ids.add(question.id);
     prompts.push(question.question);
     if (question.type === "multiple_choice") {
+      if (input.automaticMode) {
+        const candidateChoices = [
+          question.correctAnswer,
+          ...(Array.isArray(question.distractors) ? question.distractors : []),
+        ];
+        if (
+          !nonEmptyString(question.correctAnswer, 500) ||
+          !Array.isArray(question.distractors) ||
+          question.distractors.length !== 3 ||
+          candidateChoices.some((choice) => !nonEmptyString(choice, 500)) ||
+          new Set(candidateChoices.map(normalize)).size !== 4
+        ) {
+          validationFailure(
+            `Question ${index + 1} must have one unambiguous correct answer and three unique distractors.`,
+            "answer_mapping_invalid",
+          );
+        }
+        const { correctAnswer, distractors, ...storedQuestion } = question;
+        return {
+          ...storedQuestion,
+          choices: candidateChoices,
+          answerIndex: 0,
+          answer: correctAnswer,
+        };
+      }
       if (
         !Array.isArray(question.choices) ||
         question.choices.length !== 4 ||
@@ -451,12 +665,29 @@ function validateQuiz(quiz, input) {
       question.acceptableAnswers.length > 8 ||
       question.acceptableAnswers.some(
         (answer) => !nonEmptyString(answer, 1_000),
-      ) ||
-      !isCanonicalFormulaQuestion(question)
+      )
     ) {
       validationFailure(
         `Question ${index + 1} has an invalid short-answer rubric or formula.`,
       );
+    }
+    if (question.type === "short_answer") {
+      const formulaRequired = requiresCanonicalFormula(question);
+      const serializedFormula = serializeFormulaTokens(question.formulaTokens);
+      if (
+        (formulaRequired && !serializedFormula) ||
+        (question.formulaTokens !== undefined && !serializedFormula) ||
+        (serializedFormula &&
+          normalizedFormulaText(question.answer) !== serializedFormula)
+      ) {
+        validationFailure(
+          `Question ${index + 1} has an invalid or conflicting formula token structure.`,
+        );
+      }
+      const { formulaTokens: _formulaTokens, ...storedQuestion } = question;
+      return serializedFormula
+        ? { ...storedQuestion, answer: serializedFormula }
+        : storedQuestion;
     }
     return question;
   });
@@ -1131,6 +1362,11 @@ export async function generateQuizFromPlainText(
       typeof rawInput?.generationSessionId === "string"
         ? rawInput.generationSessionId
         : globalThis.crypto.randomUUID(),
+    recoverySessionId:
+      typeof rawInput?.recoverySessionId === "string"
+        ? rawInput.recoverySessionId
+        : globalThis.crypto.randomUUID(),
+    generationProfile: rawInput?.generationProfile,
     transcriptFingerprint: String(
       rawInput?.transcriptFingerprint ?? "standalone",
     ),
@@ -1155,6 +1391,11 @@ export async function generateQuizFromPlainText(
     rawInput?.generationProfile === "legacy_reasoning_v5_1" ||
     input.continuation?.promptVersion === "quiz-local-json-stream-v5.0" ||
     input.continuation?.promptVersion === "quiz-local-json-stream-v5.1";
+  const stableV52Mode =
+    !legacyMode &&
+    (rawInput?.generationProfile === "stable_non_thinking_v5_2" ||
+      input.continuation?.promptVersion === "quiz-local-json-stream-v5.2");
+  const automaticMode = !legacyMode && !stableV52Mode;
   const selectedTypes = validateQuestionTypes(input.questionTypes);
   let questionPlan;
   if (input.continuation?.questionPlan) {
@@ -1242,7 +1483,9 @@ export async function generateQuizFromPlainText(
   let retryNextMissing = false;
   let callIndex = Number.isInteger(rawInput?.callIndexStart)
     ? rawInput.callIndexStart
-    : 0;
+    : Number.isInteger(input.continuation?.nextCallIndex)
+      ? input.continuation.nextCallIndex
+      : 0;
   let lastChunkAt = Date.now();
   const metadata = legacyMode
     ? {
@@ -1258,18 +1501,71 @@ export async function generateQuizFromPlainText(
         importVersion: "extension-progressive-import-v3",
         generationProfile: "legacy_reasoning_v5_1",
       }
-    : {
-        protocolVersion: PROTOCOL_VERSION,
-        pipelineVersion: PIPELINE_VERSION,
-        model: MODEL,
-        reasoningEffort: "none",
-        promptVersion: PROMPT_VERSION,
-        validatorVersion: VALIDATOR_VERSION,
-        importVersion: IMPORT_VERSION,
-        generationProfile: GENERATION_PROFILE,
-        generationId: input.generationId,
-        questionPlan,
-      };
+    : stableV52Mode
+      ? {
+          protocolVersion: 6,
+          pipelineVersion: PIPELINE_VERSION,
+          model: MODEL,
+          reasoningEffort: "none",
+          promptVersion: "quiz-local-json-stream-v5.2",
+          validatorVersion: "validator-local-progressive-v4.1",
+          importVersion: "extension-progressive-import-v4",
+          generationProfile: "stable_non_thinking_v5_2",
+          generationId: input.generationId,
+          questionPlan,
+        }
+      : {
+          protocolVersion: PROTOCOL_VERSION,
+          pipelineVersion: PIPELINE_VERSION,
+          model: MODEL,
+          reasoningEffort: "none",
+          promptVersion: PROMPT_VERSION,
+          validatorVersion: VALIDATOR_VERSION,
+          importVersion: IMPORT_VERSION,
+          generationProfile: GENERATION_PROFILE,
+          generationId: input.generationId,
+          generationSessionId: input.generationSessionId,
+          recoverySessionId: input.recoverySessionId,
+          questionPlan,
+        };
+
+  if (automaticMode) {
+    return generateAutomaticQuiz({
+      input,
+      apiKey,
+      onProgress,
+      signal,
+      onChunk,
+      onCall,
+      metadata,
+      questionPlan,
+      acceptedQuestions,
+      trueFalseAnswerPlan: input.trueFalseAnswerPlan,
+      answerPositionByQuestion,
+      continuationStartIndex,
+      startedAt,
+      totals,
+      initialCallIndex: Number.isInteger(rawInput?.callIndexStart)
+        ? rawInput.callIndexStart
+        : Number.isInteger(input.continuation?.nextCallIndex)
+          ? input.continuation.nextCallIndex
+          : 0,
+      initialOrdinalAttempt: Number.isInteger(rawInput?.ordinalAttemptStart)
+        ? rawInput.ordinalAttemptStart
+        : Number.isInteger(input.continuation?.nextOrdinalAttempt)
+          ? input.continuation.nextOrdinalAttempt
+          : 1,
+      initialRetryKind: rawInput?.retryKind ?? input.continuation?.retryKind,
+      initialAutomaticRetryCount: Number.isInteger(
+        rawInput?.automaticRetryCount,
+      )
+        ? rawInput.automaticRetryCount
+        : Number.isInteger(input.continuation?.automaticRetryCount)
+          ? input.continuation.automaticRetryCount
+          : 0,
+      lastChunkAt,
+    });
+  }
 
   while (acceptedQuestions.length < input.questionCount) {
     const questionOffset = acceptedQuestions.length;
@@ -1310,7 +1606,7 @@ export async function generateQuizFromPlainText(
     const chunkProgress = questionOffset / input.questionCount;
     onProgress("creating_questions", 0.2 + chunkProgress * 0.72, {
       attempt: callAttempt,
-      maxAttempts: MAX_GENERATION_ATTEMPTS,
+      maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
       status: classification === "automatic_retry" ? "retrying" : "generating",
     });
     totals.aiCalls += 1;
@@ -1326,7 +1622,7 @@ export async function generateQuizFromPlainText(
     let callFailure;
     let firstQuestionInCall = true;
 
-    const publishQuestion = (rawQuestion, relativeIndex, title) => {
+    const publishQuestion = async (rawQuestion, relativeIndex, title) => {
       const globalIndex = questionOffset + relativeIndex;
       if (globalIndex !== acceptedQuestions.length) {
         validationFailure(
@@ -1356,7 +1652,7 @@ export async function generateQuizFromPlainText(
       );
       acceptedQuestions.push(question);
       const chunkTime = Date.now();
-      onChunk({
+      await onChunk({
         ...metadata,
         title: quizTitle,
         startIndex: globalIndex,
@@ -1386,7 +1682,7 @@ export async function generateQuizFromPlainText(
           : 0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
         {
           attempt: callAttempt,
-          maxAttempts: MAX_GENERATION_ATTEMPTS,
+          maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
           status: complete ? "complete" : "generating",
         },
       );
@@ -1478,7 +1774,7 @@ export async function generateQuizFromPlainText(
         0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
         {
           attempt: 2,
-          maxAttempts: MAX_GENERATION_ATTEMPTS,
+          maxAttempts: LEGACY_MAX_GENERATION_ATTEMPTS,
           status: "retrying",
           retryDelayMs,
           reasonCode: callFailure.reasonCode,
@@ -1516,6 +1812,326 @@ export async function generateQuizFromPlainText(
     quiz: completeQuiz,
     metrics,
   };
+}
+
+async function generateAutomaticQuiz({
+  input,
+  apiKey,
+  onProgress,
+  signal,
+  onChunk,
+  onCall,
+  metadata,
+  acceptedQuestions,
+  trueFalseAnswerPlan,
+  answerPositionByQuestion,
+  continuationStartIndex,
+  startedAt,
+  totals,
+  initialCallIndex,
+  initialOrdinalAttempt,
+  initialRetryKind,
+  lastChunkAt: initialLastChunkAt,
+  initialAutomaticRetryCount = 0,
+}) {
+  let callIndex = initialCallIndex;
+  let ordinalAttempt = initialOrdinalAttempt;
+  let retryKind = ordinalAttempt > 1 ? initialRetryKind : undefined;
+  let automaticRetryCount = initialAutomaticRetryCount;
+  let lastChunkAt = initialLastChunkAt;
+
+  while (acceptedQuestions.length < input.questionCount) {
+    if (Date.now() - startedAt > MAX_ACTIVE_RECOVERY_MS) {
+      throw new GenerationFailure(
+        "Automatic generation reached its active recovery time limit.",
+        "recovery_budget_exhausted",
+      );
+    }
+    const questionOffset = acceptedQuestions.length;
+    const classification = ordinalAttempt > 1 ? "automatic_retry" : "primary";
+    const callRetryKind = retryKind;
+    if (classification === "automatic_retry") {
+      if (!retryKind || automaticRetryCount >= MAX_AUTOMATIC_RETRIES) {
+        throw new GenerationFailure(
+          "Automatic generation reached its retry budget.",
+          "recovery_budget_exhausted",
+        );
+      }
+      automaticRetryCount += 1;
+      totals.retryCount += 1;
+    }
+    const chunkInput = {
+      ...input,
+      automaticMode: true,
+      legacyMode: false,
+      questionCount: 1,
+      totalQuestionCount: input.questionCount,
+      questionOffset,
+      questionTypePlan: input.questionTypePlan.slice(
+        questionOffset,
+        questionOffset + 1,
+      ),
+      trueFalseAnswerPlan: trueFalseAnswerPlan.slice(
+        questionOffset,
+        questionOffset + 1,
+      ),
+      acceptedQuestions: [...acceptedQuestions],
+      repairGuidance: repairGuidanceFor(callRetryKind),
+    };
+    const maximumRetries = retryLimitForKind(retryKind);
+    onProgress(
+      "creating_questions",
+      0.2 + (questionOffset / input.questionCount) * 0.72,
+      {
+        attempt: ordinalAttempt,
+        maxAttempts: maximumRetries + 1,
+        status:
+          classification === "automatic_retry" ? "retrying" : "generating",
+        ...(classification === "automatic_retry"
+          ? {
+              retryOrdinal: questionOffset + 1,
+              ordinalAttempt,
+              retryKind,
+              recoverySessionId: input.recoverySessionId,
+            }
+          : {}),
+      },
+    );
+
+    totals.aiCalls += 1;
+    const callStartedAt = Date.now();
+    let outcome = "complete";
+    let retryDelayMs = 0;
+    let callFailure;
+    let nextRetryKind;
+    let callUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      usageComplete: false,
+    };
+    const acceptedBeforeCall = acceptedQuestions.length;
+    const publishQuestion = async (rawQuestion, relativeIndex) => {
+      if (relativeIndex !== 0 || acceptedQuestions.length !== questionOffset) {
+        validationFailure(
+          "DeepSeek streamed a singleton question out of order.",
+          "type_or_order_mismatch",
+        );
+      }
+      const validated = validateQuiz({ questions: [rawQuestion] }, chunkInput);
+      const question = randomizeQuestionAtPosition(
+        validated.questions[0],
+        answerPositionByQuestion.get(questionOffset),
+      );
+      acceptedQuestions.push(question);
+      const chunkTime = Date.now();
+      await onChunk({
+        ...metadata,
+        title: input.title,
+        startIndex: questionOffset,
+        totalQuestions: input.questionCount,
+        question,
+        metrics: {
+          aiCalls: 0,
+          retryCount: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          reasoningTokens: 0,
+          elapsedMs: Math.max(1, chunkTime - lastChunkAt),
+        },
+      });
+      lastChunkAt = chunkTime;
+    };
+
+    try {
+      const result = await callDeepSeekJson(
+        chunkInput,
+        apiKey,
+        signal,
+        classification === "automatic_retry",
+        publishQuestion,
+      );
+      validateQuiz(result.quiz, chunkInput);
+      if (acceptedQuestions.length !== acceptedBeforeCall + 1) {
+        validationFailure(
+          "DeepSeek did not stream the requested singleton question.",
+          "truncated_json",
+        );
+      }
+      callUsage = result.usage;
+      totals.inputTokens += result.usage.inputTokens;
+      totals.outputTokens += result.usage.outputTokens;
+      totals.reasoningTokens += result.usage.reasoningTokens;
+    } catch (error) {
+      callFailure =
+        error instanceof GenerationFailure
+          ? error
+          : new GenerationFailure(
+              error instanceof Error
+                ? error.message
+                : "The generated question was invalid.",
+              "schema_invalid",
+            );
+      outcome = callFailure.reasonCode;
+      if (acceptedQuestions.length === acceptedBeforeCall + 1) {
+        callFailure = undefined;
+        outcome = "complete";
+      } else {
+        const nextKind = automaticRetryKindForFailure(callFailure.reasonCode);
+        const retryNumber = ordinalAttempt;
+        const limit =
+          nextKind === "transport"
+            ? MAX_TRANSPORT_RETRIES_PER_ORDINAL
+            : MAX_CONTENT_RETRIES_PER_ORDINAL;
+        const canRetry =
+          nextKind &&
+          retryNumber <= limit &&
+          automaticRetryCount < MAX_AUTOMATIC_RETRIES &&
+          Date.now() - startedAt < MAX_ACTIVE_RECOVERY_MS;
+        if (canRetry) {
+          nextRetryKind = nextKind;
+          retryDelayMs =
+            nextKind === "transport"
+              ? boundedRetryDelayMilliseconds(
+                  retryNumber,
+                  callFailure.retryAfterMs,
+                  () => secureRandomUint32() / 0x1_0000_0000,
+                )
+              : boundedRetryDelayMilliseconds(
+                  retryNumber,
+                  0,
+                  () => secureRandomUint32() / 0x1_0000_0000,
+                ) / 3;
+          retryDelayMs = Math.max(150, Math.round(retryDelayMs));
+        }
+      }
+    }
+
+    await onCall({
+      protocolVersion: PROTOCOL_VERSION,
+      generationSessionId: input.generationSessionId,
+      recoverySessionId: input.recoverySessionId,
+      callIndex,
+      startIndex: questionOffset,
+      ordinalAttempt,
+      requestedCount: 1,
+      acceptedCount: acceptedQuestions.length - acceptedBeforeCall,
+      classification,
+      ...(classification === "automatic_retry"
+        ? { retryKind: callRetryKind }
+        : {}),
+      outcome,
+      retryDelayMs,
+      elapsedMs: Math.max(0, Date.now() - callStartedAt),
+      ...(callUsage.usageComplete
+        ? {
+            inputTokens: callUsage.inputTokens,
+            outputTokens: callUsage.outputTokens,
+            reasoningTokens: callUsage.reasoningTokens,
+          }
+        : {}),
+      usageComplete: callUsage.usageComplete,
+    });
+    callIndex += 1;
+
+    if (!callFailure) {
+      ordinalAttempt = 1;
+      retryKind = undefined;
+      const complete = acceptedQuestions.length === input.questionCount;
+      onProgress(
+        complete ? "finalizing_questions" : "creating_questions",
+        complete
+          ? 1
+          : 0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
+        {
+          attempt: 1,
+          maxAttempts: 1,
+          status: complete ? "complete" : "generating",
+          recoverySessionId: input.recoverySessionId,
+        },
+      );
+      continue;
+    }
+    if (!nextRetryKind || retryDelayMs <= 0) throw callFailure;
+    retryKind = nextRetryKind;
+    ordinalAttempt += 1;
+    onProgress(
+      "creating_questions",
+      0.2 + (acceptedQuestions.length / input.questionCount) * 0.72,
+      {
+        attempt: ordinalAttempt,
+        maxAttempts: retryLimitForKind(nextRetryKind) + 1,
+        status: "retrying",
+        retryOrdinal: questionOffset + 1,
+        ordinalAttempt,
+        retryKind,
+        retryDelayMs,
+        reasonCode: callFailure.reasonCode,
+        recoverySessionId: input.recoverySessionId,
+      },
+    );
+    await waitForRetry(retryDelayMs, signal);
+  }
+
+  const metrics = {
+    ...totals,
+    elapsedMs: Math.max(1, Date.now() - startedAt),
+  };
+  if (continuationStartIndex > 0) {
+    return {
+      ...metadata,
+      title: input.title,
+      generatedStartIndex: continuationStartIndex,
+      totalQuestions: input.questionCount,
+      metrics,
+    };
+  }
+  return {
+    ...metadata,
+    quiz: { title: input.title, questions: acceptedQuestions },
+    metrics,
+  };
+}
+
+function automaticRetryKindForFailure(reasonCode) {
+  if (
+    ["transient_http", "network_interrupted", "timeout"].includes(reasonCode)
+  ) {
+    return "transport";
+  }
+  if (reasonCode === "empty_content") return "empty_content";
+  if (["truncated_json", "finish_length"].includes(reasonCode)) {
+    return "truncated_output";
+  }
+  if (reasonCode === "duplicate_question") return "duplicate_repair";
+  if (reasonCode === "answer_mapping_invalid") return "answer_repair";
+  if (["schema_invalid", "type_or_order_mismatch"].includes(reasonCode)) {
+    return "content_repair";
+  }
+  return null;
+}
+
+function retryLimitForKind(retryKind) {
+  return retryKind === "transport" || retryKind === "automatic_resume"
+    ? MAX_TRANSPORT_RETRIES_PER_ORDINAL
+    : MAX_CONTENT_RETRIES_PER_ORDINAL;
+}
+
+function repairGuidanceFor(retryKind) {
+  const guidance = {
+    transport: "Repeat the same singleton JSON task exactly.",
+    empty_content: "Return the required non-empty JSON object immediately.",
+    truncated_output:
+      "Keep every field concise and close the singleton JSON object.",
+    content_repair:
+      "Follow the exact singleton type schema and required fields.",
+    duplicate_repair:
+      "Use a different supported concept and do not paraphrase any accepted prompt.",
+    answer_repair:
+      "Make the correct answer and distractors distinct and unambiguous.",
+    automatic_resume: "Resume only this first missing singleton question.",
+  };
+  return retryKind ? guidance[retryKind] : undefined;
 }
 
 async function waitForRetry(milliseconds, signal) {
@@ -1559,10 +2175,15 @@ export async function generateLocalQuiz(
       jobId: context?.jobId,
       generationId: context?.generationId,
       generationSessionId: context?.generationSessionId,
+      recoverySessionId: context?.recoverySessionId,
       generationProfile: context?.generationProfile,
       transcriptFingerprint: context?.transcriptFingerprint,
       plainText,
       continuation: context?.continuation,
+      callIndexStart: context?.continuation?.nextCallIndex,
+      ordinalAttemptStart: context?.continuation?.nextOrdinalAttempt,
+      retryKind: context?.continuation?.retryKind,
+      automaticRetryCount: context?.continuation?.automaticRetryCount,
     },
     apiKey,
     onProgress,

@@ -7,12 +7,14 @@ import {
   buildTrueFalseAnswerPlanFromSeed,
   generateQuizFromPlainText,
   normalizeGeneratedQuestion,
+  serializeFormulaTokens,
 } from "../src/local-generator.js";
 
 const IDS = {
   generation: "11111111-1111-4111-8111-111111111111",
   session: "22222222-2222-4222-8222-222222222222",
   job: "33333333-3333-4333-8333-333333333333",
+  recovery: "44444444-4444-4444-8444-444444444444",
 };
 
 function stableInput(
@@ -26,6 +28,7 @@ function stableInput(
     questionTypes,
     generationId: IDS.generation,
     generationSessionId: IDS.session,
+    recoverySessionId: IDS.recovery,
     jobId: IDS.job,
     transcriptFingerprint: "1234abcd",
     plainText:
@@ -56,7 +59,7 @@ function taskFromRequest(request) {
   return { body, task, slots };
 }
 
-function questionForSlot(slot) {
+function questionForSlot(slot, automaticMode = true) {
   const marker = [
     "photosynthesis",
     "kinematics",
@@ -82,16 +85,27 @@ function questionForSlot(slot) {
     explanation: `The lesson explicitly supports concept ${slot.ordinal}.`,
   };
   if (slot.type === "multiple_choice") {
+    if (!automaticMode) {
+      return {
+        ...common,
+        choices: [
+          `Supported answer ${slot.ordinal}`,
+          `Distractor A ${slot.ordinal}`,
+          `Distractor B ${slot.ordinal}`,
+          `Distractor C ${slot.ordinal}`,
+        ],
+        answerIndex: 0,
+        answer: `Supported answer ${slot.ordinal}`,
+      };
+    }
     return {
       ...common,
-      choices: [
-        `Supported answer ${slot.ordinal}`,
+      correctAnswer: `Supported answer ${slot.ordinal}`,
+      distractors: [
         `Distractor A ${slot.ordinal}`,
         `Distractor B ${slot.ordinal}`,
         `Distractor C ${slot.ordinal}`,
       ],
-      answerIndex: 0,
-      answer: `Supported answer ${slot.ordinal}`,
     };
   }
   if (slot.type === "true_false") {
@@ -132,13 +146,41 @@ function completionResponse(value, finishReason = "stop") {
   );
 }
 
+function formulaTokens(expression) {
+  const matches = expression.match(
+    /\p{L}[\p{L}\p{N}_]*|\d+(?:\.\d+)?|[+\-*/^=(),']/gu,
+  );
+  assert.equal(matches?.join(""), expression);
+  return matches.map((value) => ({
+    kind: /^[\p{L}_]/u.test(value)
+      ? "identifier"
+      : /^\d/.test(value)
+        ? "number"
+        : value === "("
+          ? "left_paren"
+          : value === ")"
+            ? "right_paren"
+            : value === ","
+              ? "comma"
+              : value === "'"
+                ? "prime"
+                : "operator",
+    value,
+  }));
+}
+
 function responseForRequest(request, mutate = (value) => value) {
   const task = taskFromRequest(request);
+  const automaticMode = task.body.messages[0].content.includes(
+    "return one correctAnswer",
+  );
   return completionResponse(
     mutate(
       {
         title: "A model title that must be ignored",
-        questions: task.slots.map(questionForSlot),
+        questions: task.slots.map((slot) =>
+          questionForSlot(slot, automaticMode),
+        ),
       },
       task,
     ),
@@ -239,6 +281,40 @@ function interruptedSseResponse(value, acceptedCount) {
   );
 }
 
+function interruptedBeforeQuestionCompletes(value) {
+  const encoder = new TextEncoder();
+  const source = JSON.stringify(value);
+  const splitIndex = Math.max(
+    1,
+    source.indexOf('"question"') + '"question":"partial'.length,
+  );
+  let read = false;
+  return new Response(
+    new ReadableStream({
+      pull(controller) {
+        if (read) {
+          controller.error(new Error("forced transport interruption"));
+          return;
+        }
+        read = true;
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              choices: [
+                {
+                  finish_reason: null,
+                  delta: { content: source.slice(0, splitIndex) },
+                },
+              ],
+            })}\n\n`,
+          ),
+        );
+      },
+    }),
+    { status: 200, headers: { "content-type": "text/event-stream" } },
+  );
+}
+
 function maxRun(values) {
   let maximum = 0;
   let current = 0;
@@ -251,7 +327,7 @@ function maxRun(values) {
   return maximum;
 }
 
-test("v5.2 uses the stable non-thinking request profile and adaptive primary chunks", async (context) => {
+test("v5.3 uses singleton primary calls and local answer mapping", async (context) => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   const calls = [];
@@ -275,31 +351,41 @@ test("v5.2 uses the stable non-thinking request profile and adaptive primary chu
 
   assert.deepEqual(
     requests.map((request) => request.slots.length),
-    [1, 3, 3, 3, 3, 2],
+    Array(15).fill(1),
   );
   for (const request of requests) {
     assert.deepEqual(request.body.thinking, { type: "disabled" });
     assert.equal(request.body.temperature, 0.2);
     assert.equal("reasoning_effort" in request.body, false);
     assert.equal("top_p" in request.body, false);
-    assert.equal(
-      request.body.max_tokens,
-      request.slots.length === 1
-        ? 4_096
-        : request.slots.length === 2
-          ? 6_144
-          : 8_192,
+    assert.equal(request.body.max_tokens, 4_096);
+    assert.match(
+      request.body.messages[0].content,
+      /one correctAnswer and exactly three unique distractors/,
     );
+    assert.doesNotMatch(request.task, /"answerIndex"/);
   }
-  assert.equal(result.protocolVersion, 6);
-  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.2");
-  assert.equal(result.validatorVersion, "validator-local-progressive-v4.1");
-  assert.equal(result.generationProfile, "stable_non_thinking_v5_2");
+  assert.equal(result.protocolVersion, 7);
+  assert.equal(result.promptVersion, "quiz-local-json-stream-v5.3");
+  assert.equal(result.validatorVersion, "validator-local-progressive-v4.2");
+  assert.equal(result.importVersion, "extension-progressive-import-v5");
+  assert.equal(result.generationProfile, "stable_auto_recovery_v5_3");
   assert.equal(result.quiz.title, "Trusted source lesson title");
   assert.equal(result.metrics.aiCalls, requests.length);
   assert.equal(result.metrics.retryCount, 0);
   assert.equal(calls.length, requests.length);
   assert.ok(calls.every((event) => event.classification === "primary"));
+  assert.ok(calls.every((event) => event.protocolVersion === 7));
+  assert.ok(calls.every((event) => event.requestedCount === 1));
+  assert.ok(calls.every((event) => event.ordinalAttempt === 1));
+  assert.ok(calls.every((event) => event.retryKind === undefined));
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.answerIndex >= 0 &&
+        question.answer === question.choices[question.answerIndex],
+    ),
+  );
 });
 
 test("question one is emitted from one-character SSE before its response resolves", async (context) => {
@@ -352,33 +438,27 @@ test("question one is emitted from one-character SSE before its response resolve
   assert.equal(result.quiz.questions.length, 5);
 });
 
-test("one-character SSE supports every one-, two-, and three-question chunk shape", async (context) => {
+test("one-character SSE supports singleton MC, true/false, and short-answer calls", async (context) => {
   const originalFetch = globalThis.fetch;
-  const observedSizes = new Set();
+  const observedTypes = new Set();
   context.after(() => {
     globalThis.fetch = originalFetch;
   });
   globalThis.fetch = async (_url, init) => {
     const task = taskFromRequest(init.body);
-    observedSizes.add(task.slots.length);
+    assert.equal(task.slots.length, 1);
+    observedTypes.add(task.slots[0].type);
     return oneCharacterSseResponse({
       questions: task.slots.map(questionForSlot),
     }).response;
   };
 
-  await generateQuizFromPlainText(
-    stableInput(5, ["multiple_choice"]),
-    "sk-local-test",
-  );
-  await generateQuizFromPlainText(
-    {
-      ...stableInput(5, ["short_answer"]),
-      generationId: "44444444-4444-4444-8444-444444444444",
-      generationSessionId: "55555555-5555-4555-8555-555555555555",
-    },
-    "sk-local-test",
-  );
-  assert.deepEqual([...observedSizes].sort(), [1, 2, 3]);
+  await generateQuizFromPlainText(stableInput(), "sk-local-test");
+  assert.deepEqual([...observedTypes].sort(), [
+    "multiple_choice",
+    "short_answer",
+    "true_false",
+  ]);
 });
 
 test("safe normalization repairs only bounded representation differences", async (context) => {
@@ -390,11 +470,14 @@ test("safe normalization repairs only bounded representation differences", async
     responseForRequest(init.body, (value) => {
       value.questions = value.questions.map((question) => {
         if (question.type === "multiple_choice") {
+          const choices = [question.correctAnswer, ...question.distractors];
+          const { correctAnswer, distractors, ...common } = question;
           return {
-            ...question,
+            ...common,
             concept: `  ${question.concept}  `,
+            choices,
             answerIndex: "0",
-            answer: question.answer.toUpperCase(),
+            answer: correctAnswer.toUpperCase(),
             unknownModelField: "discard me",
           };
         }
@@ -443,6 +526,91 @@ test("safe normalization repairs only bounded representation differences", async
   );
 });
 
+test("formula token structures are serialized locally into canonical stored answers", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const canonical = "(u'(x)*v(x)-u(x)*v'(x))/(v(x)^2)";
+  const prompts = [
+    "Which quotient-rule derivative formula is supported by the lesson?",
+    "How does the lesson express the derivative of a ratio of functions?",
+    "Write the formula used to differentiate a numerator divided by a denominator.",
+    "What symbolic expression combines u, v, and their derivatives for a quotient?",
+    "State the lesson's denominator-squared differentiation equation.",
+  ];
+  globalThis.fetch = async (_url, init) =>
+    responseForRequest(init.body, (value, task) => {
+      const ordinal = task.slots[0].ordinal;
+      value.questions[0] = {
+        ...value.questions[0],
+        question: prompts[ordinal - 1],
+        answer: "(u'(x)*v(x)-u(x)*v'(x))/(v(x)²)",
+        formulaTokens: formulaTokens(canonical),
+        acceptableAnswers: [],
+      };
+      return value;
+    });
+
+  const result = await generateQuizFromPlainText(
+    stableInput(5, ["short_answer"]),
+    "sk-local-test",
+  );
+  assert.equal(result.quiz.questions.length, 5);
+  assert.ok(
+    result.quiz.questions.every(
+      (question) =>
+        question.answer === canonical && !("formulaTokens" in question),
+    ),
+  );
+  assert.equal(serializeFormulaTokens(formulaTokens(canonical)), canonical);
+  assert.equal(
+    serializeFormulaTokens(formulaTokens("u(x)/v(x)")),
+    null,
+    "division operands must be explicitly parenthesized",
+  );
+});
+
+test("a formula question without a valid token structure uses only bounded automatic repairs", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  const events = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    fetchCount += 1;
+    return responseForRequest(init.body, (value) => {
+      value.questions[0].question =
+        "What derivative formula is supported by the lesson?";
+      value.questions[0].answer = "(f(b)-f(a))/(b-a)";
+      delete value.questions[0].formulaTokens;
+      return value;
+    });
+  };
+
+  await assert.rejects(
+    generateQuizFromPlainText(
+      stableInput(5, ["short_answer"]),
+      "sk-local-test",
+      () => undefined,
+      undefined,
+      () => undefined,
+      (event) => events.push(event),
+    ),
+    (error) => error?.reasonCode === "schema_invalid",
+  );
+  assert.equal(fetchCount, 3);
+  assert.deepEqual(
+    events.map((event) => event.classification),
+    ["primary", "automatic_retry", "automatic_retry"],
+  );
+  assert.deepEqual(
+    events.slice(1).map((event) => event.retryKind),
+    ["content_repair", "content_repair"],
+  );
+});
+
 for (const failure of [
   {
     name: "empty successful content",
@@ -457,28 +625,20 @@ for (const failure of [
     response: () => completionResponse('{"questions":[', "length"),
   },
   {
-    name: "wrong slot id",
-    expected: "type_or_order_mismatch",
-    input: stableInput(5, ["multiple_choice"]),
-    response: (request) =>
-      responseForRequest(request, (value) => {
-        value.questions[0].id = "q9";
-        return value;
-      }),
-  },
-  {
     name: "ambiguous choices",
     expected: "answer_mapping_invalid",
+    retryKind: "answer_repair",
     input: stableInput(5, ["multiple_choice"]),
     response: (request) =>
       responseForRequest(request, (value) => {
-        value.questions[0].choices[1] = value.questions[0].choices[0];
+        value.questions[0].distractors[0] = value.questions[0].correctAnswer;
         return value;
       }),
   },
   {
     name: "missing rubric",
     expected: "schema_invalid",
+    retryKind: "content_repair",
     input: stableInput(5, ["short_answer"]),
     response: (request) =>
       responseForRequest(request, (value) => {
@@ -487,7 +647,13 @@ for (const failure of [
       }),
   },
 ]) {
-  test(`${failure.name} pauses with zero automatic retries`, async (context) => {
+  if (!failure.retryKind) {
+    failure.retryKind =
+      failure.expected === "empty_content"
+        ? "empty_content"
+        : "truncated_output";
+  }
+  test(`${failure.name} exhausts exactly two bounded content repairs`, async (context) => {
     const originalFetch = globalThis.fetch;
     let fetchCount = 0;
     const events = [];
@@ -509,14 +675,53 @@ for (const failure of [
       ),
       (error) => error?.reasonCode === failure.expected,
     );
-    assert.equal(fetchCount, 1);
-    assert.equal(events.length, 1);
-    assert.equal(events[0].classification, "primary");
-    assert.equal(events[0].outcome, failure.expected);
+    assert.equal(fetchCount, 3);
+    assert.equal(events.length, 3);
+    assert.deepEqual(
+      events.map((event) => event.classification),
+      ["primary", "automatic_retry", "automatic_retry"],
+    );
+    assert.deepEqual(
+      events.map((event) => event.outcome),
+      [failure.expected, failure.expected, failure.expected],
+    );
+    assert.equal(events[1].retryKind, failure.retryKind);
+    assert.equal(events[2].retryKind, failure.retryKind);
+    assert.equal(events[2].retryDelayMs, 0);
   });
 }
 
-test("duplicate content pauses at the first missing ordinal without a blind request", async (context) => {
+test("a wrong model id is assigned locally without another DeepSeek request", async (context) => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  const events = [];
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    fetchCount += 1;
+    return responseForRequest(init.body, (value) => {
+      value.questions[0].id = "q15";
+      return value;
+    });
+  };
+  const result = await generateQuizFromPlainText(
+    stableInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => events.push(event),
+  );
+  assert.equal(fetchCount, 5);
+  assert.deepEqual(
+    result.quiz.questions.map((question) => question.id),
+    ["q1", "q2", "q3", "q4", "q5"],
+  );
+  assert.ok(events.every((event) => event.classification === "primary"));
+});
+
+test("duplicate content repairs only the first missing singleton", async (context) => {
   const originalFetch = globalThis.fetch;
   let fetchCount = 0;
   const chunks = [];
@@ -527,36 +732,35 @@ test("duplicate content pauses at the first missing ordinal without a blind requ
   globalThis.fetch = async (_url, init) => {
     fetchCount += 1;
     return responseForRequest(init.body, (value) => {
-      if (fetchCount === 2 && value.questions.length > 1) {
-        value.questions[1].question = value.questions[0].question;
+      if (fetchCount === 2) {
+        value.questions[0].question =
+          "In the lesson's photosynthesis example, which specific result is supported for case 1?";
       }
       return value;
     });
   };
-  await assert.rejects(
-    generateQuizFromPlainText(
-      stableInput(5, ["multiple_choice"]),
-      "sk-local-test",
-      () => undefined,
-      undefined,
-      (chunk) => chunks.push(chunk),
-      (event) => events.push(event),
-    ),
-    (error) => error?.reasonCode === "duplicate_question",
+  const result = await generateQuizFromPlainText(
+    stableInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    (chunk) => chunks.push(chunk),
+    (event) => events.push(event),
   );
-  assert.equal(fetchCount, 2, "q1 plus one failed primary chunk");
+  assert.equal(fetchCount, 6, "five singleton primaries plus one q2 repair");
+  assert.equal(result.quiz.questions.length, 5);
   assert.deepEqual(
     chunks.map((chunk) => chunk.question.id),
-    ["q1", "q2"],
+    ["q1", "q2", "q3", "q4", "q5"],
   );
-  assert.equal(
-    events.filter((event) => event.classification === "automatic_retry").length,
-    0,
-  );
-  assert.equal(events.at(-1).acceptedCount, 1);
+  assert.equal(events[1].outcome, "duplicate_question");
+  assert.equal(events[1].acceptedCount, 0);
+  assert.equal(events[2].classification, "automatic_retry");
+  assert.equal(events[2].retryKind, "duplicate_repair");
+  assert.equal(events[2].startIndex, 1);
 });
 
-test("a confirmed transient failure receives exactly one automatic retry", async (context) => {
+test("a confirmed transient failure retries only the missing singleton", async (context) => {
   const originalFetch = globalThis.fetch;
   let fetchCount = 0;
   const events = [];
@@ -564,41 +768,79 @@ test("a confirmed transient failure receives exactly one automatic retry", async
   context.after(() => {
     globalThis.fetch = originalFetch;
   });
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (_url, init) => {
     fetchCount += 1;
-    return new Response("", {
-      status: fetchCount === 1 ? 429 : 503,
-      headers: { "retry-after": "0.8" },
-    });
+    if (fetchCount === 1) {
+      return new Response("", {
+        status: 429,
+        headers: { "retry-after": "0.8" },
+      });
+    }
+    return responseForRequest(init.body);
   };
-  await assert.rejects(
-    generateQuizFromPlainText(
-      stableInput(5, ["multiple_choice"]),
-      "sk-local-test",
-      (stage, value, detail) => progress.push({ stage, value, detail }),
-      undefined,
-      () => undefined,
-      (event) => events.push(event),
-    ),
-    (error) => error?.reasonCode === "transient_http",
+  const result = await generateQuizFromPlainText(
+    stableInput(5, ["multiple_choice"]),
+    "sk-local-test",
+    (stage, value, detail) => progress.push({ stage, value, detail }),
+    undefined,
+    () => undefined,
+    (event) => events.push(event),
   );
-  assert.equal(fetchCount, 2);
+  assert.equal(result.quiz.questions.length, 5);
+  assert.equal(fetchCount, 6);
   assert.deepEqual(
-    events.map((event) => event.classification),
+    events.slice(0, 2).map((event) => event.classification),
     ["primary", "automatic_retry"],
   );
-  assert.equal(events[0].retryDelayMs, 800);
+  assert.ok(events[0].retryDelayMs >= 800);
+  assert.ok(events[0].retryDelayMs <= 938);
   assert.equal(events[1].retryDelayMs, 0);
+  assert.equal(events[1].retryKind, "transport");
   assert.ok(
     progress.some(
       (event) =>
         event.detail.status === "retrying" &&
         event.detail.attempt === 2 &&
-        event.detail.maxAttempts === 2 &&
-        event.detail.retryDelayMs === 800,
+        event.detail.maxAttempts === 5 &&
+        event.detail.retryDelayMs >= 800,
     ),
   );
 });
+
+for (const failure of [
+  { status: 401, reasonCode: "credential_required" },
+  { status: 402, reasonCode: "billing_required" },
+]) {
+  test(`${failure.status} enters action-required handling with no blind model retry`, async (context) => {
+    const originalFetch = globalThis.fetch;
+    let fetchCount = 0;
+    const events = [];
+    context.after(() => {
+      globalThis.fetch = originalFetch;
+    });
+    globalThis.fetch = async () => {
+      fetchCount += 1;
+      return new Response("", { status: failure.status });
+    };
+
+    await assert.rejects(
+      generateQuizFromPlainText(
+        stableInput(5, ["multiple_choice"]),
+        "sk-local-test",
+        () => undefined,
+        undefined,
+        () => undefined,
+        (event) => events.push(event),
+      ),
+      (error) => error?.reasonCode === failure.reasonCode,
+    );
+    assert.equal(fetchCount, 1);
+    assert.equal(events.length, 1);
+    assert.equal(events[0].classification, "primary");
+    assert.equal(events[0].outcome, failure.reasonCode);
+    assert.equal(events[0].retryDelayMs, 0);
+  });
+}
 
 test("a transport close after every requested object does not waste the retry budget", async (context) => {
   const originalFetch = globalThis.fetch;
@@ -627,11 +869,11 @@ test("a transport close after every requested object does not waste the retry bu
 
   assert.deepEqual(
     requests.map((request) => request.slots.map((slot) => slot.ordinal)),
-    [[1], [2, 3, 4], [5]],
+    [[1], [2], [3], [4], [5]],
   );
   assert.equal(result.metrics.retryCount, 0);
   assert.ok(events.every((event) => event.classification === "primary"));
-  assert.equal(events[0].outcome, "network_interrupted");
+  assert.equal(events[0].outcome, "complete");
   assert.equal(events[0].acceptedCount, events[0].requestedCount);
 });
 
@@ -647,7 +889,7 @@ test("a partial transport failure preserves accepted questions and retries only 
     const task = taskFromRequest(init.body);
     requests.push(task);
     const value = { questions: task.slots.map(questionForSlot) };
-    if (requests.length === 2) return interruptedSseResponse(value, 2);
+    if (requests.length === 2) return interruptedBeforeQuestionCompletes(value);
     return completionResponse(value);
   };
 
@@ -661,7 +903,7 @@ test("a partial transport failure preserves accepted questions and retries only 
   );
   assert.deepEqual(
     requests.map((request) => request.slots.map((slot) => slot.ordinal)),
-    [[1], [2, 3, 4], [4], [5]],
+    [[1], [2], [2], [3], [4], [5]],
   );
   assert.deepEqual(
     chunks.map((chunk) => chunk.question.id),
@@ -669,7 +911,7 @@ test("a partial transport failure preserves accepted questions and retries only 
   );
   assert.equal(result.metrics.retryCount, 1);
   assert.equal(events.length, requests.length);
-  assert.equal(events[1].acceptedCount, 2);
+  assert.equal(events[1].acceptedCount, 0);
   assert.equal(events[1].outcome, "network_interrupted");
   assert.equal(events[2].classification, "automatic_retry");
 });
@@ -751,6 +993,65 @@ test("v5.1 continuation remains isolated on its original metadata", async (conte
   assert.ok(
     events.every((event) => event.classification === "manual_continuation"),
   );
+});
+
+test("v5.3 recovery resumes the first server-missing singleton without a manual call", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  const events = [];
+  const seed = "a".repeat(64);
+  const types = buildQuestionTypePlanFromSeed(["multiple_choice"], 5, seed);
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (_url, init) => {
+    const task = taskFromRequest(init.body);
+    requests.push(task);
+    return responseForRequest(init.body);
+  };
+
+  const result = await generateQuizFromPlainText(
+    {
+      ...stableInput(5, ["multiple_choice"]),
+      continuation: {
+        startIndex: 1,
+        resultProtocolVersion: 7,
+        promptVersion: "quiz-local-json-stream-v5.3",
+        validatorVersion: "validator-local-progressive-v4.2",
+        generationProfile: "stable_auto_recovery_v5_3",
+        questionPlan: { seed, types },
+        nextCallIndex: 1,
+        nextOrdinalAttempt: 1,
+        automaticRetryCount: 0,
+        acceptedQuestions: [
+          {
+            id: "q1",
+            type: "multiple_choice",
+            concept: "Stored first concept",
+            question: "Which first result did the lesson support?",
+          },
+        ],
+      },
+    },
+    "sk-local-test",
+    () => undefined,
+    undefined,
+    () => undefined,
+    (event) => events.push(event),
+  );
+
+  assert.equal(result.protocolVersion, 7);
+  assert.equal(result.generatedStartIndex, 1);
+  assert.deepEqual(
+    requests.map((request) => request.slots[0].ordinal),
+    [2, 3, 4, 5],
+  );
+  assert.deepEqual(
+    events.map((event) => event.callIndex),
+    [1, 2, 3, 4],
+  );
+  assert.ok(events.every((event) => event.classification === "primary"));
+  assert.ok(events.every((event) => event.recoverySessionId === IDS.recovery));
 });
 
 test("a disabled rollout can start a new bank on the v5.1 profile", async (context) => {
