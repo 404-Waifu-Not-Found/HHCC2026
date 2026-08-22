@@ -3104,6 +3104,19 @@ export type ProfileLearningStatsResponse = z.infer<
   typeof ProfileLearningStatsResponseSchema
 >;
 
+export const LeaderboardEntrySchema = z
+  .object({
+    rank: z.number().int().positive(),
+    name: z.string().min(1).max(120),
+    completedQuizzes: z.number().int().nonnegative(),
+  })
+  .strict();
+export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
+export const LeaderboardResponseSchema = z
+  .object({ entries: z.array(LeaderboardEntrySchema) })
+  .strict();
+export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
+
 export const PushRegisterRequestSchema = z.object({
   token: z.string().min(8).max(1_000),
   platform: z.enum(["ios", "android", "web"]),
