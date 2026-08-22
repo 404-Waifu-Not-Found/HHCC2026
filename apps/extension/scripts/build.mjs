@@ -96,16 +96,35 @@ await esbuild({
   legalComments: "none",
 });
 
+// The local quiz engine is imported by the service worker and also depends on
+// the workspace-only contracts package. Bundle it so Chrome never sees a bare
+// workspace module specifier in the unpacked extension.
+await esbuild({
+  entryPoints: [resolve(sharedEngineRoot, "local-generator.js")],
+  outfile: resolve(extensionOutput, "local-generator.js"),
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  legalComments: "none",
+});
+
 const workplaceChatBundle = readFileSync(
   resolve(extensionOutput, "workplace-chat.js"),
   "utf8",
 );
+const localGeneratorBundle = readFileSync(
+  resolve(extensionOutput, "local-generator.js"),
+  "utf8",
+);
 if (
   /from\s*["']@clipquest\/contracts["']/.test(workplaceChatBundle) ||
-  !/runWorkplaceChatTurn/.test(workplaceChatBundle)
+  !/runWorkplaceChatTurn/.test(workplaceChatBundle) ||
+  /from\s*["']@clipquest\/contracts["']/.test(localGeneratorBundle) ||
+  !/generateLocalQuiz/.test(localGeneratorBundle)
 ) {
   throw new Error(
-    "The bundled Workplace orchestrator is missing or still references a bare module specifier.",
+    "The bundled extension modules are missing or still reference a bare workspace module specifier.",
   );
 }
 
