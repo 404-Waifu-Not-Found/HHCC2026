@@ -91,21 +91,15 @@ profileRouter.get("/leaderboard", async (c) => {
 
 profileRouter.get("/leaderboard/avatar/:userId", async (c) => {
   const userId = c.req.param("userId");
+  const fallback = `https://github.com/identicons/${encodeURIComponent(userId)}.png`;
   const row = await c.env.DB.prepare("SELECT image FROM user WHERE id = ?")
     .bind(userId)
     .first<{ image: string | null }>();
   if (!row?.image?.startsWith(`avatars/${userId}/`)) {
-    return new Response(null, {
-      status: 404,
-      headers: { "Cache-Control": "public, max-age=60" },
-    });
+    return Response.redirect(fallback, 302);
   }
   const object = await c.env.PRIVATE_BUCKET.get(row.image);
-  if (!object)
-    return new Response(null, {
-      status: 404,
-      headers: { "Cache-Control": "public, max-age=60" },
-    });
+  if (!object) return Response.redirect(fallback, 302);
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("ETag", object.httpEtag);
