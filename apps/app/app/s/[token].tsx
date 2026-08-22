@@ -97,7 +97,9 @@ export default function SharedQuestScreen() {
       });
     } catch (cause) {
       if (cause instanceof ClientApiError && cause.status === 401) {
-        router.push({
+        // `replace`, not `push`: signing in returns here, and a pushed preview
+        // would stay mounted beneath the fresh one.
+        router.replace({
           pathname: "/(auth)/sign-in",
           params: { next: `/s/${shareToken}` },
         });
@@ -284,7 +286,7 @@ export default function SharedQuestScreen() {
                       />
                     }
                     onPress={() =>
-                      router.push({
+                      router.replace({
                         pathname: "/(auth)/sign-in",
                         params: { next: `/s/${shareToken}` },
                       })
@@ -296,7 +298,7 @@ export default function SharedQuestScreen() {
                     testID="sign-up-to-start"
                     variant="ghost"
                     onPress={() =>
-                      router.push({
+                      router.replace({
                         pathname: "/(auth)/sign-up",
                         params: { next: `/s/${shareToken}` },
                       })

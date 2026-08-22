@@ -1488,10 +1488,9 @@ test("shares a finished quest; a signed-out recipient previews it, signs in, and
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(SHARE_URL);
 
-  // Claim + ordinary start land on the quiz route. Signing in replaced the
-  // sign-in route with the preview, so the pre-sign-in preview stays mounted
-  // beneath the fresh one: act on the topmost screen.
-  const startButton = page.getByTestId("start-shared-quest").last();
+  // Claim + ordinary start land on the quiz route. The preview replaced itself
+  // with the sign-in route, so exactly one preview is mounted afterwards.
+  const startButton = page.getByTestId("start-shared-quest");
   await expect(startButton).toBeVisible({ timeout: 10_000 });
   await startButton.click();
   await expectQuizRoute(page);
