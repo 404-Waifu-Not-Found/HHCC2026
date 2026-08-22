@@ -29,6 +29,8 @@ export function VideoCard({
   onExport,
   onGenerateNotes,
   notesPending = false,
+  onDelete,
+  deletePending = false,
 }: {
   card: LibraryCard;
   onPress(): void;
@@ -37,11 +39,13 @@ export function VideoCard({
   onExport?(): void | Promise<void>;
   onGenerateNotes?(): void | Promise<void>;
   notesPending?: boolean;
+  onDelete?(): void;
+  deletePending?: boolean;
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const [hoveredAction, setHoveredAction] = useState<
-    "notes" | "open" | undefined
+    "notes" | "open" | "delete" | undefined
   >();
   const horizontal = !compact && width >= 720;
   // Home's compact carousel should read as a deliberate single-card surface
@@ -290,6 +294,67 @@ export function VideoCard({
             </MotionView>
           ) : null}
         </View>
+        {onDelete ? (
+          <View style={styles.actionWrap}>
+            <MotionPressable
+              pressDepth={0}
+              pressScale={motion.scale.iconPress}
+              accessibilityRole="button"
+              accessibilityLabel={t("deleteQuest")}
+              accessibilityHint={t("deleteQuest")}
+              accessibilityState={{
+                busy: deletePending,
+                disabled: deletePending,
+              }}
+              disabled={deletePending}
+              onBlur={() => setHoveredAction(undefined)}
+              onFocus={() => setHoveredAction("delete")}
+              onHoverIn={() => setHoveredAction("delete")}
+              onHoverOut={() => setHoveredAction(undefined)}
+              onPress={onDelete}
+              style={({ pressed, hovered }) => [
+                styles.iconButton,
+                {
+                  backgroundColor: hovered
+                    ? theme.errorSoft
+                    : theme.surfaceSunken,
+                  borderColor: hovered ? theme.error : theme.border,
+                  opacity: deletePending ? 0.45 : pressed ? 0.7 : 1,
+                  transform: [{ scale: hovered ? 1.06 : 1 }],
+                },
+                Platform.OS === "web" && {
+                  transitionDuration: `${motion.fast}ms`,
+                  transitionProperty: "transform, background-color, border-color",
+                  outlineColor: theme.focus,
+                },
+              ]}
+            >
+              {deletePending ? (
+                <ActivityIndicator color={theme.error} size="small" />
+              ) : (
+                <VoxelIcon name="delete" size={18} color={theme.error} />
+              )}
+            </MotionPressable>
+            {hoveredAction === "delete" ? (
+              <MotionView
+                duration={motion.fast}
+                pointerEvents="none"
+                preset="pop"
+                style={[
+                  styles.tooltip,
+                  {
+                    backgroundColor: theme.surfaceRaised,
+                    borderColor: theme.borderStrong,
+                  },
+                ]}
+              >
+                <Text style={[styles.tooltipText, { color: theme.text }]}>
+                  {t("deleteQuest")}
+                </Text>
+              </MotionView>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </View>
   );

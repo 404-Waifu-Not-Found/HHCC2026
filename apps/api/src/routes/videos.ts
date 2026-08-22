@@ -2,6 +2,7 @@ import {
   CaptionResolveResponseSchema,
   VerifiedVideoMetadataRequestSchema,
   VerifiedVideoMetadataResponseSchema,
+  VideoDeleteResponseSchema,
   VideoImportRequestSchema,
   VideoImportResponseSchema,
   type VideoSource,
@@ -35,6 +36,35 @@ type VideoRow = {
 
 export const videosRouter = new Hono<ApiBindings>();
 export const thumbnailRouter = new Hono<ApiBindings>();
+
+videosRouter.delete("/:videoId", async (c) => {
+  const user = c.get("user");
+  const videoId = c.req.param("videoId");
+  const video = await c.env.DB.prepare(
+    "SELECT thumbnail_key FROM videos WHERE id = ? AND owner_id = ?",
+  )
+    .bind(videoId, user.id)
+    .first<{ thumbnail_key: string | null }>();
+  if (!video) throw new ApiError(404, "video_not_found", "Video not found.");
+
+  // All learner data associated with a video uses foreign keys with ON DELETE
+  // CASCADE. Delete the owner-scoped root row only after it has been found so
+  // a caller cannot infer or remove another learner's task.
+  await c.env.DB.prepare("DELETE FROM videos WHERE id = ? AND owner_id = ?")
+    .bind(videoId, user.id)
+    .run();
+  const thumbnailKeys = new Set([
+    thumbnailCacheKey(videoId),
+    ...(video.thumbnail_key ? [video.thumbnail_key] : []),
+  ]);
+  c.executionCtx.waitUntil(
+    Promise.allSettled(
+      [...thumbnailKeys].map((key) => c.env.PRIVATE_BUCKET.delete(key)),
+    ).then(() => undefined),
+  );
+  c.header("Cache-Control", "no-store");
+  return c.json(VideoDeleteResponseSchema.parse({ videoId, deleted: true }));
+});
 
 videosRouter.patch("/:videoId/source-metadata", async (c) => {
   const user = c.get("user");

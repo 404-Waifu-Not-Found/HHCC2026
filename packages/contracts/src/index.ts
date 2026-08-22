@@ -2977,6 +2977,12 @@ export const LibraryResponseSchema = z.object({
 });
 export type LibraryResponse = z.infer<typeof LibraryResponseSchema>;
 
+export const VideoDeleteResponseSchema = z.object({
+  videoId: z.string().uuid(),
+  deleted: z.literal(true),
+});
+export type VideoDeleteResponse = z.infer<typeof VideoDeleteResponseSchema>;
+
 export const CheatSheetStatusSchema = z.enum(["ready", "failed", "none"]);
 export type CheatSheetStatus = z.infer<typeof CheatSheetStatusSchema>;
 

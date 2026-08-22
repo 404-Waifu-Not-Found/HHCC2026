@@ -1,5 +1,6 @@
 import {
   LibraryResponseSchema,
+  VideoDeleteResponseSchema,
   type LibraryCard,
   type LibraryResponse,
 } from "@clipquest/contracts";
@@ -8,6 +9,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -21,6 +23,7 @@ import { Surface } from "../../src/components/Surface";
 import { VideoCard } from "../../src/components/VideoCard";
 import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest } from "../../src/lib/api";
+import { useAppSession } from "../../src/lib/auth-client";
 import {
   createLibraryCheatSheetContext,
   exportCheatSheet,
@@ -31,6 +34,7 @@ import {
   uploadCheatSheet,
 } from "../../src/lib/cheat-sheet";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { clearImportedVideo } from "../../src/state/creation";
 import { breakpoints, spacing, typography } from "../../src/theme/tokens";
 import {
   FeedbackMotion,
@@ -45,6 +49,7 @@ const emptyLibrary: VisibleLibrary = { dueReviews: [], saved: [] };
 
 export default function LibraryScreen() {
   const { t, theme } = useSettings();
+  const { data: session } = useAppSession();
   const { width } = useWindowDimensions();
   const compact = width < breakpoints.tablet;
   const narrow = width < breakpoints.compact;
@@ -54,6 +59,7 @@ export default function LibraryScreen() {
   const [error, setError] = useState<string>();
   const [notesGeneratingId, setNotesGeneratingId] = useState<string>();
   const [notesError, setNotesError] = useState<string>();
+  const [deletingId, setDeletingId] = useState<string>();
   const { open, openingId, error: openError } = useOpenVideoCard();
 
   const refresh = useCallback(async () => {
@@ -126,6 +132,47 @@ export default function LibraryScreen() {
       }
     },
     [notesGeneratingId, refresh],
+  );
+
+  const deleteQuest = useCallback(
+    async (card: LibraryCard) => {
+      if (!session?.user.id || deletingId) return;
+      setDeletingId(card.videoId);
+      setError(undefined);
+      try {
+        await apiRequest(
+          `/api/videos/${encodeURIComponent(card.videoId)}`,
+          { method: "DELETE" },
+          VideoDeleteResponseSchema,
+        );
+        await clearImportedVideo(session.user.id, card.videoId);
+        setLibrary((current) => ({
+          dueReviews: current.dueReviews.filter(
+            (item) => item.videoId !== card.videoId,
+          ),
+          saved: current.saved.filter((item) => item.videoId !== card.videoId),
+        }));
+      } catch {
+        setError(t("deleteQuestFailed"));
+      } finally {
+        setDeletingId(undefined);
+      }
+    },
+    [deletingId, session?.user.id, t],
+  );
+
+  const confirmDeleteQuest = useCallback(
+    (card: LibraryCard) => {
+      Alert.alert(t("deleteQuest"), t("deleteQuestBody"), [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("deleteQuest"),
+          style: "destructive",
+          onPress: () => void deleteQuest(card),
+        },
+      ]);
+    },
+    [deleteQuest, t],
   );
 
   const allCards = useMemo(() => {
@@ -224,6 +271,8 @@ export default function LibraryScreen() {
               onOpen={(card) => void open(card)}
               notesGeneratingId={notesGeneratingId}
               onGenerateNotes={(card) => void generateNotes(card)}
+              deletingId={deletingId}
+              onDelete={(card) => void confirmDeleteQuest(card)}
             />
           ) : (
             <>
@@ -236,6 +285,8 @@ export default function LibraryScreen() {
                   onOpen={(card) => void open(card)}
                   notesGeneratingId={notesGeneratingId}
                   onGenerateNotes={(card) => void generateNotes(card)}
+                  deletingId={deletingId}
+                  onDelete={(card) => void confirmDeleteQuest(card)}
                 />
               ) : null}
               {savedCards.length ? (
@@ -247,6 +298,8 @@ export default function LibraryScreen() {
                   onOpen={(card) => void open(card)}
                   notesGeneratingId={notesGeneratingId}
                   onGenerateNotes={(card) => void generateNotes(card)}
+                  deletingId={deletingId}
+                  onDelete={(card) => void confirmDeleteQuest(card)}
                 />
               ) : null}
             </>
@@ -275,6 +328,8 @@ function QuestList({
   onOpen,
   notesGeneratingId,
   onGenerateNotes,
+  deletingId,
+  onDelete,
 }: {
   title: string;
   cards: LibraryCard[];
@@ -283,6 +338,8 @@ function QuestList({
   onOpen(card: LibraryCard): void;
   notesGeneratingId?: string;
   onGenerateNotes(card: LibraryCard): void;
+  deletingId?: string;
+  onDelete(card: LibraryCard): void;
 }) {
   const { theme } = useSettings();
   return (
@@ -311,6 +368,8 @@ function QuestList({
               }
               onGenerateNotes={() => onGenerateNotes(card)}
               notesPending={notesGeneratingId === card.videoId}
+              onDelete={() => onDelete(card)}
+              deletePending={deletingId === card.videoId}
             />
             {openingId === card.videoId ? (
               <ActivityIndicator
