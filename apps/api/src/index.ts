@@ -24,7 +24,7 @@ import { adminRouter } from "./routes/admin";
 import { generationRouter } from "./routes/generation";
 import { libraryRouter } from "./routes/library";
 import { pushRouter, sendDueReviewNotifications } from "./routes/push";
-import { profileRouter } from "./routes/profile";
+import { profileRouter, publicProfileRouter } from "./routes/profile";
 import {
   cheatSheetContextRouter,
   cheatSheetsRouter,
@@ -195,6 +195,7 @@ app.on(["GET", "POST"], "/api/auth/*", (c) =>
 // R2 remains private; this opaque-ID endpoint is deliberately public so native image views
 // do not need to expose the Better Auth session cookie in an image URL.
 app.route("/api/videos", thumbnailRouter);
+app.route("/api/profile", publicProfileRouter);
 
 app.use("/api/*", authenticated);
 app.route("/api/admin", adminRouter);
