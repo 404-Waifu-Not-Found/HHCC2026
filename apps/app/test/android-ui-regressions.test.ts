@@ -43,9 +43,8 @@ describe("Android UI regressions", () => {
     expect(verification).toContain(
       "<Surface elevated style={styles.actionCard}>",
     );
-    expect(verification).toContain(
-      'onPress={() => router.replace("/(auth)/sign-in")}',
-    );
+    expect(verification).toContain('pathname: "/(auth)/sign-in"');
+    expect(verification).toContain(': "/(auth)/sign-in"');
     expect(verification).toContain('variant="ghost"');
   });
 
