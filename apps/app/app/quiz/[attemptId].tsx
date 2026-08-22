@@ -574,6 +574,7 @@ export default function QuizScreen() {
   const streamIndicator = generation ? (
     <QuestionStreamIndicator generation={generation} />
   ) : undefined;
+  const comboSummary = useMemo(() => summarizeCombo(recapEntries), [recapEntries]);
 
   const submit = async () => {
     if (!question || !canSubmit || answer === undefined) {
@@ -869,6 +870,28 @@ export default function QuizScreen() {
                 />
               </StaggerItem>
             ) : null}
+            <StaggerItem
+              index={(showRecap ? 4 : 3) - (completedTotal === undefined ? 1 : 0)}
+              style={[
+                styles.statItem,
+                showCompactCompletionStats && styles.statItemCompact,
+              ]}
+            >
+              <StatTile
+                value={`x${comboSummary.best}`}
+                label={t("bestCombo")}
+                tone={comboSummary.best >= 3 ? "warning" : "secondary"}
+                icon={
+                  <VoxelIcon
+                    name="progress"
+                    size={22}
+                    color={
+                      comboSummary.best >= 3 ? theme.warning : theme.secondary
+                    }
+                  />
+                }
+              />
+            </StaggerItem>
           </View>
           {showRecap ? (
             <MotionView preset="rise" delay={132} style={styles.recap}>
@@ -1254,26 +1277,66 @@ export default function QuizScreen() {
           <Text style={[styles.eyebrow, { color: theme.primary }]}>
             {questionTypeLabel(question.type)}
           </Text>
-          {question.isRetry ? (
-            <MotionView
-              preset="pop"
-              style={[
-                styles.retryBadge,
-                { backgroundColor: theme.secondarySoft },
-              ]}
-            >
-              <VoxelIcon
-                name="refresh"
-                size={16}
-                color={theme.secondaryPressed}
-              />
-              <Text
-                style={[styles.retryText, { color: theme.secondaryPressed }]}
-              >
-                {t("retryingConcept")}
-              </Text>
-            </MotionView>
-          ) : null}
+          <View style={styles.metaBadges}>
+            {comboSummary.current > 0 ? (
+               <MotionView
+                 key={`combo-${comboSummary.current}`}
+                 preset="pop"
+                 style={[
+                   styles.comboBadge,
+                   {
+                     backgroundColor:
+                       comboSummary.current >= 3
+                         ? theme.warningSoft
+                         : theme.primarySoft,
+                   },
+                 ]}
+               >
+                 <VoxelIcon
+                   name="progress"
+                   size={16}
+                   color={
+                     comboSummary.current >= 3
+                       ? theme.warningText
+                       : theme.primary
+                   }
+                 />
+                 <Text
+                   style={[
+                     styles.comboText,
+                     {
+                       color:
+                         comboSummary.current >= 3
+                           ? theme.warningText
+                           : theme.primary,
+                     },
+                   ]}
+                 >
+                   {`${t("combo")} x${comboSummary.current}`}
+                 </Text>
+               </MotionView>
+            ) : null}
+            {question.isRetry ? (
+               <MotionView
+                 preset="pop"
+                 style={[
+                   styles.retryBadge,
+                   { backgroundColor: theme.secondarySoft },
+                 ]}
+               >
+                 <VoxelIcon
+                   name="refresh"
+                   size={16}
+                   color={theme.secondaryPressed}
+                 />
+                 <Text
+                   style={[styles.retryText, { color: theme.secondaryPressed }]}
+                 >
+                   {t("retryingConcept")}
+                 </Text>
+               </MotionView>
+            ) : null}
+          </View>
         </View>
         <MotionView preset="rise" delay={44}>
           <MathText
@@ -1476,6 +1539,16 @@ function questionTypeLabel(type: PublicQuestion["type"]): string {
   return "SHORT ANSWER";
 }
 
+function summarizeCombo(entries: RecapEntry[]): { current: number; best: number } {
+  let current = 0;
+  let best = 0;
+  for (const entry of entries) {
+    current = entry.correct ? current + 1 : 0;
+    if (current > best) best = current;
+  }
+  return { current, best };
+}
+
 const styles = StyleSheet.create({
   center: {
     flex: 1,
@@ -1557,11 +1630,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing[3],
   },
+  metaBadges: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: spacing[2],
+  },
   eyebrow: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
     letterSpacing: 1.4,
+  },
+  comboBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+  },
+  comboText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
   },
   retryBadge: {
     flexDirection: "row",
