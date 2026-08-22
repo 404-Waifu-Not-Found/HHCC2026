@@ -18,5 +18,8 @@ describe("shared quest route", () => {
     expect(source).toContain('testID="sign-in-to-start"');
     expect(source).toContain("params: { next: `/s/${shareToken}` }");
     expect(source).not.toContain("cheat-sheet");
+    expect(source.indexOf('effectiveStatus === "failed"')).toBeLessThan(
+      source.indexOf('effectiveStatus === "missing"'),
+    );
   });
 });

@@ -121,7 +121,29 @@ export default function SharedQuestScreen() {
     );
   }
 
-  if (effectiveStatus === "missing" || !preview) {
+  if (effectiveStatus === "failed") {
+    return (
+      <Screen contentWidth="reading" centered>
+        <EmptyState
+          icon="error"
+          title={t("shareLoadFailed")}
+          description={t("shareLoadFailedBody")}
+          action={
+            <PrimaryButton
+              onPress={() => {
+                setStatus("loading");
+                setReloadKey((key) => key + 1);
+              }}
+            >
+              {t("retry")}
+            </PrimaryButton>
+          }
+        />
+      </Screen>
+    );
+  }
+
+  if (effectiveStatus === "missing") {
     return (
       <Screen contentWidth="reading" centered>
         <EmptyState
@@ -143,23 +165,13 @@ export default function SharedQuestScreen() {
     );
   }
 
-  if (effectiveStatus === "failed") {
+  if (!preview) {
     return (
       <Screen contentWidth="reading" centered>
-        <EmptyState
-          icon="error"
-          title={t("shareLoadFailed")}
-          description={t("shareLoadFailedBody")}
-          action={
-            <PrimaryButton
-              onPress={() => {
-                setStatus("loading");
-                setReloadKey((key) => key + 1);
-              }}
-            >
-              {t("retry")}
-            </PrimaryButton>
-          }
+        <ActivityIndicator
+          accessibilityLabel={t("loading")}
+          size="large"
+          color={theme.primary}
         />
       </Screen>
     );
