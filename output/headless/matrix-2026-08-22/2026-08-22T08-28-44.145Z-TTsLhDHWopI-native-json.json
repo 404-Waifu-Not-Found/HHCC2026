@@ -1,0 +1,6418 @@
+{
+  "runId": "cc0e1b5e-9d39-487c-9bed-a1f5322f6506",
+  "source": {
+    "videoId": "TTsLhDHWopI",
+    "title": "AP Calculus AB and BC Unit 7 Review - Differential Equations - Slope Fields - Euler's Method",
+    "language": "en",
+    "durationSeconds": 2210,
+    "segments": [
+      {
+        "id": "youtube-json3-1-120",
+        "startMs": 120,
+        "endMs": 4920,
+        "text": "so this is going to be my favorite unit"
+      },
+      {
+        "id": "youtube-json3-3-2040",
+        "startMs": 2040,
+        "endMs": 7379,
+        "text": "differential equations unit 7."
+      },
+      {
+        "id": "youtube-json3-5-4920",
+        "startMs": 4920,
+        "endMs": 9840,
+        "text": "now differential equations is sort of"
+      },
+      {
+        "id": "youtube-json3-7-7379",
+        "startMs": 7379,
+        "endMs": 13799,
+        "text": "like an offshoot of the integral because"
+      },
+      {
+        "id": "youtube-json3-9-9840",
+        "startMs": 9840,
+        "endMs": 15599,
+        "text": "we're trying to unite sort of the um the"
+      },
+      {
+        "id": "youtube-json3-11-13799",
+        "startMs": 13799,
+        "endMs": 17460,
+        "text": "ideas of derivatives and integrals here"
+      },
+      {
+        "id": "youtube-json3-13-15599",
+        "startMs": 15599,
+        "endMs": 20760,
+        "text": "so let's let's get started what exactly"
+      },
+      {
+        "id": "youtube-json3-15-17460",
+        "startMs": 17460,
+        "endMs": 23220,
+        "text": "is a differential equation"
+      },
+      {
+        "id": "youtube-json3-17-20760",
+        "startMs": 20760,
+        "endMs": 25080,
+        "text": "so a differential"
+      },
+      {
+        "id": "youtube-json3-19-23220",
+        "startMs": 23220,
+        "endMs": 29840,
+        "text": "equation"
+      },
+      {
+        "id": "youtube-json3-21-25080",
+        "startMs": 25080,
+        "endMs": 33660,
+        "text": "is an equation that as you might infer"
+      },
+      {
+        "id": "youtube-json3-23-29840",
+        "startMs": 29840,
+        "endMs": 36000,
+        "text": "models the rate of change of a function"
+      },
+      {
+        "id": "youtube-json3-25-33660",
+        "startMs": 33660,
+        "endMs": 40040,
+        "text": "so back when we did implicit"
+      },
+      {
+        "id": "youtube-json3-27-36000",
+        "startMs": 36000,
+        "endMs": 44399,
+        "text": "differentiation you would get a d y d x"
+      },
+      {
+        "id": "youtube-json3-29-40040",
+        "startMs": 40040,
+        "endMs": 45719,
+        "text": "equals something like X Plus y squared"
+      },
+      {
+        "id": "youtube-json3-31-44399",
+        "startMs": 44399,
+        "endMs": 50039,
+        "text": "for example"
+      },
+      {
+        "id": "youtube-json3-33-45719",
+        "startMs": 45719,
+        "endMs": 53340,
+        "text": "okay that's a differential equation"
+      },
+      {
+        "id": "youtube-json3-35-50039",
+        "startMs": 50039,
+        "endMs": 56399,
+        "text": "the floor differential equations have"
+      },
+      {
+        "id": "youtube-json3-37-53340",
+        "startMs": 53340,
+        "endMs": 58739,
+        "text": "the derivative of y with respect to X or"
+      },
+      {
+        "id": "youtube-json3-39-56399",
+        "startMs": 56399,
+        "endMs": 60420,
+        "text": "to the derivative of population with"
+      },
+      {
+        "id": "youtube-json3-41-58739",
+        "startMs": 58739,
+        "endMs": 62460,
+        "text": "respect to time"
+      },
+      {
+        "id": "youtube-json3-43-60420",
+        "startMs": 60420,
+        "endMs": 64019,
+        "text": "on the left side of the equal sign and"
+      },
+      {
+        "id": "youtube-json3-45-62460",
+        "startMs": 62460,
+        "endMs": 68180,
+        "text": "on the right side of the equal sign they"
+      },
+      {
+        "id": "youtube-json3-47-64019",
+        "startMs": 64019,
+        "endMs": 68180,
+        "text": "have some equation okay"
+      },
+      {
+        "id": "youtube-json3-49-68400",
+        "startMs": 68400,
+        "endMs": 74100,
+        "text": "now the interesting thing about"
+      },
+      {
+        "id": "youtube-json3-51-71299",
+        "startMs": 71299,
+        "endMs": 76740,
+        "text": "differential equations as you saw with"
+      },
+      {
+        "id": "youtube-json3-53-74100",
+        "startMs": 74100,
+        "endMs": 78659,
+        "text": "all of the other derivatives is they can"
+      },
+      {
+        "id": "youtube-json3-55-76740",
+        "startMs": 76740,
+        "endMs": 81000,
+        "text": "have an infinite number of"
+      },
+      {
+        "id": "youtube-json3-57-78659",
+        "startMs": 78659,
+        "endMs": 83820,
+        "text": "antiderivatives because there's an"
+      },
+      {
+        "id": "youtube-json3-59-81000",
+        "startMs": 81000,
+        "endMs": 86520,
+        "text": "infinite number of constants"
+      },
+      {
+        "id": "youtube-json3-61-83820",
+        "startMs": 83820,
+        "endMs": 88080,
+        "text": "some constant C that you can add to the"
+      },
+      {
+        "id": "youtube-json3-63-86520",
+        "startMs": 86520,
+        "endMs": 89460,
+        "text": "antiderivative"
+      },
+      {
+        "id": "youtube-json3-65-88080",
+        "startMs": 88080,
+        "endMs": 94860,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-67-89460",
+        "startMs": 89460,
+        "endMs": 96659,
+        "text": "so first the major way you're going to"
+      },
+      {
+        "id": "youtube-json3-69-94860",
+        "startMs": 94860,
+        "endMs": 99360,
+        "text": "see this pop up on a multiple choice"
+      },
+      {
+        "id": "youtube-json3-71-96659",
+        "startMs": 96659,
+        "endMs": 100920,
+        "text": "question is you're going to have to see"
+      },
+      {
+        "id": "youtube-json3-73-99360",
+        "startMs": 99360,
+        "endMs": 102420,
+        "text": "that they're going to give you a"
+      },
+      {
+        "id": "youtube-json3-75-100920",
+        "startMs": 100920,
+        "endMs": 104820,
+        "text": "differential equation it's going to look"
+      },
+      {
+        "id": "youtube-json3-77-102420",
+        "startMs": 102420,
+        "endMs": 107400,
+        "text": "something like that"
+      },
+      {
+        "id": "youtube-json3-79-104820",
+        "startMs": 104820,
+        "endMs": 111659,
+        "text": "and they're going to give you a number"
+      },
+      {
+        "id": "youtube-json3-81-107400",
+        "startMs": 107400,
+        "endMs": 113579,
+        "text": "of solutions as multiple choice answers"
+      },
+      {
+        "id": "youtube-json3-83-111659",
+        "startMs": 111659,
+        "endMs": 115920,
+        "text": "and you need to go through each of those"
+      },
+      {
+        "id": "youtube-json3-85-113579",
+        "startMs": 113579,
+        "endMs": 118259,
+        "text": "Solutions and you need to verify which"
+      },
+      {
+        "id": "youtube-json3-87-115920",
+        "startMs": 115920,
+        "endMs": 120420,
+        "text": "one is a solution to the differential"
+      },
+      {
+        "id": "youtube-json3-89-118259",
+        "startMs": 118259,
+        "endMs": 123000,
+        "text": "equation and which one is not and what"
+      },
+      {
+        "id": "youtube-json3-91-120420",
+        "startMs": 120420,
+        "endMs": 125219,
+        "text": "we mean by solution is you're given a"
+      },
+      {
+        "id": "youtube-json3-93-123000",
+        "startMs": 123000,
+        "endMs": 127860,
+        "text": "differential equation and your job is to"
+      },
+      {
+        "id": "youtube-json3-95-125219",
+        "startMs": 125219,
+        "endMs": 129300,
+        "text": "find the original equation"
+      },
+      {
+        "id": "youtube-json3-97-127860",
+        "startMs": 127860,
+        "endMs": 132660,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-99-129300",
+        "startMs": 129300,
+        "endMs": 138920,
+        "text": "so instead of this how about I give you"
+      },
+      {
+        "id": "youtube-json3-101-132660",
+        "startMs": 132660,
+        "endMs": 138920,
+        "text": "guys d y d x equals what do I have here"
+      },
+      {
+        "id": "youtube-json3-103-139700",
+        "startMs": 139700,
+        "endMs": 145140,
+        "text": "4y over X"
+      },
+      {
+        "id": "youtube-json3-105-142920",
+        "startMs": 142920,
+        "endMs": 146940,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-107-145140",
+        "startMs": 145140,
+        "endMs": 149040,
+        "text": "now"
+      },
+      {
+        "id": "youtube-json3-109-146940",
+        "startMs": 146940,
+        "endMs": 151020,
+        "text": "is if you're just looking at this for"
+      },
+      {
+        "id": "youtube-json3-111-149040",
+        "startMs": 149040,
+        "endMs": 153120,
+        "text": "the first time it would be pretty"
+      },
+      {
+        "id": "youtube-json3-113-151020",
+        "startMs": 151020,
+        "endMs": 157080,
+        "text": "difficult to try and find an equation"
+      },
+      {
+        "id": "youtube-json3-115-153120",
+        "startMs": 153120,
+        "endMs": 158879,
+        "text": "whose derivative is that but luckily on"
+      },
+      {
+        "id": "youtube-json3-117-157080",
+        "startMs": 157080,
+        "endMs": 162480,
+        "text": "the multiple choice portion of the exam"
+      },
+      {
+        "id": "youtube-json3-119-158879",
+        "startMs": 158879,
+        "endMs": 164000,
+        "text": "you'll be given answer choice choice a y"
+      },
+      {
+        "id": "youtube-json3-121-162480",
+        "startMs": 162480,
+        "endMs": 169920,
+        "text": "equals"
+      },
+      {
+        "id": "youtube-json3-123-164000",
+        "startMs": 164000,
+        "endMs": 171019,
+        "text": "2x squared Choice b y equals"
+      },
+      {
+        "id": "youtube-json3-125-169920",
+        "startMs": 169920,
+        "endMs": 173780,
+        "text": "um"
+      },
+      {
+        "id": "youtube-json3-127-171019",
+        "startMs": 171019,
+        "endMs": 177660,
+        "text": "4X over"
+      },
+      {
+        "id": "youtube-json3-129-173780",
+        "startMs": 173780,
+        "endMs": 180420,
+        "text": "2 x squared plus one you know they give"
+      },
+      {
+        "id": "youtube-json3-131-177660",
+        "startMs": 177660,
+        "endMs": 182220,
+        "text": "you a bunch of equations as multiple"
+      },
+      {
+        "id": "youtube-json3-133-180420",
+        "startMs": 180420,
+        "endMs": 185280,
+        "text": "choice answers and your job is to figure"
+      },
+      {
+        "id": "youtube-json3-135-182220",
+        "startMs": 182220,
+        "endMs": 187379,
+        "text": "out which one is the possible it can"
+      },
+      {
+        "id": "youtube-json3-137-185280",
+        "startMs": 185280,
+        "endMs": 189720,
+        "text": "possibly be"
+      },
+      {
+        "id": "youtube-json3-139-187379",
+        "startMs": 187379,
+        "endMs": 191640,
+        "text": "the original equation from which this"
+      },
+      {
+        "id": "youtube-json3-141-189720",
+        "startMs": 189720,
+        "endMs": 192840,
+        "text": "differential equation is the derivative"
+      },
+      {
+        "id": "youtube-json3-143-191640",
+        "startMs": 191640,
+        "endMs": 194400,
+        "text": "of"
+      },
+      {
+        "id": "youtube-json3-145-192840",
+        "startMs": 192840,
+        "endMs": 196379,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-147-194400",
+        "startMs": 194400,
+        "endMs": 198480,
+        "text": "so let's let's work through these let's"
+      },
+      {
+        "id": "youtube-json3-149-196379",
+        "startMs": 196379,
+        "endMs": 200580,
+        "text": "see if any of these satisfy our"
+      },
+      {
+        "id": "youtube-json3-151-198480",
+        "startMs": 198480,
+        "endMs": 205319,
+        "text": "differential equation up here"
+      },
+      {
+        "id": "youtube-json3-153-200580",
+        "startMs": 200580,
+        "endMs": 208319,
+        "text": "let's see where this becomes d y d x"
+      },
+      {
+        "id": "youtube-json3-155-205319",
+        "startMs": 205319,
+        "endMs": 208319,
+        "text": "equals"
+      },
+      {
+        "id": "youtube-json3-157-208440",
+        "startMs": 208440,
+        "endMs": 212040,
+        "text": "4 x"
+      },
+      {
+        "id": "youtube-json3-159-210420",
+        "startMs": 210420,
+        "endMs": 214560,
+        "text": "no"
+      },
+      {
+        "id": "youtube-json3-161-212040",
+        "startMs": 212040,
+        "endMs": 218840,
+        "text": "this one becomes"
+      },
+      {
+        "id": "youtube-json3-163-214560",
+        "startMs": 214560,
+        "endMs": 218840,
+        "text": "uh low D High"
+      },
+      {
+        "id": "youtube-json3-165-219300",
+        "startMs": 219300,
+        "endMs": 223040,
+        "text": "minus High below"
+      },
+      {
+        "id": "youtube-json3-167-225720",
+        "startMs": 225720,
+        "endMs": 231319,
+        "text": "all over low squared"
+      },
+      {
+        "id": "youtube-json3-169-232920",
+        "startMs": 232920,
+        "endMs": 239700,
+        "text": "no that doesn't look like it either"
+      },
+      {
+        "id": "youtube-json3-171-236220",
+        "startMs": 236220,
+        "endMs": 243360,
+        "text": "let me give you a third option"
+      },
+      {
+        "id": "youtube-json3-173-239700",
+        "startMs": 239700,
+        "endMs": 245280,
+        "text": "y equals x to the fourth"
+      },
+      {
+        "id": "youtube-json3-175-243360",
+        "startMs": 243360,
+        "endMs": 246420,
+        "text": "let's see if this one satisfies our"
+      },
+      {
+        "id": "youtube-json3-177-245280",
+        "startMs": 245280,
+        "endMs": 252900,
+        "text": "equation"
+      },
+      {
+        "id": "youtube-json3-179-246420",
+        "startMs": 246420,
+        "endMs": 254760,
+        "text": "that one gives us d y d x equals four x"
+      },
+      {
+        "id": "youtube-json3-181-252900",
+        "startMs": 252900,
+        "endMs": 257160,
+        "text": "to the Third"
+      },
+      {
+        "id": "youtube-json3-183-254760",
+        "startMs": 254760,
+        "endMs": 259680,
+        "text": "that doesn't look the same"
+      },
+      {
+        "id": "youtube-json3-185-257160",
+        "startMs": 257160,
+        "endMs": 264360,
+        "text": "but that's the magic of differential"
+      },
+      {
+        "id": "youtube-json3-187-259680",
+        "startMs": 259680,
+        "endMs": 268320,
+        "text": "equations they try to trick you okay"
+      },
+      {
+        "id": "youtube-json3-189-264360",
+        "startMs": 264360,
+        "endMs": 273120,
+        "text": "this differential equation has a y in it"
+      },
+      {
+        "id": "youtube-json3-191-268320",
+        "startMs": 268320,
+        "endMs": 278699,
+        "text": "we're given y equals x to the fourth"
+      },
+      {
+        "id": "youtube-json3-193-273120",
+        "startMs": 273120,
+        "endMs": 282419,
+        "text": "okay we've got here a y over X so y over"
+      },
+      {
+        "id": "youtube-json3-195-278699",
+        "startMs": 278699,
+        "endMs": 285020,
+        "text": "x equals x to the fourth over x equals x"
+      },
+      {
+        "id": "youtube-json3-197-282419",
+        "startMs": 282419,
+        "endMs": 290160,
+        "text": "to the Third"
+      },
+      {
+        "id": "youtube-json3-199-285020",
+        "startMs": 285020,
+        "endMs": 293639,
+        "text": "oh that looks familiar doesn't it"
+      },
+      {
+        "id": "youtube-json3-201-290160",
+        "startMs": 290160,
+        "endMs": 299400,
+        "text": "if x to the third is the same as y over"
+      },
+      {
+        "id": "youtube-json3-203-293639",
+        "startMs": 293639,
+        "endMs": 300660,
+        "text": "X then 4y over x equals four x to the"
+      },
+      {
+        "id": "youtube-json3-205-299400",
+        "startMs": 299400,
+        "endMs": 304680,
+        "text": "Third"
+      },
+      {
+        "id": "youtube-json3-207-300660",
+        "startMs": 300660,
+        "endMs": 307680,
+        "text": "4y over x equals 4X to the third which"
+      },
+      {
+        "id": "youtube-json3-209-304680",
+        "startMs": 304680,
+        "endMs": 308759,
+        "text": "we have here meaning C is our correct"
+      },
+      {
+        "id": "youtube-json3-211-307680",
+        "startMs": 307680,
+        "endMs": 311759,
+        "text": "answer"
+      },
+      {
+        "id": "youtube-json3-213-308759",
+        "startMs": 308759,
+        "endMs": 313500,
+        "text": "okay that's the sort of loop-de-loop"
+      },
+      {
+        "id": "youtube-json3-215-311759",
+        "startMs": 311759,
+        "endMs": 315800,
+        "text": "they try to throw with at you with"
+      },
+      {
+        "id": "youtube-json3-217-313500",
+        "startMs": 313500,
+        "endMs": 318360,
+        "text": "differential equations"
+      },
+      {
+        "id": "youtube-json3-219-315800",
+        "startMs": 315800,
+        "endMs": 321240,
+        "text": "oftentimes almost every time"
+      },
+      {
+        "id": "youtube-json3-221-318360",
+        "startMs": 318360,
+        "endMs": 324840,
+        "text": "you will have to substitute the original"
+      },
+      {
+        "id": "youtube-json3-223-321240",
+        "startMs": 321240,
+        "endMs": 326759,
+        "text": "function for Y into the differential"
+      },
+      {
+        "id": "youtube-json3-225-324840",
+        "startMs": 324840,
+        "endMs": 327960,
+        "text": "equation a Khan Academy has got some"
+      },
+      {
+        "id": "youtube-json3-227-326759",
+        "startMs": 326759,
+        "endMs": 330300,
+        "text": "great practice problems with"
+      },
+      {
+        "id": "youtube-json3-229-327960",
+        "startMs": 327960,
+        "endMs": 332160,
+        "text": "differential equations honestly they"
+      },
+      {
+        "id": "youtube-json3-231-330300",
+        "startMs": 330300,
+        "endMs": 334259,
+        "text": "have they're the best they're who you"
+      },
+      {
+        "id": "youtube-json3-233-332160",
+        "startMs": 332160,
+        "endMs": 335759,
+        "text": "should go to for all your practice if"
+      },
+      {
+        "id": "youtube-json3-235-334259",
+        "startMs": 334259,
+        "endMs": 337560,
+        "text": "you need extra help with anything you"
+      },
+      {
+        "id": "youtube-json3-237-335759",
+        "startMs": 335759,
+        "endMs": 340500,
+        "text": "know I got a Discord server a link down"
+      },
+      {
+        "id": "youtube-json3-239-337560",
+        "startMs": 337560,
+        "endMs": 342539,
+        "text": "below I don't charge just come to me ask"
+      },
+      {
+        "id": "youtube-json3-241-340500",
+        "startMs": 340500,
+        "endMs": 343380,
+        "text": "questions I'd be more than happy to help"
+      },
+      {
+        "id": "youtube-json3-243-342539",
+        "startMs": 342539,
+        "endMs": 347780,
+        "text": "you"
+      },
+      {
+        "id": "youtube-json3-245-343380",
+        "startMs": 343380,
+        "endMs": 350820,
+        "text": "anyway in form of multiple choice or frq"
+      },
+      {
+        "id": "youtube-json3-247-347780",
+        "startMs": 347780,
+        "endMs": 353880,
+        "text": "uh differential equations are presented"
+      },
+      {
+        "id": "youtube-json3-249-350820",
+        "startMs": 350820,
+        "endMs": 358220,
+        "text": "to you in the form of a slope field now"
+      },
+      {
+        "id": "youtube-json3-251-353880",
+        "startMs": 353880,
+        "endMs": 358220,
+        "text": "let's get into what slope fields are"
+      },
+      {
+        "id": "youtube-json3-253-361500",
+        "startMs": 361500,
+        "endMs": 366600,
+        "text": "okay so let's continue with this"
+      },
+      {
+        "id": "youtube-json3-255-363960",
+        "startMs": 363960,
+        "endMs": 368220,
+        "text": "differential equation right here d y d x"
+      },
+      {
+        "id": "youtube-json3-257-366600",
+        "startMs": 366600,
+        "endMs": 371780,
+        "text": "equals"
+      },
+      {
+        "id": "youtube-json3-259-368220",
+        "startMs": 368220,
+        "endMs": 371780,
+        "text": "4y over X"
+      },
+      {
+        "id": "youtube-json3-261-372539",
+        "startMs": 372539,
+        "endMs": 378120,
+        "text": "and the slope field"
+      },
+      {
+        "id": "youtube-json3-263-374340",
+        "startMs": 374340,
+        "endMs": 381440,
+        "text": "is a coordinate plane"
+      },
+      {
+        "id": "youtube-json3-265-378120",
+        "startMs": 378120,
+        "endMs": 384060,
+        "text": "a normal function follows a"
+      },
+      {
+        "id": "youtube-json3-267-381440",
+        "startMs": 381440,
+        "endMs": 387900,
+        "text": "well-defined possibly curved possibly"
+      },
+      {
+        "id": "youtube-json3-269-384060",
+        "startMs": 384060,
+        "endMs": 390080,
+        "text": "linear path throughout the plane okay"
+      },
+      {
+        "id": "youtube-json3-271-387900",
+        "startMs": 387900,
+        "endMs": 395220,
+        "text": "but a slope field"
+      },
+      {
+        "id": "youtube-json3-273-390080",
+        "startMs": 390080,
+        "endMs": 397100,
+        "text": "is a field of possible routes that a"
+      },
+      {
+        "id": "youtube-json3-275-395220",
+        "startMs": 395220,
+        "endMs": 400919,
+        "text": "function can take"
+      },
+      {
+        "id": "youtube-json3-277-397100",
+        "startMs": 397100,
+        "endMs": 402780,
+        "text": "sometimes you'll be given a slope field"
+      },
+      {
+        "id": "youtube-json3-279-400919",
+        "startMs": 400919,
+        "endMs": 405419,
+        "text": "on a multiple choice and you'll have to"
+      },
+      {
+        "id": "youtube-json3-281-402780",
+        "startMs": 402780,
+        "endMs": 407639,
+        "text": "uh tell whether or not it fits the"
+      },
+      {
+        "id": "youtube-json3-283-405419",
+        "startMs": 405419,
+        "endMs": 409800,
+        "text": "differential equation or sometimes"
+      },
+      {
+        "id": "youtube-json3-285-407639",
+        "startMs": 407639,
+        "endMs": 412259,
+        "text": "you'll be given just a coordinate plane"
+      },
+      {
+        "id": "youtube-json3-287-409800",
+        "startMs": 409800,
+        "endMs": 414479,
+        "text": "on an frq and you'll have to draw the"
+      },
+      {
+        "id": "youtube-json3-289-412259",
+        "startMs": 412259,
+        "endMs": 417419,
+        "text": "slope field so again let's get right"
+      },
+      {
+        "id": "youtube-json3-291-414479",
+        "startMs": 414479,
+        "endMs": 419220,
+        "text": "into what slope fields are"
+      },
+      {
+        "id": "youtube-json3-293-417419",
+        "startMs": 417419,
+        "endMs": 421039,
+        "text": "you're given a differential equation"
+      },
+      {
+        "id": "youtube-json3-295-419220",
+        "startMs": 419220,
+        "endMs": 424400,
+        "text": "okay remember"
+      },
+      {
+        "id": "youtube-json3-297-421039",
+        "startMs": 421039,
+        "endMs": 427560,
+        "text": "a derivative or a differential equation"
+      },
+      {
+        "id": "youtube-json3-299-424400",
+        "startMs": 424400,
+        "endMs": 430440,
+        "text": "represents the slope of a function at"
+      },
+      {
+        "id": "youtube-json3-301-427560",
+        "startMs": 427560,
+        "endMs": 434580,
+        "text": "any given point okay"
+      },
+      {
+        "id": "youtube-json3-303-430440",
+        "startMs": 430440,
+        "endMs": 437220,
+        "text": "meaning if I wanted to if I was"
+      },
+      {
+        "id": "youtube-json3-305-434580",
+        "startMs": 434580,
+        "endMs": 439919,
+        "text": "concerned of my original function f of x"
+      },
+      {
+        "id": "youtube-json3-307-437220",
+        "startMs": 437220,
+        "endMs": 442139,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-309-439919",
+        "startMs": 439919,
+        "endMs": 446120,
+        "text": "if I wanted to know"
+      },
+      {
+        "id": "youtube-json3-311-442139",
+        "startMs": 442139,
+        "endMs": 448380,
+        "text": "F Prime of"
+      },
+      {
+        "id": "youtube-json3-313-446120",
+        "startMs": 446120,
+        "endMs": 452400,
+        "text": "F Prime of x"
+      },
+      {
+        "id": "youtube-json3-315-448380",
+        "startMs": 448380,
+        "endMs": 454620,
+        "text": "at the point one comma two that I would"
+      },
+      {
+        "id": "youtube-json3-317-452400",
+        "startMs": 452400,
+        "endMs": 456300,
+        "text": "just plug in 1 and 2 into my"
+      },
+      {
+        "id": "youtube-json3-319-454620",
+        "startMs": 454620,
+        "endMs": 458340,
+        "text": "differential equation and I would get"
+      },
+      {
+        "id": "youtube-json3-321-456300",
+        "startMs": 456300,
+        "endMs": 460440,
+        "text": "the slope pretty simple right just"
+      },
+      {
+        "id": "youtube-json3-323-458340",
+        "startMs": 458340,
+        "endMs": 463919,
+        "text": "review right now"
+      },
+      {
+        "id": "youtube-json3-325-460440",
+        "startMs": 460440,
+        "endMs": 468539,
+        "text": "so point x value 1"
+      },
+      {
+        "id": "youtube-json3-327-463919",
+        "startMs": 463919,
+        "endMs": 470639,
+        "text": "is 4 times 2 over 1 equals a slope of"
+      },
+      {
+        "id": "youtube-json3-329-468539",
+        "startMs": 468539,
+        "endMs": 473520,
+        "text": "eight okay"
+      },
+      {
+        "id": "youtube-json3-331-470639",
+        "startMs": 470639,
+        "endMs": 476220,
+        "text": "that means over on our graph here at the"
+      },
+      {
+        "id": "youtube-json3-333-473520",
+        "startMs": 473520,
+        "endMs": 478199,
+        "text": "point uh one comma two"
+      },
+      {
+        "id": "youtube-json3-335-476220",
+        "startMs": 476220,
+        "endMs": 481020,
+        "text": "this point right here"
+      },
+      {
+        "id": "youtube-json3-337-478199",
+        "startMs": 478199,
+        "endMs": 482759,
+        "text": "it would have a slope of"
+      },
+      {
+        "id": "youtube-json3-339-481020",
+        "startMs": 481020,
+        "endMs": 485340,
+        "text": "eight"
+      },
+      {
+        "id": "youtube-json3-341-482759",
+        "startMs": 482759,
+        "endMs": 486479,
+        "text": "very steep line"
+      },
+      {
+        "id": "youtube-json3-343-485340",
+        "startMs": 485340,
+        "endMs": 489300,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-345-486479",
+        "startMs": 486479,
+        "endMs": 492120,
+        "text": "now let's draw let's"
+      },
+      {
+        "id": "youtube-json3-347-489300",
+        "startMs": 489300,
+        "endMs": 492900,
+        "text": "try another Point how about one comma"
+      },
+      {
+        "id": "youtube-json3-349-492120",
+        "startMs": 492120,
+        "endMs": 495720,
+        "text": "one"
+      },
+      {
+        "id": "youtube-json3-351-492900",
+        "startMs": 492900,
+        "endMs": 499099,
+        "text": "that would be a slope of four"
+      },
+      {
+        "id": "youtube-json3-353-495720",
+        "startMs": 495720,
+        "endMs": 499099,
+        "text": "a less steep line"
+      },
+      {
+        "id": "youtube-json3-355-499759",
+        "startMs": 499759,
+        "endMs": 506099,
+        "text": "how about uh four comma four"
+      },
+      {
+        "id": "youtube-json3-357-504240",
+        "startMs": 504240,
+        "endMs": 508919,
+        "text": "that would be"
+      },
+      {
+        "id": "youtube-json3-359-506099",
+        "startMs": 506099,
+        "endMs": 511860,
+        "text": "also a slope of four"
+      },
+      {
+        "id": "youtube-json3-361-508919",
+        "startMs": 508919,
+        "endMs": 514560,
+        "text": "and what we're doing here is we're"
+      },
+      {
+        "id": "youtube-json3-363-511860",
+        "startMs": 511860,
+        "endMs": 517740,
+        "text": "drawing out"
+      },
+      {
+        "id": "youtube-json3-365-514560",
+        "startMs": 514560,
+        "endMs": 520380,
+        "text": "what the slope would be at any of these"
+      },
+      {
+        "id": "youtube-json3-367-517740",
+        "startMs": 517740,
+        "endMs": 521820,
+        "text": "given points okay if this was an frq you"
+      },
+      {
+        "id": "youtube-json3-369-520380",
+        "startMs": 520380,
+        "endMs": 523459,
+        "text": "would be given a much more constricted"
+      },
+      {
+        "id": "youtube-json3-371-521820",
+        "startMs": 521820,
+        "endMs": 527279,
+        "text": "graph"
+      },
+      {
+        "id": "youtube-json3-373-523459",
+        "startMs": 523459,
+        "endMs": 529200,
+        "text": "but let me continue drawing out a good"
+      },
+      {
+        "id": "youtube-json3-375-527279",
+        "startMs": 527279,
+        "endMs": 530760,
+        "text": "amount of the points that I can here in"
+      },
+      {
+        "id": "youtube-json3-377-529200",
+        "startMs": 529200,
+        "endMs": 533399,
+        "text": "the first quadrant and I'll come back to"
+      },
+      {
+        "id": "youtube-json3-379-530760",
+        "startMs": 530760,
+        "endMs": 535320,
+        "text": "you guys so I'm not sure if this shows"
+      },
+      {
+        "id": "youtube-json3-381-533399",
+        "startMs": 533399,
+        "endMs": 538019,
+        "text": "up very well on camera but if you can"
+      },
+      {
+        "id": "youtube-json3-383-535320",
+        "startMs": 535320,
+        "endMs": 540300,
+        "text": "see along the x-axis all of the slopes"
+      },
+      {
+        "id": "youtube-json3-385-538019",
+        "startMs": 538019,
+        "endMs": 542880,
+        "text": "are flat and if you can see along the"
+      },
+      {
+        "id": "youtube-json3-387-540300",
+        "startMs": 540300,
+        "endMs": 545160,
+        "text": "y-axis all of the slopes are straight up"
+      },
+      {
+        "id": "youtube-json3-389-542880",
+        "startMs": 542880,
+        "endMs": 547200,
+        "text": "now that makes perfect sense because if"
+      },
+      {
+        "id": "youtube-json3-391-545160",
+        "startMs": 545160,
+        "endMs": 550140,
+        "text": "you come back to our differential"
+      },
+      {
+        "id": "youtube-json3-393-547200",
+        "startMs": 547200,
+        "endMs": 553080,
+        "text": "equation along the y-axis I mean excuse"
+      },
+      {
+        "id": "youtube-json3-395-550140",
+        "startMs": 550140,
+        "endMs": 555420,
+        "text": "me along the x-axis all the Y values are"
+      },
+      {
+        "id": "youtube-json3-397-553080",
+        "startMs": 553080,
+        "endMs": 558300,
+        "text": "zero if our numerator is zero we have"
+      },
+      {
+        "id": "youtube-json3-399-555420",
+        "startMs": 555420,
+        "endMs": 560519,
+        "text": "got a zero slope and along the y-axis"
+      },
+      {
+        "id": "youtube-json3-401-558300",
+        "startMs": 558300,
+        "endMs": 562260,
+        "text": "all the X values are zero our"
+      },
+      {
+        "id": "youtube-json3-403-560519",
+        "startMs": 560519,
+        "endMs": 564779,
+        "text": "denominator is always zero so we always"
+      },
+      {
+        "id": "youtube-json3-405-562260",
+        "startMs": 562260,
+        "endMs": 568620,
+        "text": "have an undefined slope"
+      },
+      {
+        "id": "youtube-json3-407-564779",
+        "startMs": 564779,
+        "endMs": 569519,
+        "text": "okay and everywhere in between"
+      },
+      {
+        "id": "youtube-json3-409-568620",
+        "startMs": 568620,
+        "endMs": 571320,
+        "text": "um"
+      },
+      {
+        "id": "youtube-json3-411-569519",
+        "startMs": 569519,
+        "endMs": 574260,
+        "text": "as you get"
+      },
+      {
+        "id": "youtube-json3-413-571320",
+        "startMs": 571320,
+        "endMs": 576720,
+        "text": "further and further uh in the positive X"
+      },
+      {
+        "id": "youtube-json3-415-574260",
+        "startMs": 574260,
+        "endMs": 579540,
+        "text": "directions the slopes become flatter"
+      },
+      {
+        "id": "youtube-json3-417-576720",
+        "startMs": 576720,
+        "endMs": 581700,
+        "text": "they become more to zero as you can see"
+      },
+      {
+        "id": "youtube-json3-419-579540",
+        "startMs": 579540,
+        "endMs": 584279,
+        "text": "here we start with a slope of eight then"
+      },
+      {
+        "id": "youtube-json3-421-581700",
+        "startMs": 581700,
+        "endMs": 587519,
+        "text": "four then two then one half and"
+      },
+      {
+        "id": "youtube-json3-423-584279",
+        "startMs": 584279,
+        "endMs": 591180,
+        "text": "etc etc and if we keep increasing our y"
+      },
+      {
+        "id": "youtube-json3-425-587519",
+        "startMs": 587519,
+        "endMs": 593820,
+        "text": "value uh the Y the slope doubles"
+      },
+      {
+        "id": "youtube-json3-427-591180",
+        "startMs": 591180,
+        "endMs": 597500,
+        "text": "slope it's increasing slope is"
+      },
+      {
+        "id": "youtube-json3-429-593820",
+        "startMs": 593820,
+        "endMs": 597500,
+        "text": "increasing as we increase our y value"
+      },
+      {
+        "id": "youtube-json3-431-598100",
+        "startMs": 598100,
+        "endMs": 605100,
+        "text": "so as the Y values get larger and larger"
+      },
+      {
+        "id": "youtube-json3-433-601820",
+        "startMs": 601820,
+        "endMs": 608160,
+        "text": "our slope deviates closer and closer to"
+      },
+      {
+        "id": "youtube-json3-435-605100",
+        "startMs": 605100,
+        "endMs": 610260,
+        "text": "infinity and our X values get larger our"
+      },
+      {
+        "id": "youtube-json3-437-608160",
+        "startMs": 608160,
+        "endMs": 613140,
+        "text": "slope converges closer and closer to"
+      },
+      {
+        "id": "youtube-json3-439-610260",
+        "startMs": 610260,
+        "endMs": 615779,
+        "text": "zero but as you can see with this 4 in"
+      },
+      {
+        "id": "youtube-json3-441-613140",
+        "startMs": 613140,
+        "endMs": 617640,
+        "text": "the numerator the slope grows to"
+      },
+      {
+        "id": "youtube-json3-443-615779",
+        "startMs": 615779,
+        "endMs": 620000,
+        "text": "Infinity much faster than it grows to"
+      },
+      {
+        "id": "youtube-json3-445-617640",
+        "startMs": 617640,
+        "endMs": 620000,
+        "text": "zero"
+      },
+      {
+        "id": "youtube-json3-447-621060",
+        "startMs": 621060,
+        "endMs": 626640,
+        "text": "now that we have this slope field now"
+      },
+      {
+        "id": "youtube-json3-449-624180",
+        "startMs": 624180,
+        "endMs": 628140,
+        "text": "that we know what the slope would be at"
+      },
+      {
+        "id": "youtube-json3-451-626640",
+        "startMs": 626640,
+        "endMs": 631320,
+        "text": "any point"
+      },
+      {
+        "id": "youtube-json3-453-628140",
+        "startMs": 628140,
+        "endMs": 632760,
+        "text": "we can try sketching different graphs"
+      },
+      {
+        "id": "youtube-json3-455-631320",
+        "startMs": 631320,
+        "endMs": 635940,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-457-632760",
+        "startMs": 632760,
+        "endMs": 638580,
+        "text": "what different graphs would look like"
+      },
+      {
+        "id": "youtube-json3-459-635940",
+        "startMs": 635940,
+        "endMs": 641100,
+        "text": "and very often what you would be told to"
+      },
+      {
+        "id": "youtube-json3-461-638580",
+        "startMs": 638580,
+        "endMs": 645540,
+        "text": "do on an frq is you'd be given a slope"
+      },
+      {
+        "id": "youtube-json3-463-641100",
+        "startMs": 641100,
+        "endMs": 648180,
+        "text": "field and you'd say draw"
+      },
+      {
+        "id": "youtube-json3-465-645540",
+        "startMs": 645540,
+        "endMs": 650100,
+        "text": "the graph"
+      },
+      {
+        "id": "youtube-json3-467-648180",
+        "startMs": 648180,
+        "endMs": 652260,
+        "text": "that"
+      },
+      {
+        "id": "youtube-json3-469-650100",
+        "startMs": 650100,
+        "endMs": 654240,
+        "text": "passes"
+      },
+      {
+        "id": "youtube-json3-471-652260",
+        "startMs": 652260,
+        "endMs": 658160,
+        "text": "through"
+      },
+      {
+        "id": "youtube-json3-473-654240",
+        "startMs": 654240,
+        "endMs": 660959,
+        "text": "some point let's say the point"
+      },
+      {
+        "id": "youtube-json3-475-658160",
+        "startMs": 658160,
+        "endMs": 663180,
+        "text": "uh one comma one"
+      },
+      {
+        "id": "youtube-json3-477-660959",
+        "startMs": 660959,
+        "endMs": 665640,
+        "text": "all right let's say we pass through that"
+      },
+      {
+        "id": "youtube-json3-479-663180",
+        "startMs": 663180,
+        "endMs": 668339,
+        "text": "point well one comma one first of all"
+      },
+      {
+        "id": "youtube-json3-481-665640",
+        "startMs": 665640,
+        "endMs": 670079,
+        "text": "our slope is four here so one point"
+      },
+      {
+        "id": "youtube-json3-483-668339",
+        "startMs": 668339,
+        "endMs": 673740,
+        "text": "would be here then we would follow the"
+      },
+      {
+        "id": "youtube-json3-485-670079",
+        "startMs": 670079,
+        "endMs": 676079,
+        "text": "slope up Four Points to here"
+      },
+      {
+        "id": "youtube-json3-487-673740",
+        "startMs": 673740,
+        "endMs": 677880,
+        "text": "then here what would our slope be our"
+      },
+      {
+        "id": "youtube-json3-489-676079",
+        "startMs": 676079,
+        "endMs": 678959,
+        "text": "slope would be"
+      },
+      {
+        "id": "youtube-json3-491-677880",
+        "startMs": 677880,
+        "endMs": 680459,
+        "text": "um"
+      },
+      {
+        "id": "youtube-json3-493-678959",
+        "startMs": 678959,
+        "endMs": 682500,
+        "text": "eight"
+      },
+      {
+        "id": "youtube-json3-495-680459",
+        "startMs": 680459,
+        "endMs": 684779,
+        "text": "so we would follow the slope up one two"
+      },
+      {
+        "id": "youtube-json3-497-682500",
+        "startMs": 682500,
+        "endMs": 688019,
+        "text": "three four five six"
+      },
+      {
+        "id": "youtube-json3-499-684779",
+        "startMs": 684779,
+        "endMs": 689579,
+        "text": "and you can see that this function is"
+      },
+      {
+        "id": "youtube-json3-501-688019",
+        "startMs": 688019,
+        "endMs": 691620,
+        "text": "already starting to look like an"
+      },
+      {
+        "id": "youtube-json3-503-689579",
+        "startMs": 689579,
+        "endMs": 694040,
+        "text": "exponential function"
+      },
+      {
+        "id": "youtube-json3-505-691620",
+        "startMs": 691620,
+        "endMs": 694040,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-507-696899",
+        "startMs": 696899,
+        "endMs": 701040,
+        "text": "all of that"
+      },
+      {
+        "id": "youtube-json3-509-698459",
+        "startMs": 698459,
+        "endMs": 703560,
+        "text": "from us being given an initial point"
+      },
+      {
+        "id": "youtube-json3-511-701040",
+        "startMs": 701040,
+        "endMs": 706440,
+        "text": "also called an initial condition"
+      },
+      {
+        "id": "youtube-json3-513-703560",
+        "startMs": 703560,
+        "endMs": 709200,
+        "text": "okay and the function looking like an"
+      },
+      {
+        "id": "youtube-json3-515-706440",
+        "startMs": 706440,
+        "endMs": 711720,
+        "text": "exponential function makes perfect sense"
+      },
+      {
+        "id": "youtube-json3-517-709200",
+        "startMs": 709200,
+        "endMs": 714180,
+        "text": "with the solution we got earlier in my"
+      },
+      {
+        "id": "youtube-json3-519-711720",
+        "startMs": 711720,
+        "endMs": 716820,
+        "text": "multiple choice example so that's slope"
+      },
+      {
+        "id": "youtube-json3-521-714180",
+        "startMs": 714180,
+        "endMs": 719040,
+        "text": "Fields uh drawing them should be pretty"
+      },
+      {
+        "id": "youtube-json3-523-716820",
+        "startMs": 716820,
+        "endMs": 720600,
+        "text": "simple it's just plug the X and Y"
+      },
+      {
+        "id": "youtube-json3-525-719040",
+        "startMs": 719040,
+        "endMs": 723240,
+        "text": "coordinates into the differential"
+      },
+      {
+        "id": "youtube-json3-527-720600",
+        "startMs": 720600,
+        "endMs": 724880,
+        "text": "equation and that's the slope at that"
+      },
+      {
+        "id": "youtube-json3-529-723240",
+        "startMs": 723240,
+        "endMs": 727860,
+        "text": "point in the slope field"
+      },
+      {
+        "id": "youtube-json3-531-724880",
+        "startMs": 724880,
+        "endMs": 730019,
+        "text": "drawing a graph that passes through this"
+      },
+      {
+        "id": "youtube-json3-533-727860",
+        "startMs": 727860,
+        "endMs": 733019,
+        "text": "point is pretty simple you just start at"
+      },
+      {
+        "id": "youtube-json3-535-730019",
+        "startMs": 730019,
+        "endMs": 735360,
+        "text": "that point and then okay what's the"
+      },
+      {
+        "id": "youtube-json3-537-733019",
+        "startMs": 733019,
+        "endMs": 738180,
+        "text": "slope at this point the slope's four let"
+      },
+      {
+        "id": "youtube-json3-539-735360",
+        "startMs": 735360,
+        "endMs": 740100,
+        "text": "me go four up one to the right what's"
+      },
+      {
+        "id": "youtube-json3-541-738180",
+        "startMs": 738180,
+        "endMs": 742079,
+        "text": "the slope at that point oh the slope's"
+      },
+      {
+        "id": "youtube-json3-543-740100",
+        "startMs": 740100,
+        "endMs": 742740,
+        "text": "eight let me go eight up one to the"
+      },
+      {
+        "id": "youtube-json3-545-742079",
+        "startMs": 742079,
+        "endMs": 745380,
+        "text": "right"
+      },
+      {
+        "id": "youtube-json3-547-742740",
+        "startMs": 742740,
+        "endMs": 747000,
+        "text": "and that's how you draw slopes on slope"
+      },
+      {
+        "id": "youtube-json3-549-745380",
+        "startMs": 745380,
+        "endMs": 750540,
+        "text": "that's how you draw graphs on slope"
+      },
+      {
+        "id": "youtube-json3-551-747000",
+        "startMs": 747000,
+        "endMs": 752279,
+        "text": "fields however if we said uh the graph"
+      },
+      {
+        "id": "youtube-json3-553-750540",
+        "startMs": 750540,
+        "endMs": 753120,
+        "text": "that passes through the point one comma"
+      },
+      {
+        "id": "youtube-json3-555-752279",
+        "startMs": 752279,
+        "endMs": 758519,
+        "text": "two"
+      },
+      {
+        "id": "youtube-json3-557-753120",
+        "startMs": 753120,
+        "endMs": 760500,
+        "text": "we are asserting that the the solution"
+      },
+      {
+        "id": "youtube-json3-559-758519",
+        "startMs": 758519,
+        "endMs": 762720,
+        "text": "to our differential equation passes"
+      },
+      {
+        "id": "youtube-json3-561-760500",
+        "startMs": 760500,
+        "endMs": 764100,
+        "text": "through the point one comma two so how"
+      },
+      {
+        "id": "youtube-json3-563-762720",
+        "startMs": 762720,
+        "endMs": 767279,
+        "text": "would we do that"
+      },
+      {
+        "id": "youtube-json3-565-764100",
+        "startMs": 764100,
+        "endMs": 769800,
+        "text": "uh X when x equals one"
+      },
+      {
+        "id": "youtube-json3-567-767279",
+        "startMs": 767279,
+        "endMs": 772260,
+        "text": "x to the fourth equals one and Y equals"
+      },
+      {
+        "id": "youtube-json3-569-769800",
+        "startMs": 769800,
+        "endMs": 774120,
+        "text": "two so our plus C here would be plus one"
+      },
+      {
+        "id": "youtube-json3-571-772260",
+        "startMs": 772260,
+        "endMs": 776160,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-573-774120",
+        "startMs": 774120,
+        "endMs": 779220,
+        "text": "so if we were given the points one comma"
+      },
+      {
+        "id": "youtube-json3-575-776160",
+        "startMs": 776160,
+        "endMs": 780779,
+        "text": "two we would be drawing the the slope"
+      },
+      {
+        "id": "youtube-json3-577-779220",
+        "startMs": 779220,
+        "endMs": 783360,
+        "text": "field"
+      },
+      {
+        "id": "youtube-json3-579-780779",
+        "startMs": 780779,
+        "endMs": 785940,
+        "text": "excuse me we would be drawing the curve"
+      },
+      {
+        "id": "youtube-json3-581-783360",
+        "startMs": 783360,
+        "endMs": 789060,
+        "text": "through the slope field of this equation"
+      },
+      {
+        "id": "youtube-json3-583-785940",
+        "startMs": 785940,
+        "endMs": 791700,
+        "text": "all right remember the graph you are"
+      },
+      {
+        "id": "youtube-json3-585-789060",
+        "startMs": 789060,
+        "endMs": 793920,
+        "text": "drawing through a slope field is the"
+      },
+      {
+        "id": "youtube-json3-587-791700",
+        "startMs": 791700,
+        "endMs": 796800,
+        "text": "graph of your original function"
+      },
+      {
+        "id": "youtube-json3-589-793920",
+        "startMs": 793920,
+        "endMs": 799320,
+        "text": "the slopes the tick marks that you're"
+      },
+      {
+        "id": "youtube-json3-591-796800",
+        "startMs": 796800,
+        "endMs": 800880,
+        "text": "drawing on your slope field are the"
+      },
+      {
+        "id": "youtube-json3-593-799320",
+        "startMs": 799320,
+        "endMs": 802620,
+        "text": "values of your differential equation"
+      },
+      {
+        "id": "youtube-json3-595-800880",
+        "startMs": 800880,
+        "endMs": 805500,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-597-802620",
+        "startMs": 802620,
+        "endMs": 807300,
+        "text": "and whatever Point whatever initial"
+      },
+      {
+        "id": "youtube-json3-599-805500",
+        "startMs": 805500,
+        "endMs": 810120,
+        "text": "condition you're given"
+      },
+      {
+        "id": "youtube-json3-601-807300",
+        "startMs": 807300,
+        "endMs": 813540,
+        "text": "from that you can derive the plus C"
+      },
+      {
+        "id": "youtube-json3-603-810120",
+        "startMs": 810120,
+        "endMs": 817200,
+        "text": "value of the differ of the original"
+      },
+      {
+        "id": "youtube-json3-605-813540",
+        "startMs": 813540,
+        "endMs": 819660,
+        "text": "function that you're evaluating okay so"
+      },
+      {
+        "id": "youtube-json3-607-817200",
+        "startMs": 817200,
+        "endMs": 821100,
+        "text": "this right here is the graph of y equals"
+      },
+      {
+        "id": "youtube-json3-609-819660",
+        "startMs": 819660,
+        "endMs": 824820,
+        "text": "x to the fourth"
+      },
+      {
+        "id": "youtube-json3-611-821100",
+        "startMs": 821100,
+        "endMs": 828920,
+        "text": "okay now uh next topic"
+      },
+      {
+        "id": "youtube-json3-613-824820",
+        "startMs": 824820,
+        "endMs": 831959,
+        "text": "is something called Euler's method"
+      },
+      {
+        "id": "youtube-json3-615-828920",
+        "startMs": 828920,
+        "endMs": 834300,
+        "text": "I remember when I learned Euler's method"
+      },
+      {
+        "id": "youtube-json3-617-831959",
+        "startMs": 831959,
+        "endMs": 836760,
+        "text": "I was a bit behind on my self-study"
+      },
+      {
+        "id": "youtube-json3-619-834300",
+        "startMs": 834300,
+        "endMs": 838860,
+        "text": "schedule so I was uh teaching this to"
+      },
+      {
+        "id": "youtube-json3-621-836760",
+        "startMs": 836760,
+        "endMs": 841380,
+        "text": "myself while waiting for my food in the"
+      },
+      {
+        "id": "youtube-json3-623-838860",
+        "startMs": 838860,
+        "endMs": 844740,
+        "text": "diner but that's that's the story for"
+      },
+      {
+        "id": "youtube-json3-625-841380",
+        "startMs": 841380,
+        "endMs": 848760,
+        "text": "another time anyway Euler's method"
+      },
+      {
+        "id": "youtube-json3-627-844740",
+        "startMs": 844740,
+        "endMs": 851940,
+        "text": "it's a way for approximating the values"
+      },
+      {
+        "id": "youtube-json3-629-848760",
+        "startMs": 848760,
+        "endMs": 854519,
+        "text": "of an original function okay so let's"
+      },
+      {
+        "id": "youtube-json3-631-851940",
+        "startMs": 851940,
+        "endMs": 859500,
+        "text": "continue with this same uh differential"
+      },
+      {
+        "id": "youtube-json3-633-854519",
+        "startMs": 854519,
+        "endMs": 861720,
+        "text": "equation I like this d y d x equals 4y"
+      },
+      {
+        "id": "youtube-json3-635-859500",
+        "startMs": 859500,
+        "endMs": 863459,
+        "text": "over X okay"
+      },
+      {
+        "id": "youtube-json3-637-861720",
+        "startMs": 861720,
+        "endMs": 865620,
+        "text": "always going to be given your"
+      },
+      {
+        "id": "youtube-json3-639-863459",
+        "startMs": 863459,
+        "endMs": 867540,
+        "text": "differential equation"
+      },
+      {
+        "id": "youtube-json3-641-865620",
+        "startMs": 865620,
+        "endMs": 870720,
+        "text": "and Euler's method"
+      },
+      {
+        "id": "youtube-json3-643-867540",
+        "startMs": 867540,
+        "endMs": 872579,
+        "text": "States in order to use Euler's methods"
+      },
+      {
+        "id": "youtube-json3-645-870720",
+        "startMs": 870720,
+        "endMs": 875459,
+        "text": "you would be given"
+      },
+      {
+        "id": "youtube-json3-647-872579",
+        "startMs": 872579,
+        "endMs": 878220,
+        "text": "on original x value let's say x equals"
+      },
+      {
+        "id": "youtube-json3-649-875459",
+        "startMs": 875459,
+        "endMs": 880440,
+        "text": "one and an original y value let's say y"
+      },
+      {
+        "id": "youtube-json3-651-878220",
+        "startMs": 878220,
+        "endMs": 884120,
+        "text": "equals one it'd be given an initial"
+      },
+      {
+        "id": "youtube-json3-653-880440",
+        "startMs": 880440,
+        "endMs": 884120,
+        "text": "condition an initial coordinate"
+      },
+      {
+        "id": "youtube-json3-655-885540",
+        "startMs": 885540,
+        "endMs": 890519,
+        "text": "and Euler's method states that"
+      },
+      {
+        "id": "youtube-json3-657-888959",
+        "startMs": 888959,
+        "endMs": 895320,
+        "text": "um"
+      },
+      {
+        "id": "youtube-json3-659-890519",
+        "startMs": 890519,
+        "endMs": 896820,
+        "text": "you can approximate the value of uh"
+      },
+      {
+        "id": "youtube-json3-661-895320",
+        "startMs": 895320,
+        "endMs": 900540,
+        "text": "a function"
+      },
+      {
+        "id": "youtube-json3-663-896820",
+        "startMs": 896820,
+        "endMs": 905100,
+        "text": "that is some small distance away from"
+      },
+      {
+        "id": "youtube-json3-665-900540",
+        "startMs": 900540,
+        "endMs": 906779,
+        "text": "your initial condition by using this the"
+      },
+      {
+        "id": "youtube-json3-667-905100",
+        "startMs": 905100,
+        "endMs": 908760,
+        "text": "differential slope that your"
+      },
+      {
+        "id": "youtube-json3-669-906779",
+        "startMs": 906779,
+        "endMs": 910620,
+        "text": "differential equation provides you it's"
+      },
+      {
+        "id": "youtube-json3-671-908760",
+        "startMs": 908760,
+        "endMs": 913680,
+        "text": "pretty much the same thing as local"
+      },
+      {
+        "id": "youtube-json3-673-910620",
+        "startMs": 910620,
+        "endMs": 916800,
+        "text": "linear approximation except multiple"
+      },
+      {
+        "id": "youtube-json3-675-913680",
+        "startMs": 913680,
+        "endMs": 919260,
+        "text": "times okay"
+      },
+      {
+        "id": "youtube-json3-677-916800",
+        "startMs": 916800,
+        "endMs": 921420,
+        "text": "so here if you remember local linear"
+      },
+      {
+        "id": "youtube-json3-679-919260",
+        "startMs": 919260,
+        "endMs": 924000,
+        "text": "approximation from our applications of"
+      },
+      {
+        "id": "youtube-json3-681-921420",
+        "startMs": 921420,
+        "endMs": 926760,
+        "text": "the derivative video you would remember"
+      },
+      {
+        "id": "youtube-json3-683-924000",
+        "startMs": 924000,
+        "endMs": 930120,
+        "text": "that on a function"
+      },
+      {
+        "id": "youtube-json3-685-926760",
+        "startMs": 926760,
+        "endMs": 932579,
+        "text": "you'd be given some points you'd find"
+      },
+      {
+        "id": "youtube-json3-687-930120",
+        "startMs": 930120,
+        "endMs": 934440,
+        "text": "the tangent line to set point and you"
+      },
+      {
+        "id": "youtube-json3-689-932579",
+        "startMs": 932579,
+        "endMs": 937620,
+        "text": "would approximate some value on the"
+      },
+      {
+        "id": "youtube-json3-691-934440",
+        "startMs": 934440,
+        "endMs": 939720,
+        "text": "function by approximating that value on"
+      },
+      {
+        "id": "youtube-json3-693-937620",
+        "startMs": 937620,
+        "endMs": 942060,
+        "text": "the tangent line"
+      },
+      {
+        "id": "youtube-json3-695-939720",
+        "startMs": 939720,
+        "endMs": 944339,
+        "text": "well this is very similar it's just"
+      },
+      {
+        "id": "youtube-json3-697-942060",
+        "startMs": 942060,
+        "endMs": 946260,
+        "text": "multiple iterations of the same"
+      },
+      {
+        "id": "youtube-json3-699-944339",
+        "startMs": 944339,
+        "endMs": 949199,
+        "text": "principle"
+      },
+      {
+        "id": "youtube-json3-701-946260",
+        "startMs": 946260,
+        "endMs": 952399,
+        "text": "so when they ask you to use Euler's"
+      },
+      {
+        "id": "youtube-json3-703-949199",
+        "startMs": 949199,
+        "endMs": 954720,
+        "text": "methods to approximate let's say"
+      },
+      {
+        "id": "youtube-json3-705-952399",
+        "startMs": 952399,
+        "endMs": 958980,
+        "text": "y equals"
+      },
+      {
+        "id": "youtube-json3-707-954720",
+        "startMs": 954720,
+        "endMs": 961440,
+        "text": "2 and I'm sorry x equals two you're"
+      },
+      {
+        "id": "youtube-json3-709-958980",
+        "startMs": 958980,
+        "endMs": 963060,
+        "text": "approximating the Y value at x equals"
+      },
+      {
+        "id": "youtube-json3-711-961440",
+        "startMs": 961440,
+        "endMs": 965339,
+        "text": "two"
+      },
+      {
+        "id": "youtube-json3-713-963060",
+        "startMs": 963060,
+        "endMs": 966959,
+        "text": "y equals question mark that's what we're"
+      },
+      {
+        "id": "youtube-json3-715-965339",
+        "startMs": 965339,
+        "endMs": 968820,
+        "text": "looking for"
+      },
+      {
+        "id": "youtube-json3-717-966959",
+        "startMs": 966959,
+        "endMs": 971820,
+        "text": "they would say"
+      },
+      {
+        "id": "youtube-json3-719-968820",
+        "startMs": 968820,
+        "endMs": 974420,
+        "text": "using Euler's method with"
+      },
+      {
+        "id": "youtube-json3-721-971820",
+        "startMs": 971820,
+        "endMs": 981240,
+        "text": "uh"
+      },
+      {
+        "id": "youtube-json3-723-974420",
+        "startMs": 974420,
+        "endMs": 984000,
+        "text": "two steps or with four subdivisions or"
+      },
+      {
+        "id": "youtube-json3-725-981240",
+        "startMs": 981240,
+        "endMs": 987540,
+        "text": "something along those lines okay"
+      },
+      {
+        "id": "youtube-json3-727-984000",
+        "startMs": 984000,
+        "endMs": 990720,
+        "text": "and what that means is you would take"
+      },
+      {
+        "id": "youtube-json3-729-987540",
+        "startMs": 987540,
+        "endMs": 993660,
+        "text": "your target x value minus your original"
+      },
+      {
+        "id": "youtube-json3-731-990720",
+        "startMs": 990720,
+        "endMs": 996180,
+        "text": "x value which in this case equals one"
+      },
+      {
+        "id": "youtube-json3-733-993660",
+        "startMs": 993660,
+        "endMs": 999899,
+        "text": "and you would divide that by your amount"
+      },
+      {
+        "id": "youtube-json3-735-996180",
+        "startMs": 996180,
+        "endMs": 1003199,
+        "text": "of subdivisions let's say four okay"
+      },
+      {
+        "id": "youtube-json3-737-999899",
+        "startMs": 999899,
+        "endMs": 1006019,
+        "text": "so that means each step we take"
+      },
+      {
+        "id": "youtube-json3-739-1003199",
+        "startMs": 1003199,
+        "endMs": 1008240,
+        "text": "is one-fourth"
+      },
+      {
+        "id": "youtube-json3-741-1006019",
+        "startMs": 1006019,
+        "endMs": 1010100,
+        "text": "the one-fourth"
+      },
+      {
+        "id": "youtube-json3-743-1008240",
+        "startMs": 1008240,
+        "endMs": 1012560,
+        "text": "so let's let me show you how to do"
+      },
+      {
+        "id": "youtube-json3-745-1010100",
+        "startMs": 1010100,
+        "endMs": 1015139,
+        "text": "Euler's method"
+      },
+      {
+        "id": "youtube-json3-747-1012560",
+        "startMs": 1012560,
+        "endMs": 1017300,
+        "text": "it's very it's highly recommended to"
+      },
+      {
+        "id": "youtube-json3-749-1015139",
+        "startMs": 1015139,
+        "endMs": 1019100,
+        "text": "make a chart here"
+      },
+      {
+        "id": "youtube-json3-751-1017300",
+        "startMs": 1017300,
+        "endMs": 1021440,
+        "text": "on this side of the chart you put your x"
+      },
+      {
+        "id": "youtube-json3-753-1019100",
+        "startMs": 1019100,
+        "endMs": 1023660,
+        "text": "value this year Y and this is your d y d"
+      },
+      {
+        "id": "youtube-json3-755-1021440",
+        "startMs": 1021440,
+        "endMs": 1027140,
+        "text": "x"
+      },
+      {
+        "id": "youtube-json3-757-1023660",
+        "startMs": 1023660,
+        "endMs": 1030439,
+        "text": "so our initial condition x equals one y"
+      },
+      {
+        "id": "youtube-json3-759-1027140",
+        "startMs": 1027140,
+        "endMs": 1032299,
+        "text": "equals one and our d y d x"
+      },
+      {
+        "id": "youtube-json3-761-1030439",
+        "startMs": 1030439,
+        "endMs": 1036980,
+        "text": "4."
+      },
+      {
+        "id": "youtube-json3-763-1032299",
+        "startMs": 1032299,
+        "endMs": 1039980,
+        "text": "okay the next step is one-fourth further"
+      },
+      {
+        "id": "youtube-json3-765-1036980",
+        "startMs": 1036980,
+        "endMs": 1039980,
+        "text": "1.25"
+      },
+      {
+        "id": "youtube-json3-767-1041000",
+        "startMs": 1041000,
+        "endMs": 1048380,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-769-1043339",
+        "startMs": 1043339,
+        "endMs": 1051380,
+        "text": "then we do a local linear approximation"
+      },
+      {
+        "id": "youtube-json3-771-1048380",
+        "startMs": 1048380,
+        "endMs": 1054980,
+        "text": "the change in X 0.25"
+      },
+      {
+        "id": "youtube-json3-773-1051380",
+        "startMs": 1051380,
+        "endMs": 1057400,
+        "text": "times our slope which is 4.25 times 4 is"
+      },
+      {
+        "id": "youtube-json3-775-1054980",
+        "startMs": 1054980,
+        "endMs": 1057400,
+        "text": "1."
+      },
+      {
+        "id": "youtube-json3-777-1058400",
+        "startMs": 1058400,
+        "endMs": 1064100,
+        "text": "and that's 0.25 times 4 is our change in"
+      },
+      {
+        "id": "youtube-json3-779-1061820",
+        "startMs": 1061820,
+        "endMs": 1067240,
+        "text": "y one would be our change in y so y"
+      },
+      {
+        "id": "youtube-json3-781-1064100",
+        "startMs": 1064100,
+        "endMs": 1067240,
+        "text": "would equal 2 here"
+      },
+      {
+        "id": "youtube-json3-783-1068840",
+        "startMs": 1068840,
+        "endMs": 1072020,
+        "text": "let me redo what I just did for some"
+      },
+      {
+        "id": "youtube-json3-785-1071059",
+        "startMs": 1071059,
+        "endMs": 1076280,
+        "text": "clarity"
+      },
+      {
+        "id": "youtube-json3-787-1072020",
+        "startMs": 1072020,
+        "endMs": 1079340,
+        "text": "we took our change in X which was 0.25"
+      },
+      {
+        "id": "youtube-json3-789-1076280",
+        "startMs": 1076280,
+        "endMs": 1081740,
+        "text": "which was our step value how large our"
+      },
+      {
+        "id": "youtube-json3-791-1079340",
+        "startMs": 1079340,
+        "endMs": 1083780,
+        "text": "steps are we multiplied that by the"
+      },
+      {
+        "id": "youtube-json3-793-1081740",
+        "startMs": 1081740,
+        "endMs": 1087160,
+        "text": "value of d y d x"
+      },
+      {
+        "id": "youtube-json3-795-1083780",
+        "startMs": 1083780,
+        "endMs": 1092600,
+        "text": "which is the same as 4."
+      },
+      {
+        "id": "youtube-json3-797-1087160",
+        "startMs": 1087160,
+        "endMs": 1092600,
+        "text": "0.25 times 4 is 1."
+      },
+      {
+        "id": "youtube-json3-799-1093799",
+        "startMs": 1093799,
+        "endMs": 1098840,
+        "text": "okay 4 here represents the slope of our"
+      },
+      {
+        "id": "youtube-json3-801-1096380",
+        "startMs": 1096380,
+        "endMs": 1102919,
+        "text": "tangent line 0.25 represents the"
+      },
+      {
+        "id": "youtube-json3-803-1098840",
+        "startMs": 1098840,
+        "endMs": 1105620,
+        "text": "distance and therefore 1 represents the"
+      },
+      {
+        "id": "youtube-json3-805-1102919",
+        "startMs": 1102919,
+        "endMs": 1107419,
+        "text": "change in y how much we added or"
+      },
+      {
+        "id": "youtube-json3-807-1105620",
+        "startMs": 1105620,
+        "endMs": 1110600,
+        "text": "subtracted from y"
+      },
+      {
+        "id": "youtube-json3-809-1107419",
+        "startMs": 1107419,
+        "endMs": 1113299,
+        "text": "okay so we take our original y value and"
+      },
+      {
+        "id": "youtube-json3-811-1110600",
+        "startMs": 1110600,
+        "endMs": 1114679,
+        "text": "we add that value to it so we get y"
+      },
+      {
+        "id": "youtube-json3-813-1113299",
+        "startMs": 1113299,
+        "endMs": 1118220,
+        "text": "equals 2."
+      },
+      {
+        "id": "youtube-json3-815-1114679",
+        "startMs": 1114679,
+        "endMs": 1120080,
+        "text": "at x equals 1.25 and then we calculate d"
+      },
+      {
+        "id": "youtube-json3-817-1118220",
+        "startMs": 1118220,
+        "endMs": 1125419,
+        "text": "y d x again"
+      },
+      {
+        "id": "youtube-json3-819-1120080",
+        "startMs": 1120080,
+        "endMs": 1129640,
+        "text": "d y d x would be 8 over 1.25 which is"
+      },
+      {
+        "id": "youtube-json3-821-1125419",
+        "startMs": 1125419,
+        "endMs": 1135020,
+        "text": "the same as so d y d x would be 8 over"
+      },
+      {
+        "id": "youtube-json3-823-1129640",
+        "startMs": 1129640,
+        "endMs": 1141080,
+        "text": "1.25 which is the same as 8 over 5 over"
+      },
+      {
+        "id": "youtube-json3-825-1135020",
+        "startMs": 1135020,
+        "endMs": 1145900,
+        "text": "4 which is the same as 32 over 5."
+      },
+      {
+        "id": "youtube-json3-827-1141080",
+        "startMs": 1141080,
+        "endMs": 1145900,
+        "text": "d y the x is 32 over 5."
+      },
+      {
+        "id": "youtube-json3-829-1146059",
+        "startMs": 1146059,
+        "endMs": 1150320,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-831-1147799",
+        "startMs": 1147799,
+        "endMs": 1152960,
+        "text": "that's a pretty big number there"
+      },
+      {
+        "id": "youtube-json3-833-1150320",
+        "startMs": 1150320,
+        "endMs": 1154520,
+        "text": "and usually when you would come across a"
+      },
+      {
+        "id": "youtube-json3-835-1152960",
+        "startMs": 1152960,
+        "endMs": 1156559,
+        "text": "problem like this they wouldn't give you"
+      },
+      {
+        "id": "youtube-json3-837-1154520",
+        "startMs": 1154520,
+        "endMs": 1159440,
+        "text": "numbers that bad"
+      },
+      {
+        "id": "youtube-json3-839-1156559",
+        "startMs": 1156559,
+        "endMs": 1163940,
+        "text": "so for simplicity's sake I'm just going"
+      },
+      {
+        "id": "youtube-json3-841-1159440",
+        "startMs": 1159440,
+        "endMs": 1165559,
+        "text": "to pretend that this says eight okay"
+      },
+      {
+        "id": "youtube-json3-843-1163940",
+        "startMs": 1163940,
+        "endMs": 1167120,
+        "text": "we're just going to pretend that says"
+      },
+      {
+        "id": "youtube-json3-845-1165559",
+        "startMs": 1165559,
+        "endMs": 1168860,
+        "text": "eight for the sake of showing you how"
+      },
+      {
+        "id": "youtube-json3-847-1167120",
+        "startMs": 1167120,
+        "endMs": 1171919,
+        "text": "this problem works"
+      },
+      {
+        "id": "youtube-json3-849-1168860",
+        "startMs": 1168860,
+        "endMs": 1174640,
+        "text": "so again you would do the same process"
+      },
+      {
+        "id": "youtube-json3-851-1171919",
+        "startMs": 1171919,
+        "endMs": 1179600,
+        "text": "you would do your change in X to 0.25"
+      },
+      {
+        "id": "youtube-json3-853-1174640",
+        "startMs": 1174640,
+        "endMs": 1182000,
+        "text": "times the value of dydx which is eighth"
+      },
+      {
+        "id": "youtube-json3-855-1179600",
+        "startMs": 1179600,
+        "endMs": 1184940,
+        "text": "and you would get two that's your change"
+      },
+      {
+        "id": "youtube-json3-857-1182000",
+        "startMs": 1182000,
+        "endMs": 1188419,
+        "text": "in y you add that to your original y"
+      },
+      {
+        "id": "youtube-json3-859-1184940",
+        "startMs": 1184940,
+        "endMs": 1191120,
+        "text": "value two plus two"
+      },
+      {
+        "id": "youtube-json3-861-1188419",
+        "startMs": 1188419,
+        "endMs": 1194720,
+        "text": "okay one point five now we're"
+      },
+      {
+        "id": "youtube-json3-863-1191120",
+        "startMs": 1191120,
+        "endMs": 1197120,
+        "text": "at 1.5 2 plus 2 is 4. and then you would"
+      },
+      {
+        "id": "youtube-json3-865-1194720",
+        "startMs": 1194720,
+        "endMs": 1198919,
+        "text": "calculate d y d x again"
+      },
+      {
+        "id": "youtube-json3-867-1197120",
+        "startMs": 1197120,
+        "endMs": 1203480,
+        "text": "and you would keep iterating through"
+      },
+      {
+        "id": "youtube-json3-869-1198919",
+        "startMs": 1198919,
+        "endMs": 1204799,
+        "text": "this process until you get to x equals"
+      },
+      {
+        "id": "youtube-json3-871-1203480",
+        "startMs": 1203480,
+        "endMs": 1207440,
+        "text": "two"
+      },
+      {
+        "id": "youtube-json3-873-1204799",
+        "startMs": 1204799,
+        "endMs": 1211640,
+        "text": "and then in here would be your"
+      },
+      {
+        "id": "youtube-json3-875-1207440",
+        "startMs": 1207440,
+        "endMs": 1213919,
+        "text": "approximation of Y at x equals two"
+      },
+      {
+        "id": "youtube-json3-877-1211640",
+        "startMs": 1211640,
+        "endMs": 1215780,
+        "text": "you don't need to calculate the y d x"
+      },
+      {
+        "id": "youtube-json3-879-1213919",
+        "startMs": 1213919,
+        "endMs": 1217940,
+        "text": "here because you already have your y"
+      },
+      {
+        "id": "youtube-json3-881-1215780",
+        "startMs": 1215780,
+        "endMs": 1220400,
+        "text": "value you're done"
+      },
+      {
+        "id": "youtube-json3-883-1217940",
+        "startMs": 1217940,
+        "endMs": 1223340,
+        "text": "and that's Euler's method"
+      },
+      {
+        "id": "youtube-json3-885-1220400",
+        "startMs": 1220400,
+        "endMs": 1225200,
+        "text": "it's a pretty tricky learning curve but"
+      },
+      {
+        "id": "youtube-json3-887-1223340",
+        "startMs": 1223340,
+        "endMs": 1228160,
+        "text": "it should be fast to learn with a bit of"
+      },
+      {
+        "id": "youtube-json3-889-1225200",
+        "startMs": 1225200,
+        "endMs": 1228160,
+        "text": "practice on Khan Academy"
+      },
+      {
+        "id": "youtube-json3-891-1229280",
+        "startMs": 1229280,
+        "endMs": 1234919,
+        "text": "that's why differential equations is my"
+      },
+      {
+        "id": "youtube-json3-893-1231559",
+        "startMs": 1231559,
+        "endMs": 1237320,
+        "text": "favorite unit it seems daunting but with"
+      },
+      {
+        "id": "youtube-json3-895-1234919",
+        "startMs": 1234919,
+        "endMs": 1239840,
+        "text": "like 10 minutes of practice you start to"
+      },
+      {
+        "id": "youtube-json3-897-1237320",
+        "startMs": 1237320,
+        "endMs": 1243620,
+        "text": "get it pretty easily"
+      },
+      {
+        "id": "youtube-json3-899-1239840",
+        "startMs": 1239840,
+        "endMs": 1246460,
+        "text": "okay what's our next topic"
+      },
+      {
+        "id": "youtube-json3-901-1243620",
+        "startMs": 1243620,
+        "endMs": 1249140,
+        "text": "this is the real meat and potatoes of"
+      },
+      {
+        "id": "youtube-json3-903-1246460",
+        "startMs": 1246460,
+        "endMs": 1251200,
+        "text": "differential equations and this is uh"
+      },
+      {
+        "id": "youtube-json3-905-1249140",
+        "startMs": 1249140,
+        "endMs": 1253520,
+        "text": "separable"
+      },
+      {
+        "id": "youtube-json3-907-1251200",
+        "startMs": 1251200,
+        "endMs": 1254720,
+        "text": "differential equations"
+      },
+      {
+        "id": "youtube-json3-909-1253520",
+        "startMs": 1253520,
+        "endMs": 1257419,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-911-1254720",
+        "startMs": 1254720,
+        "endMs": 1260000,
+        "text": "now if you have anyone who's doing"
+      },
+      {
+        "id": "youtube-json3-913-1257419",
+        "startMs": 1257419,
+        "endMs": 1261860,
+        "text": "differential equations in college"
+      },
+      {
+        "id": "youtube-json3-915-1260000",
+        "startMs": 1260000,
+        "endMs": 1265340,
+        "text": "they'll tell you that you're being"
+      },
+      {
+        "id": "youtube-json3-917-1261860",
+        "startMs": 1261860,
+        "endMs": 1268340,
+        "text": "babied right now but regardless we're"
+      },
+      {
+        "id": "youtube-json3-919-1265340",
+        "startMs": 1265340,
+        "endMs": 1270200,
+        "text": "here with calc BC this is not AP"
+      },
+      {
+        "id": "youtube-json3-921-1268340",
+        "startMs": 1268340,
+        "endMs": 1273940,
+        "text": "differential equation so we're just"
+      },
+      {
+        "id": "youtube-json3-923-1270200",
+        "startMs": 1270200,
+        "endMs": 1273940,
+        "text": "gonna we're just gonna graze on it"
+      },
+      {
+        "id": "youtube-json3-925-1274160",
+        "startMs": 1274160,
+        "endMs": 1277580,
+        "text": "so a simple separable differential"
+      },
+      {
+        "id": "youtube-json3-927-1276380",
+        "startMs": 1276380,
+        "endMs": 1281120,
+        "text": "equation"
+      },
+      {
+        "id": "youtube-json3-929-1277580",
+        "startMs": 1277580,
+        "endMs": 1284900,
+        "text": "would be something like d y d x"
+      },
+      {
+        "id": "youtube-json3-931-1281120",
+        "startMs": 1281120,
+        "endMs": 1287900,
+        "text": "uh do I have an example here"
+      },
+      {
+        "id": "youtube-json3-933-1284900",
+        "startMs": 1284900,
+        "endMs": 1290419,
+        "text": "yeah let's let's use our uh let's use"
+      },
+      {
+        "id": "youtube-json3-935-1287900",
+        "startMs": 1287900,
+        "endMs": 1292780,
+        "text": "the original one we've been using this"
+      },
+      {
+        "id": "youtube-json3-937-1290419",
+        "startMs": 1290419,
+        "endMs": 1292780,
+        "text": "whole time"
+      },
+      {
+        "id": "youtube-json3-939-1292880",
+        "startMs": 1292880,
+        "endMs": 1300799,
+        "text": "d y d x equals 4y times x"
+      },
+      {
+        "id": "youtube-json3-941-1297200",
+        "startMs": 1297200,
+        "endMs": 1302419,
+        "text": "a separable differential equation is a"
+      },
+      {
+        "id": "youtube-json3-943-1300799",
+        "startMs": 1300799,
+        "endMs": 1304700,
+        "text": "differential equation that you can"
+      },
+      {
+        "id": "youtube-json3-945-1302419",
+        "startMs": 1302419,
+        "endMs": 1307520,
+        "text": "separate the variables in"
+      },
+      {
+        "id": "youtube-json3-947-1304700",
+        "startMs": 1304700,
+        "endMs": 1310460,
+        "text": "that's why it's called separable"
+      },
+      {
+        "id": "youtube-json3-949-1307520",
+        "startMs": 1307520,
+        "endMs": 1315320,
+        "text": "we've got DX and x and we've got d y and"
+      },
+      {
+        "id": "youtube-json3-951-1310460",
+        "startMs": 1310460,
+        "endMs": 1320780,
+        "text": "Y so if I divide both sides by y then I"
+      },
+      {
+        "id": "youtube-json3-953-1315320",
+        "startMs": 1315320,
+        "endMs": 1322520,
+        "text": "should get 1 over y d x equals 4"
+      },
+      {
+        "id": "youtube-json3-955-1320780",
+        "startMs": 1320780,
+        "endMs": 1326840,
+        "text": "over X"
+      },
+      {
+        "id": "youtube-json3-957-1322520",
+        "startMs": 1322520,
+        "endMs": 1333140,
+        "text": "and If I multiply both sides by DX I get"
+      },
+      {
+        "id": "youtube-json3-959-1326840",
+        "startMs": 1326840,
+        "endMs": 1335720,
+        "text": "1 over y d y equals 4 over X DX"
+      },
+      {
+        "id": "youtube-json3-961-1333140",
+        "startMs": 1333140,
+        "endMs": 1338539,
+        "text": "now we have separate variables we've got"
+      },
+      {
+        "id": "youtube-json3-963-1335720",
+        "startMs": 1335720,
+        "endMs": 1340280,
+        "text": "y d y on one side and we've got X DX on"
+      },
+      {
+        "id": "youtube-json3-965-1338539",
+        "startMs": 1338539,
+        "endMs": 1344360,
+        "text": "the other"
+      },
+      {
+        "id": "youtube-json3-967-1340280",
+        "startMs": 1340280,
+        "endMs": 1347720,
+        "text": "that is something we can integrate"
+      },
+      {
+        "id": "youtube-json3-969-1344360",
+        "startMs": 1344360,
+        "endMs": 1349460,
+        "text": "we can take the integral of both sides"
+      },
+      {
+        "id": "youtube-json3-971-1347720",
+        "startMs": 1347720,
+        "endMs": 1351440,
+        "text": "because remember what you got to do to"
+      },
+      {
+        "id": "youtube-json3-973-1349460",
+        "startMs": 1349460,
+        "endMs": 1353600,
+        "text": "one side you got to do the other you can"
+      },
+      {
+        "id": "youtube-json3-975-1351440",
+        "startMs": 1351440,
+        "endMs": 1354799,
+        "text": "take the indefinite integral of 1 over y"
+      },
+      {
+        "id": "youtube-json3-977-1353600",
+        "startMs": 1353600,
+        "endMs": 1356780,
+        "text": "d y"
+      },
+      {
+        "id": "youtube-json3-979-1354799",
+        "startMs": 1354799,
+        "endMs": 1361240,
+        "text": "and we can set that equal to the"
+      },
+      {
+        "id": "youtube-json3-981-1356780",
+        "startMs": 1356780,
+        "endMs": 1361240,
+        "text": "integral of 4 over X the X"
+      },
+      {
+        "id": "youtube-json3-983-1361580",
+        "startMs": 1361580,
+        "endMs": 1365780,
+        "text": "and you know these are simple integrals"
+      },
+      {
+        "id": "youtube-json3-985-1363860",
+        "startMs": 1363860,
+        "endMs": 1368720,
+        "text": "you can solve this out"
+      },
+      {
+        "id": "youtube-json3-987-1365780",
+        "startMs": 1365780,
+        "endMs": 1370520,
+        "text": "that would be uh natural log of the"
+      },
+      {
+        "id": "youtube-json3-989-1368720",
+        "startMs": 1368720,
+        "endMs": 1374059,
+        "text": "absolute value of y"
+      },
+      {
+        "id": "youtube-json3-991-1370520",
+        "startMs": 1370520,
+        "endMs": 1375919,
+        "text": "equals 4 times the natural log of the"
+      },
+      {
+        "id": "youtube-json3-993-1374059",
+        "startMs": 1374059,
+        "endMs": 1379100,
+        "text": "absolute value of x"
+      },
+      {
+        "id": "youtube-json3-995-1375919",
+        "startMs": 1375919,
+        "endMs": 1382820,
+        "text": "and that can be Rewritten as natural log"
+      },
+      {
+        "id": "youtube-json3-997-1379100",
+        "startMs": 1379100,
+        "endMs": 1386600,
+        "text": "the absolute value of y equals the"
+      },
+      {
+        "id": "youtube-json3-999-1382820",
+        "startMs": 1382820,
+        "endMs": 1388400,
+        "text": "natural log of the absolute value of x"
+      },
+      {
+        "id": "youtube-json3-1001-1386600",
+        "startMs": 1386600,
+        "endMs": 1391940,
+        "text": "to the fourth"
+      },
+      {
+        "id": "youtube-json3-1003-1388400",
+        "startMs": 1388400,
+        "endMs": 1394520,
+        "text": "and then what we can do here is since x"
+      },
+      {
+        "id": "youtube-json3-1005-1391940",
+        "startMs": 1391940,
+        "endMs": 1397520,
+        "text": "to the fourth is always positive it"
+      },
+      {
+        "id": "youtube-json3-1007-1394520",
+        "startMs": 1394520,
+        "endMs": 1399799,
+        "text": "always lies above the x-axis we can get"
+      },
+      {
+        "id": "youtube-json3-1009-1397520",
+        "startMs": 1397520,
+        "endMs": 1401780,
+        "text": "rid of these absolute value bars we can"
+      },
+      {
+        "id": "youtube-json3-1011-1399799",
+        "startMs": 1399799,
+        "endMs": 1404299,
+        "text": "replace them with normal parentheses and"
+      },
+      {
+        "id": "youtube-json3-1013-1401780",
+        "startMs": 1401780,
+        "endMs": 1406940,
+        "text": "then we can raise both sides to the I"
+      },
+      {
+        "id": "youtube-json3-1015-1404299",
+        "startMs": 1404299,
+        "endMs": 1409460,
+        "text": "mean we can put both sides"
+      },
+      {
+        "id": "youtube-json3-1017-1406940",
+        "startMs": 1406940,
+        "endMs": 1411980,
+        "text": "with e as a base"
+      },
+      {
+        "id": "youtube-json3-1019-1409460",
+        "startMs": 1409460,
+        "endMs": 1415580,
+        "text": "we can take e and raise it to both sides"
+      },
+      {
+        "id": "youtube-json3-1021-1411980",
+        "startMs": 1411980,
+        "endMs": 1417860,
+        "text": "and we get y equals x to the fourth"
+      },
+      {
+        "id": "youtube-json3-1023-1415580",
+        "startMs": 1415580,
+        "endMs": 1421419,
+        "text": "which is precisely"
+      },
+      {
+        "id": "youtube-json3-1025-1417860",
+        "startMs": 1417860,
+        "endMs": 1421419,
+        "text": "the value we got here"
+      },
+      {
+        "id": "youtube-json3-1027-1421640",
+        "startMs": 1421640,
+        "endMs": 1427700,
+        "text": "that is our general solution remember we"
+      },
+      {
+        "id": "youtube-json3-1029-1425179",
+        "startMs": 1425179,
+        "endMs": 1431320,
+        "text": "don't want to forget our plus c"
+      },
+      {
+        "id": "youtube-json3-1031-1427700",
+        "startMs": 1427700,
+        "endMs": 1431320,
+        "text": "still has a plus c there"
+      },
+      {
+        "id": "youtube-json3-1033-1432500",
+        "startMs": 1432500,
+        "endMs": 1436580,
+        "text": "so"
+      },
+      {
+        "id": "youtube-json3-1035-1433700",
+        "startMs": 1433700,
+        "endMs": 1439340,
+        "text": "you can solve for a particular solution"
+      },
+      {
+        "id": "youtube-json3-1037-1436580",
+        "startMs": 1436580,
+        "endMs": 1441440,
+        "text": "to a differential equation if you are"
+      },
+      {
+        "id": "youtube-json3-1039-1439340",
+        "startMs": 1439340,
+        "endMs": 1443840,
+        "text": "given"
+      },
+      {
+        "id": "youtube-json3-1041-1441440",
+        "startMs": 1441440,
+        "endMs": 1446059,
+        "text": "an initial condition"
+      },
+      {
+        "id": "youtube-json3-1043-1443840",
+        "startMs": 1443840,
+        "endMs": 1447620,
+        "text": "we talked about initial conditions here"
+      },
+      {
+        "id": "youtube-json3-1045-1446059",
+        "startMs": 1446059,
+        "endMs": 1448940,
+        "text": "and you're going to see your initial"
+      },
+      {
+        "id": "youtube-json3-1047-1447620",
+        "startMs": 1447620,
+        "endMs": 1452299,
+        "text": "conditions again"
+      },
+      {
+        "id": "youtube-json3-1049-1448940",
+        "startMs": 1448940,
+        "endMs": 1454700,
+        "text": "you're always only ever going to be able"
+      },
+      {
+        "id": "youtube-json3-1051-1452299",
+        "startMs": 1452299,
+        "endMs": 1457780,
+        "text": "to solve for General Solutions you're"
+      },
+      {
+        "id": "youtube-json3-1053-1454700",
+        "startMs": 1454700,
+        "endMs": 1461539,
+        "text": "only ever going to be able to get plus C"
+      },
+      {
+        "id": "youtube-json3-1055-1457780",
+        "startMs": 1457780,
+        "endMs": 1465020,
+        "text": "unless you're given an initial condition"
+      },
+      {
+        "id": "youtube-json3-1057-1461539",
+        "startMs": 1461539,
+        "endMs": 1469159,
+        "text": "let's say our initial condition is x"
+      },
+      {
+        "id": "youtube-json3-1059-1465020",
+        "startMs": 1465020,
+        "endMs": 1472760,
+        "text": "equals one y equals six okay in that"
+      },
+      {
+        "id": "youtube-json3-1061-1469159",
+        "startMs": 1469159,
+        "endMs": 1475940,
+        "text": "case when we plug a 1 in for X Y equals"
+      },
+      {
+        "id": "youtube-json3-1063-1472760",
+        "startMs": 1472760,
+        "endMs": 1479480,
+        "text": "six our C would equal five therefore y"
+      },
+      {
+        "id": "youtube-json3-1065-1475940",
+        "startMs": 1475940,
+        "endMs": 1482240,
+        "text": "equals x to the fourth plus five"
+      },
+      {
+        "id": "youtube-json3-1067-1479480",
+        "startMs": 1479480,
+        "endMs": 1484640,
+        "text": "and that's your final equation separable"
+      },
+      {
+        "id": "youtube-json3-1069-1482240",
+        "startMs": 1482240,
+        "endMs": 1487460,
+        "text": "differential equations the hardest part"
+      },
+      {
+        "id": "youtube-json3-1071-1484640",
+        "startMs": 1484640,
+        "endMs": 1488659,
+        "text": "is just figuring out how to separate the"
+      },
+      {
+        "id": "youtube-json3-1073-1487460",
+        "startMs": 1487460,
+        "endMs": 1491240,
+        "text": "variables"
+      },
+      {
+        "id": "youtube-json3-1075-1488659",
+        "startMs": 1488659,
+        "endMs": 1494780,
+        "text": "usually once you've done that"
+      },
+      {
+        "id": "youtube-json3-1077-1491240",
+        "startMs": 1491240,
+        "endMs": 1497179,
+        "text": "it should be pretty simple to integrate"
+      },
+      {
+        "id": "youtube-json3-1079-1494780",
+        "startMs": 1494780,
+        "endMs": 1499640,
+        "text": "you know we've done integration for so"
+      },
+      {
+        "id": "youtube-json3-1081-1497179",
+        "startMs": 1497179,
+        "endMs": 1501559,
+        "text": "long now I think our integration video"
+      },
+      {
+        "id": "youtube-json3-1083-1499640",
+        "startMs": 1499640,
+        "endMs": 1504380,
+        "text": "was our longest video here on the"
+      },
+      {
+        "id": "youtube-json3-1085-1501559",
+        "startMs": 1501559,
+        "endMs": 1506299,
+        "text": "channel but"
+      },
+      {
+        "id": "youtube-json3-1087-1504380",
+        "startMs": 1504380,
+        "endMs": 1509240,
+        "text": "integration should not be what you're"
+      },
+      {
+        "id": "youtube-json3-1089-1506299",
+        "startMs": 1506299,
+        "endMs": 1511400,
+        "text": "struggling with it should really be just"
+      },
+      {
+        "id": "youtube-json3-1091-1509240",
+        "startMs": 1509240,
+        "endMs": 1513380,
+        "text": "figuring out how to separate them from"
+      },
+      {
+        "id": "youtube-json3-1093-1511400",
+        "startMs": 1511400,
+        "endMs": 1515539,
+        "text": "there it's pretty simple"
+      },
+      {
+        "id": "youtube-json3-1095-1513380",
+        "startMs": 1513380,
+        "endMs": 1518900,
+        "text": "and rule of thumb"
+      },
+      {
+        "id": "youtube-json3-1097-1515539",
+        "startMs": 1515539,
+        "endMs": 1520640,
+        "text": "if you're doing this on a frq on the"
+      },
+      {
+        "id": "youtube-json3-1099-1518900",
+        "startMs": 1518900,
+        "endMs": 1524059,
+        "text": "apvc exam"
+      },
+      {
+        "id": "youtube-json3-1101-1520640",
+        "startMs": 1520640,
+        "endMs": 1527539,
+        "text": "always put your function in terms of Y"
+      },
+      {
+        "id": "youtube-json3-1103-1524059",
+        "startMs": 1524059,
+        "endMs": 1529039,
+        "text": "get y by itself if at all possible which"
+      },
+      {
+        "id": "youtube-json3-1105-1527539",
+        "startMs": 1527539,
+        "endMs": 1531320,
+        "text": "if it's a separable differential"
+      },
+      {
+        "id": "youtube-json3-1107-1529039",
+        "startMs": 1529039,
+        "endMs": 1532880,
+        "text": "equation you will always be able to get"
+      },
+      {
+        "id": "youtube-json3-1109-1531320",
+        "startMs": 1531320,
+        "endMs": 1535580,
+        "text": "y by itself"
+      },
+      {
+        "id": "youtube-json3-1111-1532880",
+        "startMs": 1532880,
+        "endMs": 1538940,
+        "text": "okay so I want to take the time now to"
+      },
+      {
+        "id": "youtube-json3-1113-1535580",
+        "startMs": 1535580,
+        "endMs": 1541159,
+        "text": "show you the two most popular forms of"
+      },
+      {
+        "id": "youtube-json3-1115-1538940",
+        "startMs": 1538940,
+        "endMs": 1544760,
+        "text": "differential equations that tend to pop"
+      },
+      {
+        "id": "youtube-json3-1117-1541159",
+        "startMs": 1541159,
+        "endMs": 1547400,
+        "text": "up on the BC exam and these will pop up"
+      },
+      {
+        "id": "youtube-json3-1119-1544760",
+        "startMs": 1544760,
+        "endMs": 1549860,
+        "text": "generally in frqs because frqs always"
+      },
+      {
+        "id": "youtube-json3-1121-1547400",
+        "startMs": 1547400,
+        "endMs": 1551659,
+        "text": "include some sort of context some sort"
+      },
+      {
+        "id": "youtube-json3-1123-1549860",
+        "startMs": 1549860,
+        "endMs": 1555200,
+        "text": "of application some sort of real world"
+      },
+      {
+        "id": "youtube-json3-1125-1551659",
+        "startMs": 1551659,
+        "endMs": 1558200,
+        "text": "meaning and that's uh"
+      },
+      {
+        "id": "youtube-json3-1127-1555200",
+        "startMs": 1555200,
+        "endMs": 1558200,
+        "text": "exponential"
+      },
+      {
+        "id": "youtube-json3-1129-1558260",
+        "startMs": 1558260,
+        "endMs": 1563539,
+        "text": "growth or exponential decay"
+      },
+      {
+        "id": "youtube-json3-1131-1561380",
+        "startMs": 1561380,
+        "endMs": 1565960,
+        "text": "whatever the case may be exponential"
+      },
+      {
+        "id": "youtube-json3-1133-1563539",
+        "startMs": 1563539,
+        "endMs": 1565960,
+        "text": "something"
+      },
+      {
+        "id": "youtube-json3-1135-1566120",
+        "startMs": 1566120,
+        "endMs": 1574340,
+        "text": "and uh logistic"
+      },
+      {
+        "id": "youtube-json3-1137-1568820",
+        "startMs": 1568820,
+        "endMs": 1577100,
+        "text": "logistic curves uh I'll often used to uh"
+      },
+      {
+        "id": "youtube-json3-1139-1574340",
+        "startMs": 1574340,
+        "endMs": 1579559,
+        "text": "often use to model population Dynamics"
+      },
+      {
+        "id": "youtube-json3-1141-1577100",
+        "startMs": 1577100,
+        "endMs": 1583059,
+        "text": "if you took AP Bio you're very well"
+      },
+      {
+        "id": "youtube-json3-1143-1579559",
+        "startMs": 1579559,
+        "endMs": 1583059,
+        "text": "acquainted with that type of function"
+      },
+      {
+        "id": "youtube-json3-1145-1583760",
+        "startMs": 1583760,
+        "endMs": 1590840,
+        "text": "okay so exponential growth Decay takes"
+      },
+      {
+        "id": "youtube-json3-1147-1587120",
+        "startMs": 1587120,
+        "endMs": 1593419,
+        "text": "the form of a differential equation of"
+      },
+      {
+        "id": "youtube-json3-1149-1590840",
+        "startMs": 1590840,
+        "endMs": 1596000,
+        "text": "say dsdt"
+      },
+      {
+        "id": "youtube-json3-1151-1593419",
+        "startMs": 1593419,
+        "endMs": 1598480,
+        "text": "equals"
+      },
+      {
+        "id": "youtube-json3-1153-1596000",
+        "startMs": 1596000,
+        "endMs": 1602960,
+        "text": "some constant k"
+      },
+      {
+        "id": "youtube-json3-1155-1598480",
+        "startMs": 1598480,
+        "endMs": 1606080,
+        "text": "multiplied by S okay where s is let's"
+      },
+      {
+        "id": "youtube-json3-1157-1602960",
+        "startMs": 1602960,
+        "endMs": 1610880,
+        "text": "say Let's uh what could s equal let's"
+      },
+      {
+        "id": "youtube-json3-1159-1606080",
+        "startMs": 1606080,
+        "endMs": 1614779,
+        "text": "say uh s equals"
+      },
+      {
+        "id": "youtube-json3-1161-1610880",
+        "startMs": 1610880,
+        "endMs": 1617480,
+        "text": "s equals the population"
+      },
+      {
+        "id": "youtube-json3-1163-1614779",
+        "startMs": 1614779,
+        "endMs": 1619779,
+        "text": "and DS DT is the rate of change of the"
+      },
+      {
+        "id": "youtube-json3-1165-1617480",
+        "startMs": 1617480,
+        "endMs": 1619779,
+        "text": "population"
+      },
+      {
+        "id": "youtube-json3-1167-1620360",
+        "startMs": 1620360,
+        "endMs": 1626779,
+        "text": "Okay so"
+      },
+      {
+        "id": "youtube-json3-1169-1623299",
+        "startMs": 1623299,
+        "endMs": 1629000,
+        "text": "this like the differential equation we"
+      },
+      {
+        "id": "youtube-json3-1171-1626779",
+        "startMs": 1626779,
+        "endMs": 1631400,
+        "text": "looked at down here is a separable"
+      },
+      {
+        "id": "youtube-json3-1173-1629000",
+        "startMs": 1629000,
+        "endMs": 1632960,
+        "text": "differential equation so let's separate"
+      },
+      {
+        "id": "youtube-json3-1175-1631400",
+        "startMs": 1631400,
+        "endMs": 1635779,
+        "text": "it"
+      },
+      {
+        "id": "youtube-json3-1177-1632960",
+        "startMs": 1632960,
+        "endMs": 1641000,
+        "text": "um let's multiply both sides by DT you"
+      },
+      {
+        "id": "youtube-json3-1179-1635779",
+        "startMs": 1635779,
+        "endMs": 1646100,
+        "text": "get DS equals k s DT let's divide both"
+      },
+      {
+        "id": "youtube-json3-1181-1641000",
+        "startMs": 1641000,
+        "endMs": 1650260,
+        "text": "sides by S 1 over s the S equals K DT"
+      },
+      {
+        "id": "youtube-json3-1183-1646100",
+        "startMs": 1646100,
+        "endMs": 1650260,
+        "text": "you integrate both sides"
+      },
+      {
+        "id": "youtube-json3-1185-1650299",
+        "startMs": 1650299,
+        "endMs": 1658460,
+        "text": "one over s is Ln absolute value s"
+      },
+      {
+        "id": "youtube-json3-1187-1654380",
+        "startMs": 1654380,
+        "endMs": 1662960,
+        "text": "equals uh KT"
+      },
+      {
+        "id": "youtube-json3-1189-1658460",
+        "startMs": 1658460,
+        "endMs": 1664880,
+        "text": "okay you're given s is population you"
+      },
+      {
+        "id": "youtube-json3-1191-1662960",
+        "startMs": 1662960,
+        "endMs": 1665919,
+        "text": "know you can never have a negative"
+      },
+      {
+        "id": "youtube-json3-1193-1664880",
+        "startMs": 1664880,
+        "endMs": 1668539,
+        "text": "population"
+      },
+      {
+        "id": "youtube-json3-1195-1665919",
+        "startMs": 1665919,
+        "endMs": 1670220,
+        "text": "therefore these absolute value bars"
+      },
+      {
+        "id": "youtube-json3-1197-1668539",
+        "startMs": 1668539,
+        "endMs": 1671659,
+        "text": "disappear and you can replace them with"
+      },
+      {
+        "id": "youtube-json3-1199-1670220",
+        "startMs": 1670220,
+        "endMs": 1675260,
+        "text": "parentheses"
+      },
+      {
+        "id": "youtube-json3-1201-1671659",
+        "startMs": 1671659,
+        "endMs": 1678260,
+        "text": "be careful to pay attention to the real"
+      },
+      {
+        "id": "youtube-json3-1203-1675260",
+        "startMs": 1675260,
+        "endMs": 1681380,
+        "text": "world application of your math okay"
+      },
+      {
+        "id": "youtube-json3-1205-1678260",
+        "startMs": 1678260,
+        "endMs": 1682880,
+        "text": "if the problem uh dictates something"
+      },
+      {
+        "id": "youtube-json3-1207-1681380",
+        "startMs": 1681380,
+        "endMs": 1685520,
+        "text": "like that something like population"
+      },
+      {
+        "id": "youtube-json3-1209-1682880",
+        "startMs": 1682880,
+        "endMs": 1687500,
+        "text": "which is always positive you'll be able"
+      },
+      {
+        "id": "youtube-json3-1211-1685520",
+        "startMs": 1685520,
+        "endMs": 1690799,
+        "text": "to remove your absolute value bars and"
+      },
+      {
+        "id": "youtube-json3-1213-1687500",
+        "startMs": 1687500,
+        "endMs": 1694640,
+        "text": "replace it with a normal natural log"
+      },
+      {
+        "id": "youtube-json3-1215-1690799",
+        "startMs": 1690799,
+        "endMs": 1697640,
+        "text": "okay now if we want to put this just in"
+      },
+      {
+        "id": "youtube-json3-1217-1694640",
+        "startMs": 1694640,
+        "endMs": 1701900,
+        "text": "terms of s if we want to isolate s we"
+      },
+      {
+        "id": "youtube-json3-1219-1697640",
+        "startMs": 1697640,
+        "endMs": 1701900,
+        "text": "can simply say s equals"
+      },
+      {
+        "id": "youtube-json3-1221-1705080",
+        "startMs": 1705080,
+        "endMs": 1709159,
+        "text": "oh yes of course don't forget your plus"
+      },
+      {
+        "id": "youtube-json3-1223-1708140",
+        "startMs": 1708140,
+        "endMs": 1711860,
+        "text": "c"
+      },
+      {
+        "id": "youtube-json3-1225-1709159",
+        "startMs": 1709159,
+        "endMs": 1713840,
+        "text": "remember that don't don't be like me"
+      },
+      {
+        "id": "youtube-json3-1227-1711860",
+        "startMs": 1711860,
+        "endMs": 1717620,
+        "text": "don't make those silly mistakes"
+      },
+      {
+        "id": "youtube-json3-1229-1713840",
+        "startMs": 1713840,
+        "endMs": 1721039,
+        "text": "now from here you just simply take e and"
+      },
+      {
+        "id": "youtube-json3-1231-1717620",
+        "startMs": 1717620,
+        "endMs": 1725539,
+        "text": "raise e to both sides e to the natural"
+      },
+      {
+        "id": "youtube-json3-1233-1721039",
+        "startMs": 1721039,
+        "endMs": 1728659,
+        "text": "log of s equals e to the KT plus c"
+      },
+      {
+        "id": "youtube-json3-1235-1725539",
+        "startMs": 1725539,
+        "endMs": 1732860,
+        "text": "and that becomes s equals e to the KT"
+      },
+      {
+        "id": "youtube-json3-1237-1728659",
+        "startMs": 1728659,
+        "endMs": 1736299,
+        "text": "plus C or more accurately s of P because"
+      },
+      {
+        "id": "youtube-json3-1239-1732860",
+        "startMs": 1732860,
+        "endMs": 1736299,
+        "text": "this is a function of population"
+      },
+      {
+        "id": "youtube-json3-1241-1737360",
+        "startMs": 1737360,
+        "endMs": 1742039,
+        "text": "but if you remember from your pre-calc"
+      },
+      {
+        "id": "youtube-json3-1243-1740480",
+        "startMs": 1740480,
+        "endMs": 1743799,
+        "text": "days"
+      },
+      {
+        "id": "youtube-json3-1245-1742039",
+        "startMs": 1742039,
+        "endMs": 1748580,
+        "text": "any addition"
+      },
+      {
+        "id": "youtube-json3-1247-1743799",
+        "startMs": 1743799,
+        "endMs": 1752659,
+        "text": "within an exponent can be broken up as"
+      },
+      {
+        "id": "youtube-json3-1249-1748580",
+        "startMs": 1748580,
+        "endMs": 1754600,
+        "text": "such s of T is the same as e to the k"
+      },
+      {
+        "id": "youtube-json3-1251-1752659",
+        "startMs": 1752659,
+        "endMs": 1758059,
+        "text": "e to the KT"
+      },
+      {
+        "id": "youtube-json3-1253-1754600",
+        "startMs": 1754600,
+        "endMs": 1761000,
+        "text": "multiplied by e to the C because when"
+      },
+      {
+        "id": "youtube-json3-1255-1758059",
+        "startMs": 1758059,
+        "endMs": 1763880,
+        "text": "you multiply like bases you add the"
+      },
+      {
+        "id": "youtube-json3-1257-1761000",
+        "startMs": 1761000,
+        "endMs": 1765559,
+        "text": "exponents and if you've got addition in"
+      },
+      {
+        "id": "youtube-json3-1259-1763880",
+        "startMs": 1763880,
+        "endMs": 1767600,
+        "text": "your exponent you can break it up into"
+      },
+      {
+        "id": "youtube-json3-1261-1765559",
+        "startMs": 1765559,
+        "endMs": 1769460,
+        "text": "two light bases"
+      },
+      {
+        "id": "youtube-json3-1263-1767600",
+        "startMs": 1767600,
+        "endMs": 1774260,
+        "text": "now if we look here"
+      },
+      {
+        "id": "youtube-json3-1265-1769460",
+        "startMs": 1769460,
+        "endMs": 1776720,
+        "text": "e some constant number 2.7 something C"
+      },
+      {
+        "id": "youtube-json3-1267-1774260",
+        "startMs": 1774260,
+        "endMs": 1779380,
+        "text": "is some constant number so a constant"
+      },
+      {
+        "id": "youtube-json3-1269-1776720",
+        "startMs": 1776720,
+        "endMs": 1784100,
+        "text": "raised to a constant is a constant"
+      },
+      {
+        "id": "youtube-json3-1271-1779380",
+        "startMs": 1779380,
+        "endMs": 1788779,
+        "text": "therefore s of T equals c"
+      },
+      {
+        "id": "youtube-json3-1273-1784100",
+        "startMs": 1784100,
+        "endMs": 1792559,
+        "text": "times e to the KT we just took this and"
+      },
+      {
+        "id": "youtube-json3-1275-1788779",
+        "startMs": 1788779,
+        "endMs": 1796580,
+        "text": "replaced it with some other constant C"
+      },
+      {
+        "id": "youtube-json3-1277-1792559",
+        "startMs": 1792559,
+        "endMs": 1799039,
+        "text": "and that's the solution to"
+      },
+      {
+        "id": "youtube-json3-1279-1796580",
+        "startMs": 1796580,
+        "endMs": 1801460,
+        "text": "an exponential growth differential"
+      },
+      {
+        "id": "youtube-json3-1281-1799039",
+        "startMs": 1799039,
+        "endMs": 1801460,
+        "text": "equation"
+      },
+      {
+        "id": "youtube-json3-1283-1801679",
+        "startMs": 1801679,
+        "endMs": 1804440,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-1285-1803179",
+        "startMs": 1803179,
+        "endMs": 1806899,
+        "text": "so"
+      },
+      {
+        "id": "youtube-json3-1287-1804440",
+        "startMs": 1804440,
+        "endMs": 1809419,
+        "text": "um when you're given a logistic growth"
+      },
+      {
+        "id": "youtube-json3-1289-1806899",
+        "startMs": 1806899,
+        "endMs": 1812840,
+        "text": "curve on the BC Exam if you're given one"
+      },
+      {
+        "id": "youtube-json3-1291-1809419",
+        "startMs": 1809419,
+        "endMs": 1814880,
+        "text": "I had one on my BC Exam so I figured it"
+      },
+      {
+        "id": "youtube-json3-1293-1812840",
+        "startMs": 1812840,
+        "endMs": 1816080,
+        "text": "might be important"
+      },
+      {
+        "id": "youtube-json3-1295-1814880",
+        "startMs": 1814880,
+        "endMs": 1818960,
+        "text": "um"
+      },
+      {
+        "id": "youtube-json3-1297-1816080",
+        "startMs": 1816080,
+        "endMs": 1821899,
+        "text": "they're not going to ask you to solve"
+      },
+      {
+        "id": "youtube-json3-1299-1818960",
+        "startMs": 1818960,
+        "endMs": 1824299,
+        "text": "for a solution like they do here"
+      },
+      {
+        "id": "youtube-json3-1301-1821899",
+        "startMs": 1821899,
+        "endMs": 1826039,
+        "text": "they're going to ask you questions about"
+      },
+      {
+        "id": "youtube-json3-1303-1824299",
+        "startMs": 1824299,
+        "endMs": 1828620,
+        "text": "it but"
+      },
+      {
+        "id": "youtube-json3-1305-1826039",
+        "startMs": 1826039,
+        "endMs": 1830419,
+        "text": "it's a lot more difficult to solve for a"
+      },
+      {
+        "id": "youtube-json3-1307-1828620",
+        "startMs": 1828620,
+        "endMs": 1831860,
+        "text": "solution to a logistic curve so they"
+      },
+      {
+        "id": "youtube-json3-1309-1830419",
+        "startMs": 1830419,
+        "endMs": 1833840,
+        "text": "don't they don't bother asking you to"
+      },
+      {
+        "id": "youtube-json3-1311-1831860",
+        "startMs": 1831860,
+        "endMs": 1835700,
+        "text": "solve for a solution"
+      },
+      {
+        "id": "youtube-json3-1313-1833840",
+        "startMs": 1833840,
+        "endMs": 1843620,
+        "text": "so we're going to use the example what"
+      },
+      {
+        "id": "youtube-json3-1315-1835700",
+        "startMs": 1835700,
+        "endMs": 1846760,
+        "text": "do I have here uh 90 minus 3n over 20."
+      },
+      {
+        "id": "youtube-json3-1317-1843620",
+        "startMs": 1843620,
+        "endMs": 1849500,
+        "text": "times n equals"
+      },
+      {
+        "id": "youtube-json3-1319-1846760",
+        "startMs": 1846760,
+        "endMs": 1853659,
+        "text": "DN DT"
+      },
+      {
+        "id": "youtube-json3-1321-1849500",
+        "startMs": 1849500,
+        "endMs": 1853659,
+        "text": "where n is the population"
+      },
+      {
+        "id": "youtube-json3-1323-1855500",
+        "startMs": 1855500,
+        "endMs": 1860659,
+        "text": "now those of you in AP Bio know that"
+      },
+      {
+        "id": "youtube-json3-1325-1858320",
+        "startMs": 1858320,
+        "endMs": 1862279,
+        "text": "population can often be modeled by a"
+      },
+      {
+        "id": "youtube-json3-1327-1860659",
+        "startMs": 1860659,
+        "endMs": 1864679,
+        "text": "logistic curve for those of you who"
+      },
+      {
+        "id": "youtube-json3-1329-1862279",
+        "startMs": 1862279,
+        "endMs": 1869360,
+        "text": "don't know what a logistic curve is a"
+      },
+      {
+        "id": "youtube-json3-1331-1864679",
+        "startMs": 1864679,
+        "endMs": 1872059,
+        "text": "logistic curve is a curve that uh starts"
+      },
+      {
+        "id": "youtube-json3-1333-1869360",
+        "startMs": 1869360,
+        "endMs": 1875419,
+        "text": "out low gains speed the gain grows"
+      },
+      {
+        "id": "youtube-json3-1335-1872059",
+        "startMs": 1872059,
+        "endMs": 1878659,
+        "text": "really fast and then levels out"
+      },
+      {
+        "id": "youtube-json3-1337-1875419",
+        "startMs": 1875419,
+        "endMs": 1880520,
+        "text": "that's a logistic curve okay it levels"
+      },
+      {
+        "id": "youtube-json3-1339-1878659",
+        "startMs": 1878659,
+        "endMs": 1884000,
+        "text": "out at the top because the population"
+      },
+      {
+        "id": "youtube-json3-1341-1880520",
+        "startMs": 1880520,
+        "endMs": 1887480,
+        "text": "has reached its carrying capacity"
+      },
+      {
+        "id": "youtube-json3-1343-1884000",
+        "startMs": 1884000,
+        "endMs": 1889640,
+        "text": "okay this bar up here represents the"
+      },
+      {
+        "id": "youtube-json3-1345-1887480",
+        "startMs": 1887480,
+        "endMs": 1892120,
+        "text": "upper bound represents the carrying"
+      },
+      {
+        "id": "youtube-json3-1347-1889640",
+        "startMs": 1889640,
+        "endMs": 1892120,
+        "text": "capacity"
+      },
+      {
+        "id": "youtube-json3-1349-1894140",
+        "startMs": 1894140,
+        "endMs": 1896659,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-1351-1895520",
+        "startMs": 1895520,
+        "endMs": 1899120,
+        "text": "so"
+      },
+      {
+        "id": "youtube-json3-1353-1896659",
+        "startMs": 1896659,
+        "endMs": 1900620,
+        "text": "some of the most common questions that"
+      },
+      {
+        "id": "youtube-json3-1355-1899120",
+        "startMs": 1899120,
+        "endMs": 1904039,
+        "text": "they would ask you"
+      },
+      {
+        "id": "youtube-json3-1357-1900620",
+        "startMs": 1900620,
+        "endMs": 1906500,
+        "text": "for a logistic curve logistic"
+      },
+      {
+        "id": "youtube-json3-1359-1904039",
+        "startMs": 1904039,
+        "endMs": 1909340,
+        "text": "differential equation frq would be"
+      },
+      {
+        "id": "youtube-json3-1361-1906500",
+        "startMs": 1906500,
+        "endMs": 1909340,
+        "text": "questions like"
+      },
+      {
+        "id": "youtube-json3-1363-1910399",
+        "startMs": 1910399,
+        "endMs": 1914380,
+        "text": "um what is the carrying capacity"
+      },
+      {
+        "id": "youtube-json3-1365-1914480",
+        "startMs": 1914480,
+        "endMs": 1919000,
+        "text": "what is the population"
+      },
+      {
+        "id": "youtube-json3-1367-1921020",
+        "startMs": 1921020,
+        "endMs": 1928059,
+        "text": "when the population is is growing"
+      },
+      {
+        "id": "youtube-json3-1369-1925520",
+        "startMs": 1925520,
+        "endMs": 1928059,
+        "text": "fastest"
+      },
+      {
+        "id": "youtube-json3-1371-1930200",
+        "startMs": 1930200,
+        "endMs": 1936980,
+        "text": "okay now this second part B is the one"
+      },
+      {
+        "id": "youtube-json3-1373-1933799",
+        "startMs": 1933799,
+        "endMs": 1939080,
+        "text": "that trips a lot of kids up but I'm"
+      },
+      {
+        "id": "youtube-json3-1375-1936980",
+        "startMs": 1936980,
+        "endMs": 1941419,
+        "text": "going to walk you guys through exactly"
+      },
+      {
+        "id": "youtube-json3-1377-1939080",
+        "startMs": 1939080,
+        "endMs": 1944840,
+        "text": "how to solve this this is actually very"
+      },
+      {
+        "id": "youtube-json3-1379-1941419",
+        "startMs": 1941419,
+        "endMs": 1947200,
+        "text": "similar to the frq I had on uh on my"
+      },
+      {
+        "id": "youtube-json3-1381-1944840",
+        "startMs": 1944840,
+        "endMs": 1947200,
+        "text": "exam"
+      },
+      {
+        "id": "youtube-json3-1383-1947360",
+        "startMs": 1947360,
+        "endMs": 1951380,
+        "text": "I'm not allowed to tell you that it's"
+      },
+      {
+        "id": "youtube-json3-1385-1949580",
+        "startMs": 1949580,
+        "endMs": 1953240,
+        "text": "the exact same one because then the"
+      },
+      {
+        "id": "youtube-json3-1387-1951380",
+        "startMs": 1951380,
+        "endMs": 1954620,
+        "text": "college boy there'd be a lot of problems"
+      },
+      {
+        "id": "youtube-json3-1389-1953240",
+        "startMs": 1953240,
+        "endMs": 1956240,
+        "text": "with the College Board and the"
+      },
+      {
+        "id": "youtube-json3-1391-1954620",
+        "startMs": 1954620,
+        "endMs": 1957559,
+        "text": "non-disclosure it's it's not the same"
+      },
+      {
+        "id": "youtube-json3-1393-1956240",
+        "startMs": 1956240,
+        "endMs": 1959779,
+        "text": "one okay"
+      },
+      {
+        "id": "youtube-json3-1395-1957559",
+        "startMs": 1957559,
+        "endMs": 1962600,
+        "text": "same one"
+      },
+      {
+        "id": "youtube-json3-1397-1959779",
+        "startMs": 1959779,
+        "endMs": 1963799,
+        "text": "it's the same one"
+      },
+      {
+        "id": "youtube-json3-1399-1962600",
+        "startMs": 1962600,
+        "endMs": 1966080,
+        "text": "okay"
+      },
+      {
+        "id": "youtube-json3-1401-1963799",
+        "startMs": 1963799,
+        "endMs": 1969740,
+        "text": "what is the carrying capacity"
+      },
+      {
+        "id": "youtube-json3-1403-1966080",
+        "startMs": 1966080,
+        "endMs": 1972500,
+        "text": "so as we saw here on the curve the"
+      },
+      {
+        "id": "youtube-json3-1405-1969740",
+        "startMs": 1969740,
+        "endMs": 1975020,
+        "text": "carrying capacity is when our slope is"
+      },
+      {
+        "id": "youtube-json3-1407-1972500",
+        "startMs": 1972500,
+        "endMs": 1978520,
+        "text": "zero simple enough you guys know how to"
+      },
+      {
+        "id": "youtube-json3-1409-1975020",
+        "startMs": 1975020,
+        "endMs": 1983539,
+        "text": "solve that you set DN DT equal to zero"
+      },
+      {
+        "id": "youtube-json3-1411-1978520",
+        "startMs": 1978520,
+        "endMs": 1986260,
+        "text": "equals 90 minus 30 uh sorry three n over"
+      },
+      {
+        "id": "youtube-json3-1413-1983539",
+        "startMs": 1983539,
+        "endMs": 1986260,
+        "text": "20."
+      },
+      {
+        "id": "youtube-json3-1415-1987080",
+        "startMs": 1987080,
+        "endMs": 1991640,
+        "text": "times n"
+      },
+      {
+        "id": "youtube-json3-1417-1989419",
+        "startMs": 1989419,
+        "endMs": 1997299,
+        "text": "and you would solve for when n equals"
+      },
+      {
+        "id": "youtube-json3-1419-1991640",
+        "startMs": 1991640,
+        "endMs": 1997299,
+        "text": "zero okay this n on the outside"
+      },
+      {
+        "id": "youtube-json3-1421-1997580",
+        "startMs": 1997580,
+        "endMs": 2005200,
+        "text": "is zero when the population is zero when"
+      },
+      {
+        "id": "youtube-json3-1423-2002019",
+        "startMs": 2002019,
+        "endMs": 2007059,
+        "text": "we're here okay we're not looking for"
+      },
+      {
+        "id": "youtube-json3-1425-2005200",
+        "startMs": 2005200,
+        "endMs": 2009159,
+        "text": "when the population is zero we're"
+      },
+      {
+        "id": "youtube-json3-1427-2007059",
+        "startMs": 2007059,
+        "endMs": 2011740,
+        "text": "looking for the carrying capacity"
+      },
+      {
+        "id": "youtube-json3-1429-2009159",
+        "startMs": 2009159,
+        "endMs": 2014260,
+        "text": "so we're looking for when this term is"
+      },
+      {
+        "id": "youtube-json3-1431-2011740",
+        "startMs": 2011740,
+        "endMs": 2017620,
+        "text": "zero"
+      },
+      {
+        "id": "youtube-json3-1433-2014260",
+        "startMs": 2014260,
+        "endMs": 2019480,
+        "text": "rule of thumb anyway Part B what's the"
+      },
+      {
+        "id": "youtube-json3-1435-2017620",
+        "startMs": 2017620,
+        "endMs": 2022480,
+        "text": "population when the population is"
+      },
+      {
+        "id": "youtube-json3-1437-2019480",
+        "startMs": 2019480,
+        "endMs": 2026140,
+        "text": "growing fastest"
+      },
+      {
+        "id": "youtube-json3-1439-2022480",
+        "startMs": 2022480,
+        "endMs": 2027940,
+        "text": "okay so it says you're growing"
+      },
+      {
+        "id": "youtube-json3-1441-2026140",
+        "startMs": 2026140,
+        "endMs": 2031000,
+        "text": "that means"
+      },
+      {
+        "id": "youtube-json3-1443-2027940",
+        "startMs": 2027940,
+        "endMs": 2034320,
+        "text": "when the rate of change of the"
+      },
+      {
+        "id": "youtube-json3-1445-2031000",
+        "startMs": 2031000,
+        "endMs": 2034320,
+        "text": "population is positive"
+      },
+      {
+        "id": "youtube-json3-1447-2035260",
+        "startMs": 2035260,
+        "endMs": 2040720,
+        "text": "and when the rate of change of the"
+      },
+      {
+        "id": "youtube-json3-1449-2037120",
+        "startMs": 2037120,
+        "endMs": 2045240,
+        "text": "population is at a maximum so that's"
+      },
+      {
+        "id": "youtube-json3-1451-2040720",
+        "startMs": 2040720,
+        "endMs": 2045240,
+        "text": "what's fastest means a maximum rate"
+      },
+      {
+        "id": "youtube-json3-1453-2045399",
+        "startMs": 2045399,
+        "endMs": 2052000,
+        "text": "so we're going to have to find the"
+      },
+      {
+        "id": "youtube-json3-1455-2049000",
+        "startMs": 2049000,
+        "endMs": 2054159,
+        "text": "derivative of DN DT and set that equal"
+      },
+      {
+        "id": "youtube-json3-1457-2052000",
+        "startMs": 2052000,
+        "endMs": 2057040,
+        "text": "to zero because if you remember from our"
+      },
+      {
+        "id": "youtube-json3-1459-2054159",
+        "startMs": 2054159,
+        "endMs": 2061359,
+        "text": "graphical analysis unit"
+      },
+      {
+        "id": "youtube-json3-1461-2057040",
+        "startMs": 2057040,
+        "endMs": 2063460,
+        "text": "relative maximums only occur when the"
+      },
+      {
+        "id": "youtube-json3-1463-2061359",
+        "startMs": 2061359,
+        "endMs": 2065679,
+        "text": "derivative of a function is zero so if"
+      },
+      {
+        "id": "youtube-json3-1465-2063460",
+        "startMs": 2063460,
+        "endMs": 2066700,
+        "text": "we're trying to find the maximum of DN"
+      },
+      {
+        "id": "youtube-json3-1467-2065679",
+        "startMs": 2065679,
+        "endMs": 2069520,
+        "text": "DT"
+      },
+      {
+        "id": "youtube-json3-1469-2066700",
+        "startMs": 2066700,
+        "endMs": 2072040,
+        "text": "we're going to need to find when the"
+      },
+      {
+        "id": "youtube-json3-1471-2069520",
+        "startMs": 2069520,
+        "endMs": 2074500,
+        "text": "derivative of D and DT is zero"
+      },
+      {
+        "id": "youtube-json3-1473-2072040",
+        "startMs": 2072040,
+        "endMs": 2077139,
+        "text": "okay so you would take this whole"
+      },
+      {
+        "id": "youtube-json3-1475-2074500",
+        "startMs": 2074500,
+        "endMs": 2080980,
+        "text": "function right here 90 minus 3 and over"
+      },
+      {
+        "id": "youtube-json3-1477-2077139",
+        "startMs": 2077139,
+        "endMs": 2083020,
+        "text": "20 quantity times n"
+      },
+      {
+        "id": "youtube-json3-1479-2080980",
+        "startMs": 2080980,
+        "endMs": 2085440,
+        "text": "and you would have to differentiate that"
+      },
+      {
+        "id": "youtube-json3-1481-2083020",
+        "startMs": 2083020,
+        "endMs": 2085440,
+        "text": "whole thing"
+      },
+      {
+        "id": "youtube-json3-1483-2085599",
+        "startMs": 2085599,
+        "endMs": 2091060,
+        "text": "so that's just product rule it's a bit"
+      },
+      {
+        "id": "youtube-json3-1485-2088240",
+        "startMs": 2088240,
+        "endMs": 2094859,
+        "text": "time consuming which is why a lot of"
+      },
+      {
+        "id": "youtube-json3-1487-2091060",
+        "startMs": 2091060,
+        "endMs": 2094859,
+        "text": "kids get tripped up on this"
+      },
+      {
+        "id": "youtube-json3-1489-2094899",
+        "startMs": 2094899,
+        "endMs": 2100359,
+        "text": "they usually don't put time consuming"
+      },
+      {
+        "id": "youtube-json3-1491-2098500",
+        "startMs": 2098500,
+        "endMs": 2104440,
+        "text": "stuff like product rule and quotient"
+      },
+      {
+        "id": "youtube-json3-1493-2100359",
+        "startMs": 2100359,
+        "endMs": 2106599,
+        "text": "rule on frqs but out of the eight frqs"
+      },
+      {
+        "id": "youtube-json3-1495-2104440",
+        "startMs": 2104440,
+        "endMs": 2108280,
+        "text": "it hap it usually happens at least once"
+      },
+      {
+        "id": "youtube-json3-1497-2106599",
+        "startMs": 2106599,
+        "endMs": 2111520,
+        "text": "so you got to be prepared for when it"
+      },
+      {
+        "id": "youtube-json3-1499-2108280",
+        "startMs": 2108280,
+        "endMs": 2114400,
+        "text": "hits you and it usually shows up on the"
+      },
+      {
+        "id": "youtube-json3-1501-2111520",
+        "startMs": 2111520,
+        "endMs": 2117880,
+        "text": "differential equation frq"
+      },
+      {
+        "id": "youtube-json3-1503-2114400",
+        "startMs": 2114400,
+        "endMs": 2120820,
+        "text": "or the parametric polar coordinate frq"
+      },
+      {
+        "id": "youtube-json3-1505-2117880",
+        "startMs": 2117880,
+        "endMs": 2122740,
+        "text": "which next unit two units from now"
+      },
+      {
+        "id": "youtube-json3-1507-2120820",
+        "startMs": 2120820,
+        "endMs": 2127780,
+        "text": "excuse me"
+      },
+      {
+        "id": "youtube-json3-1509-2122740",
+        "startMs": 2122740,
+        "endMs": 2131980,
+        "text": "so you take uh 90 minus 33n over 20. uh"
+      },
+      {
+        "id": "youtube-json3-1511-2127780",
+        "startMs": 2127780,
+        "endMs": 2133660,
+        "text": "let's see uh first times the derivative"
+      },
+      {
+        "id": "youtube-json3-1513-2131980",
+        "startMs": 2131980,
+        "endMs": 2137320,
+        "text": "of the second"
+      },
+      {
+        "id": "youtube-json3-1515-2133660",
+        "startMs": 2133660,
+        "endMs": 2140079,
+        "text": "plus the second times the derivative of"
+      },
+      {
+        "id": "youtube-json3-1517-2137320",
+        "startMs": 2137320,
+        "endMs": 2141839,
+        "text": "the first which would be"
+      },
+      {
+        "id": "youtube-json3-1519-2140079",
+        "startMs": 2140079,
+        "endMs": 2145980,
+        "text": "um"
+      },
+      {
+        "id": "youtube-json3-1521-2141839",
+        "startMs": 2141839,
+        "endMs": 2145980,
+        "text": "negative 3 over 20."
+      },
+      {
+        "id": "youtube-json3-1523-2149200",
+        "startMs": 2149200,
+        "endMs": 2157000,
+        "text": "right yeah negative 3 over 20. okay"
+      },
+      {
+        "id": "youtube-json3-1525-2153460",
+        "startMs": 2153460,
+        "endMs": 2159700,
+        "text": "so you got to set this equal to zero"
+      },
+      {
+        "id": "youtube-json3-1527-2157000",
+        "startMs": 2157000,
+        "endMs": 2163480,
+        "text": "that would require require a good bit of"
+      },
+      {
+        "id": "youtube-json3-1529-2159700",
+        "startMs": 2159700,
+        "endMs": 2166480,
+        "text": "factoring 90 minus three n over 20."
+      },
+      {
+        "id": "youtube-json3-1531-2163480",
+        "startMs": 2163480,
+        "endMs": 2166480,
+        "text": "minus"
+      },
+      {
+        "id": "youtube-json3-1533-2172780",
+        "startMs": 2172780,
+        "endMs": 2183099,
+        "text": "Three N over 20 equals zero so 90 minus"
+      },
+      {
+        "id": "youtube-json3-1535-2178680",
+        "startMs": 2178680,
+        "endMs": 2187960,
+        "text": "6n over 20 equals zero"
+      },
+      {
+        "id": "youtube-json3-1537-2183099",
+        "startMs": 2183099,
+        "endMs": 2192339,
+        "text": "multiply this 1 8 0 0 minus 6n equals"
+      },
+      {
+        "id": "youtube-json3-1539-2187960",
+        "startMs": 2187960,
+        "endMs": 2194940,
+        "text": "zero one eight zero zero equals six n uh"
+      },
+      {
+        "id": "youtube-json3-1541-2192339",
+        "startMs": 2192339,
+        "endMs": 2197500,
+        "text": "what would that be"
+      },
+      {
+        "id": "youtube-json3-1543-2194940",
+        "startMs": 2194940,
+        "endMs": 2200200,
+        "text": "300 equals n"
+      },
+      {
+        "id": "youtube-json3-1545-2197500",
+        "startMs": 2197500,
+        "endMs": 2204520,
+        "text": "so the population is growing the fastest"
+      },
+      {
+        "id": "youtube-json3-1547-2200200",
+        "startMs": 2200200,
+        "endMs": 2206859,
+        "text": "when the population is 300."
+      },
+      {
+        "id": "youtube-json3-1549-2204520",
+        "startMs": 2204520,
+        "endMs": 2209700,
+        "text": "that's all the differential equations"
+      },
+      {
+        "id": "youtube-json3-1551-2206859",
+        "startMs": 2206859,
+        "endMs": 2209700,
+        "text": "guys enjoy life"
+      }
+    ],
+    "sourceSegmentCount": 776,
+    "characterCount": 22707,
+    "transcriptFingerprint": "b42f7510",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 10,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "87b837ac-9172-403c-b80b-4d0b2809e572",
+    "generationSessionId": "bdada78f-9e5c-46ce-b42a-d07b1c1ed0a5",
+    "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac",
+    "questionPlan": {
+      "seed": "212907eaa19f5791f7038acde063b2d6182149ebc9835c08e21cb4dd2255546c",
+      "types": [
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+        "true_false",
+        "true_false",
+        "short_answer",
+        "multiple_choice",
+        "multiple_choice",
+        "short_answer",
+        "true_false"
+      ]
+    },
+    "promptFingerprint": "f63c554869e54aef75e0b67fb3d2f543e2ac77bb8bfd9a7507ab7af3143b8db5",
+    "quiz": {
+      "title": "AP Calculus AB and BC Unit 7 Review - Differential Equations - Slope Fields - Euler's Method",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "Euler's method",
+          "question": "What is the purpose of Euler's method in the context of differential equations?",
+          "retryQuestion": "Which option correctly identifies what Euler's method is used for?",
+          "explanation": "Euler's method is a numerical technique used to approximate the values of the original function when an exact solution is difficult or impossible to find analytically.",
+          "type": "multiple_choice",
+          "choices": [
+            "It approximates the values of the original function.",
+            "It draws the slope field for the differential equation.",
+            "It finds the exact solution of the differential equation.",
+            "It calculates the constant C from the initial condition."
+          ],
+          "answerIndex": 0,
+          "answer": "It approximates the values of the original function."
+        },
+        {
+          "id": "q2",
+          "concept": "carrying capacity",
+          "question": "The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N.",
+          "retryQuestion": "To determine the carrying capacity, one sets the growth rate dN/dt to zero and solves for the positive population value.",
+          "explanation": "The carrying capacity is the population size at which the growth rate is zero, corresponding to the nonzero equilibrium solution of the differential equation.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N."
+        },
+        {
+          "id": "q3",
+          "concept": "logistic growth curve",
+          "question": "On the AP Calculus BC exam, what type of question is typically asked about a logistic growth curve?",
+          "retryQuestion": "What kind of question do AP Calculus BC exams typically ask about a logistic growth curve?",
+          "explanation": "The BC exam typically asks questions about a logistic growth curve rather than asking students to solve for its solution, because solving the logistic differential equation is much more difficult.",
+          "type": "short_answer",
+          "answer": "Questions about the logistic growth curve, rather than solving for its solution.",
+          "rubricIdeas": [
+            "Questions about the logistic growth curve, rather than solving for its solution."
+          ],
+          "acceptableAnswers": [
+            "Questions about it",
+            "Questions about the curve",
+            "Questions about the logistic growth curve"
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "Questions about the logistic growth curve, rather than solving for its solution."
+            ],
+            "acceptableAnswers": [
+              "Questions about the logistic growth curve, rather than solving for its solution.",
+              "Questions about it",
+              "Questions about the curve",
+              "Questions about the logistic growth curve"
+            ]
+          }
+        },
+        {
+          "id": "q4",
+          "concept": "separable differential equations",
+          "question": "In a separable differential equation, the dependent variable can always be isolated on one side of the equation.",
+          "retryQuestion": "For any separable differential equation, it is always possible to solve for the dependent variable alone on one side.",
+          "explanation": "This statement is true: In a separable differential equation, the dependent variable can always be isolated on one side of the equation.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "In a separable differential equation, the dependent variable can always be isolated on one side of the equation."
+        },
+        {
+          "id": "q5",
+          "concept": "differential equation definition",
+          "question": "A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2.",
+          "retryQuestion": "An equation that models the rate of change of a function, like dy/dx = x + y^2, is a differential equation.",
+          "explanation": "A differential equation relates a function to its derivatives, expressing how the function changes with respect to a variable.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2."
+        },
+        {
+          "id": "q6",
+          "concept": "slope field evaluation",
+          "question": "Given a differential equation that represents the slope of a function at any point, how do you find the slope of the function at a specific point (x, y)?",
+          "retryQuestion": "How can you determine the slope of a function at a given point using its differential equation?",
+          "explanation": "The derivative, or differential equation, gives the slope of the function at any point. To find the slope at a specific point, substitute the coordinates of that point into the differential equation.",
+          "type": "short_answer",
+          "answer": "Substitute the coordinates of the point into the differential equation.",
+          "rubricIdeas": [
+            "Substitute the coordinates of the point into the differential equation."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "Substitute the coordinates of the point into the differential equation."
+            ],
+            "acceptableAnswers": [
+              "Substitute the coordinates of the point into the differential equation."
+            ]
+          }
+        },
+        {
+          "id": "q7",
+          "concept": "Euler's method step size",
+          "question": "In Euler's method, how is the step size (the change in x per step) determined when the number of subdivisions is specified?",
+          "retryQuestion": "Which statement correctly describes how to compute the step size in Euler's method when the number of subdivisions is given?",
+          "explanation": "The step size is the total change in x from the initial x-value to the target x-value divided by the number of subdivisions. For example, if the target x is 2, the initial x is 1, and there are 4 subdivisions, the step size is (2-1)/4 = 1/4.",
+          "type": "multiple_choice",
+          "choices": [
+            "It is the target x-value divided by the number of subdivisions.",
+            "It is the difference between the target x-value and the initial x-value multiplied by the number of subdivisions.",
+            "It is the initial x-value divided by the number of subdivisions.",
+            "It is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+          ],
+          "answerIndex": 3,
+          "answer": "It is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+        },
+        {
+          "id": "q8",
+          "concept": "Euler's method iteration",
+          "question": "In Euler's method, after computing a new y-value at the next x-step, what is the next action in the iterative process?",
+          "retryQuestion": "What does Euler's method do after each new y-value is found at the next x-step?",
+          "explanation": "Euler's method proceeds by repeatedly using the current y-value to compute the slope dy/dx at the new x, then stepping forward. The process continues until the target x is reached.",
+          "type": "multiple_choice",
+          "choices": [
+            "Use the previous slope without updating it.",
+            "Compute the slope dy/dx at the new x using the updated y-value, then take another step.",
+            "Stop because the y-value is already exact.",
+            "Skip to the target x without intermediate steps."
+          ],
+          "answerIndex": 1,
+          "answer": "Compute the slope dy/dx at the new x using the updated y-value, then take another step."
+        },
+        {
+          "id": "q9",
+          "concept": "Euler's method step size calculation",
+          "question": "In Euler's method, how is the size of each step determined when the number of subdivisions is specified?",
+          "retryQuestion": "What formula gives the step size when Euler's method uses a specified number of equal subdivisions?",
+          "explanation": "The step size is the total change in the independent variable divided by the number of subdivisions, so each step covers an equal interval.",
+          "type": "short_answer",
+          "answer": "The step size is the difference between the target x-value and the initial x-value divided by the number of subdivisions.",
+          "rubricIdeas": [
+            "Difference between target x-value and initial x-value",
+            "Divided by number of subdivisions"
+          ],
+          "acceptableAnswers": [
+            "(target x - initial x) / number of subdivisions",
+            "(target x value - original x value) / number of subdivisions",
+            "(x_target - x_initial) / n"
+          ],
+          "shortAnswerMode": "enumeration",
+          "rubricV2": {
+            "version": 2,
+            "mode": "enumeration",
+            "requiredItems": [
+              "Difference between target x-value and initial x-value",
+              "Divided by number of subdivisions"
+            ],
+            "requiredCardinality": 2,
+            "aliasesByItem": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "q10",
+          "concept": "Euler's method learning curve",
+          "question": "Euler's method has a tricky learning curve and remains difficult to learn even with a bit of practice.",
+          "retryQuestion": "With a bit of practice, Euler's method becomes easy to learn despite its tricky learning curve.",
+          "explanation": "The false statement reverses the outcome: practice makes Euler's method easy to learn, not difficult.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "Euler's method has a tricky learning curve but becomes easy to learn with a bit of practice."
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 13,
+      "retryCount": 3,
+      "inputTokens": 107323,
+      "outputTokens": 1710,
+      "reasoningTokens": 0,
+      "elapsedMs": 27084,
+      "sourceSelection": {
+        "sentenceCount": 86,
+        "excludedSentenceCount": 7,
+        "candidateWindowCount": 76,
+        "selectedWindowCount": 19,
+        "focusWordCount": 334
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "Euler's method",
+      "question": "What is the purpose of Euler's method in the context of differential equations?",
+      "retryQuestion": "Which option correctly identifies what Euler's method is used for?",
+      "explanation": "Euler's method is a numerical technique used to approximate the values of the original function when an exact solution is difficult or impossible to find analytically.",
+      "type": "multiple_choice",
+      "choices": [
+        "It approximates the values of the original function.",
+        "It draws the slope field for the differential equation.",
+        "It finds the exact solution of the differential equation.",
+        "It calculates the constant C from the initial condition."
+      ],
+      "answerIndex": 0,
+      "answer": "It approximates the values of the original function."
+    },
+    {
+      "id": "q2",
+      "concept": "carrying capacity",
+      "question": "The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N.",
+      "retryQuestion": "To determine the carrying capacity, one sets the growth rate dN/dt to zero and solves for the positive population value.",
+      "explanation": "The carrying capacity is the population size at which the growth rate is zero, corresponding to the nonzero equilibrium solution of the differential equation.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N."
+    },
+    {
+      "id": "q3",
+      "concept": "logistic growth curve",
+      "question": "On the AP Calculus BC exam, what type of question is typically asked about a logistic growth curve?",
+      "retryQuestion": "What kind of question do AP Calculus BC exams typically ask about a logistic growth curve?",
+      "explanation": "The BC exam typically asks questions about a logistic growth curve rather than asking students to solve for its solution, because solving the logistic differential equation is much more difficult.",
+      "type": "short_answer",
+      "answer": "Questions about the logistic growth curve, rather than solving for its solution.",
+      "rubricIdeas": [
+        "Questions about the logistic growth curve, rather than solving for its solution."
+      ],
+      "acceptableAnswers": [
+        "Questions about it",
+        "Questions about the curve",
+        "Questions about the logistic growth curve"
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "Questions about the logistic growth curve, rather than solving for its solution."
+        ],
+        "acceptableAnswers": [
+          "Questions about the logistic growth curve, rather than solving for its solution.",
+          "Questions about it",
+          "Questions about the curve",
+          "Questions about the logistic growth curve"
+        ]
+      }
+    },
+    {
+      "id": "q4",
+      "concept": "separable differential equations",
+      "question": "In a separable differential equation, the dependent variable can always be isolated on one side of the equation.",
+      "retryQuestion": "For any separable differential equation, it is always possible to solve for the dependent variable alone on one side.",
+      "explanation": "This statement is true: In a separable differential equation, the dependent variable can always be isolated on one side of the equation.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "In a separable differential equation, the dependent variable can always be isolated on one side of the equation."
+    },
+    {
+      "id": "q5",
+      "concept": "differential equation definition",
+      "question": "A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2.",
+      "retryQuestion": "An equation that models the rate of change of a function, like dy/dx = x + y^2, is a differential equation.",
+      "explanation": "A differential equation relates a function to its derivatives, expressing how the function changes with respect to a variable.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2."
+    },
+    {
+      "id": "q6",
+      "concept": "slope field evaluation",
+      "question": "Given a differential equation that represents the slope of a function at any point, how do you find the slope of the function at a specific point (x, y)?",
+      "retryQuestion": "How can you determine the slope of a function at a given point using its differential equation?",
+      "explanation": "The derivative, or differential equation, gives the slope of the function at any point. To find the slope at a specific point, substitute the coordinates of that point into the differential equation.",
+      "type": "short_answer",
+      "answer": "Substitute the coordinates of the point into the differential equation.",
+      "rubricIdeas": [
+        "Substitute the coordinates of the point into the differential equation."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "Substitute the coordinates of the point into the differential equation."
+        ],
+        "acceptableAnswers": [
+          "Substitute the coordinates of the point into the differential equation."
+        ]
+      }
+    },
+    {
+      "id": "q7",
+      "concept": "Euler's method step size",
+      "question": "In Euler's method, how is the step size (the change in x per step) determined when the number of subdivisions is specified?",
+      "retryQuestion": "Which statement correctly describes how to compute the step size in Euler's method when the number of subdivisions is given?",
+      "explanation": "The step size is the total change in x from the initial x-value to the target x-value divided by the number of subdivisions. For example, if the target x is 2, the initial x is 1, and there are 4 subdivisions, the step size is (2-1)/4 = 1/4.",
+      "type": "multiple_choice",
+      "choices": [
+        "It is the target x-value divided by the number of subdivisions.",
+        "It is the difference between the target x-value and the initial x-value multiplied by the number of subdivisions.",
+        "It is the initial x-value divided by the number of subdivisions.",
+        "It is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+      ],
+      "answerIndex": 3,
+      "answer": "It is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+    },
+    {
+      "id": "q8",
+      "concept": "Euler's method iteration",
+      "question": "In Euler's method, after computing a new y-value at the next x-step, what is the next action in the iterative process?",
+      "retryQuestion": "What does Euler's method do after each new y-value is found at the next x-step?",
+      "explanation": "Euler's method proceeds by repeatedly using the current y-value to compute the slope dy/dx at the new x, then stepping forward. The process continues until the target x is reached.",
+      "type": "multiple_choice",
+      "choices": [
+        "Use the previous slope without updating it.",
+        "Compute the slope dy/dx at the new x using the updated y-value, then take another step.",
+        "Stop because the y-value is already exact.",
+        "Skip to the target x without intermediate steps."
+      ],
+      "answerIndex": 1,
+      "answer": "Compute the slope dy/dx at the new x using the updated y-value, then take another step."
+    },
+    {
+      "id": "q9",
+      "concept": "Euler's method step size calculation",
+      "question": "In Euler's method, how is the size of each step determined when the number of subdivisions is specified?",
+      "retryQuestion": "What formula gives the step size when Euler's method uses a specified number of equal subdivisions?",
+      "explanation": "The step size is the total change in the independent variable divided by the number of subdivisions, so each step covers an equal interval.",
+      "type": "short_answer",
+      "answer": "The step size is the difference between the target x-value and the initial x-value divided by the number of subdivisions.",
+      "rubricIdeas": [
+        "Difference between target x-value and initial x-value",
+        "Divided by number of subdivisions"
+      ],
+      "acceptableAnswers": [
+        "(target x - initial x) / number of subdivisions",
+        "(target x value - original x value) / number of subdivisions",
+        "(x_target - x_initial) / n"
+      ],
+      "shortAnswerMode": "enumeration",
+      "rubricV2": {
+        "version": 2,
+        "mode": "enumeration",
+        "requiredItems": [
+          "Difference between target x-value and initial x-value",
+          "Divided by number of subdivisions"
+        ],
+        "requiredCardinality": 2,
+        "aliasesByItem": [
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "id": "q10",
+      "concept": "Euler's method learning curve",
+      "question": "Euler's method has a tricky learning curve and remains difficult to learn even with a bit of practice.",
+      "retryQuestion": "With a bit of practice, Euler's method becomes easy to learn despite its tricky learning curve.",
+      "explanation": "The false statement reverses the outcome: practice makes Euler's method easy to learn, not difficult.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "Euler's method has a tricky learning curve but becomes easy to learn with a bit of practice."
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "82d2df6cf92c027a30f9f0b608ccdcc7de843c7b921b2a9d5ad80088a129b442"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "55257342f442635810e0f27cd5c5417a3c44165cb4724cd7d9dd512def5166d0"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "questionFingerprint": "b07a0a13ff4441a0b1e23be8beb0abd1e794083e407822d8d8a48ae7f3cf162f"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "c1310f89be6662594e372f724d6974b083037008178df4a978764d3f87d4898e"
+    },
+    {
+      "callIndex": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "ab5e0452f93b6c9f40e941b7ed313a1eb31d0c9c29ecee115906615196c13640"
+    },
+    {
+      "callIndex": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "9eda7cc1cea7f9500e9d6a26afadd06930166c4570bdafdc6de97ff0b0deb19d"
+    },
+    {
+      "callIndex": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "8bd6d0337834e623779fd2f52578f88c6c8e12d4ac3b7437628d414360ca9c9b"
+    },
+    {
+      "callIndex": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "d7ea051fe17b7d1985f4818a036b087cf7d3dae5e571b30adab68b85cc09c5ad"
+    },
+    {
+      "callIndex": 11,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "questionFingerprint": "acc600bfc7f65c501b3b6d3fd42cf959f836d5278b45f681a33abf6f46153c13"
+    },
+    {
+      "callIndex": 12,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "35c10fd5178923c359f2d5d6f0f9eab0698d6f1ecda8a789d559191930aafe4a"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "NOTICE"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "It approximates the values of the original function.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that Euler's method is used to approximate the values of the original function when an exact solution is difficult or impossible to find.",
+        "matchedIdeas": [
+          "It approximates the values of the original function."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Correct—the carrying capacity is indeed found by setting dN/dt to zero and solving for the nonzero population N.",
+        "matchedIdeas": [
+          "Carrying capacity found by setting dN/dt to zero and solving for nonzero N"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "Questions about the logistic growth curve, rather than solving for its solution.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that AP Calculus BC questions focus on analyzing the logistic growth curve itself, rather than solving for its explicit solution.",
+        "matchedIdeas": [
+          "Questions about the logistic growth curve, rather than solving for its solution."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that in a separable differential equation, the dependent variable can always be isolated on one side of the equation.",
+        "matchedIdeas": [
+          "The statement is true"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that a differential equation models the rate of change of a function, matching the given definition.",
+        "matchedIdeas": [
+          "Differential equation models rate of change"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 6,
+      "response": "Substitute the coordinates of the point into the differential equation.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that substituting the point's coordinates into the differential equation gives the slope at that specific point.",
+        "matchedIdeas": [
+          "Substitute the coordinates of the point into the differential equation."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 7,
+      "response": "It is the difference between the target x-value and the initial x-value divided by the number of subdivisions.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that the step size is the total interval length (target minus initial x) divided by the number of subdivisions.",
+        "matchedIdeas": [
+          "Step size = (target x - initial x) / number of subdivisions"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 8,
+      "response": "Compute the slope dy/dx at the new x using the updated y-value, then take another step.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that Euler's method is iterative: after updating y, you must recompute the slope at the new point before taking the next step.",
+        "matchedIdeas": [
+          "Compute the slope dy/dx at the new x using the updated y-value, then take another step."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 9,
+      "response": "The step size is the difference between the target x-value and the initial x-value divided by the number of subdivisions.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the step size is the total interval length divided by the number of subdivisions.",
+        "matchedIdeas": [
+          "Difference between target x-value and initial x-value",
+          "Divided by number of subdivisions"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 10,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that Euler's method becomes easy to learn with practice, not difficult.",
+        "matchedIdeas": [
+          "Learner correctly identified the statement as False"
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 0,
+      "videoId": "TTsLhDHWopI"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 3492,
+      "videoId": "TTsLhDHWopI",
+      "title": "AP Calculus AB and BC Unit 7 Review - Differential Equations - Slope Fields - Euler's Method",
+      "language": "en",
+      "durationSeconds": 2210,
+      "segmentCount": 776,
+      "sourceSegmentCount": 776,
+      "characterCount": 22707,
+      "transcriptFingerprint": "b42f7510",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 3493,
+      "questionCount": 10,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 7683,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 7706,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 10201,
+      "ordinal": 1,
+      "concept": "Euler's method",
+      "prompt": "What is the purpose of Euler's method in the context of differential equations?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 10202,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2518,
+      "inputTokens": 10130,
+      "outputTokens": 188,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10203,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10225,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10265,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 12138,
+      "ordinal": 2,
+      "concept": "carrying capacity",
+      "prompt": "The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12138,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1913,
+      "inputTokens": 10252,
+      "outputTokens": 106,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12139,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12157,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12201,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 13994,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "unsupported_absolute_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 276,
+      "callElapsedMs": 1836
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 13995,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 276,
+      "reasonCode": "unsupported_absolute_claim",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14296,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14344,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 16498,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "unsupported_absolute_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 438,
+      "callElapsedMs": 2201
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16498,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "retryDelayMs": 438,
+      "reasonCode": "unsupported_absolute_claim",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16958,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 17007,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 19246,
+      "ordinal": 3,
+      "concept": "logistic growth curve",
+      "prompt": "On the AP Calculus BC exam, what type of question is typically asked about a logistic growth curve?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 19246,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2288,
+      "inputTokens": 10628,
+      "outputTokens": 194,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 19246,
+      "stage": "creating_questions",
+      "progress": 0.416,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 19262,
+      "stage": "creating_questions",
+      "progress": 0.416,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 19302,
+      "callIndex": 5,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 20968,
+      "ordinal": 4,
+      "concept": "separable differential equations",
+      "prompt": "In a separable differential equation, the dependent variable can always be isolated on one side of the equation."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 20968,
+      "callIndex": 5,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1706,
+      "inputTokens": 10889,
+      "outputTokens": 155,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20968,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20997,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 21058,
+      "callIndex": 6,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 22561,
+      "ordinal": 5,
+      "concept": "differential equation definition",
+      "prompt": "A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 22562,
+      "callIndex": 6,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1565,
+      "inputTokens": 10528,
+      "outputTokens": 109,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 22562,
+      "stage": "creating_questions",
+      "progress": 0.56,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 22596,
+      "stage": "creating_questions",
+      "progress": 0.56,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 22663,
+      "callIndex": 7,
+      "ordinal": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 24738,
+      "ordinal": 6,
+      "concept": "slope field evaluation",
+      "prompt": "Given a differential equation that represents the slope of a function at any point, how do you find the slope of the function at a specific point (x, y)?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 24738,
+      "callIndex": 7,
+      "ordinal": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2142,
+      "inputTokens": 10848,
+      "outputTokens": 191,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 24738,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 24785,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 24858,
+      "callIndex": 8,
+      "ordinal": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 26650,
+      "ordinal": 7,
+      "concept": "Euler's method step size",
+      "prompt": "In Euler's method, how is the step size (the change in x per step) determined when the number of subdivisions is specified?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 26652,
+      "callIndex": 8,
+      "ordinal": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1866,
+      "inputTokens": 10614,
+      "outputTokens": 259,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 26652,
+      "stage": "creating_questions",
+      "progress": 0.704,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 26689,
+      "stage": "creating_questions",
+      "progress": 0.704,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 26783,
+      "callIndex": 9,
+      "ordinal": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 28722,
+      "ordinal": 8,
+      "concept": "Euler's method iteration",
+      "prompt": "In Euler's method, after computing a new y-value at the next x-step, what is the next action in the iterative process?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 28722,
+      "callIndex": 9,
+      "ordinal": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2033,
+      "inputTokens": 10805,
+      "outputTokens": 175,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 28722,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 28755,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 28858,
+      "callIndex": 10,
+      "ordinal": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 30639,
+      "callIndex": 10,
+      "ordinal": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "schema_invalid",
+      "acceptedCount": 0,
+      "retryDelayMs": 296,
+      "callElapsedMs": 1884
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 30640,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 9,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 296,
+      "reasonCode": "schema_invalid",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 30937,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 9,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 31063,
+      "callIndex": 11,
+      "ordinal": 9,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 33128,
+      "ordinal": 9,
+      "concept": "Euler's method step size calculation",
+      "prompt": "In Euler's method, how is the size of each step determined when the number of subdivisions is specified?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 33130,
+      "callIndex": 11,
+      "ordinal": 9,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2193,
+      "inputTokens": 11129,
+      "outputTokens": 194,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 33130,
+      "stage": "creating_questions",
+      "progress": 0.848,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 33173,
+      "stage": "creating_questions",
+      "progress": 0.848,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 33299,
+      "callIndex": 12,
+      "ordinal": 10,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 34758,
+      "ordinal": 10,
+      "concept": "Euler's method learning curve",
+      "prompt": "Euler's method has a tricky learning curve and remains difficult to learn even with a bit of practice."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 34760,
+      "callIndex": 12,
+      "ordinal": 10,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1585,
+      "inputTokens": 11500,
+      "outputTokens": 139,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 34760,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "f8b16bab-99f8-4dda-822e-b8a67e178bac"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 34762,
+      "accepted": 10,
+      "requested": 10,
+      "aiCalls": 13,
+      "retryCount": 3,
+      "generationElapsedMs": 27084,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 34764,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "It approximates the values of the original function."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 36545,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that Euler's method is used to approximate the values of the original function when an exact solution is difficult or impossible to find.",
+      "matchedIdeas": [
+        "It approximates the values of the original function."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 36545,
+      "ordinal": 2,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 38644,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Correct—the carrying capacity is indeed found by setting dN/dt to zero and solving for the nonzero population N.",
+      "matchedIdeas": [
+        "Carrying capacity found by setting dN/dt to zero and solving for nonzero N"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 38645,
+      "ordinal": 3,
+      "questionType": "short_answer",
+      "response": "Questions about the logistic growth curve, rather than solving for its solution."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 40347,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that AP Calculus BC questions focus on analyzing the logistic growth curve itself, rather than solving for its explicit solution.",
+      "matchedIdeas": [
+        "Questions about the logistic growth curve, rather than solving for its solution."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 40347,
+      "ordinal": 4,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 42001,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that in a separable differential equation, the dependent variable can always be isolated on one side of the equation.",
+      "matchedIdeas": [
+        "The statement is true"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 42001,
+      "ordinal": 5,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 43372,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that a differential equation models the rate of change of a function, matching the given definition.",
+      "matchedIdeas": [
+        "Differential equation models rate of change"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 43372,
+      "ordinal": 6,
+      "questionType": "short_answer",
+      "response": "Substitute the coordinates of the point into the differential equation."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 45116,
+      "ordinal": 6,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that substituting the point's coordinates into the differential equation gives the slope at that specific point.",
+      "matchedIdeas": [
+        "Substitute the coordinates of the point into the differential equation."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 45116,
+      "ordinal": 7,
+      "questionType": "multiple_choice",
+      "response": "It is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 46753,
+      "ordinal": 7,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that the step size is the total interval length (target minus initial x) divided by the number of subdivisions.",
+      "matchedIdeas": [
+        "Step size = (target x - initial x) / number of subdivisions"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 46753,
+      "ordinal": 8,
+      "questionType": "multiple_choice",
+      "response": "Compute the slope dy/dx at the new x using the updated y-value, then take another step."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 48455,
+      "ordinal": 8,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that Euler's method is iterative: after updating y, you must recompute the slope at the new point before taking the next step.",
+      "matchedIdeas": [
+        "Compute the slope dy/dx at the new x using the updated y-value, then take another step."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 48455,
+      "ordinal": 9,
+      "questionType": "short_answer",
+      "response": "The step size is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 50058,
+      "ordinal": 9,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the step size is the total interval length divided by the number of subdivisions.",
+      "matchedIdeas": [
+        "Difference between target x-value and initial x-value",
+        "Divided by number of subdivisions"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 50058,
+      "ordinal": 10,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 51518,
+      "ordinal": 10,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that Euler's method becomes easy to learn with practice, not difficult.",
+      "matchedIdeas": [
+        "Learner correctly identified the statement as False"
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

@@ -118,7 +118,6 @@ on retry, finishes, and asserts the recap content.
 ## Verification
 
 `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`,
-`npm run test:e2e` all green locally on Windows after the line-ending fix;
 the same commands run in CI on Ubuntu.
 
 ## Findings during implementation

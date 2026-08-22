@@ -6,16 +6,15 @@ ClipQuest deploys its Cloudflare Worker and content-hashed static assets as one 
 
 Verified on 2026-08-22:
 
-| Item                        | Production value                                                        |
-| --------------------------- | ----------------------------------------------------------------------- |
-| Worker version              | `8350cd9a-e7ba-4b7e-883e-cd85796b8895`                                  |
-| Worker tag / Git SHA        | `5d4a9e4146a4968c786439a92ad4b86c98a9332a`                              |
-| Extension source artifact   | `0.8.19`; Chrome 0.8.17 remains the minimum accepted version            |
-| Current generation metadata | prompt v5.12, validator v5.3, protocol 10, pipeline 9                   |
-| Generation rollout          | v5.12 disabled; v5.11 effective default                                 |
-| Native client metadata      | Android and iOS 0.2.0 with `question-stream-v7`, foreground-only        |
-| D1 migration                | `0020_generation_call_lifecycle.sql`                                    |
-| Remaining release gate      | immutable v5.12 canary plus complete Chrome/native real-client matrices |
+| Item                        | Production value                                                |
+| --------------------------- | --------------------------------------------------------------- |
+| Worker version              | `8350cd9a-e7ba-4b7e-883e-cd85796b8895`                          |
+| Worker tag / Git SHA        | `5d4a9e4146a4968c786439a92ad4b86c98a9332a`                      |
+| Extension source artifact   | `0.8.19`; Chrome 0.8.17 remains the minimum accepted version    |
+| Current generation metadata | prompt v5.12, validator v5.3, protocol 10, pipeline 9           |
+| Generation rollout          | v5.12 disabled; v5.11 effective default                         |
+| D1 migration                | `0020_generation_call_lifecycle.sql`                            |
+| Remaining release gate      | immutable v5.12 canary plus complete Chrome real-browser matrix |
 
 The public Cloudflare edge reports the exact SHA, version affinity, supported prompt metadata, and storage-only architecture. This baseline is deployment evidence only: it does not enable v5.12 or clear the official-site and physical-device matrices.
 
@@ -43,13 +42,13 @@ The current [ten-video production report](../qa-results/live-production-quiz-gen
 
 This table is a dated observation, not a substitute for checking the live service before the next release.
 
-## Current web and native source candidate
+## Current web source candidate
 
-The assigned new-bank contract uses extension `0.8.31`, result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, progressive import `v4`, and generation profile `stable_non_thinking_v5_2`. Android and iOS 0.2.0 consume the same local engine and report native client metadata; web reports `chrome_extension`.
+The assigned new-bank contract uses extension `0.8.31`, result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, progressive import `v4`, and generation profile `stable_non_thinking_v5_2`. Web reports `chrome_extension`.
 
 The checked-in rollout enables v5.2 and disables v5.3, v5.4, and v5.9-v5.12. `/health` reports supported metadata and the effective default separately; `/api/local-ai/profile` is authoritative for a learner. A fresh bank makes one non-thinking DeepSeek request for the exact 5/10/15 count, buffers and validates the complete JSON response, uploads only after validation, and opens the attempt only when the bank is ready. It performs no generation retry and creates no fallback content. Existing completed banks preserve their original prompt, validator, telemetry, and client-integrity metadata.
 
-The same release adds backward-compatible Android client metadata, push-token unregister behavior, safe Android generation status, and a certificate-gated App Links endpoint. No D1 migration is required. Worker deployment, extension installation, EAS signing, physical-device acceptance, and real-video matrices remain separate release actions.
+No D1 migration is required. Worker deployment, extension installation, and real-video matrices remain separate release actions.
 
 Quest sharing adds D1 migration `0027_quiz_shares.sql` (two additive tables: `quiz_shares`, `quiz_share_claims`). Apply it with `npm run db:migrate:remote` **before** promoting the Worker version that mounts `/api/shares`; a Worker rollback leaves the tables unused and is safe. The public preview endpoint is rate limited per IP and exposes no question text.
 
@@ -77,7 +76,6 @@ References:
 - The worktree is clean so source, version tag, app assets, Worker code, and extension ZIP refer to one immutable revision.
 - Every migration has a backward-compatible rollout plan. A Worker rollback does not roll back D1.
 - The compatible unpacked extension has been built and its exact version has passed Chrome acceptance.
-- For an Android beta, the Expo account/project, EAS-managed keystore, FCM credentials, release certificate, authenticated internal distribution, and physical-device acceptance must also be available.
 - The target generation rollout mode is deliberate. Enabling a profile is a separate product gate from merely deploying code that supports it.
 - No API key, transcript, DeepSeek body, raw prompt, answer export, or QA credential is present in release evidence.
 
@@ -91,7 +89,6 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm test
-npm run test:e2e
 npm run build
 npm run cf:types
 npm run cf:dry-run
@@ -151,28 +148,12 @@ Require the health response to identify the promoted Worker version and report:
 - pipeline 9;
 - backend quiz generation disabled;
 - extension quiz generation enabled and required;
-- Android in-app generation enabled, foreground-only, and requiring Android 0.2.0 plus `question-stream-v7`;
 - expected model, current prompt, validator, and rollout mode;
 - the expected newest applied D1 migration.
 
 Probe `/`, `/library`, `/settings`, `/admin`, `/admin/jobs`, `/admin/system`, and representative dynamic quiz routes. Parse each HTML shell, request every same-origin script/module preload/stylesheet/font/image reference, and require the expected content type and a successful response.
 
 Health metadata alone is insufficient for a generation-profile release. Create a disposable quiz through the real Chrome extension, then verify its stored `generationProfile`, `promptVersion`, `validatorVersion`, `protocolVersion`, and planned count. `/health` describes the deployed code's current capability; rollout flags can still assign a compatibility profile to a newly created bank.
-
-## Android private-beta release
-
-The Worker/app rollout may proceed before the private APK because the API additions are backward compatible. APK distribution is a separate gate:
-
-1. Run the guarded Cloudflare release first and record the exact active Worker version.
-2. Create/authenticate the EAS project from `apps/app`, supply the real project ID, and configure FCM.
-3. Run `npx eas-cli build --platform android --profile internal` from `apps/app` at the exact pushed Git SHA.
-4. Verify the APK is release-signed, version 0.2.0/code 2, min API 29, target API 36, and contains no key, transcript fixture, environment secret, or signing material.
-5. Back up the EAS-managed keystore securely and configure its SHA-256 certificate fingerprint as `ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINT`.
-6. Configure `IOS_APP_LINKS_TEAM_ID` from the production Apple signing identity and verify both `/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association` before treating HTTPS authentication links as native-ready.
-7. Verify notification delivery/tap routing, install and upgrade behavior, and the full API 29/API 36/physical-device matrix.
-8. Run and complete the ten-video Android matrix before sharing the restricted APK URL.
-
-Do not distribute a locally debug-signed Gradle artifact. See [Android private beta](./ANDROID-BETA.md) and the [current dated QA report](./QA-ANDROID-BETA-2026-08-22.md).
 
 ## Generation rollout gate
 
@@ -184,7 +165,7 @@ Do not treat extension installation, a successful local test, or `/health` alone
 4. Require question 1 to validate, persist, and navigate before suffix generation completes. Verify ordered requested/accepted call accounting, accepted-prefix preservation through an injected later-question failure, automatic missing-ordinal repair, full-length completion, and no fallback content.
 5. Run the immutable artifact across ten different real YouTube videos and answer every planned learner question on the original bank; do not replace a failed bank and count the replacement as success.
 6. Audit question grounding, true/false polarity, answer-to-prompt consistency, duplicate objectives, fragmentary answers, unsupported absolute wording, and soft short-answer grading.
-7. Confirm the page bridge, native API traffic, and Worker requests contain no API key, captions, transcript, generation instructions, or raw DeepSeek response.
+7. Confirm the page bridge and Worker requests contain no API key, captions, transcript, generation instructions, or raw DeepSeek response.
 
 If a gate fails, disable `QUIZ_V5_2_ROLLOUT` or replace the candidate; do not add generated fallback questions or expose a learner-facing continuation action. Retain privacy-safe call-event evidence for diagnosis.
 

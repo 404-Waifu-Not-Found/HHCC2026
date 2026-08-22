@@ -1,0 +1,2240 @@
+{
+  "runId": "a6ebb819-e82d-48d7-9b62-19659e0d4931",
+  "source": {
+    "videoId": "GBFM7Ti-P34",
+    "title": "AP Chemistry Unit 2 Review | Compound Structure and Properties",
+    "language": "en",
+    "durationSeconds": 695,
+    "segments": [
+      {
+        "id": "youtube-json3-0-200",
+        "startMs": 200,
+        "endMs": 6120,
+        "text": "Hi there! I’m Jeremy Krug, and welcome to my review of AP Chemistry Unit 2 – which covers"
+      },
+      {
+        "id": "youtube-json3-1-6120",
+        "startMs": 6120,
+        "endMs": 11240,
+        "text": "compound structure and properties. I really appreciate it when you HIT that like button,"
+      },
+      {
+        "id": "youtube-json3-2-11240",
+        "startMs": 11240,
+        "endMs": 16880,
+        "text": "subscribe, leave a comment, and share these videos with the rest of your AP Chem community!"
+      },
+      {
+        "id": "youtube-json3-3-16880",
+        "startMs": 16880,
+        "endMs": 22840,
+        "text": "And if you want more practice, I’m making ALL my Unit 2 review materials FREE OF CHARGE – as"
+      },
+      {
+        "id": "youtube-json3-4-22840",
+        "startMs": 22840,
+        "endMs": 29960,
+        "text": "my gift to you – over at UltimateReviewPacket.com. You’ll find my FULL 30 minute unit summary video,"
+      },
+      {
+        "id": "youtube-json3-5-31520",
+        "startMs": 31520,
+        "endMs": 35520,
+        "text": "practice multiple choice, free-response, guided notes,"
+      },
+      {
+        "id": "youtube-json3-6-35520",
+        "startMs": 35520,
+        "endMs": 41760,
+        "text": "full-length study guide. So go check it out, the link is down below. Let’s get started…."
+      },
+      {
+        "id": "youtube-json3-7-41760",
+        "startMs": 41760,
+        "endMs": 47880,
+        "text": "In chemical compounds, the two main types of bonds are ionic and covalent. We normally"
+      },
+      {
+        "id": "youtube-json3-8-47880",
+        "startMs": 47880,
+        "endMs": 53440,
+        "text": "say ionic bonds are between a metal and a nonmetal, while covalent bonds are between"
+      },
+      {
+        "id": "youtube-json3-9-53440",
+        "startMs": 53440,
+        "endMs": 60000,
+        "text": "2 nonmetals. Usually, ionic compounds are brittle, have high melting points,"
+      },
+      {
+        "id": "youtube-json3-10-60000",
+        "startMs": 60000,
+        "endMs": 65560,
+        "text": "and conduct electricity when dissolved into solution. Covalent compounds on the other hand,"
+      },
+      {
+        "id": "youtube-json3-11-65560",
+        "startMs": 65560,
+        "endMs": 71440,
+        "text": "have lower melting points and don’t conduct electricity very well when dissolved."
+      },
+      {
+        "id": "youtube-json3-12-71440",
+        "startMs": 71440,
+        "endMs": 78040,
+        "text": "We can further classify covalent bonds as polar covalent and nonpolar covalent. If one of the"
+      },
+      {
+        "id": "youtube-json3-13-78040",
+        "startMs": 78040,
+        "endMs": 84640,
+        "text": "atoms in the bond is hogging the electrons, we say it’s a polar covalent bond. On the other hand,"
+      },
+      {
+        "id": "youtube-json3-14-84640",
+        "startMs": 84640,
+        "endMs": 88760,
+        "text": "if the two atoms are sharing those electrons equally (or almost equally),"
+      },
+      {
+        "id": "youtube-json3-15-88760",
+        "startMs": 88760,
+        "endMs": 95200,
+        "text": "we say it’s nonpolar. To determine if a bond is polar or nonpolar, look at the difference"
+      },
+      {
+        "id": "youtube-json3-16-95200",
+        "startMs": 95200,
+        "endMs": 101400,
+        "text": "between the two atoms’ electronegativities. If the two values are very close to each other,"
+      },
+      {
+        "id": "youtube-json3-17-101400",
+        "startMs": 101400,
+        "endMs": 106960,
+        "text": "they’ll be nonpolar. If they’re farther apart, we’ll say it’s polar. Since you"
+      },
+      {
+        "id": "youtube-json3-18-106960",
+        "startMs": 106960,
+        "endMs": 112840,
+        "text": "don’t get an electronegativity chart on the AP exam, you’ll have to rely on how close the"
+      },
+      {
+        "id": "youtube-json3-19-112840",
+        "startMs": 112840,
+        "endMs": 119280,
+        "text": "atoms are to each other on the periodic table. For example. selenium and iodine are close,"
+      },
+      {
+        "id": "youtube-json3-20-119280",
+        "startMs": 119280,
+        "endMs": 124600,
+        "text": "so we’d predict their bond to be more nonpolar than selenium and oxygen,"
+      },
+      {
+        "id": "youtube-json3-21-124600",
+        "startMs": 124600,
+        "endMs": 130800,
+        "text": "which are farther away from each other on the table. That bond would be more polar."
+      },
+      {
+        "id": "youtube-json3-22-130800",
+        "startMs": 130800,
+        "endMs": 136960,
+        "text": "Energy of bonds has a lot to do with how atoms interact with each other. Generally speaking,"
+      },
+      {
+        "id": "youtube-json3-23-136960",
+        "startMs": 136960,
+        "endMs": 139720,
+        "text": "the farther away two atoms are from each other,"
+      },
+      {
+        "id": "youtube-json3-24-139720",
+        "startMs": 139720,
+        "endMs": 144840,
+        "text": "the higher their potential energies are. And as they get closer to form a bond,"
+      },
+      {
+        "id": "youtube-json3-25-144840",
+        "startMs": 144840,
+        "endMs": 151120,
+        "text": "their potential energies decrease. This graph shows how potential energy between two atoms"
+      },
+      {
+        "id": "youtube-json3-26-151120",
+        "startMs": 151120,
+        "endMs": 157520,
+        "text": "changes as the distance between them changes. The bond length is determined by the LOWEST"
+      },
+      {
+        "id": "youtube-json3-27-157520",
+        "startMs": 157520,
+        "endMs": 164040,
+        "text": "point on the graph, so the bond length is 200 picometers. The bond energy is the"
+      },
+      {
+        "id": "youtube-json3-28-164040",
+        "startMs": 164040,
+        "endMs": 171360,
+        "text": "absolute value of the potential energy at that point, which would be 250 kilojoules per mole."
+      },
+      {
+        "id": "youtube-json3-29-171360",
+        "startMs": 171360,
+        "endMs": 177680,
+        "text": "Bond order is just another way of saying single, double, or triple bonds. First order bonds,"
+      },
+      {
+        "id": "youtube-json3-30-177680",
+        "startMs": 177680,
+        "endMs": 182880,
+        "text": "single bonds, are the weakest and the longest. While third order bonds,"
+      },
+      {
+        "id": "youtube-json3-31-182880",
+        "startMs": 182880,
+        "endMs": 188680,
+        "text": "triple bonds, are the strongest and the shortest. Double bonds are in the middle."
+      },
+      {
+        "id": "youtube-json3-32-188680",
+        "startMs": 188680,
+        "endMs": 194960,
+        "text": "Coulomb’s Law helps us decide how strongly ions will interact with each other. Remember,"
+      },
+      {
+        "id": "youtube-json3-33-194960",
+        "startMs": 194960,
+        "endMs": 201880,
+        "text": "Coulomb’s Law has two variables – CHARGE and DISTANCE. The greater the magnitude of charge,"
+      },
+      {
+        "id": "youtube-json3-34-201880",
+        "startMs": 201880,
+        "endMs": 207880,
+        "text": "the stronger the attractions between the ions. So a magnesium ion with a +2"
+      },
+      {
+        "id": "youtube-json3-35-207880",
+        "startMs": 207880,
+        "endMs": 213760,
+        "text": "charge and chloride ion with a -1 charge will have a fairly strong attraction,"
+      },
+      {
+        "id": "youtube-json3-36-213760",
+        "startMs": 213760,
+        "endMs": 221720,
+        "text": "but magnesium is even more strongly attracted to the sulfide ion, because sulfide has a -2 charge."
+      },
+      {
+        "id": "youtube-json3-37-221720",
+        "startMs": 221720,
+        "endMs": 229280,
+        "text": "So we can say that magnesium sulfide will have a higher melting point than magnesium chloride."
+      },
+      {
+        "id": "youtube-json3-38-229280",
+        "startMs": 229280,
+        "endMs": 234520,
+        "text": "The larger an ion is, the weaker its attraction will be to surrounding ions,"
+      },
+      {
+        "id": "youtube-json3-39-234520",
+        "startMs": 234520,
+        "endMs": 240160,
+        "text": "because its protons are so much more distant from any neighboring ion. So"
+      },
+      {
+        "id": "youtube-json3-40-240160",
+        "startMs": 240160,
+        "endMs": 245880,
+        "text": "magnesium and sulfide have a strong attraction, but magnesium is even more strongly attracted"
+      },
+      {
+        "id": "youtube-json3-41-245880",
+        "startMs": 245880,
+        "endMs": 253520,
+        "text": "to oxide, because the oxide ion is so much smaller than the sulfide ion. So we’d say"
+      },
+      {
+        "id": "youtube-json3-42-253520",
+        "startMs": 253520,
+        "endMs": 259680,
+        "text": "that the melting point for magnesium oxide is even higher than that of magnesium sulfide. So"
+      },
+      {
+        "id": "youtube-json3-43-259680",
+        "startMs": 259680,
+        "endMs": 267400,
+        "text": "look at charge first, then if it’s a tie, look at the distance – the relative size of the ions."
+      },
+      {
+        "id": "youtube-json3-44-267400",
+        "startMs": 267400,
+        "endMs": 273560,
+        "text": "You need to know the nature of ionic compounds. Sodium chloride is ionic, which means it’s made"
+      },
+      {
+        "id": "youtube-json3-45-273560",
+        "startMs": 273560,
+        "endMs": 281680,
+        "text": "up of sodium cations and chloride anions. But that doesn’t mean that an individual NaCl unit is just"
+      },
+      {
+        "id": "youtube-json3-46-281680",
+        "startMs": 281680,
+        "endMs": 288280,
+        "text": "floating around independently. All ionic compounds are part of a repeating three-dimensional crystal"
+      },
+      {
+        "id": "youtube-json3-47-288280",
+        "startMs": 288280,
+        "endMs": 294600,
+        "text": "lattice. Sodium chloride looks more like this. Be able to draw this, and understand that for"
+      },
+      {
+        "id": "youtube-json3-48-294600",
+        "startMs": 294600,
+        "endMs": 302760,
+        "text": "the most part, in the crystal, positive ions are smaller and negative ions are larger."
+      },
+      {
+        "id": "youtube-json3-49-302760",
+        "startMs": 302760,
+        "endMs": 309120,
+        "text": "Metals are bonded differently. Metallic elements exhibit what we call metallic bonding,"
+      },
+      {
+        "id": "youtube-json3-50-309120",
+        "startMs": 309120,
+        "endMs": 315200,
+        "text": "where the valence electrons are delocalized and can basically float around. So metals"
+      },
+      {
+        "id": "youtube-json3-51-315200",
+        "startMs": 315200,
+        "endMs": 321880,
+        "text": "have positively-charged cations surrounded by a sea of electrons. The free movement"
+      },
+      {
+        "id": "youtube-json3-52-321880",
+        "startMs": 321880,
+        "endMs": 327440,
+        "text": "of those electrons explains why metals conduct electricity so well."
+      },
+      {
+        "id": "youtube-json3-53-327440",
+        "startMs": 327440,
+        "endMs": 333480,
+        "text": "Different elements can combine with metals to form alloys. When most of us think of an alloy,"
+      },
+      {
+        "id": "youtube-json3-54-333480",
+        "startMs": 333480,
+        "endMs": 339160,
+        "text": "we think of something like bronze or brass or pewter – those are substitutional alloys,"
+      },
+      {
+        "id": "youtube-json3-55-339160",
+        "startMs": 339160,
+        "endMs": 345160,
+        "text": "where atoms of one element substitute into positions of some of the atoms of"
+      },
+      {
+        "id": "youtube-json3-56-345160",
+        "startMs": 345160,
+        "endMs": 350560,
+        "text": "the primary metal in the alloy. So for example, in brass, zinc atoms"
+      },
+      {
+        "id": "youtube-json3-57-350560",
+        "startMs": 350560,
+        "endMs": 356960,
+        "text": "substitute into the positions where some of the copper atoms are, and it looks like this."
+      },
+      {
+        "id": "youtube-json3-58-356960",
+        "startMs": 356960,
+        "endMs": 359920,
+        "text": "Now some alloys have a metal with much smaller"
+      },
+      {
+        "id": "youtube-json3-59-359920",
+        "startMs": 359920,
+        "endMs": 365800,
+        "text": "atoms that stick themselves in the spaces between the atoms of the metal. Here is an"
+      },
+      {
+        "id": "youtube-json3-60-365800",
+        "startMs": 365800,
+        "endMs": 372800,
+        "text": "example of that – this is called an interstitial alloy. Steel is a great example of this – little"
+      },
+      {
+        "id": "youtube-json3-61-372800",
+        "startMs": 372800,
+        "endMs": 379920,
+        "text": "carbon atoms stick themselves into the interstitial spaces between the iron atoms."
+      },
+      {
+        "id": "youtube-json3-62-379920",
+        "startMs": 379920,
+        "endMs": 385760,
+        "text": "Lewis electron-dot diagrams are visual representations of the molecular structure"
+      },
+      {
+        "id": "youtube-json3-63-385760",
+        "startMs": 385760,
+        "endMs": 391080,
+        "text": "of a molecule. So if you have this arrangement of atoms and are asked to put the dots in,"
+      },
+      {
+        "id": "youtube-json3-64-391080",
+        "startMs": 391080,
+        "endMs": 398480,
+        "text": "I would recommend that you always start with the outside of the molecule and work your way in. So"
+      },
+      {
+        "id": "youtube-json3-65-398480",
+        "startMs": 398480,
+        "endMs": 403840,
+        "text": "remember that hydrogen is stable with 2 valence electrons, and the others are usually trying to"
+      },
+      {
+        "id": "youtube-json3-66-403840",
+        "startMs": 403840,
+        "endMs": 411840,
+        "text": "have an octet. So hydrogen brings in 1 valence electron, so 1 for each of these. This oxygen on"
+      },
+      {
+        "id": "youtube-json3-67-411840",
+        "startMs": 411840,
+        "endMs": 419960,
+        "text": "top brings in 6 dots, and so does this one over here. And the carbon brings in 4 dots. Now the"
+      },
+      {
+        "id": "youtube-json3-68-419960",
+        "startMs": 419960,
+        "endMs": 426880,
+        "text": "way this is drawn, the carbon in the middle only has 6 dots, and it needs 8. So I’m going to move"
+      },
+      {
+        "id": "youtube-json3-69-426880",
+        "startMs": 426880,
+        "endMs": 434120,
+        "text": "a pair of dots from the top of oxygen down to the middle, and that puts a double bond between the"
+      },
+      {
+        "id": "youtube-json3-70-434120",
+        "startMs": 434120,
+        "endMs": 441280,
+        "text": "carbon and the oxygen here. So we can draw this with lines representing the pairs, just like this."
+      },
+      {
+        "id": "youtube-json3-71-441280",
+        "startMs": 441280,
+        "endMs": 447600,
+        "text": "Normally, molecules are most stable when their atoms all have eight valence electrons. Of course,"
+      },
+      {
+        "id": "youtube-json3-72-447600",
+        "startMs": 447600,
+        "endMs": 454400,
+        "text": "hydrogen can only hold two valence electrons, and boron tends to have six. Sometimes,"
+      },
+      {
+        "id": "youtube-json3-73-454400",
+        "startMs": 454400,
+        "endMs": 459760,
+        "text": "the only way to make a Lewis structure work is to give the central atom more"
+      },
+      {
+        "id": "youtube-json3-74-459760",
+        "startMs": 459760,
+        "endMs": 465800,
+        "text": "than eight valence electrons; when that happens, it’s called an expanded octet."
+      },
+      {
+        "id": "youtube-json3-75-465800",
+        "startMs": 465800,
+        "endMs": 470920,
+        "text": "Like in xenon tetrafluoride, when we put the eight dots around xenon,"
+      },
+      {
+        "id": "youtube-json3-76-470920",
+        "startMs": 470920,
+        "endMs": 475960,
+        "text": "we find we run out of room for xenon’s last four dots. So those"
+      },
+      {
+        "id": "youtube-json3-77-475960",
+        "startMs": 475960,
+        "endMs": 482240,
+        "text": "extra dots end up being placed as unshared pairs on the central atom."
+      },
+      {
+        "id": "youtube-json3-78-482240",
+        "startMs": 482240,
+        "endMs": 488160,
+        "text": "Sometimes there’s more than one acceptable way to draw a Lewis diagram. Let’s say you’re"
+      },
+      {
+        "id": "youtube-json3-79-488160",
+        "startMs": 488160,
+        "endMs": 493400,
+        "text": "trying to draw the structure for ozone, which has the formula O3. You might draw"
+      },
+      {
+        "id": "youtube-json3-80-493400",
+        "startMs": 493400,
+        "endMs": 500280,
+        "text": "it like this. Or you might draw it like this. The double bonds are in different positions,"
+      },
+      {
+        "id": "youtube-json3-81-500280",
+        "startMs": 500280,
+        "endMs": 505720,
+        "text": "but both structures are fine. Those are resonance structures."
+      },
+      {
+        "id": "youtube-json3-82-505720",
+        "startMs": 505720,
+        "endMs": 511800,
+        "text": "You need to be able to determine the formal charge of any atom in a molecule. To calculate"
+      },
+      {
+        "id": "youtube-json3-83-511800",
+        "startMs": 511800,
+        "endMs": 517720,
+        "text": "formal charge, take the number of valence electrons an atom has based on its location"
+      },
+      {
+        "id": "youtube-json3-84-517720",
+        "startMs": 517720,
+        "endMs": 524680,
+        "text": "on the periodic table, then subtract the number of electrons assigned to it in the Lewis diagram,"
+      },
+      {
+        "id": "youtube-json3-85-524680",
+        "startMs": 524680,
+        "endMs": 530680,
+        "text": "counting each bond as a 1. So for example, in ozone, on the first atom,"
+      },
+      {
+        "id": "youtube-json3-86-530680",
+        "startMs": 530680,
+        "endMs": 540320,
+        "text": "oxygen has 6 valence electrons. Then, we subtract 1, 2, 3, 4, and there are two bonds here, so that"
+      },
+      {
+        "id": "youtube-json3-87-540320",
+        "startMs": 540320,
+        "endMs": 550560,
+        "text": "makes 6. Six minus six equals zero. Then on the second atom, 1, 2, and there are three bonds,"
+      },
+      {
+        "id": "youtube-json3-88-550560",
+        "startMs": 550560,
+        "endMs": 561120,
+        "text": "so that makes 5. Six minus five equals +1. On the third atom, 1, 2, 3, 4, 5, 6, and there’s"
+      },
+      {
+        "id": "youtube-json3-89-561120",
+        "startMs": 561120,
+        "endMs": 569560,
+        "text": "one bond, so that makes 7. Six minus seven equals –1. The total of the formal charges in"
+      },
+      {
+        "id": "youtube-json3-90-569560",
+        "startMs": 569560,
+        "endMs": 576440,
+        "text": "a structure should add up to the total structure’s charge, and it does. Usually, but not always,"
+      },
+      {
+        "id": "youtube-json3-91-576440",
+        "startMs": 576440,
+        "endMs": 584480,
+        "text": "in a neutral molecule, the most stable structure will have every atom with a formal charge of zero."
+      },
+      {
+        "id": "youtube-json3-92-584480",
+        "startMs": 584480,
+        "endMs": 588400,
+        "text": "You need to be able to apply the VSEPR theory."
+      },
+      {
+        "id": "youtube-json3-93-588400",
+        "startMs": 588400,
+        "endMs": 593360,
+        "text": "Make sure you can count the number of sigma and pi bonds in a molecule."
+      },
+      {
+        "id": "youtube-json3-94-593360",
+        "startMs": 593360,
+        "endMs": 600240,
+        "text": "Every single bond is a sigma bond. Every double bond is composed of one sigma bond"
+      },
+      {
+        "id": "youtube-json3-95-600240",
+        "startMs": 600240,
+        "endMs": 608560,
+        "text": "and one pi bond. And every triple bond is composed of one sigma bond and two pi bonds."
+      },
+      {
+        "id": "youtube-json3-96-608560",
+        "startMs": 608560,
+        "endMs": 615360,
+        "text": "You need to be able to determine the hybridization of any central atom in a molecule. Just take the"
+      },
+      {
+        "id": "youtube-json3-97-615360",
+        "startMs": 615360,
+        "endMs": 620720,
+        "text": "number of other atoms a central atom touches, then add in the number of unshared electron"
+      },
+      {
+        "id": "youtube-json3-98-620720",
+        "startMs": 620720,
+        "endMs": 629440,
+        "text": "pairs touching that central atom. If the number is 2, then the hybridization is sp. If it’s 3,"
+      },
+      {
+        "id": "youtube-json3-99-629440",
+        "startMs": 629440,
+        "endMs": 636960,
+        "text": "then you will choose sp2. And if it’s 4, the hybridization is sp3."
+      },
+      {
+        "id": "youtube-json3-100-636960",
+        "startMs": 636960,
+        "endMs": 642800,
+        "text": "You need to know the molecular geometries and bond angles for molecular structures. For example,"
+      },
+      {
+        "id": "youtube-json3-101-642800",
+        "startMs": 642800,
+        "endMs": 648800,
+        "text": "if the central atom touches 4 other atoms and has no unshared pairs on the central atom,"
+      },
+      {
+        "id": "youtube-json3-102-648800",
+        "startMs": 648800,
+        "endMs": 656480,
+        "text": "it has a tetrahedral shape, and its bond angle is 109.5 degrees. The AP readers are usually"
+      },
+      {
+        "id": "youtube-json3-103-656480",
+        "startMs": 656480,
+        "endMs": 661640,
+        "text": "more lenient on bond angles than most classroom teachers, so the bond angles they generally expect"
+      },
+      {
+        "id": "youtube-json3-104-661640",
+        "startMs": 661640,
+        "endMs": 673880,
+        "text": "you to know are 109.5°, 120°, 90°, and 180°. Here’s a more complete list of those geometries."
+      },
+      {
+        "id": "youtube-json3-105-673880",
+        "startMs": 673880,
+        "endMs": 677800,
+        "text": "That was 10 minutes, and that’s Unit 2! Thanks for watching,"
+      },
+      {
+        "id": "youtube-json3-106-677800",
+        "startMs": 677800,
+        "endMs": 682760,
+        "text": "and I hope to see you back here soon as we review Unit 3, don’t forget that if"
+      },
+      {
+        "id": "youtube-json3-107-682760",
+        "startMs": 682760,
+        "endMs": 688840,
+        "text": "you need more in-depth review to go check out my AP-style practice and review questions over"
+      },
+      {
+        "id": "youtube-json3-108-688840",
+        "startMs": 688840,
+        "endMs": 694800,
+        "text": "at UltimateReviewPacket.com. Keep up the good work, and keep learning chemistry!"
+      }
+    ],
+    "sourceSegmentCount": 109,
+    "characterCount": 9261,
+    "transcriptFingerprint": "4d348634",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 10,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "ee15eb02-e835-422d-9be8-22858ce300ee",
+    "generationSessionId": "7afa6c73-65bc-44f4-a493-4e4fbf49c7bc",
+    "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e",
+    "questionPlan": {
+      "seed": "7c41d00981b70b4b9c491bf89056bb8c29e36f844cbe5768cd46f28029ab72a7",
+      "types": [
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+        "true_false",
+        "short_answer",
+        "multiple_choice",
+        "true_false",
+        "true_false",
+        "multiple_choice",
+        "short_answer"
+      ]
+    },
+    "promptFingerprint": "f63c554869e54aef75e0b67fb3d2f543e2ac77bb8bfd9a7507ab7af3143b8db5",
+    "quiz": {
+      "title": "AP Chemistry Unit 2 Review | Compound Structure and Properties",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "ionic attraction and charge magnitude",
+          "question": "Why is a magnesium ion more strongly attracted to a sulfide ion than to a chloride ion?",
+          "retryQuestion": "What causes the stronger attraction between magnesium and sulfide ions compared to magnesium and chloride ions?",
+          "explanation": "The strength of attraction between ions increases with the magnitude of their charges. Sulfide has a -2 charge, while chloride has a -1 charge, so the magnesium ion is more strongly attracted to sulfide.",
+          "type": "multiple_choice",
+          "choices": [
+            "Because the magnesium ion has a greater charge magnitude than the sulfide ion.",
+            "Because the sulfide ion has a greater charge magnitude (-2) than the chloride ion (-1).",
+            "Because the chloride ion has a greater charge magnitude than the sulfide ion.",
+            "Because the sulfide ion is larger than the chloride ion."
+          ],
+          "answerIndex": 1,
+          "answer": "Because the sulfide ion has a greater charge magnitude (-2) than the chloride ion (-1)."
+        },
+        {
+          "id": "q2",
+          "concept": "formal charge calculation method",
+          "question": "To calculate formal charge, add the number of electrons assigned to the atom in the Lewis diagram, counting each bond as one electron, to the atom's valence electrons based on its periodic table position.",
+          "retryQuestion": "Formal charge is found by adding the electrons assigned to the atom in the Lewis structure, with each bond counted as one electron, to the atom's valence electrons from its periodic table position.",
+          "explanation": "The false statement reverses the operation: formal charge is the valence electrons minus the assigned electrons, not the sum of the two.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "To calculate formal charge, subtract the number of electrons assigned to the atom in the Lewis diagram, counting each bond as one electron, from the atom's valence electrons based on its periodic table position."
+        },
+        {
+          "id": "q3",
+          "concept": "alloy formation method",
+          "question": "How do interstitial alloys form?",
+          "retryQuestion": "What is the method by which interstitial alloys are created?",
+          "explanation": "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal.",
+          "type": "short_answer",
+          "answer": "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal.",
+          "rubricIdeas": [
+            "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+            ],
+            "acceptableAnswers": [
+              "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+            ]
+          }
+        },
+        {
+          "id": "q4",
+          "concept": "bond polarity determination",
+          "question": "To determine if a bond is polar or nonpolar, compare the difference between the two atoms' electronegativities.",
+          "retryQuestion": "The polarity of a bond is determined by the difference in electronegativity between the two bonded atoms.",
+          "explanation": "A large electronegativity difference indicates unequal sharing of electrons, making the bond polar, while a small difference indicates nearly equal sharing, making it nonpolar.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "To determine if a bond is polar or nonpolar, compare the difference between the two atoms' electronegativities."
+        },
+        {
+          "id": "q5",
+          "concept": "expanded octet definition",
+          "question": "What term describes a Lewis structure in which the central atom has more than eight valence electrons?",
+          "retryQuestion": "What is the name for a Lewis structure where the central atom exceeds eight valence electrons?",
+          "explanation": "An expanded octet occurs when a central atom accommodates more than eight valence electrons in its Lewis structure.",
+          "type": "short_answer",
+          "answer": "Expanded octet",
+          "rubricIdeas": [
+            "Expanded octet"
+          ],
+          "acceptableAnswers": [
+            "Expanded octets"
+          ],
+          "shortAnswerMode": "atomic_term",
+          "rubricV2": {
+            "version": 2,
+            "mode": "atomic_term",
+            "canonicalAnswer": "Expanded octet",
+            "aliases": [
+              "Expanded octets"
+            ]
+          }
+        },
+        {
+          "id": "q6",
+          "concept": "electronegativity trend prediction",
+          "question": "Without an electronegativity chart, how can the relative polarity of a bond be predicted from the periodic table?",
+          "retryQuestion": "Which periodic-table relationship is used to estimate whether a bond is polar or nonpolar when electronegativity values are not available?",
+          "explanation": "Atoms that are close together on the periodic table have similar electronegativities, so their bonds are more nonpolar. Atoms farther apart have a greater electronegativity difference, making the bond more polar.",
+          "type": "multiple_choice",
+          "choices": [
+            "By counting the total number of valence electrons in the molecule.",
+            "By comparing the atomic masses of the two atoms.",
+            "By comparing how close the two atoms are on the periodic table.",
+            "By identifying which atom has the larger atomic radius."
+          ],
+          "answerIndex": 2,
+          "answer": "By comparing how close the two atoms are on the periodic table."
+        },
+        {
+          "id": "q7",
+          "concept": "ionic compound composition",
+          "question": "Sodium chloride is ionic, meaning it is composed of sodium cations and chloride anions.",
+          "retryQuestion": "Sodium chloride is an ionic compound made up of sodium cations and chloride anions.",
+          "explanation": "Ionic compounds consist of positively charged cations and negatively charged anions held together by electrostatic attraction.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "Sodium chloride is ionic, meaning it is composed of sodium cations and chloride anions."
+        },
+        {
+          "id": "q8",
+          "concept": "triple bond composition",
+          "question": "Every triple bond is composed of two sigma bonds and one pi bond.",
+          "retryQuestion": "A triple bond consists of two sigma bonds and one pi bond.",
+          "explanation": "A triple bond contains one sigma bond and two pi bonds, not two sigma bonds and one pi bond.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "Every triple bond is composed of one sigma bond and two pi bonds."
+        },
+        {
+          "id": "q9",
+          "concept": "covalent compound properties",
+          "question": "What are two characteristic properties of covalent compounds?",
+          "retryQuestion": "Which option correctly describes the melting points and electrical conductivity of covalent compounds when dissolved?",
+          "explanation": "Covalent compounds have lower melting points and do not conduct electricity well when dissolved in solution.",
+          "type": "multiple_choice",
+          "choices": [
+            "They have high melting points and conduct electricity when dissolved.",
+            "They conduct electricity well when dissolved and have high melting points.",
+            "They are brittle and have high melting points.",
+            "They have lower melting points and do not conduct electricity well when dissolved."
+          ],
+          "answerIndex": 3,
+          "answer": "They have lower melting points and do not conduct electricity well when dissolved."
+        },
+        {
+          "id": "q10",
+          "concept": "octet rule stability",
+          "question": "What condition makes a molecule most stable with respect to its atoms' valence electrons?",
+          "retryQuestion": "Under what condition are molecules most stable regarding their atoms' valence electrons?",
+          "explanation": "A molecule is most stable when each of its atoms has eight valence electrons, the octet rule.",
+          "type": "short_answer",
+          "answer": "A molecule is most stable when its atoms all have eight valence electrons.",
+          "rubricIdeas": [
+            "A molecule is most stable when its atoms all have eight valence electrons."
+          ],
+          "acceptableAnswers": [
+            "When its atoms all have eight valence electrons",
+            "When each atom has eight valence electrons"
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "A molecule is most stable when its atoms all have eight valence electrons."
+            ],
+            "acceptableAnswers": [
+              "A molecule is most stable when its atoms all have eight valence electrons.",
+              "When its atoms all have eight valence electrons",
+              "When each atom has eight valence electrons"
+            ]
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 10,
+      "retryCount": 0,
+      "inputTokens": 105006,
+      "outputTokens": 1409,
+      "reasoningTokens": 0,
+      "elapsedMs": 17032,
+      "sourceSelection": {
+        "sentenceCount": 104,
+        "excludedSentenceCount": 4,
+        "candidateWindowCount": 85,
+        "selectedWindowCount": 30,
+        "focusWordCount": 122
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "ionic attraction and charge magnitude",
+      "question": "Why is a magnesium ion more strongly attracted to a sulfide ion than to a chloride ion?",
+      "retryQuestion": "What causes the stronger attraction between magnesium and sulfide ions compared to magnesium and chloride ions?",
+      "explanation": "The strength of attraction between ions increases with the magnitude of their charges. Sulfide has a -2 charge, while chloride has a -1 charge, so the magnesium ion is more strongly attracted to sulfide.",
+      "type": "multiple_choice",
+      "choices": [
+        "Because the magnesium ion has a greater charge magnitude than the sulfide ion.",
+        "Because the sulfide ion has a greater charge magnitude (-2) than the chloride ion (-1).",
+        "Because the chloride ion has a greater charge magnitude than the sulfide ion.",
+        "Because the sulfide ion is larger than the chloride ion."
+      ],
+      "answerIndex": 1,
+      "answer": "Because the sulfide ion has a greater charge magnitude (-2) than the chloride ion (-1)."
+    },
+    {
+      "id": "q2",
+      "concept": "formal charge calculation method",
+      "question": "To calculate formal charge, add the number of electrons assigned to the atom in the Lewis diagram, counting each bond as one electron, to the atom's valence electrons based on its periodic table position.",
+      "retryQuestion": "Formal charge is found by adding the electrons assigned to the atom in the Lewis structure, with each bond counted as one electron, to the atom's valence electrons from its periodic table position.",
+      "explanation": "The false statement reverses the operation: formal charge is the valence electrons minus the assigned electrons, not the sum of the two.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "To calculate formal charge, subtract the number of electrons assigned to the atom in the Lewis diagram, counting each bond as one electron, from the atom's valence electrons based on its periodic table position."
+    },
+    {
+      "id": "q3",
+      "concept": "alloy formation method",
+      "question": "How do interstitial alloys form?",
+      "retryQuestion": "What is the method by which interstitial alloys are created?",
+      "explanation": "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal.",
+      "type": "short_answer",
+      "answer": "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal.",
+      "rubricIdeas": [
+        "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+        ],
+        "acceptableAnswers": [
+          "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+        ]
+      }
+    },
+    {
+      "id": "q4",
+      "concept": "bond polarity determination",
+      "question": "To determine if a bond is polar or nonpolar, compare the difference between the two atoms' electronegativities.",
+      "retryQuestion": "The polarity of a bond is determined by the difference in electronegativity between the two bonded atoms.",
+      "explanation": "A large electronegativity difference indicates unequal sharing of electrons, making the bond polar, while a small difference indicates nearly equal sharing, making it nonpolar.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "To determine if a bond is polar or nonpolar, compare the difference between the two atoms' electronegativities."
+    },
+    {
+      "id": "q5",
+      "concept": "expanded octet definition",
+      "question": "What term describes a Lewis structure in which the central atom has more than eight valence electrons?",
+      "retryQuestion": "What is the name for a Lewis structure where the central atom exceeds eight valence electrons?",
+      "explanation": "An expanded octet occurs when a central atom accommodates more than eight valence electrons in its Lewis structure.",
+      "type": "short_answer",
+      "answer": "Expanded octet",
+      "rubricIdeas": [
+        "Expanded octet"
+      ],
+      "acceptableAnswers": [
+        "Expanded octets"
+      ],
+      "shortAnswerMode": "atomic_term",
+      "rubricV2": {
+        "version": 2,
+        "mode": "atomic_term",
+        "canonicalAnswer": "Expanded octet",
+        "aliases": [
+          "Expanded octets"
+        ]
+      }
+    },
+    {
+      "id": "q6",
+      "concept": "electronegativity trend prediction",
+      "question": "Without an electronegativity chart, how can the relative polarity of a bond be predicted from the periodic table?",
+      "retryQuestion": "Which periodic-table relationship is used to estimate whether a bond is polar or nonpolar when electronegativity values are not available?",
+      "explanation": "Atoms that are close together on the periodic table have similar electronegativities, so their bonds are more nonpolar. Atoms farther apart have a greater electronegativity difference, making the bond more polar.",
+      "type": "multiple_choice",
+      "choices": [
+        "By counting the total number of valence electrons in the molecule.",
+        "By comparing the atomic masses of the two atoms.",
+        "By comparing how close the two atoms are on the periodic table.",
+        "By identifying which atom has the larger atomic radius."
+      ],
+      "answerIndex": 2,
+      "answer": "By comparing how close the two atoms are on the periodic table."
+    },
+    {
+      "id": "q7",
+      "concept": "ionic compound composition",
+      "question": "Sodium chloride is ionic, meaning it is composed of sodium cations and chloride anions.",
+      "retryQuestion": "Sodium chloride is an ionic compound made up of sodium cations and chloride anions.",
+      "explanation": "Ionic compounds consist of positively charged cations and negatively charged anions held together by electrostatic attraction.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "Sodium chloride is ionic, meaning it is composed of sodium cations and chloride anions."
+    },
+    {
+      "id": "q8",
+      "concept": "triple bond composition",
+      "question": "Every triple bond is composed of two sigma bonds and one pi bond.",
+      "retryQuestion": "A triple bond consists of two sigma bonds and one pi bond.",
+      "explanation": "A triple bond contains one sigma bond and two pi bonds, not two sigma bonds and one pi bond.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "Every triple bond is composed of one sigma bond and two pi bonds."
+    },
+    {
+      "id": "q9",
+      "concept": "covalent compound properties",
+      "question": "What are two characteristic properties of covalent compounds?",
+      "retryQuestion": "Which option correctly describes the melting points and electrical conductivity of covalent compounds when dissolved?",
+      "explanation": "Covalent compounds have lower melting points and do not conduct electricity well when dissolved in solution.",
+      "type": "multiple_choice",
+      "choices": [
+        "They have high melting points and conduct electricity when dissolved.",
+        "They conduct electricity well when dissolved and have high melting points.",
+        "They are brittle and have high melting points.",
+        "They have lower melting points and do not conduct electricity well when dissolved."
+      ],
+      "answerIndex": 3,
+      "answer": "They have lower melting points and do not conduct electricity well when dissolved."
+    },
+    {
+      "id": "q10",
+      "concept": "octet rule stability",
+      "question": "What condition makes a molecule most stable with respect to its atoms' valence electrons?",
+      "retryQuestion": "Under what condition are molecules most stable regarding their atoms' valence electrons?",
+      "explanation": "A molecule is most stable when each of its atoms has eight valence electrons, the octet rule.",
+      "type": "short_answer",
+      "answer": "A molecule is most stable when its atoms all have eight valence electrons.",
+      "rubricIdeas": [
+        "A molecule is most stable when its atoms all have eight valence electrons."
+      ],
+      "acceptableAnswers": [
+        "When its atoms all have eight valence electrons",
+        "When each atom has eight valence electrons"
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "A molecule is most stable when its atoms all have eight valence electrons."
+        ],
+        "acceptableAnswers": [
+          "A molecule is most stable when its atoms all have eight valence electrons.",
+          "When its atoms all have eight valence electrons",
+          "When each atom has eight valence electrons"
+        ]
+      }
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "6dfcecbffafb8167ac54cb092924f552a2e2cab517d18a97a67b098777fb20a2"
+    },
+    {
+      "callIndex": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "5932e75e606e7f7938bd62fb81d5892a54fdd3a1ca0e887847d2c4aa27ea6c0e"
+    },
+    {
+      "callIndex": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "bf628bc88c15c89200751147ba5542b5576d8f8d6363a3200cc5e9df063fc29b"
+    },
+    {
+      "callIndex": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "d985ab7a0971d22d431a01e365d6ba62bd2f007ca5100d4c47075b27c3d26457"
+    },
+    {
+      "callIndex": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "a64d221562b8aa4797c57acfd9a48eddd17a0a6a2f791d00dcf029f4a6a3a5ae"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "2ec0615891117d46d441819a06a3305e7c14ef27cbc6b2b60291b364ca9077d3"
+    },
+    {
+      "callIndex": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "d701353edfc3bd36035b3b67308c8892c7fa179b590a699a29e73bd06a9d408b"
+    },
+    {
+      "callIndex": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "abf04da8c9f1c4bb0a3b783270c60a8e6b73ab7aaf3ef43bb401fe03a7eb7b01"
+    },
+    {
+      "callIndex": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "50f36aa5497fa0932a252a1e4c5ab7f51b9e7815c73341a3d434c1c5a494d21a"
+    },
+    {
+      "callIndex": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "a4f56ccf785bccc8191eb531a0424d445fbd4051bce3d7fb5262ad4e224ca258"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "Because the sulfide ion has a greater charge magnitude (-2) than the chloride ion (-1).",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that the sulfide ion’s greater charge magnitude (-2) creates a stronger attraction to the magnesium ion than the chloride ion’s -1 charge.",
+        "matchedIdeas": [
+          "Sulfide ion has greater charge magnitude (-2) than chloride ion (-1)"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that formal charge is calculated by subtracting, not adding, the assigned electrons from the valence electrons.",
+        "matchedIdeas": [
+          "Correctly identifies the statement as false"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly explains that interstitial alloys form when smaller atoms fit into the spaces between the atoms of the primary metal.",
+        "matchedIdeas": [
+          "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that comparing the electronegativity difference between two atoms is the right way to determine if a bond is polar or nonpolar.",
+        "matchedIdeas": [
+          "Bond polarity determined by electronegativity difference"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "Expanded octet",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your answer correctly identifies the term \"expanded octet,\" which describes a central atom with more than eight valence electrons.",
+        "matchedIdeas": [
+          "Expanded octet"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 6,
+      "response": "By comparing how close the two atoms are on the periodic table.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that bond polarity can be predicted by comparing the atoms' positions on the periodic table, since their distance reflects the difference in electronegativity.",
+        "matchedIdeas": [
+          "Comparing how close the two atoms are on the periodic table"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 7,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Correct — sodium chloride is indeed ionic, made up of Na⁺ cations and Cl⁻ anions.",
+        "matchedIdeas": [
+          "Sodium chloride is ionic, composed of sodium cations and chloride anions"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 8,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the statement as false, since a triple bond actually consists of one sigma bond and two pi bonds.",
+        "matchedIdeas": [
+          "Triple bond is not two sigma and one pi"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 9,
+      "response": "They have lower melting points and do not conduct electricity well when dissolved.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that covalent compounds typically have lower melting points and do not conduct electricity well when dissolved.",
+        "matchedIdeas": [
+          "lower melting points",
+          "do not conduct electricity well when dissolved"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 10,
+      "response": "A molecule is most stable when its atoms all have eight valence electrons.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the octet rule—that a molecule is most stable when its atoms have eight valence electrons.",
+        "matchedIdeas": [
+          "A molecule is most stable when its atoms all have eight valence electrons."
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 1,
+      "videoId": "GBFM7Ti-P34"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 3053,
+      "videoId": "GBFM7Ti-P34",
+      "title": "AP Chemistry Unit 2 Review | Compound Structure and Properties",
+      "language": "en",
+      "durationSeconds": 695,
+      "segmentCount": 109,
+      "sourceSegmentCount": 109,
+      "characterCount": 9261,
+      "transcriptFingerprint": "4d348634",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 3054,
+      "questionCount": 10,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 9907,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 9920,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 11881,
+      "ordinal": 1,
+      "concept": "ionic attraction and charge magnitude",
+      "prompt": "Why is a magnesium ion more strongly attracted to a sulfide ion than to a chloride ion?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 11882,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1974,
+      "inputTokens": 9895,
+      "outputTokens": 178,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 11882,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 11889,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 11905,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 13586,
+      "ordinal": 2,
+      "concept": "formal charge calculation method",
+      "prompt": "To calculate formal charge, add the number of electrons assigned to the atom in the Lewis diagram, counting each bond as one electron, to the atom's valence electrons based on its periodic table position."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 13591,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1697,
+      "inputTokens": 10495,
+      "outputTokens": 199,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 13591,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 13614,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 13665,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 15016,
+      "ordinal": 3,
+      "concept": "alloy formation method",
+      "prompt": "How do interstitial alloys form?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 15018,
+      "callIndex": 2,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1403,
+      "inputTokens": 10337,
+      "outputTokens": 126,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 15018,
+      "stage": "creating_questions",
+      "progress": 0.416,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 15044,
+      "stage": "creating_questions",
+      "progress": 0.416,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 15093,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 16830,
+      "ordinal": 4,
+      "concept": "bond polarity determination",
+      "prompt": "To determine if a bond is polar or nonpolar, compare the difference between the two atoms' electronegativities."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 16831,
+      "callIndex": 3,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1786,
+      "inputTokens": 10224,
+      "outputTokens": 106,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16831,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16857,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 16929,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 18285,
+      "ordinal": 5,
+      "concept": "expanded octet definition",
+      "prompt": "What term describes a Lewis structure in which the central atom has more than eight valence electrons?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 18286,
+      "callIndex": 4,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1429,
+      "inputTokens": 10558,
+      "outputTokens": 121,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18286,
+      "stage": "creating_questions",
+      "progress": 0.56,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18317,
+      "stage": "creating_questions",
+      "progress": 0.56,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 18384,
+      "callIndex": 5,
+      "ordinal": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 20767,
+      "ordinal": 6,
+      "concept": "electronegativity trend prediction",
+      "prompt": "Without an electronegativity chart, how can the relative polarity of a bond be predicted from the periodic table?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 20768,
+      "callIndex": 5,
+      "ordinal": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2450,
+      "inputTokens": 10397,
+      "outputTokens": 210,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20768,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20803,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 20877,
+      "callIndex": 6,
+      "ordinal": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 22039,
+      "ordinal": 7,
+      "concept": "ionic compound composition",
+      "prompt": "Sodium chloride is ionic, meaning it is composed of sodium cations and chloride anions."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 22041,
+      "callIndex": 6,
+      "ordinal": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1236,
+      "inputTokens": 10505,
+      "outputTokens": 82,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 22041,
+      "stage": "creating_questions",
+      "progress": 0.704,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 22081,
+      "stage": "creating_questions",
+      "progress": 0.704,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 22163,
+      "callIndex": 7,
+      "ordinal": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 23633,
+      "ordinal": 8,
+      "concept": "triple bond composition",
+      "prompt": "Every triple bond is composed of two sigma bonds and one pi bond."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 23634,
+      "callIndex": 7,
+      "ordinal": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1552,
+      "inputTokens": 11024,
+      "outputTokens": 120,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 23634,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 23670,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 23753,
+      "callIndex": 8,
+      "ordinal": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 25240,
+      "ordinal": 9,
+      "concept": "covalent compound properties",
+      "prompt": "What are two characteristic properties of covalent compounds?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 25242,
+      "callIndex": 8,
+      "ordinal": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1570,
+      "inputTokens": 10581,
+      "outputTokens": 132,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 25242,
+      "stage": "creating_questions",
+      "progress": 0.848,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 25284,
+      "stage": "creating_questions",
+      "progress": 0.848,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 25376,
+      "callIndex": 9,
+      "ordinal": 10,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 26934,
+      "ordinal": 10,
+      "concept": "octet rule stability",
+      "prompt": "What condition makes a molecule most stable with respect to its atoms' valence electrons?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 26935,
+      "callIndex": 9,
+      "ordinal": 10,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1651,
+      "inputTokens": 10990,
+      "outputTokens": 135,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 26935,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "534a1ed5-c3b9-45fa-8e36-41391a88151e"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 26936,
+      "accepted": 10,
+      "requested": 10,
+      "aiCalls": 10,
+      "retryCount": 0,
+      "generationElapsedMs": 17032,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 26937,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "Because the sulfide ion has a greater charge magnitude (-2) than the chloride ion (-1)."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 28703,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that the sulfide ion’s greater charge magnitude (-2) creates a stronger attraction to the magnesium ion than the chloride ion’s -1 charge.",
+      "matchedIdeas": [
+        "Sulfide ion has greater charge magnitude (-2) than chloride ion (-1)"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 28703,
+      "ordinal": 2,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 30425,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that formal charge is calculated by subtracting, not adding, the assigned electrons from the valence electrons.",
+      "matchedIdeas": [
+        "Correctly identifies the statement as false"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 30426,
+      "ordinal": 3,
+      "questionType": "short_answer",
+      "response": "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 32121,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly explains that interstitial alloys form when smaller atoms fit into the spaces between the atoms of the primary metal.",
+      "matchedIdeas": [
+        "Interstitial alloys form when atoms of a smaller element occupy the spaces between the atoms of the primary metal."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 32121,
+      "ordinal": 4,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 33634,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that comparing the electronegativity difference between two atoms is the right way to determine if a bond is polar or nonpolar.",
+      "matchedIdeas": [
+        "Bond polarity determined by electronegativity difference"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 33635,
+      "ordinal": 5,
+      "questionType": "short_answer",
+      "response": "Expanded octet"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 35718,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your answer correctly identifies the term \"expanded octet,\" which describes a central atom with more than eight valence electrons.",
+      "matchedIdeas": [
+        "Expanded octet"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 35718,
+      "ordinal": 6,
+      "questionType": "multiple_choice",
+      "response": "By comparing how close the two atoms are on the periodic table."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 37631,
+      "ordinal": 6,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that bond polarity can be predicted by comparing the atoms' positions on the periodic table, since their distance reflects the difference in electronegativity.",
+      "matchedIdeas": [
+        "Comparing how close the two atoms are on the periodic table"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 37631,
+      "ordinal": 7,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 39108,
+      "ordinal": 7,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Correct — sodium chloride is indeed ionic, made up of Na⁺ cations and Cl⁻ anions.",
+      "matchedIdeas": [
+        "Sodium chloride is ionic, composed of sodium cations and chloride anions"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 39109,
+      "ordinal": 8,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 41203,
+      "ordinal": 8,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the statement as false, since a triple bond actually consists of one sigma bond and two pi bonds.",
+      "matchedIdeas": [
+        "Triple bond is not two sigma and one pi"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 41203,
+      "ordinal": 9,
+      "questionType": "multiple_choice",
+      "response": "They have lower melting points and do not conduct electricity well when dissolved."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 42818,
+      "ordinal": 9,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that covalent compounds typically have lower melting points and do not conduct electricity well when dissolved.",
+      "matchedIdeas": [
+        "lower melting points",
+        "do not conduct electricity well when dissolved"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 42819,
+      "ordinal": 10,
+      "questionType": "short_answer",
+      "response": "A molecule is most stable when its atoms all have eight valence electrons."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 44578,
+      "ordinal": 10,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the octet rule—that a molecule is most stable when its atoms have eight valence electrons.",
+      "matchedIdeas": [
+        "A molecule is most stable when its atoms all have eight valence electrons."
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}

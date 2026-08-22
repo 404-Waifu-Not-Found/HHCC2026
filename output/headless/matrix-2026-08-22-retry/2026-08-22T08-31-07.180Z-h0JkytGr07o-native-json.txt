@@ -1,0 +1,194 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.001] SOURCE_STARTED videoId="h0JkytGr07o"
+[00:04.133] CAPTIONS_COMPLETE videoId="h0JkytGr07o" title="Everything you need to Crush AP Bio Unit 2: Cell Structure and Function" language="en" durationSeconds=3165 segmentCount=1189 sourceSegmentCount=1189 characterCount=43236 transcriptFingerprint="6b34d51c" acquisition="youtube_local_ytdlp"
+[00:04.136] PLAN_REQUESTED questionCount=10 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:20.788] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:20.818] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:22.985] QUESTION_ACCEPTED ordinal=1 concept="osmosis in animal cells" prompt="In a situation where an animal cell is hypertonic to its environment, what is the direct consequence for water movement?"
+[00:22.985] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2197 inputTokens=9844 outputTokens=186 reasoningTokens=0
+[00:22.985] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:22.993] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=3 status="generating"
+[00:23.010] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:25.393] QUESTION_ACCEPTED ordinal=2 concept="surface area to volume ratio and marine mammal size" prompt="How does the surface area to volume ratio constrain the body size of mammals adapted to ocean living?"
+[00:25.393] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2400 inputTokens=10228 outputTokens=200 reasoningTokens=0
+[00:25.393] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:25.399] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:25.423] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:26.664] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="retry_question_invalid" acceptedCount=0 retryDelayMs=245 callElapsedMs=1264
+[00:26.664] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" retryDelayMs=245 reasonCode="retry_question_invalid" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:26.942] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:26.968] AI_CALL_STARTED callIndex=3 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:28.361] QUESTION_ACCEPTED ordinal=3 concept="phospholipid bilayer composition" prompt="Within the phospholipid bilayer, phospholipids are arranged in a single layer."
+[00:28.362] AI_CALL_COMPLETED callIndex=3 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1418 inputTokens=10692 outputTokens=116 reasoningTokens=0
+[00:28.362] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:28.377] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=3 status="generating"
+[00:28.415] AI_CALL_STARTED callIndex=4 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:30.249] QUESTION_ACCEPTED ordinal=4 concept="central dogma of molecular biology" prompt="What term describes the process by which genes in DNA are transcribed into messenger RNA and then translated into proteins by ribosomes?"
+[00:30.250] AI_CALL_COMPLETED callIndex=4 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1872 inputTokens=10465 outputTokens=128 reasoningTokens=0
+[00:30.250] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:30.269] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:30.409] AI_CALL_STARTED callIndex=5 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:32.744] QUESTION_ACCEPTED ordinal=5 concept="endosymbiotic origin of chloroplasts" prompt="What event led to the formation of chloroplasts and set the stage for algae and plants?"
+[00:32.745] AI_CALL_COMPLETED callIndex=5 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2475 inputTokens=10306 outputTokens=194 reasoningTokens=0
+[00:32.745] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:32.764] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=3 status="generating"
+[00:32.932] AI_CALL_STARTED callIndex=6 ordinal=6 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:34.628] QUESTION_ACCEPTED ordinal=6 concept="cell structure definition" prompt="What is the basic structure and fundamental parts of cells?"
+[00:34.628] AI_CALL_COMPLETED callIndex=6 ordinal=6 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1863 inputTokens=10641 outputTokens=112 reasoningTokens=0
+[00:34.628] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:34.647] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:34.856] AI_CALL_STARTED callIndex=7 ordinal=7 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:36.145] QUESTION_ACCEPTED ordinal=7 concept="glycoprotein definition" prompt="A glycoprotein is a carbohydrate attached to a protein."
+[00:36.147] AI_CALL_COMPLETED callIndex=7 ordinal=7 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1499 inputTokens=10500 outputTokens=95 reasoningTokens=0
+[00:36.147] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:36.164] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=3 status="generating"
+[00:36.418] AI_CALL_STARTED callIndex=8 ordinal=8 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:37.643] QUESTION_ACCEPTED ordinal=8 concept="ribosome composition" prompt="Ribosomes are particles composed of ribosomal RNA and protein."
+[00:37.644] AI_CALL_COMPLETED callIndex=8 ordinal=8 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1478 inputTokens=10606 outputTokens=99 reasoningTokens=0
+[00:37.644] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:37.668] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:37.971] AI_CALL_STARTED callIndex=9 ordinal=9 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:39.582] QUESTION_ACCEPTED ordinal=9 concept="isotonic condition" prompt="What does it mean for a cell to be isotonic to its environment?"
+[00:39.583] AI_CALL_COMPLETED callIndex=9 ordinal=9 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1914 inputTokens=10852 outputTokens=166 reasoningTokens=0
+[00:39.583] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=1 status="generating" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:39.615] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=3 status="generating"
+[00:39.993] AI_CALL_STARTED callIndex=10 ordinal=10 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:41.785] QUESTION_ACCEPTED ordinal=10 concept="isotonic condition and water concentration" prompt="When a cell is isotonic to its environment, what is the relationship between the water concentration in the cytoplasm and the water concentration in the environment?"
+[00:41.786] AI_CALL_COMPLETED callIndex=10 ordinal=10 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2170 inputTokens=10643 outputTokens=211 reasoningTokens=0
+[00:41.786] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="92472558-89a0-4186-845e-4dfdc3dc88cd"
+[00:41.791] BANK_COMPLETE accepted=10 requested=10 aiCalls=11 retryCount=1 generationElapsedMs=21051 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: osmosis in animal cells
+Prompt: In a situation where an animal cell is hypertonic to its environment, what is the direct consequence for water movement?
+Retry prompt: What happens to water when an animal cell has a higher solute concentration than its surroundings?
+A. Water flows into the cell.
+B. Water moves equally in both directions.
+C. Water flows out of the cell.
+D. Water does not move across the membrane.
+Correct answer: A. Water flows into the cell.
+Explanation: A hypertonic cell has a higher solute concentration than its environment, so water moves into the cell by osmosis. Because animal cells lack a cell wall, the inward water flow can cause the cell to burst.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=0e5286cf1e793c8ca73cdd5124a4b62d021b6ec2d8fa213b573ba026f3951b18
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — SHORT_ANSWER
+Concept: surface area to volume ratio and marine mammal size
+Prompt: How does the surface area to volume ratio constrain the body size of mammals adapted to ocean living?
+Retry prompt: What size limitation does the surface area to volume ratio impose on marine mammals?
+Reference answer: The surface area to volume ratio limits marine mammals to being fairly large because small size would cause excessive cold stress.
+Rubric ideas: The surface area to volume ratio limits marine mammals to being fairly large because small size would cause excessive cold stress.
+Short-answer mode: proposition
+Explanation: Small mammals have a high surface area to volume ratio, which causes rapid heat loss and cold stress in the ocean. Therefore, marine mammals are limited to being fairly large, and there are no mouse-sized marine mammals.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=c81309730dd951bfc471d1e0dc32911de7e044257f4de98951c6f351ad49a5b0
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 3 — TRUE_FALSE
+Concept: phospholipid bilayer composition
+Prompt: Within the phospholipid bilayer, phospholipids are arranged in a single layer.
+Retry prompt: The phospholipid bilayer consists of phospholipids arranged in one layer.
+Correct answer: False
+Correction: Within the phospholipid bilayer, phospholipids are arranged in two layers.
+Explanation: The term bilayer indicates two layers of phospholipids, not a single layer.
+AI provenance: call=3 attempt=2 classification=automatic_retry fingerprint=a76bbcb8c8189ac4a483261ec17cee4365cb6dc83c704ae88cee6f0f0fd2f347
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 4 — SHORT_ANSWER
+Concept: central dogma of molecular biology
+Prompt: What term describes the process by which genes in DNA are transcribed into messenger RNA and then translated into proteins by ribosomes?
+Retry prompt: What is the name for the flow of genetic information from DNA to RNA to protein?
+Reference answer: Central dogma
+Rubric ideas: Central dogma
+Short-answer mode: atomic_term
+Explanation: This sequence—DNA to messenger RNA to protein—is the central dogma of molecular biology, describing the flow of genetic information.
+AI provenance: call=4 attempt=1 classification=primary fingerprint=52b8375d40581f6409e059b261f43a7d80388d7b55aa7fc9306c695bccbd3d78
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 5 — MULTIPLE_CHOICE
+Concept: endosymbiotic origin of chloroplasts
+Prompt: What event led to the formation of chloroplasts and set the stage for algae and plants?
+Retry prompt: Which event resulted in chloroplasts and enabled the later emergence of algae and plants?
+A. A eukaryotic cell engulfed another eukaryotic cell and became a chloroplast.
+B. Free-living cyanobacteria entered a eukaryotic cell and became chloroplasts.
+C. A bacterial cell entered an archaeal cell and became a mitochondrion.
+D. Mitochondria secreted vesicles that formed the nuclear membrane.
+Correct answer: B. Free-living cyanobacteria entered a eukaryotic cell and became chloroplasts.
+Explanation: A second endosymbiotic event involved free-living cyanobacteria entering a eukaryotic cell, becoming chloroplasts, which then set the stage for algae and plants.
+AI provenance: call=5 attempt=1 classification=primary fingerprint=1f73d2a4b1b60f4fae41d6a15d611fe8082e77d52a7567c89e7d38334e78cf36
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 6 — SHORT_ANSWER
+Concept: cell structure definition
+Prompt: What is the basic structure and fundamental parts of cells?
+Retry prompt: Define the basic structure and fundamental parts of cells.
+Reference answer: Cells are composed of basic structures and fundamental parts that carry out the functions necessary for life.
+Rubric ideas: Cells are composed of basic structures and fundamental parts that carry out the functions necessary for life.
+Short-answer mode: proposition
+Explanation: Cells are composed of basic structures and fundamental parts that carry out the functions necessary for life.
+AI provenance: call=6 attempt=1 classification=primary fingerprint=91daca99c039b8f0d831bf3cae65132731da20c48d50075271abefd5550b9845
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 7 — TRUE_FALSE
+Concept: glycoprotein definition
+Prompt: A glycoprotein is a carbohydrate attached to a protein.
+Retry prompt: A glycoprotein consists of a carbohydrate linked to a protein.
+Correct answer: True
+Correction: A glycoprotein is a carbohydrate attached to a protein.
+Explanation: The prefix glyco- indicates a carbohydrate, and the protein is the other component of the molecule.
+AI provenance: call=7 attempt=1 classification=primary fingerprint=4e37d6814eaee553a8669059277d0ff9d821c6d3b296767b17ebcb626deae20c
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 8 — TRUE_FALSE
+Concept: ribosome composition
+Prompt: Ribosomes are particles composed of ribosomal RNA and protein.
+Retry prompt: Ribosomal particles consist of both ribosomal RNA and protein.
+Correct answer: True
+Correction: Ribosomes are particles composed of ribosomal RNA and protein.
+Explanation: Ribosomes are built from ribosomal RNA and proteins, which together form the large and small subunits that carry out translation.
+AI provenance: call=8 attempt=1 classification=primary fingerprint=3f695667a57cf9bb0b5fac60b7d504663ea8bb301b6fe0c13b3ea4412e8dae73
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 9 — SHORT_ANSWER
+Concept: isotonic condition
+Prompt: What does it mean for a cell to be isotonic to its environment?
+Retry prompt: Describe the condition of a cell that is isotonic to its surroundings.
+Reference answer: The solute concentration and the water concentration are the same on both sides of the membrane.
+Rubric ideas: The solute concentration and the water concentration are the same on both sides of the membrane.
+Short-answer mode: proposition
+Explanation: Isotonic means that the solute concentration and the water concentration are the same on both sides of the membrane.
+AI provenance: call=9 attempt=1 classification=primary fingerprint=711e8886db04b17d69b0ed1d19c0875f89a19bcf5374619ff1ea3acbb9cb7e42
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 10 — MULTIPLE_CHOICE
+Concept: isotonic condition and water concentration
+Prompt: When a cell is isotonic to its environment, what is the relationship between the water concentration in the cytoplasm and the water concentration in the environment?
+Retry prompt: In an isotonic environment, how does the water concentration outside the cell compare with the water concentration inside the cytoplasm?
+A. The water concentration in the cytoplasm is higher than in the environment.
+B. The water concentration in the cytoplasm is lower than in the environment.
+C. The water concentration in the cytoplasm is unrelated to the environment's water concentration.
+D. The water concentration in the cytoplasm is equal to the water concentration in the environment.
+Correct answer: D. The water concentration in the cytoplasm is equal to the water concentration in the environment.
+Explanation: In an isotonic condition, the solute concentrations are equal on both sides of the membrane, so the water concentrations are also equal.
+AI provenance: call=10 attempt=1 classification=primary fingerprint=677b59408bba325248a8e2ef483a37df509431e4c3f268a87734aa93e0c85019
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:41.795] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="Water flows into the cell."
+[00:43.694] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="You correctly identified that water will flow into the cell, which is the direct result of the cell being hypertonic (having a higher solute concentration) compared to its environment." matchedIdeas=["Water flows into the cell"] source="deepseek_local"
+[00:43.694] GRADE_STARTED ordinal=2 questionType="short_answer" response="The surface area to volume ratio limits marine mammals to being fairly large because small size would cause excessive cold stress."
+[00:45.309] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Your response correctly explains that a small surface area to volume ratio in large marine mammals minimizes heat loss, preventing excessive cold stress." matchedIdeas=["The surface area to volume ratio limits marine mammals to being fairly large because small size would cause excessive cold stress."] source="deepseek_local"
+[00:45.309] GRADE_STARTED ordinal=3 questionType="true_false" response="False"
+[00:47.163] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="The response correctly identifies that the statement is false, as phospholipids in a bilayer are arranged in two layers, not a single layer." matchedIdeas=["Learner correctly identified the statement as false"] source="deepseek_local"
+[00:47.163] GRADE_STARTED ordinal=4 questionType="short_answer" response="Central dogma"
+[00:48.909] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="The response correctly identifies the \"Central dogma\" as the process describing the flow of genetic information from DNA to RNA to protein." matchedIdeas=["Central dogma"] source="deepseek_local"
+[00:48.910] GRADE_STARTED ordinal=5 questionType="multiple_choice" response="Free-living cyanobacteria entered a eukaryotic cell and became chloroplasts."
+[00:50.424] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="Your response correctly identifies the endosymbiotic event where free-living cyanobacteria were engulfed by a eukaryotic cell, becoming chloroplasts." matchedIdeas=["Free-living cyanobacteria entered a eukaryotic cell and became chloroplasts."] source="deepseek_local"
+[00:50.424] GRADE_STARTED ordinal=6 questionType="short_answer" response="Cells are composed of basic structures and fundamental parts that carry out the functions necessary for life."
+[00:52.374] GRADE_COMPLETED ordinal=6 correct=true confidence="high" reason="Your response correctly identifies that cells are made up of basic structures and fundamental parts that perform essential life functions." matchedIdeas=["Cells are composed of basic structures and fundamental parts that carry out the functions necessary for life."] source="deepseek_local"
+[00:52.375] GRADE_STARTED ordinal=7 questionType="true_false" response="True"
+[00:53.699] GRADE_COMPLETED ordinal=7 correct=true confidence="high" reason="Correct — a glycoprotein is indeed a carbohydrate attached to a protein." matchedIdeas=["Glycoprotein is a carbohydrate attached to a protein"] source="deepseek_local"
+[00:53.699] GRADE_STARTED ordinal=8 questionType="true_false" response="True"
+[00:55.410] GRADE_COMPLETED ordinal=8 correct=true confidence="high" reason="Correct — ribosomes are indeed made of ribosomal RNA and protein, so your answer matches the definition." matchedIdeas=["Ribosomes are composed of ribosomal RNA and protein"] source="deepseek_local"
+[00:55.411] GRADE_STARTED ordinal=9 questionType="short_answer" response="The solute concentration and the water concentration are the same on both sides of the membrane."
+[00:58.587] GRADE_COMPLETED ordinal=9 correct=true confidence="high" reason="Your response correctly explains that isotonic means equal solute and water concentrations on both sides of the membrane." matchedIdeas=["The solute concentration and the water concentration are the same on both sides of the membrane."] source="deepseek_local"
+[00:58.587] GRADE_STARTED ordinal=10 questionType="multiple_choice" response="The water concentration in the cytoplasm is equal to the water concentration in the environment."
+[01:00.841] GRADE_COMPLETED ordinal=10 correct=true confidence="high" reason="Your response correctly identifies that in an isotonic environment, water concentrations inside and outside the cell are equal, so no net water movement occurs." matchedIdeas=["Water concentration in cytoplasm equals water concentration in environment"] source="deepseek_local"

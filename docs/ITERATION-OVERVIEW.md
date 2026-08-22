@@ -16,8 +16,8 @@ between the pre-event foundation and the post-event iteration.
 
 Before the event, the project had only a short written README describing the
 initial product idea. There was no implemented product flow, no completed
-frontend, no quiz engine, no persistence layer, no browser extension, no native
-client flow, and no production deployment to evaluate.
+frontend, no quiz engine, no persistence layer, no browser extension, and no
+production deployment to evaluate.
 
 The pre-event material established the direction: use educational YouTube
 content as the starting point for a focused learning experience. The event
@@ -36,24 +36,24 @@ stage addressed a concrete product risk discovered in the previous stage.
 | Progressive learning         | Waiting for a complete quiz made the experience feel slow.      | Added question-first progressive generation. The first validated question opens the attempt while the remaining questions continue in bounded background batches.                                                    |
 | Correctness and recovery     | A malformed or missing question could break an entire attempt.  | Added ordinal validation, duplicate checks, answer mapping checks, bounded repair of the first missing question, idempotent imports, cancellation, timeouts, and safe recovery without replacing accepted questions. |
 | Mastery loop                 | A quiz result alone did not provide a repeatable learning loop. | Added Library history, color-coded mastery ranks, review state, progress bars, due reviews, saved lessons, and practice-oriented quiz presentation.                                                                  |
-| Cross-platform access        | The experience needed to work beyond one browser screen.        | Added a Chrome extension bridge plus native iOS and Android client paths that share the local quiz engine and privacy boundary.                                                                                      |
-| Product polish               | The first UI needed stronger hierarchy and feedback.            | Redesigned the Library cards, hover and theme states, bottom progress treatment, streaming feedback, error and empty states, responsive layouts, accessibility labels, and reduced-motion behavior.                  |
+| Browser access               | The experience needed to work beyond one browser screen.        | Added a Chrome extension bridge that shares the local quiz engine and privacy boundary.                                                                                                                              |
+| Product polish               | The first UI needed stronger hierarchy and feedback.            | Redesigned the Library cards, hover and theme states, progress treatment, streaming feedback, error and empty states, accessibility labels, and reduced-motion behavior.                                             |
 | Release readiness            | A working feature needed repeatable delivery and evidence.      | Added contracts, migrations, API routes, tests, web asset verification, extension packaging, Wrangler deployment, health checks, and release documentation.                                                          |
 
 ## Pre-event versus post-event
 
-| Area          | Pre-event                       | Post-event                                                                                     |
-| ------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Product state | Short README only               | Deployed web product with browser extension and native implementation paths                    |
-| Input         | Product idea                    | Public YouTube URL validation, metadata preview, and caption acquisition                       |
-| AI            | No implemented AI flow          | Learner-owned DeepSeek key used locally for structured question generation                     |
-| Learning      | No quiz experience              | Multiple-choice, true/false, and short-answer quizzes with immediate feedback                  |
-| Progress      | No persistence or mastery model | Authenticated attempts, ordered question storage, mastery ranks, review state, and Library     |
-| Reliability   | No validation or recovery       | Contract validation, bounded retries, repair, cancellation, timeouts, and idempotency          |
-| UX            | No interface                    | Responsive ClipQuest interface with light/dark themes, motion, accessibility, and clear states |
-| Platforms     | No working client               | Web, Chrome extension bridge, iOS path, and Android path sharing core logic                    |
-| Delivery      | No deployment                   | Cloudflare Worker and static web assets deployed at `clipquest.ccwu.cc`                        |
-| Verification  | No test suite                   | Automated contract, API, app, engine, extension, UI regression, build, and asset checks        |
+| Area          | Pre-event                       | Post-event                                                                                 |
+| ------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
+| Product state | Short README only               | Deployed web product with browser extension                                                |
+| Input         | Product idea                    | Public YouTube URL validation, metadata preview, and caption acquisition                   |
+| AI            | No implemented AI flow          | Learner-owned DeepSeek key used locally for structured question generation                 |
+| Learning      | No quiz experience              | Multiple-choice, true/false, and short-answer quizzes with immediate feedback              |
+| Progress      | No persistence or mastery model | Authenticated attempts, ordered question storage, mastery ranks, review state, and Library |
+| Reliability   | No validation or recovery       | Contract validation, bounded retries, repair, cancellation, timeouts, and idempotency      |
+| UX            | No interface                    | ClipQuest interface with light/dark themes, motion, accessibility, and clear states        |
+| Platforms     | No working client               | Web and Chrome extension bridge sharing core logic                                         |
+| Delivery      | No deployment                   | Cloudflare Worker and static web assets deployed at `clipquest.ccwu.cc`                    |
+| Verification  | No test suite                   | Automated contract, API, app, engine, extension, UI regression, build, and asset checks    |
 
 ## Improvement logic and scope
 
@@ -70,7 +70,7 @@ useful feedback. Once that loop worked, the team expanded it in layers:
    quickly while preserving ordered completion of the full set.
 4. **Make progress meaningful.** Results become mastery, review, and Library
    state instead of disappearing after one attempt.
-5. **Make the product usable.** Responsive layouts, theme parity, accessible
+5. **Make the product usable.** Clear layouts, theme parity, accessible
    controls, visible loading/error/empty states, and motion-safe feedback were
    treated as part of the feature, not post-event decoration.
 6. **Ship with evidence.** The final scope includes automated checks and a

@@ -1,0 +1,201 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.000] SOURCE_STARTED videoId="TTsLhDHWopI"
+[00:03.492] CAPTIONS_COMPLETE videoId="TTsLhDHWopI" title="AP Calculus AB and BC Unit 7 Review - Differential Equations - Slope Fields - Euler's Method" language="en" durationSeconds=2210 segmentCount=776 sourceSegmentCount=776 characterCount=22707 transcriptFingerprint="b42f7510" acquisition="youtube_local_ytdlp"
+[00:03.493] PLAN_REQUESTED questionCount=10 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:07.683] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:07.706] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:10.201] QUESTION_ACCEPTED ordinal=1 concept="Euler's method" prompt="What is the purpose of Euler's method in the context of differential equations?"
+[00:10.202] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2518 inputTokens=10130 outputTokens=188 reasoningTokens=0
+[00:10.203] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:10.225] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=3 status="generating"
+[00:10.265] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:12.138] QUESTION_ACCEPTED ordinal=2 concept="carrying capacity" prompt="The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N."
+[00:12.138] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1913 inputTokens=10252 outputTokens=106 reasoningTokens=0
+[00:12.139] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:12.157] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:12.201] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:13.994] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="unsupported_absolute_claim" acceptedCount=0 retryDelayMs=276 callElapsedMs=1836
+[00:13.995] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" retryDelayMs=276 reasonCode="unsupported_absolute_claim" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:14.296] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:14.344] AI_CALL_STARTED callIndex=3 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:16.498] AI_CALL_COMPLETED callIndex=3 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="unsupported_absolute_claim" acceptedCount=0 retryDelayMs=438 callElapsedMs=2201
+[00:16.498] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=3 retryKind="structural" retryDelayMs=438 reasonCode="unsupported_absolute_claim" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:16.958] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=3 retryKind="structural" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:17.007] AI_CALL_STARTED callIndex=4 ordinal=3 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:19.246] QUESTION_ACCEPTED ordinal=3 concept="logistic growth curve" prompt="On the AP Calculus BC exam, what type of question is typically asked about a logistic growth curve?"
+[00:19.246] AI_CALL_COMPLETED callIndex=4 ordinal=3 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2288 inputTokens=10628 outputTokens=194 reasoningTokens=0
+[00:19.246] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:19.262] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=3 status="generating"
+[00:19.302] AI_CALL_STARTED callIndex=5 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:20.968] QUESTION_ACCEPTED ordinal=4 concept="separable differential equations" prompt="In a separable differential equation, the dependent variable can always be isolated on one side of the equation."
+[00:20.968] AI_CALL_COMPLETED callIndex=5 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1706 inputTokens=10889 outputTokens=155 reasoningTokens=0
+[00:20.968] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:20.997] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:21.058] AI_CALL_STARTED callIndex=6 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:22.561] QUESTION_ACCEPTED ordinal=5 concept="differential equation definition" prompt="A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2."
+[00:22.562] AI_CALL_COMPLETED callIndex=6 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1565 inputTokens=10528 outputTokens=109 reasoningTokens=0
+[00:22.562] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:22.596] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=3 status="generating"
+[00:22.663] AI_CALL_STARTED callIndex=7 ordinal=6 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:24.738] QUESTION_ACCEPTED ordinal=6 concept="slope field evaluation" prompt="Given a differential equation that represents the slope of a function at any point, how do you find the slope of the function at a specific point (x, y)?"
+[00:24.738] AI_CALL_COMPLETED callIndex=7 ordinal=6 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2142 inputTokens=10848 outputTokens=191 reasoningTokens=0
+[00:24.738] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:24.785] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:24.858] AI_CALL_STARTED callIndex=8 ordinal=7 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:26.650] QUESTION_ACCEPTED ordinal=7 concept="Euler's method step size" prompt="In Euler's method, how is the step size (the change in x per step) determined when the number of subdivisions is specified?"
+[00:26.652] AI_CALL_COMPLETED callIndex=8 ordinal=7 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1866 inputTokens=10614 outputTokens=259 reasoningTokens=0
+[00:26.652] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:26.689] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=3 status="generating"
+[00:26.783] AI_CALL_STARTED callIndex=9 ordinal=8 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:28.722] QUESTION_ACCEPTED ordinal=8 concept="Euler's method iteration" prompt="In Euler's method, after computing a new y-value at the next x-step, what is the next action in the iterative process?"
+[00:28.722] AI_CALL_COMPLETED callIndex=9 ordinal=8 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2033 inputTokens=10805 outputTokens=175 reasoningTokens=0
+[00:28.722] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:28.755] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:28.858] AI_CALL_STARTED callIndex=10 ordinal=9 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:30.639] AI_CALL_COMPLETED callIndex=10 ordinal=9 ordinalAttempt=1 classification="primary" outcome="schema_invalid" acceptedCount=0 retryDelayMs=296 callElapsedMs=1884
+[00:30.640] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=9 ordinalAttempt=2 retryKind="structural" retryDelayMs=296 reasonCode="schema_invalid" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:30.937] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=9 ordinalAttempt=2 retryKind="structural" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:31.063] AI_CALL_STARTED callIndex=11 ordinal=9 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:33.128] QUESTION_ACCEPTED ordinal=9 concept="Euler's method step size calculation" prompt="In Euler's method, how is the size of each step determined when the number of subdivisions is specified?"
+[00:33.130] AI_CALL_COMPLETED callIndex=11 ordinal=9 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2193 inputTokens=11129 outputTokens=194 reasoningTokens=0
+[00:33.130] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:33.173] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=3 status="generating"
+[00:33.299] AI_CALL_STARTED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:34.758] QUESTION_ACCEPTED ordinal=10 concept="Euler's method learning curve" prompt="Euler's method has a tricky learning curve and remains difficult to learn even with a bit of practice."
+[00:34.760] AI_CALL_COMPLETED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1585 inputTokens=11500 outputTokens=139 reasoningTokens=0
+[00:34.760] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="f8b16bab-99f8-4dda-822e-b8a67e178bac"
+[00:34.762] BANK_COMPLETE accepted=10 requested=10 aiCalls=13 retryCount=3 generationElapsedMs=27084 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: Euler's method
+Prompt: What is the purpose of Euler's method in the context of differential equations?
+Retry prompt: Which option correctly identifies what Euler's method is used for?
+A. It approximates the values of the original function.
+B. It draws the slope field for the differential equation.
+C. It finds the exact solution of the differential equation.
+D. It calculates the constant C from the initial condition.
+Correct answer: A. It approximates the values of the original function.
+Explanation: Euler's method is a numerical technique used to approximate the values of the original function when an exact solution is difficult or impossible to find analytically.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=82d2df6cf92c027a30f9f0b608ccdcc7de843c7b921b2a9d5ad80088a129b442
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — TRUE_FALSE
+Concept: carrying capacity
+Prompt: The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N.
+Retry prompt: To determine the carrying capacity, one sets the growth rate dN/dt to zero and solves for the positive population value.
+Correct answer: True
+Correction: The carrying capacity is found by setting the population growth rate dN/dt equal to zero and solving for the nonzero population N.
+Explanation: The carrying capacity is the population size at which the growth rate is zero, corresponding to the nonzero equilibrium solution of the differential equation.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=55257342f442635810e0f27cd5c5417a3c44165cb4724cd7d9dd512def5166d0
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 3 — SHORT_ANSWER
+Concept: logistic growth curve
+Prompt: On the AP Calculus BC exam, what type of question is typically asked about a logistic growth curve?
+Retry prompt: What kind of question do AP Calculus BC exams typically ask about a logistic growth curve?
+Reference answer: Questions about the logistic growth curve, rather than solving for its solution.
+Rubric ideas: Questions about the logistic growth curve, rather than solving for its solution.
+Short-answer mode: proposition
+Explanation: The BC exam typically asks questions about a logistic growth curve rather than asking students to solve for its solution, because solving the logistic differential equation is much more difficult.
+AI provenance: call=4 attempt=3 classification=automatic_retry fingerprint=b07a0a13ff4441a0b1e23be8beb0abd1e794083e407822d8d8a48ae7f3cf162f
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 4 — TRUE_FALSE
+Concept: separable differential equations
+Prompt: In a separable differential equation, the dependent variable can always be isolated on one side of the equation.
+Retry prompt: For any separable differential equation, it is always possible to solve for the dependent variable alone on one side.
+Correct answer: True
+Correction: In a separable differential equation, the dependent variable can always be isolated on one side of the equation.
+Explanation: This statement is true: In a separable differential equation, the dependent variable can always be isolated on one side of the equation.
+AI provenance: call=5 attempt=1 classification=primary fingerprint=c1310f89be6662594e372f724d6974b083037008178df4a978764d3f87d4898e
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=NOTICE | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 5 — TRUE_FALSE
+Concept: differential equation definition
+Prompt: A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2.
+Retry prompt: An equation that models the rate of change of a function, like dy/dx = x + y^2, is a differential equation.
+Correct answer: True
+Correction: A differential equation is an equation that models the rate of change of a function, such as dy/dx = x + y^2.
+Explanation: A differential equation relates a function to its derivatives, expressing how the function changes with respect to a variable.
+AI provenance: call=6 attempt=1 classification=primary fingerprint=ab5e0452f93b6c9f40e941b7ed313a1eb31d0c9c29ecee115906615196c13640
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 6 — SHORT_ANSWER
+Concept: slope field evaluation
+Prompt: Given a differential equation that represents the slope of a function at any point, how do you find the slope of the function at a specific point (x, y)?
+Retry prompt: How can you determine the slope of a function at a given point using its differential equation?
+Reference answer: Substitute the coordinates of the point into the differential equation.
+Rubric ideas: Substitute the coordinates of the point into the differential equation.
+Short-answer mode: proposition
+Explanation: The derivative, or differential equation, gives the slope of the function at any point. To find the slope at a specific point, substitute the coordinates of that point into the differential equation.
+AI provenance: call=7 attempt=1 classification=primary fingerprint=9eda7cc1cea7f9500e9d6a26afadd06930166c4570bdafdc6de97ff0b0deb19d
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 7 — MULTIPLE_CHOICE
+Concept: Euler's method step size
+Prompt: In Euler's method, how is the step size (the change in x per step) determined when the number of subdivisions is specified?
+Retry prompt: Which statement correctly describes how to compute the step size in Euler's method when the number of subdivisions is given?
+A. It is the target x-value divided by the number of subdivisions.
+B. It is the difference between the target x-value and the initial x-value multiplied by the number of subdivisions.
+C. It is the initial x-value divided by the number of subdivisions.
+D. It is the difference between the target x-value and the initial x-value divided by the number of subdivisions.
+Correct answer: D. It is the difference between the target x-value and the initial x-value divided by the number of subdivisions.
+Explanation: The step size is the total change in x from the initial x-value to the target x-value divided by the number of subdivisions. For example, if the target x is 2, the initial x is 1, and there are 4 subdivisions, the step size is (2-1)/4 = 1/4.
+AI provenance: call=8 attempt=1 classification=primary fingerprint=8bd6d0337834e623779fd2f52578f88c6c8e12d4ac3b7437628d414360ca9c9b
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 8 — MULTIPLE_CHOICE
+Concept: Euler's method iteration
+Prompt: In Euler's method, after computing a new y-value at the next x-step, what is the next action in the iterative process?
+Retry prompt: What does Euler's method do after each new y-value is found at the next x-step?
+A. Use the previous slope without updating it.
+B. Compute the slope dy/dx at the new x using the updated y-value, then take another step.
+C. Stop because the y-value is already exact.
+D. Skip to the target x without intermediate steps.
+Correct answer: B. Compute the slope dy/dx at the new x using the updated y-value, then take another step.
+Explanation: Euler's method proceeds by repeatedly using the current y-value to compute the slope dy/dx at the new x, then stepping forward. The process continues until the target x is reached.
+AI provenance: call=9 attempt=1 classification=primary fingerprint=d7ea051fe17b7d1985f4818a036b087cf7d3dae5e571b30adab68b85cc09c5ad
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 9 — SHORT_ANSWER
+Concept: Euler's method step size calculation
+Prompt: In Euler's method, how is the size of each step determined when the number of subdivisions is specified?
+Retry prompt: What formula gives the step size when Euler's method uses a specified number of equal subdivisions?
+Reference answer: The step size is the difference between the target x-value and the initial x-value divided by the number of subdivisions.
+Rubric ideas: Difference between target x-value and initial x-value | Divided by number of subdivisions
+Short-answer mode: enumeration
+Explanation: The step size is the total change in the independent variable divided by the number of subdivisions, so each step covers an equal interval.
+AI provenance: call=11 attempt=2 classification=automatic_retry fingerprint=acc600bfc7f65c501b3b6d3fd42cf959f836d5278b45f681a33abf6f46153c13
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 10 — TRUE_FALSE
+Concept: Euler's method learning curve
+Prompt: Euler's method has a tricky learning curve and remains difficult to learn even with a bit of practice.
+Retry prompt: With a bit of practice, Euler's method becomes easy to learn despite its tricky learning curve.
+Correct answer: False
+Correction: Euler's method has a tricky learning curve but becomes easy to learn with a bit of practice.
+Explanation: The false statement reverses the outcome: practice makes Euler's method easy to learn, not difficult.
+AI provenance: call=12 attempt=1 classification=primary fingerprint=35c10fd5178923c359f2d5d6f0f9eab0698d6f1ecda8a789d559191930aafe4a
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+ANSWER GRADING
+[00:34.764] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="It approximates the values of the original function."
+[00:36.545] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="You correctly identified that Euler's method is used to approximate the values of the original function when an exact solution is difficult or impossible to find." matchedIdeas=["It approximates the values of the original function."] source="deepseek_local"
+[00:36.545] GRADE_STARTED ordinal=2 questionType="true_false" response="True"
+[00:38.644] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Correct—the carrying capacity is indeed found by setting dN/dt to zero and solving for the nonzero population N." matchedIdeas=["Carrying capacity found by setting dN/dt to zero and solving for nonzero N"] source="deepseek_local"
+[00:38.645] GRADE_STARTED ordinal=3 questionType="short_answer" response="Questions about the logistic growth curve, rather than solving for its solution."
+[00:40.347] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="Your response correctly identifies that AP Calculus BC questions focus on analyzing the logistic growth curve itself, rather than solving for its explicit solution." matchedIdeas=["Questions about the logistic growth curve, rather than solving for its solution."] source="deepseek_local"
+[00:40.347] GRADE_STARTED ordinal=4 questionType="true_false" response="True"
+[00:42.001] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="You correctly identified that in a separable differential equation, the dependent variable can always be isolated on one side of the equation." matchedIdeas=["The statement is true"] source="deepseek_local"
+[00:42.001] GRADE_STARTED ordinal=5 questionType="true_false" response="True"
+[00:43.372] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="Your response correctly identifies that a differential equation models the rate of change of a function, matching the given definition." matchedIdeas=["Differential equation models rate of change"] source="deepseek_local"
+[00:43.372] GRADE_STARTED ordinal=6 questionType="short_answer" response="Substitute the coordinates of the point into the differential equation."
+[00:45.116] GRADE_COMPLETED ordinal=6 correct=true confidence="high" reason="You correctly identified that substituting the point's coordinates into the differential equation gives the slope at that specific point." matchedIdeas=["Substitute the coordinates of the point into the differential equation."] source="deepseek_local"
+[00:45.116] GRADE_STARTED ordinal=7 questionType="multiple_choice" response="It is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+[00:46.753] GRADE_COMPLETED ordinal=7 correct=true confidence="high" reason="You correctly identified that the step size is the total interval length (target minus initial x) divided by the number of subdivisions." matchedIdeas=["Step size = (target x - initial x) / number of subdivisions"] source="deepseek_local"
+[00:46.753] GRADE_STARTED ordinal=8 questionType="multiple_choice" response="Compute the slope dy/dx at the new x using the updated y-value, then take another step."
+[00:48.455] GRADE_COMPLETED ordinal=8 correct=true confidence="high" reason="You correctly identified that Euler's method is iterative: after updating y, you must recompute the slope at the new point before taking the next step." matchedIdeas=["Compute the slope dy/dx at the new x using the updated y-value, then take another step."] source="deepseek_local"
+[00:48.455] GRADE_STARTED ordinal=9 questionType="short_answer" response="The step size is the difference between the target x-value and the initial x-value divided by the number of subdivisions."
+[00:50.058] GRADE_COMPLETED ordinal=9 correct=true confidence="high" reason="The response correctly identifies that the step size is the total interval length divided by the number of subdivisions." matchedIdeas=["Difference between target x-value and initial x-value","Divided by number of subdivisions"] source="deepseek_local"
+[00:50.058] GRADE_STARTED ordinal=10 questionType="true_false" response="False"
+[00:51.518] GRADE_COMPLETED ordinal=10 correct=true confidence="high" reason="You correctly identified that Euler's method becomes easy to learn with practice, not difficult." matchedIdeas=["Learner correctly identified the statement as False"] source="deepseek_local"

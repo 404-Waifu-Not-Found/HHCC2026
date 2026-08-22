@@ -6,7 +6,7 @@ Accessed and refreshed: 2026-08-22.
 
 This document records current public Duolingo identity and interface patterns that informed the 2026 ClipQuest rebrand. It is product-design research, not permission to copy Duolingo assets. Current implementation and acceptance status lives in the [README release status](../README.md#release-status).
 
-ClipQuest independently implements the useful principles: green-led hierarchy, focused tasks, visible progress, large controls, tactile depth, immediate feedback, simple silhouettes, generous negative space, and responsive navigation. It does not ship Duolingo screenshots, logos, characters, illustrations, sounds, copy, proprietary fonts, or Feather Green (`#58CC02`).
+ClipQuest independently implements the useful principles: green-led hierarchy, focused tasks, visible progress, large controls, tactile depth, immediate feedback, simple silhouettes, and generous negative space. It does not ship Duolingo screenshots, logos, characters, illustrations, sounds, copy, proprietary fonts, or Feather Green (`#58CC02`).
 
 The adaptation boundary is explicit: Duolingo's recognizable mascot behavior, emotional posing, character construction, and flat-vector artwork are out of scope. ClipQuest uses an original deeper green system and individually generated low-density voxel artwork. Its learning prism is an abstract interlocking video-frame and quiz-card object with no face, limbs, clothing, pose, mood, or personality cues.
 
@@ -14,28 +14,23 @@ Authenticated Duolingo screens are cohort- and experiment-dependent. Measurement
 
 ## References
 
-| Reference                                                                                                                                                                         | Screen purpose                              | Screenshot or image reference                                           | Notes                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [Current Duolingo web entry](https://www.duolingo.com/learn)                                                                                                                      | Public entry and marketing                  | Inspected live; not stored in this repository                           | Sparse split hero, paired CTA stack, large whitespace reserve                       |
-| [Duolingo App Store listing](https://apps.apple.com/us/app/duolingo-language-lessons/id570060128)                                                                                 | Current iPhone and iPad product screenshots | Official App Store screenshots; not stored                              | Current native navigation, exercises, and product positioning                       |
-| [Duolingo Google Play listing](https://play.google.com/store/apps/details?id=com.duolingo)                                                                                        | Current Android product screenshots         | Official Google Play screenshots; not stored                            | Current Android lesson and path examples; store slogans are not app UI              |
-| [Core tabs redesign](https://blog.duolingo.com/core-tabs-redesign/)                                                                                                               | 2026 mobile navigation and hierarchy        | Official article images; not stored                                     | Consistent title anchors, flatter sections, stronger whitespace, fixed icon tab bar |
-| [Six refreshed tabs image](https://storage.ghost.io/c/7a/33/7a33d0f4-927d-4fe8-a6bf-96131b5e76d4/content/images/2026/01/1.-Caption.-Refreshed-bottom-tabs.png)                    | Side-by-side mobile tab comparison          | Remote official image                                                   | Home, quest, league, practice/profile, and feed hierarchy                           |
-| [Header-anchor image](https://storage.ghost.io/c/7a/33/7a33d0f4-927d-4fe8-a6bf-96131b5e76d4/content/images/2026/01/10.-Caption.-Consistent-header-size-and-title-placement-1.png) | Header system                               | Remote official image                                                   | Different header heights preserve one title origin                                  |
-| [Spacing comparison image](https://storage.ghost.io/c/7a/33/7a33d0f4-927d-4fe8-a6bf-96131b5e76d4/content/images/2026/01/11.-Caption.-Cleaned-up-visual-spacing-1.png)             | Before and after spacing                    | Remote official image                                                   | Containers are removed when whitespace can express grouping                         |
-| [Frontend prediction](https://blog.duolingo.com/frontend-prediction/)                                                                                                             | Learning path and optimistic feedback       | Official path and completion images; not stored                         | Completed, active, and locked path states; fast perceived response                  |
-| [Home screen path redesign](https://blog.duolingo.com/new-duolingo-home-screen-design/)                                                                                           | Linear learning path                        | Official before/after images; not stored                                | A guided vertical route replaces a free-form skill tree                             |
-| [Practice tab](https://blog.duolingo.com/guide-to-duolingo-practice-hub/)                                                                                                         | Intent-based practice choices               | Official practice, matching, listening, and speaking images; not stored | Each activity type has a distinct interaction rather than one generic template      |
-| [Explain My Answer](https://blog.duolingo.com/explain-my-answer-now-free/)                                                                                                        | Correct and incorrect feedback              | Official green and red feedback images; not stored                      | Immediate state label, correct answer, optional deeper explanation                  |
-| [2025 product highlights](https://blog.duolingo.com/product-highlights/)                                                                                                          | Recent exercise and completion patterns     | Official exercise images; not stored                                    | Tap correction, speaking fallback, flashcards, selective celebration                |
-| [Hearing-oriented controls](https://blog.duolingo.com/learning-with-hearing-aids/)                                                                                                | Listening accessibility                     | Official listening, reveal, skip, and settings images; not stored       | Replay, slowed audio, reveal text, defer audio, independent preferences             |
-| [Duolingo typography guidance](https://design.duolingo.com/identity/typography)                                                                                                   | Brand typography                            | Official guideline examples; not stored                                 | Feather Bold is proprietary; Nunito is Duolingo's public substitute recommendation  |
-| [Duolingo color guidance](https://design.duolingo.com/identity/color)                                                                                                             | Brand color roles                           | Official palette examples; not stored                                   | Brand green and its total color combination must not be reproduced                  |
-| [Duolingo shape-language guidance](https://design.duolingo.com/illustration/shape-language)                                                                                       | Illustration construction                   | Official guideline examples; not stored                                 | Few simple shapes, clear silhouettes, minimal detail, and controlled color          |
-| [Duolingo imagery guidance](https://design.duolingo.com/identity/imagery)                                                                                                         | Brand imagery and mascot use                | Official guideline examples; not stored                                 | Recognizable imagery is systematic; ClipQuest excludes character behavior           |
-| [Duo construction guidance](https://design.duolingo.com/illustration/duo)                                                                                                         | Mascot construction principles              | Official guideline examples; not stored                                 | Simple geometry and silhouette inform only the abstraction boundary                 |
-| [Apple UI design tips](https://developer.apple.com/design/tips/)                                                                                                                  | Native touch and layout guidance            | N/A                                                                     | Use at least 44 by 44 point frequent touch targets                                  |
-| [WCAG 2.2](https://www.w3.org/TR/WCAG22/)                                                                                                                                         | Web accessibility baseline                  | N/A                                                                     | Contrast, focus visibility, captions, target sizing, and status semantics           |
+| Reference                                                                                                                                                                         | Screen purpose                          | Screenshot or image reference                                           | Notes                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [Current Duolingo web entry](https://www.duolingo.com/learn)                                                                                                                      | Public entry and marketing              | Inspected live; not stored in this repository                           | Sparse split hero, paired CTA stack, large whitespace reserve                      |
+| [Header-anchor image](https://storage.ghost.io/c/7a/33/7a33d0f4-927d-4fe8-a6bf-96131b5e76d4/content/images/2026/01/10.-Caption.-Consistent-header-size-and-title-placement-1.png) | Header system                           | Remote official image                                                   | Different header heights preserve one title origin                                 |
+| [Spacing comparison image](https://storage.ghost.io/c/7a/33/7a33d0f4-927d-4fe8-a6bf-96131b5e76d4/content/images/2026/01/11.-Caption.-Cleaned-up-visual-spacing-1.png)             | Before and after spacing                | Remote official image                                                   | Containers are removed when whitespace can express grouping                        |
+| [Frontend prediction](https://blog.duolingo.com/frontend-prediction/)                                                                                                             | Learning path and optimistic feedback   | Official path and completion images; not stored                         | Completed, active, and locked path states; fast perceived response                 |
+| [Home screen path redesign](https://blog.duolingo.com/new-duolingo-home-screen-design/)                                                                                           | Linear learning path                    | Official before/after images; not stored                                | A guided vertical route replaces a free-form skill tree                            |
+| [Practice tab](https://blog.duolingo.com/guide-to-duolingo-practice-hub/)                                                                                                         | Intent-based practice choices           | Official practice, matching, listening, and speaking images; not stored | Each activity type has a distinct interaction rather than one generic template     |
+| [Explain My Answer](https://blog.duolingo.com/explain-my-answer-now-free/)                                                                                                        | Correct and incorrect feedback          | Official green and red feedback images; not stored                      | Immediate state label, correct answer, optional deeper explanation                 |
+| [2025 product highlights](https://blog.duolingo.com/product-highlights/)                                                                                                          | Recent exercise and completion patterns | Official exercise images; not stored                                    | Tap correction, speaking fallback, flashcards, selective celebration               |
+| [Hearing-oriented controls](https://blog.duolingo.com/learning-with-hearing-aids/)                                                                                                | Listening accessibility                 | Official listening, reveal, skip, and settings images; not stored       | Replay, slowed audio, reveal text, defer audio, independent preferences            |
+| [Duolingo typography guidance](https://design.duolingo.com/identity/typography)                                                                                                   | Brand typography                        | Official guideline examples; not stored                                 | Feather Bold is proprietary; Nunito is Duolingo's public substitute recommendation |
+| [Duolingo color guidance](https://design.duolingo.com/identity/color)                                                                                                             | Brand color roles                       | Official palette examples; not stored                                   | Brand green and its total color combination must not be reproduced                 |
+| [Duolingo shape-language guidance](https://design.duolingo.com/illustration/shape-language)                                                                                       | Illustration construction               | Official guideline examples; not stored                                 | Few simple shapes, clear silhouettes, minimal detail, and controlled color         |
+| [Duolingo imagery guidance](https://design.duolingo.com/identity/imagery)                                                                                                         | Brand imagery and mascot use            | Official guideline examples; not stored                                 | Recognizable imagery is systematic; ClipQuest excludes character behavior          |
+| [Duo construction guidance](https://design.duolingo.com/illustration/duo)                                                                                                         | Mascot construction principles          | Official guideline examples; not stored                                 | Simple geometry and silhouette inform only the abstraction boundary                |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/)                                                                                                                                         | Web accessibility baseline              | N/A                                                                     | Contrast, focus visibility, captions, target sizing, and status semantics          |
 
 ## Current interface observations
 
@@ -58,16 +53,6 @@ ClipQuest adaptation: the signed-out entry will show a real, usable URL field in
 - Supplemental progress or account information may occupy a right-side area, but the primary action remains in the main column.
 
 ClipQuest adaptation: desktop Home, Library, and Settings will share a 248 px rail. Lesson and generation routes will use a distraction-free full-width shell instead of carrying the rail into a focused task.
-
-### 2026 mobile tabs
-
-- Six fixed icon tabs are evenly distributed above the safe area in the official refresh.
-- The selected item receives a bounded background or outline treatment rather than relying on color alone.
-- Large and compact headers can coexist because titles keep one leading and top anchor.
-- Flat sections, alignment, whitespace, and a small number of dividers replace nested cards.
-- Cards are retained for actions, progress modules, or content that genuinely needs one boundary.
-
-ClipQuest adaptation: use three labelled destinations, Home, Library, and Settings. Labels improve clarity for this smaller information architecture. Each icon keeps an accessible name and selected state.
 
 ### Learning path and progression
 
@@ -120,30 +105,28 @@ ClipQuest adaptation: use the same design system but keep auth visually quieter 
 
 These values are visual estimates from public screenshots and browser inspection. They are implementation targets, not Duolingo source values.
 
-| Element                      |          Observed range |                     ClipQuest decision |
-| ---------------------------- | ----------------------: | -------------------------------------: |
-| Desktop persistent rail      |              240-270 px |                                 248 px |
-| Desktop main reading column  |              600-760 px |      704 px default, 760 px lesson max |
-| Desktop wide content region  |             960-1120 px |                                1080 px |
-| Mobile horizontal gutter     |                20-24 px |    20 px under 480 px, 24 px on tablet |
-| Primary button height        |                48-54 px |            52 px mobile, 56 px desktop |
-| Input height                 |                48-56 px |        56 px standard, 62 px URL entry |
-| Answer target minimum height |                64-84 px |                                  68 px |
-| Frequent icon target         |                44-48 px |                          44 px minimum |
-| Card radius                  |                14-20 px | 20 px standard, 24 px feature surfaces |
-| Input/button radius          |                12-16 px |                                  16 px |
-| Border thickness             |                  2-3 px |  2 px standard, 3 px selected/emphasis |
-| Tactile lower edge           |                  3-5 px |                                   4 px |
-| Progress track height        |                10-14 px |                                  12 px |
-| Desktop feedback region      |              150-210 px |         content-driven, 164 px minimum |
-| Mobile navigation            | 64-78 px plus safe area |                68 px plus bottom inset |
-| Major vertical rhythm        |                24-40 px |            32 px desktop, 24 px mobile |
+| Element                      | Observed range |                     ClipQuest decision |
+| ---------------------------- | -------------: | -------------------------------------: |
+| Desktop persistent rail      |     240-270 px |                                 248 px |
+| Desktop main reading column  |     600-760 px |      704 px default, 760 px lesson max |
+| Desktop wide content region  |    960-1120 px |                                1080 px |
+| Primary button height        |       48-54 px |                                  56 px |
+| Input height                 |       48-56 px |        56 px standard, 62 px URL entry |
+| Answer target minimum height |       64-84 px |                                  68 px |
+| Frequent icon target         |       44-48 px |                          44 px minimum |
+| Card radius                  |       14-20 px | 20 px standard, 24 px feature surfaces |
+| Input/button radius          |       12-16 px |                                  16 px |
+| Border thickness             |         2-3 px |  2 px standard, 3 px selected/emphasis |
+| Tactile lower edge           |         3-5 px |                                   4 px |
+| Progress track height        |       10-14 px |                                  12 px |
+| Desktop feedback region      |     150-210 px |         content-driven, 164 px minimum |
+| Major vertical rhythm        |       24-40 px |                                  32 px |
 
 ## Typography decision
 
 Duolingo's Feather Bold is explicitly bespoke and unavailable to third parties. It will not be copied or bundled.
 
-ClipQuest will keep the already licensed Expo Google Font packages:
+ClipQuest will keep the already licensed Google Font packages:
 
 - Fredoka 600/700 for short display headings and important interaction labels.
 - DM Sans 400/500/700 for body text, metadata, fields, and longer instructions.
@@ -188,7 +171,7 @@ Duolingo's official system makes green the dominant brand anchor, white the prim
 - Every product icon is generated as its own still image. The family locks one orthographic three-quarter camera, one module scale, 12-30 visible cuboids, and a 6-14 module dominant span. Canonical artwork uses a transparent background so it can sit naturally on every semantic surface; required launcher backplates use structural green rather than a white field.
 - Spring Glow communicates core learning, Blue Cream information and processing, Amber Dusk warnings, Grapefruit errors, and Moon Pearl neutral utilities. Only whole-preset tone shifts are used.
 - The learning prism combines a green video frame, a light quiz-card prism, a yellow knowledge marker, and a restrained blue companion block. It has no human or animal traits, moods, poses, or reaction variants.
-- The same prism silhouette produces the ClipQuest mark, favicon/PWA art, launcher and splash art, browser-extension icons, and a responsive Fredoka wordmark lockup through a deterministic derivative script. The primary lockup color-splits `Clip` and `Quest` to distinguish source media from the learning action; symbol-only applications remain reserved for constrained icon surfaces. Canonical generated sources are never resized in place.
+- The same prism silhouette produces the ClipQuest mark, favicon/PWA art, browser-extension icons, and a responsive Fredoka wordmark lockup through a deterministic derivative script. The primary lockup color-splits `Clip` and `Quest` to distinguish source media from the learning action; symbol-only applications remain reserved for constrained icon surfaces. Canonical generated sources are never resized in place.
 
 ## Accessibility observations and requirements
 
@@ -200,7 +183,6 @@ Duolingo's official system makes green the dominant brand anchor, white the prim
 - Provide captions or transcript context for video questions. No core question may require audio alone.
 - Preserve keyboard submission and add number-key selection for answer choices where practical.
 - Preserve reduced-motion behavior and keep haptics nonessential.
-- Ensure fixed mobile controls respect bottom safe-area insets and do not cover scrollable content.
 - Keep validation attached to its field with an alert role; do not rely on toast-only form errors.
 
 ## Historical pre-rebuild ClipQuest baseline
@@ -215,13 +197,13 @@ Baseline behavior and issues recorded before visual replacement:
 
 - The worktree was clean at `2f6bed1` before screenshots were added.
 - `npm ci` completed successfully with the existing npm lockfile.
-- The local Expo web app started successfully and rendered `/welcome`.
+- The local web app started successfully and rendered `/welcome`.
 - All 38 existing Vitest tests passed: 19 API, 14 app, and 5 contracts.
 - A typecheck immediately after clean install failed because the ignored generated `packages/contracts/dist/index.d.ts` was stale and omitted `AttemptResumeResponse.mastery`.
 - The ordered root build regenerated contracts first; the subsequent workspace typecheck passed.
 - `npm run build` passed and exported 23 web routes.
 - `npm run cf:dry-run` passed.
-- The old visual layer emits Expo warnings for legacy `shadow*` props. The rebuild will use the supported `boxShadow` style.
+- The old visual layer emits warnings for legacy `shadow*` props. The rebuild will use the supported `boxShadow` style.
 - The repository has no lint, format, Playwright, Detox, or browser-integration script at baseline.
 
 The baseline counts and limitations above are intentionally historical. As of 2026-08-22, the repository has ESLint, Prettier, Playwright journeys, 66 Vitest tests, complete-transcript integrity contracts, paste-time pre-generation, and learner-selected question types. Use the README release status—not this research baseline—for release decisions.

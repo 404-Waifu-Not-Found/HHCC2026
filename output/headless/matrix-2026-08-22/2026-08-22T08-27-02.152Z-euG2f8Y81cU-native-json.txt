@@ -1,0 +1,200 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.002] SOURCE_STARTED videoId="euG2f8Y81cU"
+[00:04.642] CAPTIONS_COMPLETE videoId="euG2f8Y81cU" title="AP Biology Review: Unit 2 The Cell" language="en" durationSeconds=2809 segmentCount=1291 sourceSegmentCount=1291 characterCount=47884 transcriptFingerprint="da3aef84" acquisition="youtube_local_ytdlp"
+[00:04.644] PLAN_REQUESTED questionCount=10 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:32.042] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:32.056] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:33.894] QUESTION_ACCEPTED ordinal=1 concept="proton transport mechanism" prompt="How does the K+ H+ transport protein change the pH of the vacuole?"
+[00:33.895] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1852 inputTokens=9923 outputTokens=157 reasoningTokens=0
+[00:33.895] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:33.901] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=3 status="generating"
+[00:33.916] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:36.042] QUESTION_ACCEPTED ordinal=2 concept="diffusion across a membrane" prompt="What happens to the amount of a substance inside a selectively permeable bag when some of that substance moves out into the surrounding solution?"
+[00:36.043] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2141 inputTokens=10006 outputTokens=153 reasoningTokens=0
+[00:36.043] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:36.050] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:36.075] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:37.439] QUESTION_ACCEPTED ordinal=3 concept="isotonic solution effect on red blood cells" prompt="In an isotonic solution, water moves into and out of red blood cells at the same rate, so the cells maintain their normal shape."
+[00:37.440] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1390 inputTokens=10173 outputTokens=116 reasoningTokens=0
+[00:37.440] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:37.451] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=3 status="generating"
+[00:37.486] AI_CALL_STARTED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:38.924] QUESTION_ACCEPTED ordinal=4 concept="nuclear envelope function" prompt="What is the function of the pores in the nuclear envelope?"
+[00:38.925] AI_CALL_COMPLETED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1474 inputTokens=10462 outputTokens=117 reasoningTokens=0
+[00:38.925] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:38.940] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:38.984] AI_CALL_STARTED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:40.839] QUESTION_ACCEPTED ordinal=5 concept="osmolarity and ATP production" prompt="The osmolarity of the solution outside a cell does not affect the amount of ATP produced by cellular respiration."
+[00:40.840] AI_CALL_COMPLETED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1899 inputTokens=10368 outputTokens=115 reasoningTokens=0
+[00:40.840] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:40.858] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=3 status="generating"
+[00:40.910] AI_CALL_STARTED callIndex=5 ordinal=6 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:43.059] QUESTION_ACCEPTED ordinal=6 concept="CFTR protein production pathway" prompt="What is the sequence of locations a normal CFTR protein follows from gene expression to its final destination?"
+[00:43.060] AI_CALL_COMPLETED callIndex=5 ordinal=6 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2201 inputTokens=10670 outputTokens=216 reasoningTokens=0
+[00:43.060] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:43.075] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:43.129] AI_CALL_STARTED callIndex=6 ordinal=7 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:44.772] QUESTION_ACCEPTED ordinal=7 concept="receptor-mediated endocytosis" prompt="What process brings a specific solute into a cell after a ligand binds to a receptor on the cell surface?"
+[00:44.774] AI_CALL_COMPLETED callIndex=6 ordinal=7 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1698 inputTokens=10488 outputTokens=163 reasoningTokens=0
+[00:44.774] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:44.797] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=3 status="generating"
+[00:44.867] AI_CALL_STARTED callIndex=7 ordinal=8 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:46.162] AI_CALL_COMPLETED callIndex=7 ordinal=8 ordinalAttempt=1 classification="primary" outcome="unsupported_absolute_claim" acceptedCount=0 retryDelayMs=212 callElapsedMs=1363
+[00:46.162] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=8 ordinalAttempt=2 retryKind="structural" retryDelayMs=212 reasonCode="unsupported_absolute_claim" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:46.395] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=8 ordinalAttempt=2 retryKind="structural" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:46.468] AI_CALL_STARTED callIndex=8 ordinal=8 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:47.911] QUESTION_ACCEPTED ordinal=8 concept="resource availability for exam preparation" prompt="What resource is available to students for AP Biology review?"
+[00:47.912] AI_CALL_COMPLETED callIndex=8 ordinal=8 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1517 inputTokens=10906 outputTokens=141 reasoningTokens=0
+[00:47.912] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:47.938] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:48.016] AI_CALL_STARTED callIndex=9 ordinal=9 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:49.842] AI_CALL_COMPLETED callIndex=9 ordinal=9 ordinalAttempt=1 classification="primary" outcome="retry_question_invalid" acceptedCount=0 retryDelayMs=222 callElapsedMs=1904
+[00:49.842] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=9 ordinalAttempt=2 retryKind="structural" retryDelayMs=222 reasonCode="retry_question_invalid" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:50.091] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=9 ordinalAttempt=2 retryKind="structural" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:50.170] AI_CALL_STARTED callIndex=10 ordinal=9 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:51.542] QUESTION_ACCEPTED ordinal=9 concept="resource availability for exam preparation" prompt="A 374-page review guide is available on the instructor's Instagram stories for biology review."
+[00:51.543] AI_CALL_COMPLETED callIndex=10 ordinal=9 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1450 inputTokens=11318 outputTokens=116 reasoningTokens=0
+[00:51.543] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=1 status="generating" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:51.564] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=3 status="generating"
+[00:51.652] AI_CALL_STARTED callIndex=11 ordinal=10 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:53.514] QUESTION_ACCEPTED ordinal=10 concept="osmotic water movement in hypertonic solution" prompt="What happens to water movement when a cell is placed in a hypertonic solution?"
+[00:53.514] AI_CALL_COMPLETED callIndex=11 ordinal=10 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1950 inputTokens=10801 outputTokens=191 reasoningTokens=0
+[00:53.514] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="cf972bc0-c299-445a-9a9b-f000bc9a6dcd"
+[00:53.516] BANK_COMPLETE accepted=10 requested=10 aiCalls=12 retryCount=2 generationElapsedMs=21478 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: proton transport mechanism
+Prompt: How does the K+ H+ transport protein change the pH of the vacuole?
+Retry prompt: What action by the K+ H+ transport protein directly lowers the H+ concentration inside the vacuole?
+A. It moves protons (H+ ions) into the vacuole.
+B. It moves protons (H+ ions) out of the vacuole.
+C. It neutralizes protons by adding hydroxide ions.
+D. It moves potassium ions (K+) out of the vacuole.
+Correct answer: B. It moves protons (H+ ions) out of the vacuole.
+Explanation: The transport protein moves protons (H+ ions) out of the vacuole, reducing the H+ concentration and thereby raising the pH.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=bb022556b6f0e2a451897493353ce0bc11adb67e718b4bde2b43c00f43a85fe0
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — MULTIPLE_CHOICE
+Concept: diffusion across a membrane
+Prompt: What happens to the amount of a substance inside a selectively permeable bag when some of that substance moves out into the surrounding solution?
+Retry prompt: If a substance moves out of a bag into the surrounding solution, what is the effect on the amount remaining inside the bag?
+A. The amount inside the bag becomes zero.
+B. The amount inside the bag increases.
+C. The amount inside the bag stays the same.
+D. The amount inside the bag decreases.
+Correct answer: D. The amount inside the bag decreases.
+Explanation: When some of the substance leaves the bag, the amount inside the bag decreases because a portion of it has moved out into the surrounding solution.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=9b88b7f821d5ca4b67628feee316d26533d0acaf4e3063d39c64c5448982ccb8
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 3 — TRUE_FALSE
+Concept: isotonic solution effect on red blood cells
+Prompt: In an isotonic solution, water moves into and out of red blood cells at the same rate, so the cells maintain their normal shape.
+Retry prompt: Red blood cells in an isotonic solution experience equal water movement in and out, keeping them in their normal state.
+Correct answer: True
+Correction: In an isotonic solution, water moves into and out of red blood cells at the same rate, so the cells maintain their normal shape.
+Explanation: Isotonic means the solute concentration outside the cell equals that inside, so there is no net water movement, preventing crenation or bursting.
+AI provenance: call=2 attempt=1 classification=primary fingerprint=3982bf60978ff20ec293d6beb1b106ecec2c256b1e51df9683bd7fd91b706d69
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 4 — SHORT_ANSWER
+Concept: nuclear envelope function
+Prompt: What is the function of the pores in the nuclear envelope?
+Retry prompt: What do the nuclear envelope pores permit to exit the nucleus?
+Reference answer: The pores allow mRNA to leave the nucleus and travel to the cytoplasm for translation.
+Rubric ideas: The pores allow mRNA to leave the nucleus and travel to the cytoplasm for translation.
+Short-answer mode: proposition
+Explanation: The nuclear envelope has pores that allow mRNA to leave the nucleus and travel to the cytoplasm for translation.
+AI provenance: call=3 attempt=1 classification=primary fingerprint=426e8f6148869ca20f1772f3dd4b5e9af94bd2d6c938222e2de05bcf0d716b58
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 5 — TRUE_FALSE
+Concept: osmolarity and ATP production
+Prompt: The osmolarity of the solution outside a cell does not affect the amount of ATP produced by cellular respiration.
+Retry prompt: The concentration of solutes in the external solution has no effect on the rate of ATP production from cellular respiration.
+Correct answer: True
+Correction: The osmolarity of the solution outside a cell does not affect the amount of ATP produced by cellular respiration.
+Explanation: ATP production depends on cellular respiration, which is not influenced by the external solute concentration.
+AI provenance: call=4 attempt=1 classification=primary fingerprint=eda1c32646d6f589efebdb1f94666b46443db5e55a22d78fa9e53f8f0b19f0b8
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 6 — SHORT_ANSWER
+Concept: CFTR protein production pathway
+Prompt: What is the sequence of locations a normal CFTR protein follows from gene expression to its final destination?
+Retry prompt: Trace the route of a normal CFTR protein from its gene to the cell membrane.
+Reference answer: Nucleus to ribosome to cell membrane
+Rubric ideas: Nucleus to ribosome to cell membrane
+Short-answer mode: proposition
+Explanation: The CFTR gene is transcribed in the nucleus, the mRNA is translated at a ribosome, and the protein is then transported to the cell membrane, its final location.
+AI provenance: call=5 attempt=1 classification=primary fingerprint=dfa25af20c29427698fa2eea7f473cf24364c1701c22bdd740c7cc842b5edbb6
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 7 — MULTIPLE_CHOICE
+Concept: receptor-mediated endocytosis
+Prompt: What process brings a specific solute into a cell after a ligand binds to a receptor on the cell surface?
+Retry prompt: Which mechanism is triggered when a ligand binds to its receptor, leading to the uptake of a particular solute?
+A. Phagocytosis
+B. Simple diffusion
+C. Receptor-mediated endocytosis
+D. Exocytosis
+Correct answer: C. Receptor-mediated endocytosis
+Explanation: Receptor-mediated endocytosis is the process in which ligand binding to a receptor triggers invagination of the membrane, bringing the bound solute into the cell.
+AI provenance: call=6 attempt=1 classification=primary fingerprint=0d016a9a99f43cfe4fbcc4bbda4827a06ac859dd989db551fa9317f76cf2ccfc
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 8 — SHORT_ANSWER
+Concept: resource availability for exam preparation
+Prompt: What resource is available to students for AP Biology review?
+Retry prompt: Which study material is provided for AP Biology review?
+Reference answer: A 374-page review guide on the instructor's Weebly site.
+Rubric ideas: A 374-page review guide on the instructor's Weebly site.
+Short-answer mode: proposition
+Explanation: A 374-page review guide is available on the instructor's Weebly site for AP Biology review.
+AI provenance: call=8 attempt=2 classification=automatic_retry fingerprint=c32d7286725d9b6071a2bcc5d1f660a3f373b4d9d03affac384f3d7569c28f22
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 9 — TRUE_FALSE
+Concept: resource availability for exam preparation
+Prompt: A 374-page review guide is available on the instructor's Instagram stories for biology review.
+Retry prompt: The instructor's 374-page biology review guide is posted on Instagram stories.
+Correct answer: False
+Correction: A 374-page review guide is available on the instructor's Weebly site for biology review.
+Explanation: The false statement incorrectly places the review guide on Instagram stories; the guide is actually available on the instructor's Weebly site.
+AI provenance: call=10 attempt=2 classification=automatic_retry fingerprint=b9cd61dfac8eab6eb3167712f978abad932a941e74e36468767f592bb961fc96
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 10 — MULTIPLE_CHOICE
+Concept: osmotic water movement in hypertonic solution
+Prompt: What happens to water movement when a cell is placed in a hypertonic solution?
+Retry prompt: Which statement correctly describes the net movement of water for a cell in a hypertonic solution?
+A. Water moves out of the cell, causing it to shrink.
+B. Water moves into the cell, causing it to swell.
+C. Water does not move across the membrane.
+D. Water moves equally in and out, so the cell stays the same.
+Correct answer: A. Water moves out of the cell, causing it to shrink.
+Explanation: In a hypertonic solution, the solute concentration outside the cell is higher than inside, so water moves out of the cell, causing it to shrink.
+AI provenance: call=11 attempt=1 classification=primary fingerprint=064f85ad49265d5d5ead75f3fc4bd04bc017430e4052e727f5448e5d25eacf46
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:53.518] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="It moves protons (H+ ions) out of the vacuole."
+[00:55.369] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="Your response correctly identifies that the K+ H+ transport protein moves protons out of the vacuole, which is the key mechanism for changing its pH." matchedIdeas=["Moves protons (H+ ions) out of the vacuole"] source="deepseek_local"
+[00:55.369] GRADE_STARTED ordinal=2 questionType="multiple_choice" response="The amount inside the bag decreases."
+[00:57.454] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="The response correctly identifies that the substance leaving the bag reduces the amount remaining inside." matchedIdeas=["The amount inside the bag decreases."] source="deepseek_local"
+[00:57.454] GRADE_STARTED ordinal=3 questionType="true_false" response="True"
+[00:59.552] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="Correct — in an isotonic solution, water moves in and out of red blood cells at equal rates, so they keep their normal shape." matchedIdeas=["Isotonic solution: water moves in and out at same rate, cells maintain normal shape"] source="deepseek_local"
+[00:59.553] GRADE_STARTED ordinal=4 questionType="short_answer" response="The pores allow mRNA to leave the nucleus and travel to the cytoplasm for translation."
+[01:01.197] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your answer correctly identifies that nuclear pores allow mRNA to exit the nucleus and reach the cytoplasm for translation." matchedIdeas=["The pores allow mRNA to leave the nucleus and travel to the cytoplasm for translation."] source="deepseek_local"
+[01:01.197] GRADE_STARTED ordinal=5 questionType="true_false" response="True"
+[01:03.281] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="Correct—osmolarity outside the cell doesn’t change the ATP yield from cellular respiration, since ATP production depends on internal metabolic processes, not the external solution’s concentration." matchedIdeas=["Osmolarity outside cell does not affect ATP production"] source="deepseek_local"
+[01:03.282] GRADE_STARTED ordinal=6 questionType="short_answer" response="Nucleus to ribosome to cell membrane"
+[01:04.863] GRADE_COMPLETED ordinal=6 correct=true confidence="high" reason="Your response correctly identifies the key locations—nucleus, ribosome, and cell membrane—in the proper order." matchedIdeas=["Nucleus to ribosome to cell membrane"] source="deepseek_local"
+[01:04.863] GRADE_STARTED ordinal=7 questionType="multiple_choice" response="Receptor-mediated endocytosis"
+[01:06.501] GRADE_COMPLETED ordinal=7 correct=true confidence="high" reason="Your response correctly identifies receptor-mediated endocytosis as the process that brings a specific solute into the cell after a ligand binds to a receptor." matchedIdeas=["Receptor-mediated endocytosis"] source="deepseek_local"
+[01:06.501] GRADE_STARTED ordinal=8 questionType="short_answer" response="A 374-page review guide on the instructor's Weebly site."
+[01:08.087] GRADE_COMPLETED ordinal=8 correct=true confidence="high" reason="Your response correctly identifies the 374-page review guide available on the instructor's Weebly site." matchedIdeas=["A 374-page review guide on the instructor's Weebly site."] source="deepseek_local"
+[01:08.087] GRADE_STARTED ordinal=9 questionType="true_false" response="False"
+[01:10.095] GRADE_COMPLETED ordinal=9 correct=true confidence="high" reason="The response correctly identifies the statement as false, as the review guide is actually on the instructor's Weebly site, not Instagram stories." matchedIdeas=["Learner correctly identified the statement as False"] source="deepseek_local"
+[01:10.095] GRADE_STARTED ordinal=10 questionType="multiple_choice" response="Water moves out of the cell, causing it to shrink."
+[01:12.150] GRADE_COMPLETED ordinal=10 correct=true confidence="high" reason="You correctly identified that in a hypertonic solution, water exits the cell, leading to shrinkage." matchedIdeas=["Water moves out of the cell, causing it to shrink."] source="deepseek_local"

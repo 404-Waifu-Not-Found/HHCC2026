@@ -1,0 +1,2366 @@
+{
+  "runId": "ce32aff7-8396-4f75-ad37-76b684e430ed",
+  "source": {
+    "videoId": "7HnHjnZbYNk",
+    "title": "AP Chemistry Unit 1 in 10 Minutes! | Atomic Structure and Properties",
+    "language": "en",
+    "durationSeconds": 671,
+    "segments": [
+      {
+        "id": "youtube-json3-0-200",
+        "startMs": 200,
+        "endMs": 6120,
+        "text": "Hi there! I’m Jeremy Krug, and welcome to my ten minute review of AP Chemistry Unit 1 – which"
+      },
+      {
+        "id": "youtube-json3-1-6120",
+        "startMs": 6120,
+        "endMs": 11760,
+        "text": "covers Atomic Structure and Properties. If you find this video useful, don’t forget to smash"
+      },
+      {
+        "id": "youtube-json3-2-11760",
+        "startMs": 11760,
+        "endMs": 17640,
+        "text": "that LIKE button, subscribe, leave a comment, and share this video with your AP Chemistry classmates"
+      },
+      {
+        "id": "youtube-json3-3-17640",
+        "startMs": 17640,
+        "endMs": 23360,
+        "text": "and colleagues. And don’t forget to check out my complete AP Chemistry course playlist right here"
+      },
+      {
+        "id": "youtube-json3-4-23360",
+        "startMs": 23360,
+        "endMs": 31353,
+        "text": "on YouTube that gets right to the point of all 91 topics in the course. Now, let’s review Unit One…."
+      },
+      {
+        "id": "youtube-json3-5-31353",
+        "startMs": 31353,
+        "endMs": 36640,
+        "text": "#1 – You have to be able to convert from moles to grams, and vice versa. To do this,"
+      },
+      {
+        "id": "youtube-json3-6-36640",
+        "startMs": 36640,
+        "endMs": 42440,
+        "text": "use the atomic mass for an element – or for a compound, the sum of the atomic masses of the"
+      },
+      {
+        "id": "youtube-json3-7-42440",
+        "startMs": 42440,
+        "endMs": 49520,
+        "text": "atoms in the compound. For example, to convert 10.00 grams of carbon dioxide to moles, you’ll"
+      },
+      {
+        "id": "youtube-json3-8-49520",
+        "startMs": 49520,
+        "endMs": 57560,
+        "text": "use dimensional analysis – in your conversion factor put 1 mole on top, 44.01 grams on bottom"
+      },
+      {
+        "id": "youtube-json3-9-57560",
+        "startMs": 57560,
+        "endMs": 68120,
+        "text": "(which is 12.01 plus 16.00 And when you divide, you get an answer of 0.2272 moles."
+      },
+      {
+        "id": "youtube-json3-10-68120",
+        "startMs": 68120,
+        "endMs": 75360,
+        "text": "You should also be able to convert particles to moles. There are 6.022 x 1023 teeny tiny"
+      },
+      {
+        "id": "youtube-json3-11-75360",
+        "startMs": 75360,
+        "endMs": 80920,
+        "text": "particles in a mole – atoms, molecules, ions, whatever it happens to be for that"
+      },
+      {
+        "id": "youtube-json3-12-80920",
+        "startMs": 80920,
+        "endMs": 87960,
+        "text": "substance. So if you have those 0.2272 moles of carbon dioxide, you can convert to molecules,"
+      },
+      {
+        "id": "youtube-json3-13-87960",
+        "startMs": 87960,
+        "endMs": 95000,
+        "text": "by putting 1 mole on the bottom of your conversion factor, and 6.022 x 1023 molecules"
+      },
+      {
+        "id": "youtube-json3-14-95000",
+        "startMs": 95000,
+        "endMs": 103953,
+        "text": "on the top. When you cancel out the units and multiply, you get 1.368 x 1023 molecules."
+      },
+      {
+        "id": "youtube-json3-15-103953",
+        "startMs": 103953,
+        "endMs": 110240,
+        "text": "#2 – Another skill is being able to interpret a mass spectrum graph for an element. For example,"
+      },
+      {
+        "id": "youtube-json3-16-110240",
+        "startMs": 110240,
+        "endMs": 115280,
+        "text": "a graph like this shows the relative abundance of the isotopes of the element that’s being"
+      },
+      {
+        "id": "youtube-json3-17-115280",
+        "startMs": 115280,
+        "endMs": 122400,
+        "text": "analyzed. So we have two isotopes, one of them has a mass of 107 atomic mass units,"
+      },
+      {
+        "id": "youtube-json3-18-122400",
+        "startMs": 122400,
+        "endMs": 129520,
+        "text": "and the other one has a mass of 109 atomic mass units. The 107 isotope is more abundant;"
+      },
+      {
+        "id": "youtube-json3-19-129520",
+        "startMs": 129520,
+        "endMs": 134800,
+        "text": "about 52% of all the atoms of this element have a mass of 107,"
+      },
+      {
+        "id": "youtube-json3-20-134800",
+        "startMs": 134800,
+        "endMs": 141120,
+        "text": "while about 48% have a mass of 109. We can do some quick math and estimate that the average"
+      },
+      {
+        "id": "youtube-json3-21-141120",
+        "startMs": 141120,
+        "endMs": 147640,
+        "text": "atomic mass of this element would be right around 108, maybe a tad less than that. So we can look"
+      },
+      {
+        "id": "youtube-json3-22-147640",
+        "startMs": 147640,
+        "endMs": 153400,
+        "text": "at the periodic table and confidently say that this is the graph for SILVER. You need to be"
+      },
+      {
+        "id": "youtube-json3-23-153400",
+        "startMs": 153400,
+        "endMs": 160393,
+        "text": "able to do that for any element’s mass spec graph that you might be given on the exam."
+      },
+      {
+        "id": "youtube-json3-24-160393",
+        "startMs": 160393,
+        "endMs": 166600,
+        "text": "#3 – You should be able to determine an empirical formula from a compound’s composition data. An"
+      },
+      {
+        "id": "youtube-json3-25-166600",
+        "startMs": 166600,
+        "endMs": 172800,
+        "text": "empirical formula is the simplest whole number ratio formula for a compound. It’s like taking"
+      },
+      {
+        "id": "youtube-json3-26-172800",
+        "startMs": 172800,
+        "endMs": 180040,
+        "text": "a formula and reducing it down to lowest terms. So for example, the molecular formula for oxalic"
+      },
+      {
+        "id": "youtube-json3-27-180040",
+        "startMs": 180040,
+        "endMs": 188920,
+        "text": "acid is H2C2O4, but its empirical formula is HCO2. If we have a substance that contains"
+      },
+      {
+        "id": "youtube-json3-28-188920",
+        "startMs": 188920,
+        "endMs": 209835,
+        "text": "40.05 percent sulfur and 59.95 percent oxygen by mass, we would express those percents as grams,"
+      },
+      {
+        "id": "youtube-json3-29-209835",
+        "startMs": 209835,
+        "endMs": 209990,
+        "text": "like we show here. Then, convert both of those masses to moles, using those elements’ respective"
+      },
+      {
+        "id": "youtube-json3-30-209990",
+        "startMs": 209990,
+        "endMs": 210560,
+        "text": "atomic masses. Then, when we get the moles, we divide each of them by the smallest of those"
+      },
+      {
+        "id": "youtube-json3-31-210560",
+        "startMs": 210560,
+        "endMs": 214480,
+        "text": "values. These are the relative subscripts of the elements,"
+      },
+      {
+        "id": "youtube-json3-32-214480",
+        "startMs": 214480,
+        "endMs": 221600,
+        "text": "so the 1 and 3 tell us that the empirical formula is SO3. Now the law of definite"
+      },
+      {
+        "id": "youtube-json3-33-221600",
+        "startMs": 221600,
+        "endMs": 227680,
+        "text": "proportions tells us that every sample of SO3, sulfur trioxide, no matter where it comes from,"
+      },
+      {
+        "id": "youtube-json3-34-227680",
+        "startMs": 227680,
+        "endMs": 235473,
+        "text": "will always have that same proportion, 40.05 percent sulfur, and 59.95 percent oxygen."
+      },
+      {
+        "id": "youtube-json3-35-235473",
+        "startMs": 235473,
+        "endMs": 239720,
+        "text": "#4 – You need to understand that mixtures are not the same as pure substances."
+      },
+      {
+        "id": "youtube-json3-36-240360",
+        "startMs": 240360,
+        "endMs": 244920,
+        "text": "Often in the lab, we’re asked to analyze a sample that has a certain substance"
+      },
+      {
+        "id": "youtube-json3-37-244920",
+        "startMs": 244920,
+        "endMs": 249480,
+        "text": "we’re interested in. Let’s say it’s potassium chloride. Now that sample"
+      },
+      {
+        "id": "youtube-json3-38-249480",
+        "startMs": 249480,
+        "endMs": 255080,
+        "text": "might have some other impurities in it. We can weigh the sample, dissolve it in water,"
+      },
+      {
+        "id": "youtube-json3-39-255080",
+        "startMs": 255080,
+        "endMs": 261200,
+        "text": "then analyze how much potassium or how much chloride is in there using a variety of methods."
+      },
+      {
+        "id": "youtube-json3-40-261200",
+        "startMs": 261200,
+        "endMs": 266520,
+        "text": "If we’re asked to compare samples containing multiple chlorides – such as a few different vials"
+      },
+      {
+        "id": "youtube-json3-41-266520",
+        "startMs": 266520,
+        "endMs": 272360,
+        "text": "containing lithium chloride, sodium chloride, aluminum chloride, and who knows what else,"
+      },
+      {
+        "id": "youtube-json3-42-272360",
+        "startMs": 272360,
+        "endMs": 279440,
+        "text": "our key here is to focus on the chloride, because it’s the ion they have in common. And if you have"
+      },
+      {
+        "id": "youtube-json3-43-279440",
+        "startMs": 279440,
+        "endMs": 285680,
+        "text": "a sample of sodium chloride, you can calculate its percent mass and see that a pure sample of"
+      },
+      {
+        "id": "youtube-json3-44-285680",
+        "startMs": 285680,
+        "endMs": 293320,
+        "text": "sodium chloride should be about 61% chloride. If the sample is only 20% chloride, then you"
+      },
+      {
+        "id": "youtube-json3-45-293320",
+        "startMs": 293320,
+        "endMs": 300120,
+        "text": "know that the sodium chloride only makes up about 1/3 of what it would be if it were a pure sample;"
+      },
+      {
+        "id": "youtube-json3-46-300120",
+        "startMs": 300120,
+        "endMs": 306000,
+        "text": "that means you have about 2/3 of the sample making up impurities."
+      },
+      {
+        "id": "youtube-json3-47-306000",
+        "startMs": 306000,
+        "endMs": 311040,
+        "text": "We’re halfway through, so I want to let you know that if you like these fast review videos,"
+      },
+      {
+        "id": "youtube-json3-48-311040",
+        "startMs": 311040,
+        "endMs": 319600,
+        "text": "then you’re going to LOVE my Ultimate Review Packet for AP Chemistry! I expand on each of"
+      },
+      {
+        "id": "youtube-json3-49-322880",
+        "startMs": 322880,
+        "endMs": 332520,
+        "text": "the nine units in a longer 30-minute summary video, I give you LOTS of practice questions,"
+      },
+      {
+        "id": "youtube-json3-50-332520",
+        "startMs": 332520,
+        "endMs": 339360,
+        "text": "study guides WITH the answer keys, key concept worksheets with all the main ideas,"
+      },
+      {
+        "id": "youtube-json3-51-339360",
+        "startMs": 339360,
+        "endMs": 342680,
+        "text": "and my EXCLUSIVE TIPS AND TRICKS that give you EVERYTHING you need"
+      },
+      {
+        "id": "youtube-json3-52-343280",
+        "startMs": 343280,
+        "endMs": 352633,
+        "text": "to get that FIVE! Check it out at ULTIMATE REVIEW PACKET DOT COM. Now, back to the review…"
+      },
+      {
+        "id": "youtube-json3-53-352633",
+        "startMs": 352633,
+        "endMs": 354920,
+        "text": "#5 – One of the key skills in understanding atomic"
+      },
+      {
+        "id": "youtube-json3-54-354920",
+        "startMs": 354920,
+        "endMs": 360440,
+        "text": "structure is being able to write electron configurations for the elements. For example,"
+      },
+      {
+        "id": "youtube-json3-55-360440",
+        "startMs": 360440,
+        "endMs": 373160,
+        "text": "the electron configuration for scandium would be 1s2 2s2 2p6 3s2 3p6 4s2 3d1. You"
+      },
+      {
+        "id": "youtube-json3-56-373160",
+        "startMs": 373160,
+        "endMs": 378760,
+        "text": "need to be very good at writing these. You need to recognize that the electrons in the"
+      },
+      {
+        "id": "youtube-json3-57-378760",
+        "startMs": 378760,
+        "endMs": 387040,
+        "text": "outermost electron shell are called valence electrons. In scandium, there are two. The s,"
+      },
+      {
+        "id": "youtube-json3-58-387040",
+        "startMs": 387040,
+        "endMs": 395240,
+        "text": "p, and d represent sublevels, or subshells, and there are 7 total sublevels in scandium."
+      },
+      {
+        "id": "youtube-json3-59-395240",
+        "startMs": 395240,
+        "endMs": 401880,
+        "text": "If we’re trying to compare the forces holding the electrons to the nucleus, we use Coulomb’s Law."
+      },
+      {
+        "id": "youtube-json3-60-401880",
+        "startMs": 401880,
+        "endMs": 408880,
+        "text": "Essentially, Coulomb’s Law states that there are two factors, CHARGE and DISTANCE, when determining"
+      },
+      {
+        "id": "youtube-json3-61-408880",
+        "startMs": 408880,
+        "endMs": 415520,
+        "text": "the force holding two charged particles together. The GREATER the CHARGE, the stronger the"
+      },
+      {
+        "id": "youtube-json3-62-415520",
+        "startMs": 415520,
+        "endMs": 423360,
+        "text": "attractive force, the LOWER the CHARGE, the weaker the attractive force. The GREATER the DISTANCE,"
+      },
+      {
+        "id": "youtube-json3-63-425280",
+        "startMs": 425280,
+        "endMs": 433160,
+        "text": "the weaker the attractive force, and the LOWER the DISTANCE, the stronger the attractive force."
+      },
+      {
+        "id": "youtube-json3-64-433160",
+        "startMs": 433160,
+        "endMs": 439080,
+        "text": "So that means that the electrons that are farthest way from the nucleus, the VALENCE electrons, have"
+      },
+      {
+        "id": "youtube-json3-65-439080",
+        "startMs": 439080,
+        "endMs": 445640,
+        "text": "the weakest attractions to the nucleus. So they’re the ones that can be removed the easiest. And"
+      },
+      {
+        "id": "youtube-json3-66-445640",
+        "startMs": 445640,
+        "endMs": 452313,
+        "text": "these core electrons, the ones that are closest to the nucleus, are most difficult to remove."
+      },
+      {
+        "id": "youtube-json3-67-452313",
+        "startMs": 452313,
+        "endMs": 458320,
+        "text": "#6 – You can identify an atom using photoelectron spectroscopy. If you can write an electron"
+      },
+      {
+        "id": "youtube-json3-68-458320",
+        "startMs": 458320,
+        "endMs": 464800,
+        "text": "configuration, you can interpret a PES graph like this. All you have to do is label the peaks from"
+      },
+      {
+        "id": "youtube-json3-69-464800",
+        "startMs": 464800,
+        "endMs": 476480,
+        "text": "left to right with the sublevels in increasing energy, so 1s, 2s, 2p, 3s, 3p, and 4s. And the"
+      },
+      {
+        "id": "youtube-json3-70-476480",
+        "startMs": 476480,
+        "endMs": 483400,
+        "text": "relative heights of the peaks correspond to number of electrons in each sublevel. So all these s"
+      },
+      {
+        "id": "youtube-json3-71-483400",
+        "startMs": 483400,
+        "endMs": 490600,
+        "text": "sublevels each have 2, since they’re all the same height. And these two are three times taller, so"
+      },
+      {
+        "id": "youtube-json3-72-490600",
+        "startMs": 490600,
+        "endMs": 498953,
+        "text": "they must have 6. So you can look at this and see that it ends with 4s2, so that means it’s calcium."
+      },
+      {
+        "id": "youtube-json3-73-498953",
+        "startMs": 498953,
+        "endMs": 503160,
+        "text": "#7 – Several trends in atomic properties can be predicted by looking at the periodic"
+      },
+      {
+        "id": "youtube-json3-74-503160",
+        "startMs": 503160,
+        "endMs": 509520,
+        "text": "table. For example, ionization energy and electronegativity generally increase as"
+      },
+      {
+        "id": "youtube-json3-75-509520",
+        "startMs": 509520,
+        "endMs": 514880,
+        "text": "you move to the right and top of the periodic table. And they decrease as you move toward"
+      },
+      {
+        "id": "youtube-json3-76-514880",
+        "startMs": 514880,
+        "endMs": 521920,
+        "text": "the left and bottom of the table. Atomic radius is the opposite – atoms are smaller toward the"
+      },
+      {
+        "id": "youtube-json3-77-521920",
+        "startMs": 521920,
+        "endMs": 527440,
+        "text": "top and right of the periodic table, and they are the largest toward the bottom and left."
+      },
+      {
+        "id": "youtube-json3-78-527440",
+        "startMs": 527440,
+        "endMs": 534560,
+        "text": "The periodic table helps predict these trends, but they DO NOT EXPLAIN THEM! Generally speaking,"
+      },
+      {
+        "id": "youtube-json3-79-534560",
+        "startMs": 534560,
+        "endMs": 539520,
+        "text": "if you are asked for an explanation comparing atoms that are across from each other,"
+      },
+      {
+        "id": "youtube-json3-80-539520",
+        "startMs": 539520,
+        "endMs": 546080,
+        "text": "left and right, their differences are due to a greater effective nuclear charge on the right,"
+      },
+      {
+        "id": "youtube-json3-81-546080",
+        "startMs": 546080,
+        "endMs": 551560,
+        "text": "and lower effective nuclear charge on the left. When comparing atoms that are"
+      },
+      {
+        "id": "youtube-json3-82-551560",
+        "startMs": 551560,
+        "endMs": 555920,
+        "text": "above or below each other, their differences are due to a greater"
+      },
+      {
+        "id": "youtube-json3-83-555920",
+        "startMs": 555920,
+        "endMs": 560640,
+        "text": "distance of valence electrons from the nucleus toward the bottom of the table,"
+      },
+      {
+        "id": "youtube-json3-84-560640",
+        "startMs": 560640,
+        "endMs": 565880,
+        "text": "and a lower distance from the valence electrons to the nucleus for the atom at the top."
+      },
+      {
+        "id": "youtube-json3-85-567240",
+        "startMs": 567240,
+        "endMs": 572880,
+        "text": "When you’re looking at ions, generally speaking, the more positively charged an ion,"
+      },
+      {
+        "id": "youtube-json3-86-573520",
+        "startMs": 573520,
+        "endMs": 578080,
+        "text": "the smaller it is, and the more negatively charged the ion it is,"
+      },
+      {
+        "id": "youtube-json3-87-578080",
+        "startMs": 578080,
+        "endMs": 584800,
+        "text": "the larger it will be. That’s because of Coulomb’s Law – an ion with more electrons than protons will"
+      },
+      {
+        "id": "youtube-json3-88-584800",
+        "startMs": 584800,
+        "endMs": 590440,
+        "text": "allow the electrons to repel each other more and will be larger; an ion with more protons"
+      },
+      {
+        "id": "youtube-json3-89-590440",
+        "startMs": 590440,
+        "endMs": 596793,
+        "text": "than electrons will have that nucleus pulling in those electrons as tightly as possible."
+      },
+      {
+        "id": "youtube-json3-90-596793",
+        "startMs": 596793,
+        "endMs": 600640,
+        "text": "#8 – You need to be comfortable with the number of valence electrons in atoms,"
+      },
+      {
+        "id": "youtube-json3-91-600640",
+        "startMs": 600640,
+        "endMs": 605480,
+        "text": "and how this affects the compounds they form. There are specific patterns that"
+      },
+      {
+        "id": "youtube-json3-92-605480",
+        "startMs": 605480,
+        "endMs": 610360,
+        "text": "help us to see how many valence electrons an atom has, and as you can see here,"
+      },
+      {
+        "id": "youtube-json3-93-610360",
+        "startMs": 610360,
+        "endMs": 615760,
+        "text": "the group that an element is in tells us how many valence electrons it has."
+      },
+      {
+        "id": "youtube-json3-94-615760",
+        "startMs": 615760,
+        "endMs": 622080,
+        "text": "The octet rule helps us to predict the charge that ions of these atoms will have. So ions"
+      },
+      {
+        "id": "youtube-json3-95-622080",
+        "startMs": 622080,
+        "endMs": 631000,
+        "text": "from Group 1 tend to have a +1 charge, Group 2 will be +2, and Group 13 will be +3. Ions from"
+      },
+      {
+        "id": "youtube-json3-96-631000",
+        "startMs": 631000,
+        "endMs": 639480,
+        "text": "Group 17 tend to take a -1 charge, Group 16 will be -2, and Group 15 will be -3."
+      },
+      {
+        "id": "youtube-json3-97-639480",
+        "startMs": 639480,
+        "endMs": 646360,
+        "text": "So an ionic compound made up of magnesium and chloride will have +2 and -1 charges."
+      },
+      {
+        "id": "youtube-json3-98-646360",
+        "startMs": 646360,
+        "endMs": 654400,
+        "text": "So its formula would be MgCl2. And likewise, aluminum has a +3 charge,"
+      },
+      {
+        "id": "youtube-json3-99-654400",
+        "startMs": 654400,
+        "endMs": 662960,
+        "text": "while sulfide has a -2 charge. So the formula for aluminum sulfide would be Al2S3."
+      },
+      {
+        "id": "youtube-json3-100-662960",
+        "startMs": 662960,
+        "endMs": 667800,
+        "text": "That was 10 minutes, and that’s Unit 1 – over Atomic Structure and Properties!"
+      },
+      {
+        "id": "youtube-json3-101-667800",
+        "startMs": 667800,
+        "endMs": 670480,
+        "text": "Thanks for watching, and I’ll see you next time!"
+      }
+    ],
+    "sourceSegmentCount": 102,
+    "characterCount": 8862,
+    "transcriptFingerprint": "8f8e0996",
+    "acquisition": "youtube_local_ytdlp"
+  },
+  "configuration": {
+    "questionCount": 10,
+    "questionTypes": [
+      "multiple_choice",
+      "true_false",
+      "short_answer"
+    ],
+    "transport": "native-json",
+    "answerAndGrade": true,
+    "interruptAfter": null,
+    "noFallback": true
+  },
+  "generation": {
+    "protocolVersion": 10,
+    "pipelineVersion": 9,
+    "model": "deepseek-v4-flash",
+    "reasoningEffort": "none",
+    "promptVersion": "quiz-local-json-stream-v5.12",
+    "validatorVersion": "validator-minimal-gradeability-v5.3",
+    "importVersion": "extension-progressive-import-v8",
+    "generationProfile": "prompt_first_auto_v5_12",
+    "generationId": "c3f94ad5-ee89-4432-830c-080ff54880db",
+    "generationSessionId": "82f0801a-2f0e-4fde-a4bc-4fa588d7b4f4",
+    "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9",
+    "questionPlan": {
+      "seed": "ec67d39f1d73231206c85199672f77c79afc3fc2a350a0fd5eb03c86b1b7bf72",
+      "types": [
+        "multiple_choice",
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+        "multiple_choice",
+        "short_answer",
+        "true_false",
+        "true_false",
+        "multiple_choice",
+        "short_answer"
+      ]
+    },
+    "promptFingerprint": "f63c554869e54aef75e0b67fb3d2f543e2ac77bb8bfd9a7507ab7af3143b8db5",
+    "quiz": {
+      "title": "AP Chemistry Unit 1 in 10 Minutes! | Atomic Structure and Properties",
+      "questions": [
+        {
+          "id": "q1",
+          "concept": "octet rule and ion charge",
+          "question": "What does the octet rule help predict for atoms of the main-group elements?",
+          "retryQuestion": "Which prediction is made using the octet rule for main-group atoms?",
+          "explanation": "The octet rule predicts the charge that ions of these atoms will have, such as Group 1 elements tending to form +1 ions.",
+          "type": "multiple_choice",
+          "choices": [
+            "The mass number of the atom.",
+            "The number of isotopes that exist.",
+            "The number of neutrons in the nucleus.",
+            "The charge that ions of these atoms will have."
+          ],
+          "answerIndex": 3,
+          "answer": "The charge that ions of these atoms will have."
+        },
+        {
+          "id": "q2",
+          "concept": "molar mass calculation",
+          "question": "How is the molar mass of a compound determined?",
+          "retryQuestion": "What is the correct way to find the molar mass of a compound?",
+          "explanation": "The molar mass of a compound is the sum of the atomic masses of all atoms in its chemical formula.",
+          "type": "multiple_choice",
+          "choices": [
+            "It is the sum of the atomic masses of the atoms in the compound.",
+            "It is the average of the atomic masses of the elements in the compound.",
+            "It is the atomic mass of the heaviest element in the compound.",
+            "It is the atomic mass of the first element listed in the formula."
+          ],
+          "answerIndex": 0,
+          "answer": "It is the sum of the atomic masses of the atoms in the compound."
+        },
+        {
+          "id": "q3",
+          "concept": "periodic trends prediction vs explanation",
+          "question": "The periodic table helps predict trends in atomic properties and explains them.",
+          "retryQuestion": "The periodic table explains the trends in atomic properties that it helps predict.",
+          "explanation": "The periodic table organizes elements so that patterns such as ionization energy and atomic radius can be predicted, but the table itself does not provide the underlying reasons for those patterns.",
+          "type": "true_false",
+          "answer": false,
+          "correction": "The periodic table helps predict trends in atomic properties, but it does not explain them."
+        },
+        {
+          "id": "q4",
+          "concept": "empirical formula determination",
+          "question": "After converting the masses of the elements to moles, what is the next step to determine the empirical formula?",
+          "retryQuestion": "Once the masses of the elements have been converted to moles, what operation is performed on the mole values to obtain the relative subscripts of the empirical formula?",
+          "explanation": "The mole values are divided by the smallest of those values to obtain the relative subscripts, which are then used to write the empirical formula.",
+          "type": "short_answer",
+          "answer": "Divide each mole value by the smallest of the mole values.",
+          "rubricIdeas": [
+            "Divide each mole value by the smallest of the mole values."
+          ],
+          "acceptableAnswers": [
+            "Divide the moles by the smallest mole value."
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "Divide each mole value by the smallest of the mole values."
+            ],
+            "acceptableAnswers": [
+              "Divide each mole value by the smallest of the mole values.",
+              "Divide the moles by the smallest mole value."
+            ]
+          }
+        },
+        {
+          "id": "q5",
+          "concept": "ion charge trends",
+          "question": "What is the typical charge of an ion formed by an element in Group 16?",
+          "retryQuestion": "Which charge is most commonly taken by a Group 16 ion?",
+          "explanation": "Elements in Group 16 typically gain two electrons to achieve a stable electron configuration, resulting in a -2 charge.",
+          "type": "multiple_choice",
+          "choices": [
+            "-3",
+            "-1",
+            "-2",
+            "+2"
+          ],
+          "answerIndex": 2,
+          "answer": "-2"
+        },
+        {
+          "id": "q6",
+          "concept": "isotope abundance relationship",
+          "question": "How does the abundance of the isotope with mass 107 compare with that of the isotope with mass 109?",
+          "retryQuestion": "Which isotope is more abundant and what are the approximate percentages of each isotope?",
+          "explanation": "The isotope with mass 107 is more abundant, making up about 52% of the atoms, while the isotope with mass 109 makes up about 48%.",
+          "type": "short_answer",
+          "answer": "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%.",
+          "rubricIdeas": [
+            "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+          ],
+          "acceptableAnswers": [],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+            ],
+            "acceptableAnswers": [
+              "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+            ]
+          }
+        },
+        {
+          "id": "q7",
+          "concept": "common ion in chloride samples",
+          "question": "When comparing samples of different chlorides, the chloride ion is the common component.",
+          "retryQuestion": "The chloride ion is the shared component among different chloride samples.",
+          "explanation": "Each chloride compound contains chloride as the anion, so it is the ion common to all such samples.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "When comparing samples of different chlorides, the chloride ion is the common component."
+        },
+        {
+          "id": "q8",
+          "concept": "Coulomb's law charge-force relationship",
+          "question": "The greater the charge, the stronger the attractive force between charged particles.",
+          "retryQuestion": "A larger charge produces a stronger attractive force between charged particles.",
+          "explanation": "Coulomb's law states that the force between charged particles depends on both charge and distance, with force increasing as charge increases.",
+          "type": "true_false",
+          "answer": true,
+          "correction": "The greater the charge, the stronger the attractive force between charged particles."
+        },
+        {
+          "id": "q9",
+          "concept": "percent composition analysis",
+          "question": "How does comparing the measured chloride percentage in a sample to the expected percentage for a pure chloride help determine sample purity?",
+          "retryQuestion": "Which statement describes how the measured chloride percentage relative to the pure chloride percentage indicates the amount of impurity?",
+          "explanation": "The measured chloride percentage relative to the expected percentage for the pure compound shows what fraction of the sample is the pure chloride; the remaining fraction is impurity.",
+          "type": "multiple_choice",
+          "choices": [
+            "The measured chloride percentage directly gives the mass of impurity in the sample.",
+            "The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity.",
+            "The measured chloride percentage is compared to the expected percentage to find the identity of the impurity.",
+            "The measured chloride percentage is always equal to the expected percentage regardless of impurities."
+          ],
+          "answerIndex": 1,
+          "answer": "The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity."
+        },
+        {
+          "id": "q10",
+          "concept": "Coulomb's law distance-force relationship",
+          "question": "How does the attractive force between a nucleus and an electron change as the distance between them increases?",
+          "retryQuestion": "As the distance between a nucleus and an electron increases, what happens to the attractive force between them?",
+          "explanation": "Coulomb's law states that the attractive force between charged particles is inversely related to the square of the distance between them. Therefore, as the distance increases, the attractive force weakens.",
+          "type": "short_answer",
+          "answer": "The attractive force weakens.",
+          "rubricIdeas": [
+            "The attractive force weakens."
+          ],
+          "acceptableAnswers": [
+            "The attractive force decreases.",
+            "The attractive force becomes weaker."
+          ],
+          "shortAnswerMode": "proposition",
+          "rubricV2": {
+            "version": 2,
+            "mode": "proposition",
+            "requiredIdeas": [
+              "The attractive force weakens."
+            ],
+            "acceptableAnswers": [
+              "The attractive force weakens.",
+              "The attractive force decreases.",
+              "The attractive force becomes weaker."
+            ]
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "aiCalls": 13,
+      "retryCount": 3,
+      "inputTokens": 104836,
+      "outputTokens": 1612,
+      "reasoningTokens": 0,
+      "elapsedMs": 27295,
+      "sourceSelection": {
+        "sentenceCount": 72,
+        "excludedSentenceCount": 5,
+        "candidateWindowCount": 63,
+        "selectedWindowCount": 30,
+        "focusWordCount": 225
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "concept": "octet rule and ion charge",
+      "question": "What does the octet rule help predict for atoms of the main-group elements?",
+      "retryQuestion": "Which prediction is made using the octet rule for main-group atoms?",
+      "explanation": "The octet rule predicts the charge that ions of these atoms will have, such as Group 1 elements tending to form +1 ions.",
+      "type": "multiple_choice",
+      "choices": [
+        "The mass number of the atom.",
+        "The number of isotopes that exist.",
+        "The number of neutrons in the nucleus.",
+        "The charge that ions of these atoms will have."
+      ],
+      "answerIndex": 3,
+      "answer": "The charge that ions of these atoms will have."
+    },
+    {
+      "id": "q2",
+      "concept": "molar mass calculation",
+      "question": "How is the molar mass of a compound determined?",
+      "retryQuestion": "What is the correct way to find the molar mass of a compound?",
+      "explanation": "The molar mass of a compound is the sum of the atomic masses of all atoms in its chemical formula.",
+      "type": "multiple_choice",
+      "choices": [
+        "It is the sum of the atomic masses of the atoms in the compound.",
+        "It is the average of the atomic masses of the elements in the compound.",
+        "It is the atomic mass of the heaviest element in the compound.",
+        "It is the atomic mass of the first element listed in the formula."
+      ],
+      "answerIndex": 0,
+      "answer": "It is the sum of the atomic masses of the atoms in the compound."
+    },
+    {
+      "id": "q3",
+      "concept": "periodic trends prediction vs explanation",
+      "question": "The periodic table helps predict trends in atomic properties and explains them.",
+      "retryQuestion": "The periodic table explains the trends in atomic properties that it helps predict.",
+      "explanation": "The periodic table organizes elements so that patterns such as ionization energy and atomic radius can be predicted, but the table itself does not provide the underlying reasons for those patterns.",
+      "type": "true_false",
+      "answer": false,
+      "correction": "The periodic table helps predict trends in atomic properties, but it does not explain them."
+    },
+    {
+      "id": "q4",
+      "concept": "empirical formula determination",
+      "question": "After converting the masses of the elements to moles, what is the next step to determine the empirical formula?",
+      "retryQuestion": "Once the masses of the elements have been converted to moles, what operation is performed on the mole values to obtain the relative subscripts of the empirical formula?",
+      "explanation": "The mole values are divided by the smallest of those values to obtain the relative subscripts, which are then used to write the empirical formula.",
+      "type": "short_answer",
+      "answer": "Divide each mole value by the smallest of the mole values.",
+      "rubricIdeas": [
+        "Divide each mole value by the smallest of the mole values."
+      ],
+      "acceptableAnswers": [
+        "Divide the moles by the smallest mole value."
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "Divide each mole value by the smallest of the mole values."
+        ],
+        "acceptableAnswers": [
+          "Divide each mole value by the smallest of the mole values.",
+          "Divide the moles by the smallest mole value."
+        ]
+      }
+    },
+    {
+      "id": "q5",
+      "concept": "ion charge trends",
+      "question": "What is the typical charge of an ion formed by an element in Group 16?",
+      "retryQuestion": "Which charge is most commonly taken by a Group 16 ion?",
+      "explanation": "Elements in Group 16 typically gain two electrons to achieve a stable electron configuration, resulting in a -2 charge.",
+      "type": "multiple_choice",
+      "choices": [
+        "-3",
+        "-1",
+        "-2",
+        "+2"
+      ],
+      "answerIndex": 2,
+      "answer": "-2"
+    },
+    {
+      "id": "q6",
+      "concept": "isotope abundance relationship",
+      "question": "How does the abundance of the isotope with mass 107 compare with that of the isotope with mass 109?",
+      "retryQuestion": "Which isotope is more abundant and what are the approximate percentages of each isotope?",
+      "explanation": "The isotope with mass 107 is more abundant, making up about 52% of the atoms, while the isotope with mass 109 makes up about 48%.",
+      "type": "short_answer",
+      "answer": "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%.",
+      "rubricIdeas": [
+        "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+      ],
+      "acceptableAnswers": [],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+        ],
+        "acceptableAnswers": [
+          "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+        ]
+      }
+    },
+    {
+      "id": "q7",
+      "concept": "common ion in chloride samples",
+      "question": "When comparing samples of different chlorides, the chloride ion is the common component.",
+      "retryQuestion": "The chloride ion is the shared component among different chloride samples.",
+      "explanation": "Each chloride compound contains chloride as the anion, so it is the ion common to all such samples.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "When comparing samples of different chlorides, the chloride ion is the common component."
+    },
+    {
+      "id": "q8",
+      "concept": "Coulomb's law charge-force relationship",
+      "question": "The greater the charge, the stronger the attractive force between charged particles.",
+      "retryQuestion": "A larger charge produces a stronger attractive force between charged particles.",
+      "explanation": "Coulomb's law states that the force between charged particles depends on both charge and distance, with force increasing as charge increases.",
+      "type": "true_false",
+      "answer": true,
+      "correction": "The greater the charge, the stronger the attractive force between charged particles."
+    },
+    {
+      "id": "q9",
+      "concept": "percent composition analysis",
+      "question": "How does comparing the measured chloride percentage in a sample to the expected percentage for a pure chloride help determine sample purity?",
+      "retryQuestion": "Which statement describes how the measured chloride percentage relative to the pure chloride percentage indicates the amount of impurity?",
+      "explanation": "The measured chloride percentage relative to the expected percentage for the pure compound shows what fraction of the sample is the pure chloride; the remaining fraction is impurity.",
+      "type": "multiple_choice",
+      "choices": [
+        "The measured chloride percentage directly gives the mass of impurity in the sample.",
+        "The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity.",
+        "The measured chloride percentage is compared to the expected percentage to find the identity of the impurity.",
+        "The measured chloride percentage is always equal to the expected percentage regardless of impurities."
+      ],
+      "answerIndex": 1,
+      "answer": "The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity."
+    },
+    {
+      "id": "q10",
+      "concept": "Coulomb's law distance-force relationship",
+      "question": "How does the attractive force between a nucleus and an electron change as the distance between them increases?",
+      "retryQuestion": "As the distance between a nucleus and an electron increases, what happens to the attractive force between them?",
+      "explanation": "Coulomb's law states that the attractive force between charged particles is inversely related to the square of the distance between them. Therefore, as the distance increases, the attractive force weakens.",
+      "type": "short_answer",
+      "answer": "The attractive force weakens.",
+      "rubricIdeas": [
+        "The attractive force weakens."
+      ],
+      "acceptableAnswers": [
+        "The attractive force decreases.",
+        "The attractive force becomes weaker."
+      ],
+      "shortAnswerMode": "proposition",
+      "rubricV2": {
+        "version": 2,
+        "mode": "proposition",
+        "requiredIdeas": [
+          "The attractive force weakens."
+        ],
+        "acceptableAnswers": [
+          "The attractive force weakens.",
+          "The attractive force decreases.",
+          "The attractive force becomes weaker."
+        ]
+      }
+    }
+  ],
+  "provenance": [
+    {
+      "callIndex": 0,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "ababd4192f95f8d9effa3d40869822a95d30e091e9ee3aa4560b430b116023d8"
+    },
+    {
+      "callIndex": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "questionFingerprint": "e0fc126b6f9b9c5a685768aaba031f16b9a525c744b364313e2575f96804a070"
+    },
+    {
+      "callIndex": 5,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "questionFingerprint": "a453224008b5e0c57771b5ad7c124c7c41826ce00d330b503572d0421811df11"
+    },
+    {
+      "callIndex": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "acf1335175d34d9068f3ab5bf2bea3f26f995a79f12742495dccb051c5a30102"
+    },
+    {
+      "callIndex": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "d1247e61e48e57366f10969135a2f719a8b7200d814fe578734226339d85c51f"
+    },
+    {
+      "callIndex": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "be50e7b6764404f2580d648accf9a8e239697f57ea59e4d9dc90459c5e8cdc4a"
+    },
+    {
+      "callIndex": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "56516bbd1a382b26c8be98f5a93f6a3d759d8f9a825d0faa879e05355a045f9b"
+    },
+    {
+      "callIndex": 10,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "c39e32db9d3ca103465c9aefd5930bfe7ca60725569ebbf77bec15cd81460cb5"
+    },
+    {
+      "callIndex": 11,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "8cdbee18d8fbd78a7dec170ca1149f355f2997593235a513fd21c61ad2817111"
+    },
+    {
+      "callIndex": 12,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "questionFingerprint": "c49bff03db271b69430b2b7ca2d79d149c978bae42eb60ceaf5ce4c9ea2b9442"
+    }
+  ],
+  "audits": [
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      },
+      {
+        "name": "true_false_polarity",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ],
+    [
+      {
+        "name": "production_validator",
+        "status": "PASS"
+      },
+      {
+        "name": "exact_duplicate",
+        "status": "PASS"
+      },
+      {
+        "name": "fragmentary_prompt",
+        "status": "PASS"
+      },
+      {
+        "name": "absolute_wording",
+        "status": "PASS"
+      },
+      {
+        "name": "answer_prompt_consistency",
+        "status": "PASS_ENGINE"
+      }
+    ]
+  ],
+  "grades": [
+    {
+      "ordinal": 1,
+      "response": "The charge that ions of these atoms will have.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that the octet rule helps predict the charge that ions of main-group elements will have.",
+        "matchedIdeas": [
+          "The charge that ions of these atoms will have."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 2,
+      "response": "It is the sum of the atomic masses of the atoms in the compound.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that molar mass is found by adding up the atomic masses of all the atoms in the compound's formula.",
+        "matchedIdeas": [
+          "Sum of the atomic masses of the atoms in the compound"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 3,
+      "response": "False",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the periodic table predicts trends but does not explain them.",
+        "matchedIdeas": [
+          "The periodic table predicts trends but does not explain them"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 4,
+      "response": "Divide each mole value by the smallest of the mole values.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies the next step: dividing each mole value by the smallest mole value to find the simplest whole-number ratio.",
+        "matchedIdeas": [
+          "Divide each mole value by the smallest of the mole values."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 5,
+      "response": "-2",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that Group 16 elements typically gain two electrons to form an ion with a -2 charge.",
+        "matchedIdeas": [
+          "Group 16 elements form ions with a -2 charge"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 6,
+      "response": "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the isotope with mass 107 is more abundant, at about 52%, compared to about 48% for the isotope with mass 109.",
+        "matchedIdeas": [
+          "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 7,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly identifies that the chloride ion is the shared component across different chloride samples.",
+        "matchedIdeas": [
+          "Chloride ion is the common component when comparing different chlorides"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 8,
+      "response": "True",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "You correctly identified that the statement is true, as the attractive force between charged particles increases with greater charge.",
+        "matchedIdeas": [
+          "Greater charge means stronger attractive force"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 9,
+      "response": "The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "Your response correctly identifies that the ratio of measured to expected chloride percentage reveals the fraction of pure chloride, with the remainder being impurity.",
+        "matchedIdeas": [
+          "Ratio of measured to expected chloride percentage gives fraction of pure chloride; rest is impurity"
+        ],
+        "source": "deepseek_local"
+      }
+    },
+    {
+      "ordinal": 10,
+      "response": "The attractive force weakens.",
+      "grade": {
+        "correct": true,
+        "confidence": "high",
+        "reason": "The response correctly states that the attractive force weakens as the distance increases.",
+        "matchedIdeas": [
+          "The attractive force weakens."
+        ],
+        "source": "deepseek_local"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "SOURCE_STARTED",
+      "elapsedMs": 1,
+      "videoId": "7HnHjnZbYNk"
+    },
+    {
+      "type": "CAPTIONS_COMPLETE",
+      "elapsedMs": 3846,
+      "videoId": "7HnHjnZbYNk",
+      "title": "AP Chemistry Unit 1 in 10 Minutes! | Atomic Structure and Properties",
+      "language": "en",
+      "durationSeconds": 671,
+      "segmentCount": 102,
+      "sourceSegmentCount": 102,
+      "characterCount": 8862,
+      "transcriptFingerprint": "8f8e0996",
+      "acquisition": "youtube_local_ytdlp"
+    },
+    {
+      "type": "PLAN_REQUESTED",
+      "elapsedMs": 3849,
+      "questionCount": 10,
+      "questionTypes": [
+        "multiple_choice",
+        "true_false",
+        "short_answer"
+      ],
+      "transport": "native-json",
+      "noFallback": true
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 10512,
+      "stage": "creating_questions",
+      "progress": 0.2,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 10532,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 12575,
+      "ordinal": 1,
+      "concept": "octet rule and ion charge",
+      "prompt": "What does the octet rule help predict for atoms of the main-group elements?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 12576,
+      "callIndex": 0,
+      "ordinal": 1,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2063,
+      "inputTokens": 9942,
+      "outputTokens": 187,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12576,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 12590,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 12609,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 14678,
+      "callIndex": 1,
+      "ordinal": 2,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "truncated_json",
+      "acceptedCount": 0,
+      "retryDelayMs": 208,
+      "callElapsedMs": 2087
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14678,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 208,
+      "reasonCode": "truncated_json",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 14886,
+      "stage": "creating_questions",
+      "progress": 0.272,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 2,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 14909,
+      "callIndex": 2,
+      "ordinal": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 16944,
+      "ordinal": 2,
+      "concept": "molar mass calculation",
+      "prompt": "How is the molar mass of a compound determined?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 16945,
+      "callIndex": 2,
+      "ordinal": 2,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2057,
+      "inputTokens": 10056,
+      "outputTokens": 177,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16945,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 16960,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 17047,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 18810,
+      "callIndex": 3,
+      "ordinal": 3,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "true_false_compound_claim",
+      "acceptedCount": 0,
+      "retryDelayMs": 238,
+      "callElapsedMs": 1850
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 18810,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "retryDelayMs": 238,
+      "reasonCode": "true_false_compound_claim",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 19055,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 2,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 2,
+      "retryKind": "structural",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 19063,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 20496,
+      "callIndex": 4,
+      "ordinal": 3,
+      "ordinalAttempt": 2,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "retry_question_invalid",
+      "acceptedCount": 0,
+      "retryDelayMs": 388,
+      "callElapsedMs": 1441
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20497,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "retryDelayMs": 388,
+      "reasonCode": "retry_question_invalid",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 20902,
+      "stage": "creating_questions",
+      "progress": 0.344,
+      "attempt": 3,
+      "maxAttempts": 3,
+      "status": "retrying",
+      "retryOrdinal": 3,
+      "ordinalAttempt": 3,
+      "retryKind": "structural",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 20951,
+      "callIndex": 5,
+      "ordinal": 3,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 22589,
+      "ordinal": 3,
+      "concept": "periodic trends prediction vs explanation",
+      "prompt": "The periodic table helps predict trends in atomic properties and explains them."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 22591,
+      "callIndex": 5,
+      "ordinal": 3,
+      "ordinalAttempt": 3,
+      "classification": "automatic_retry",
+      "retryKind": "structural",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1687,
+      "inputTokens": 10676,
+      "outputTokens": 137,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 22591,
+      "stage": "creating_questions",
+      "progress": 0.416,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 22615,
+      "stage": "creating_questions",
+      "progress": 0.416,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 22647,
+      "callIndex": 6,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 24913,
+      "ordinal": 4,
+      "concept": "empirical formula determination",
+      "prompt": "After converting the masses of the elements to moles, what is the next step to determine the empirical formula?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 24914,
+      "callIndex": 6,
+      "ordinal": 4,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2298,
+      "inputTokens": 10452,
+      "outputTokens": 211,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 24914,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 24944,
+      "stage": "creating_questions",
+      "progress": 0.488,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 24970,
+      "callIndex": 7,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 26719,
+      "ordinal": 5,
+      "concept": "ion charge trends",
+      "prompt": "What is the typical charge of an ion formed by an element in Group 16?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 26720,
+      "callIndex": 7,
+      "ordinal": 5,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1775,
+      "inputTokens": 10220,
+      "outputTokens": 104,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 26720,
+      "stage": "creating_questions",
+      "progress": 0.56,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 26761,
+      "stage": "creating_questions",
+      "progress": 0.56,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 26800,
+      "callIndex": 8,
+      "ordinal": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 29032,
+      "ordinal": 6,
+      "concept": "isotope abundance relationship",
+      "prompt": "How does the abundance of the isotope with mass 107 compare with that of the isotope with mass 109?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 29033,
+      "callIndex": 8,
+      "ordinal": 6,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2271,
+      "inputTokens": 10664,
+      "outputTokens": 162,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 29033,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 29053,
+      "stage": "creating_questions",
+      "progress": 0.632,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 29109,
+      "callIndex": 9,
+      "ordinal": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 30910,
+      "ordinal": 7,
+      "concept": "common ion in chloride samples",
+      "prompt": "When comparing samples of different chlorides, the chloride ion is the common component."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 30912,
+      "callIndex": 9,
+      "ordinal": 7,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1858,
+      "inputTokens": 10585,
+      "outputTokens": 101,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 30912,
+      "stage": "creating_questions",
+      "progress": 0.704,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 30940,
+      "stage": "creating_questions",
+      "progress": 0.704,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 30999,
+      "callIndex": 10,
+      "ordinal": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "true_false",
+      "elapsedMs": 32143,
+      "ordinal": 8,
+      "concept": "Coulomb's law charge-force relationship",
+      "prompt": "The greater the charge, the stronger the attractive force between charged particles."
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 32144,
+      "callIndex": 10,
+      "ordinal": 8,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 1203,
+      "inputTokens": 10593,
+      "outputTokens": 106,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 32144,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 32175,
+      "stage": "creating_questions",
+      "progress": 0.776,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 32258,
+      "callIndex": 11,
+      "ordinal": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "multiple_choice",
+      "elapsedMs": 35134,
+      "ordinal": 9,
+      "concept": "percent composition analysis",
+      "prompt": "How does comparing the measured chloride percentage in a sample to the expected percentage for a pure chloride help determine sample purity?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 35137,
+      "callIndex": 11,
+      "ordinal": 9,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2959,
+      "inputTokens": 10688,
+      "outputTokens": 222,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 35137,
+      "stage": "creating_questions",
+      "progress": 0.848,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "generating",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 35187,
+      "stage": "creating_questions",
+      "progress": 0.848,
+      "attempt": 1,
+      "maxAttempts": 3,
+      "status": "generating"
+    },
+    {
+      "type": "AI_CALL_STARTED",
+      "elapsedMs": 35278,
+      "callIndex": 12,
+      "ordinal": 10,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "acceptedCount": 0,
+      "retryDelayMs": 0
+    },
+    {
+      "type": "short_answer",
+      "elapsedMs": 37800,
+      "ordinal": 10,
+      "concept": "Coulomb's law distance-force relationship",
+      "prompt": "How does the attractive force between a nucleus and an electron change as the distance between them increases?"
+    },
+    {
+      "type": "AI_CALL_COMPLETED",
+      "elapsedMs": 37800,
+      "callIndex": 12,
+      "ordinal": 10,
+      "ordinalAttempt": 1,
+      "classification": "primary",
+      "outcome": "complete",
+      "acceptedCount": 1,
+      "retryDelayMs": 0,
+      "callElapsedMs": 2613,
+      "inputTokens": 10960,
+      "outputTokens": 205,
+      "reasoningTokens": 0
+    },
+    {
+      "type": "GENERATION_PROGRESS",
+      "elapsedMs": 37801,
+      "stage": "finalizing_questions",
+      "progress": 1,
+      "attempt": 1,
+      "maxAttempts": 1,
+      "status": "complete",
+      "recoverySessionId": "4534cc2c-081d-431d-9f2f-25f18af29bd9"
+    },
+    {
+      "type": "BANK_COMPLETE",
+      "elapsedMs": 37807,
+      "accepted": 10,
+      "requested": 10,
+      "aiCalls": 13,
+      "retryCount": 3,
+      "generationElapsedMs": 27295,
+      "promptVersion": "quiz-local-json-stream-v5.12",
+      "validatorVersion": "validator-minimal-gradeability-v5.3",
+      "userActionsRequired": 0
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 37809,
+      "ordinal": 1,
+      "questionType": "multiple_choice",
+      "response": "The charge that ions of these atoms will have."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 39840,
+      "ordinal": 1,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that the octet rule helps predict the charge that ions of main-group elements will have.",
+      "matchedIdeas": [
+        "The charge that ions of these atoms will have."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 39840,
+      "ordinal": 2,
+      "questionType": "multiple_choice",
+      "response": "It is the sum of the atomic masses of the atoms in the compound."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 41806,
+      "ordinal": 2,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that molar mass is found by adding up the atomic masses of all the atoms in the compound's formula.",
+      "matchedIdeas": [
+        "Sum of the atomic masses of the atoms in the compound"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 41806,
+      "ordinal": 3,
+      "questionType": "true_false",
+      "response": "False"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 43595,
+      "ordinal": 3,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the periodic table predicts trends but does not explain them.",
+      "matchedIdeas": [
+        "The periodic table predicts trends but does not explain them"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 43595,
+      "ordinal": 4,
+      "questionType": "short_answer",
+      "response": "Divide each mole value by the smallest of the mole values."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 45315,
+      "ordinal": 4,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies the next step: dividing each mole value by the smallest mole value to find the simplest whole-number ratio.",
+      "matchedIdeas": [
+        "Divide each mole value by the smallest of the mole values."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 45316,
+      "ordinal": 5,
+      "questionType": "multiple_choice",
+      "response": "-2"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 47177,
+      "ordinal": 5,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that Group 16 elements typically gain two electrons to form an ion with a -2 charge.",
+      "matchedIdeas": [
+        "Group 16 elements form ions with a -2 charge"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 47178,
+      "ordinal": 6,
+      "questionType": "short_answer",
+      "response": "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 49128,
+      "ordinal": 6,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the isotope with mass 107 is more abundant, at about 52%, compared to about 48% for the isotope with mass 109.",
+      "matchedIdeas": [
+        "The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 49129,
+      "ordinal": 7,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 51047,
+      "ordinal": 7,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly identifies that the chloride ion is the shared component across different chloride samples.",
+      "matchedIdeas": [
+        "Chloride ion is the common component when comparing different chlorides"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 51048,
+      "ordinal": 8,
+      "questionType": "true_false",
+      "response": "True"
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 52950,
+      "ordinal": 8,
+      "correct": true,
+      "confidence": "high",
+      "reason": "You correctly identified that the statement is true, as the attractive force between charged particles increases with greater charge.",
+      "matchedIdeas": [
+        "Greater charge means stronger attractive force"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 52950,
+      "ordinal": 9,
+      "questionType": "multiple_choice",
+      "response": "The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 54850,
+      "ordinal": 9,
+      "correct": true,
+      "confidence": "high",
+      "reason": "Your response correctly identifies that the ratio of measured to expected chloride percentage reveals the fraction of pure chloride, with the remainder being impurity.",
+      "matchedIdeas": [
+        "Ratio of measured to expected chloride percentage gives fraction of pure chloride; rest is impurity"
+      ],
+      "source": "deepseek_local"
+    },
+    {
+      "type": "GRADE_STARTED",
+      "elapsedMs": 54851,
+      "ordinal": 10,
+      "questionType": "short_answer",
+      "response": "The attractive force weakens."
+    },
+    {
+      "type": "GRADE_COMPLETED",
+      "elapsedMs": 56620,
+      "ordinal": 10,
+      "correct": true,
+      "confidence": "high",
+      "reason": "The response correctly states that the attractive force weakens as the distance increases.",
+      "matchedIdeas": [
+        "The attractive force weakens."
+      ],
+      "source": "deepseek_local"
+    }
+  ]
+}
