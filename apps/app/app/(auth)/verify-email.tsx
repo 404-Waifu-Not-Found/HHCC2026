@@ -6,11 +6,19 @@ import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Surface } from "../../src/components/Surface";
 import { authClient } from "../../src/lib/auth-client";
+import {
+  parseNextPath,
+  type AuthNextSearchParams,
+} from "../../src/lib/auth-next";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { spacing, typography } from "../../src/theme/tokens";
 
 export default function VerifyEmailScreen() {
-  const { email } = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<
+    { email?: string } & AuthNextSearchParams
+  >();
+  const email = params.email;
+  const next = parseNextPath(params);
   const { t, theme } = useSettings();
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
@@ -85,7 +93,13 @@ export default function VerifyEmailScreen() {
             leadingIcon={
               <VoxelIcon name="sign-in" size={21} color={theme.textOnAction} />
             }
-            onPress={() => router.replace("/(auth)/sign-in")}
+            onPress={() =>
+              router.replace(
+                next
+                  ? { pathname: "/(auth)/sign-in", params: { next } }
+                  : "/(auth)/sign-in",
+              )
+            }
           >
             {t("signIn")}
           </PrimaryButton>
