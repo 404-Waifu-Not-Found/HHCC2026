@@ -393,7 +393,6 @@ ClipQuest/
 ├─ packages/
 │  ├─ contracts/               # Shared Zod API and quiz schemas
 │  └─ local-quiz-engine/       # Chrome/Android prompt, parser, validation, retry core
-├─ e2e/                        # Playwright browser journeys
 └─ docs/                       # Product guides, QA notes, and screenshots
 ```
 
@@ -471,7 +470,6 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm test
-npm run test:e2e
 npm run build
 npm run cf:types
 npm run cf:dry-run
@@ -479,7 +477,7 @@ npm run cf:dry-run
 
 The suite covers caption parsing and timestamp removal, one-character SSE/JSON fragmentation, early question emission, resumable suffix generation, retry budgets, the versioned extension channel, mixed question types, true/false balance, two-stage multiple-choice randomization, ordered/idempotent singleton imports, generating-attempt races, waiting and automatic-recovery states, legacy pipeline compatibility, learner feedback, the completion recap, and completion flows.
 
-The same format, lint, typecheck, unit, extension-packaging, and Playwright steps run on every pull request and every push to `main` in [GitHub Actions](./.github/workflows/ci.yml). The repository forces LF line endings through `.gitattributes`, and the extension packager falls back to a built-in ZIP writer when the `zip` CLI is missing, so the gate behaves identically on macOS, Linux, and Windows. Two notes for Windows contributors: a clone made before the LF policy keeps its CRLF files until you run `git config core.autocrlf false && git rm -r --cached -q . && git reset --hard` from a clean tree; and when the built-in ZIP writer is used, `npm run dev:web`/`build` leave the tracked release archive `apps/app/public/clipquest-captions-extension.zip` untouched (Chrome loads the unpacked `apps/extension/dist` folder), so only machines with the `zip` CLI refresh that asset.
+The same format, lint, typecheck, unit, and extension-packaging steps run on every pull request and every push to `main` in [GitHub Actions](./.github/workflows/ci.yml). The repository forces LF line endings through `.gitattributes`, and the extension packager falls back to a built-in ZIP writer when the `zip` CLI is missing, so the gate behaves identically on macOS, Linux, and Windows. Two notes for Windows contributors: a clone made before the LF policy keeps its CRLF files until you run `git config core.autocrlf false && git rm -r --cached -q . && git reset --hard` from a clean tree; and when the built-in ZIP writer is used, `npm run dev:web`/`build` leave the tracked release archive `apps/app/public/clipquest-captions-extension.zip` untouched (Chrome loads the unpacked `apps/extension/dist` folder), so only machines with the `zip` CLI refresh that asset.
 
 For a real extension smoke test with Chrome available:
 

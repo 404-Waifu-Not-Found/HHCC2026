@@ -97,7 +97,6 @@ for the learner or the teacher.
 git clone https://github.com/404-Waifu-Not-Found/HHCC2026.git && cd HHCC2026
 npm ci
 npm run typecheck && npm test          # the same gate CI runs
-npm run test:e2e                       # mocked Playwright journeys (Chrome required)
 ```
 
 The local Worker needs `apps/api/.dev.vars` (see `.dev.vars.example`); account e-mail
