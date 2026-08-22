@@ -242,8 +242,8 @@ The generation screen uses one fixed-duration, time-linear clock for time to que
 
 These captures show the current deployed library and leaderboard surfaces, including progress cards, learner avatars, and community ranking.
 
-| Library                                                                                  | Leaderboard                                                                                      |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Library | Leaderboard |
+| ------- | ----------- |
 | ![Current ClipQuest library](./docs/screenshots/final/production-library-2026-08-22.png) | ![Current ClipQuest leaderboard](./docs/screenshots/final/production-leaderboard-2026-08-22.png) |
 
 ### Link-first home
@@ -284,8 +284,8 @@ The completion screen pairs the score and mastery state with a "Right first try"
 
 Leaderboard entries are interactive. Selecting a learner opens a read-only public profile with their avatar, completed quizzes, total learning time, and daily activity history.
 
-| Library progress cards                                                                          | Leaderboard                                                                                                                |
-| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Library progress cards | Leaderboard |
+| ---------------------- | ----------- |
 | ![ClipQuest library progress cards](./docs/screenshots/final/production-library-2026-08-22.png) | ![ClipQuest leaderboard with learner avatars and progress](./docs/screenshots/final/production-leaderboard-2026-08-22.png) |
 
 ### Mobile learning and completion
