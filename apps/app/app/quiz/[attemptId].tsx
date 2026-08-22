@@ -868,6 +868,7 @@ export default function QuizScreen() {
               index={1}
               style={[
                 styles.statItem,
+                styles.masteryStatItem,
                 showCompactCompletionStats && styles.statItemCompact,
               ]}
             >
@@ -2011,6 +2012,7 @@ const styles = StyleSheet.create({
     flexWrap: "nowrap",
   },
   statItem: { minWidth: 132, flex: 1 },
+  masteryStatItem: { flexGrow: 1.35 },
   statItemCompact: { width: "100%", flexGrow: 0 },
   completeActions: {
     width: "100%",
