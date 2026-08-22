@@ -341,9 +341,7 @@ export default function CreateQuestScreen() {
                 value={quizLanguage}
                 onChange={(value) => setQuizLanguage(value as AppLanguage)}
                 options={
-                  [
-                    { value: "en", label: t("languageEnglish") },
-                  ] as const
+                  [{ value: "en", label: t("languageEnglish") }] as const
                 }
               />
             </SettingGroup>

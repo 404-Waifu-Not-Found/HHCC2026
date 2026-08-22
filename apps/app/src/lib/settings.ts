@@ -16,9 +16,7 @@ export function parseStoredSettings(stored: string | null): StoredSettings {
   try {
     const candidate = JSON.parse(stored) as Record<string, unknown>;
     return {
-      ...(candidate.locale === "en"
-        ? { locale: candidate.locale }
-        : {}),
+      ...(candidate.locale === "en" ? { locale: candidate.locale } : {}),
       ...(candidate.themeMode === "light" ||
       candidate.themeMode === "dark" ||
       candidate.themeMode === "system"

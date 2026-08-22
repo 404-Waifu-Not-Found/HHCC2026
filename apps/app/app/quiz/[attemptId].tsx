@@ -575,7 +575,10 @@ export default function QuizScreen() {
   const streamIndicator = generation ? (
     <QuestionStreamIndicator generation={generation} />
   ) : undefined;
-  const comboSummary = useMemo(() => summarizeCombo(recapEntries), [recapEntries]);
+  const comboSummary = useMemo(
+    () => summarizeCombo(recapEntries),
+    [recapEntries],
+  );
 
   const submit = async () => {
     if (!question || !canSubmit || answer === undefined) {
@@ -885,7 +888,11 @@ export default function QuizScreen() {
                   label={t("bestCombo")}
                   tone="warning"
                   icon={
-                    <VoxelIcon name="progress" size={22} color={theme.warning} />
+                    <VoxelIcon
+                      name="progress"
+                      size={22}
+                      color={theme.warning}
+                    />
                   }
                 />
               </StaggerItem>
@@ -903,7 +910,11 @@ export default function QuizScreen() {
                   label={t("comboBonus")}
                   tone="secondary"
                   icon={
-                    <VoxelIcon name="target" size={22} color={theme.secondary} />
+                    <VoxelIcon
+                      name="target"
+                      size={22}
+                      color={theme.secondary}
+                    />
                   }
                 />
               </StaggerItem>
@@ -1311,7 +1322,10 @@ export default function QuizScreen() {
                     color={theme.secondaryPressed}
                   />
                   <Text
-                    style={[styles.retryText, { color: theme.secondaryPressed }]}
+                    style={[
+                      styles.retryText,
+                      { color: theme.secondaryPressed },
+                    ]}
                   >
                     {t("retryingConcept")}
                   </Text>
@@ -1324,7 +1338,9 @@ export default function QuizScreen() {
                     styles.comboBadge,
                     {
                       backgroundColor:
-                        activeCombo > 1 ? theme.warningSoft : theme.surfaceSunken,
+                        activeCombo > 1
+                          ? theme.warningSoft
+                          : theme.surfaceSunken,
                       borderColor:
                         activeCombo > 1 ? theme.warning : theme.borderStrong,
                     },
@@ -1338,7 +1354,10 @@ export default function QuizScreen() {
                   <Text
                     style={[
                       styles.comboText,
-                      { color: activeCombo > 1 ? theme.warning : theme.textMuted },
+                      {
+                        color:
+                          activeCombo > 1 ? theme.warning : theme.textMuted,
+                      },
                     ]}
                   >
                     {`${t("combo")} x${activeCombo}`}
