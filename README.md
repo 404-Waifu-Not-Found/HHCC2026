@@ -64,14 +64,15 @@
 </p>
 
 > [!TIP]
-> **HHCC 2026 judges — start here.** ClipQuest is the **Iteration Track** entry from team
+> **HHCC 2026 judges — this is your fastest path.** ClipQuest is the **Iteration Track** entry from team
 > `@404-Waifu-Not-Found/cos`, submitted under the **Education** theme. The five-minute
-> version — the learning problem, how each feature maps to learning science (retrieval
+> judge brief — the learning problem, how each feature maps to learning science (retrieval
 > practice, immediate corrective feedback, adaptive retries, a missed-concept recap,
 > spaced review with mastery states, a consolidation cheat sheet), what is verified in
-> production, and how to try it in two minutes — is in
+> production, the honest current limitation, and how to try it in two minutes — is in
 > **[docs/HACKATHON.md](./docs/HACKATHON.md)**. The [judge briefing](#judge-briefing)
-> directly below maps this repository to the handbook's five scoring dimensions.
+> below maps the repository to the handbook's five scoring dimensions. For the shortest
+> visual overview, open the **[seven-page judge PDF](./output/pdf/ClipQuest_Project_Description.pdf)**.
 > Everything after it is the full engineering reference.
 >
 > **Pre-event baseline:** one week before HHCC 2026 this repository contained only a short
@@ -83,7 +84,11 @@
 
 <a id="judge-briefing"></a>
 
-## 🏆 HHCC 2026 judge briefing
+## 🏆 HHCC 2026 judge briefing — score the proof, not the pitch
+
+Use this section as the judging index: start with the live product, verify the learner loop,
+then use the linked QA and architecture evidence to test the claims. The project is intentionally
+explicit about its current limitation instead of presenting roadmap work as complete.
 
 ### Submission at a glance
 
