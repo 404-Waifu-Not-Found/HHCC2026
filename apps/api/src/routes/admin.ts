@@ -64,6 +64,17 @@ const GenerationListQuerySchema = ListQuerySchema.extend({
 });
 
 type CountRow = { count: number };
+type LearningQualityRow = {
+  first_answered: number | null;
+  first_correct: number | null;
+  first_wrong: number | null;
+  retried_questions: number | null;
+  corrected_questions: number | null;
+};
+type AttemptCompletionRow = {
+  total_attempts: number | null;
+  completed_attempts: number | null;
+};
 type UserRow = {
   id: string;
   name: string;
@@ -109,6 +120,7 @@ adminRouter.get(
       lessons7d,
       attempts7d,
       generationCounts,
+      learningMetrics,
       recentFailures,
     ] = await Promise.all([
       count(c.env.DB, "SELECT COUNT(*) AS count FROM user"),
@@ -132,6 +144,7 @@ adminRouter.get(
         [weekAgo],
       ),
       readAdminGenerationCounts(c.env.DB),
+      readAdminLearningMetrics(c.env.DB),
       readRecentGenerationFailures(c.env.DB),
     ]);
 
@@ -155,6 +168,7 @@ adminRouter.get(
           lessons7d,
           completedAttempts7d: attempts7d,
         },
+        learningMetrics,
         recentFailures,
       }),
     );
@@ -569,6 +583,81 @@ function parseListQuery<T extends z.ZodType>(
     );
   }
   return parsed.data;
+}
+
+async function readAdminLearningMetrics(db: D1Database): Promise<{
+  questionQualityRate: number;
+  retryRate: number;
+  completionRate: number;
+  correctionRate: number;
+}> {
+  const [quality, completion] = await Promise.all([
+    db
+      .prepare(
+        `WITH answer_scope AS (
+           SELECT ans.attempt_id, ans.question_id, ans.variant_index, ans.is_correct
+           FROM answers ans
+           JOIN attempts a ON a.id = ans.attempt_id
+           JOIN quiz_banks q ON q.id = a.quiz_id
+           JOIN videos v ON v.id = q.video_id
+           WHERE v.source = 'youtube'
+         ),
+         first_answers AS (
+           SELECT attempt_id, question_id, is_correct
+           FROM answer_scope
+           WHERE variant_index = 0
+         ),
+         retry_answers AS (
+           SELECT DISTINCT attempt_id, question_id, is_correct
+           FROM answer_scope
+           WHERE variant_index > 0
+         )
+         SELECT
+           (SELECT COUNT(*) FROM first_answers) AS first_answered,
+           (SELECT COUNT(*) FROM first_answers WHERE is_correct = 1) AS first_correct,
+           (SELECT COUNT(*) FROM first_answers WHERE is_correct = 0) AS first_wrong,
+           (SELECT COUNT(*) FROM retry_answers) AS retried_questions,
+           (SELECT COUNT(*) FROM first_answers f
+            WHERE f.is_correct = 0
+              AND EXISTS (
+                SELECT 1
+                FROM retry_answers r
+                WHERE r.attempt_id = f.attempt_id
+                  AND r.question_id = f.question_id
+                  AND r.is_correct = 1
+              )) AS corrected_questions`,
+      )
+      .first<LearningQualityRow>(),
+    db
+      .prepare(
+        `SELECT
+           COUNT(*) AS total_attempts,
+           SUM(CASE WHEN a.status = 'complete' THEN 1 ELSE 0 END) AS completed_attempts
+         FROM attempts a
+         JOIN quiz_banks q ON q.id = a.quiz_id
+         JOIN videos v ON v.id = q.video_id
+         WHERE v.source = 'youtube'`,
+      )
+      .first<AttemptCompletionRow>(),
+  ]);
+  const firstAnswered = Number(quality?.first_answered ?? 0);
+  const firstCorrect = Number(quality?.first_correct ?? 0);
+  const firstWrong = Number(quality?.first_wrong ?? 0);
+  const retriedQuestions = Number(quality?.retried_questions ?? 0);
+  const correctedQuestions = Number(quality?.corrected_questions ?? 0);
+  const totalAttempts = Number(completion?.total_attempts ?? 0);
+  const completedAttempts = Number(completion?.completed_attempts ?? 0);
+  return {
+    questionQualityRate: percentage(firstCorrect, firstAnswered),
+    retryRate: percentage(retriedQuestions, firstAnswered),
+    completionRate: percentage(completedAttempts, totalAttempts),
+    correctionRate: percentage(correctedQuestions, firstWrong),
+  };
+}
+
+function percentage(part: number, whole: number): number {
+  if (!Number.isFinite(part) || !Number.isFinite(whole) || whole <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((part / whole) * 1_000) / 10));
 }
 
 function toIso(value: number): string {

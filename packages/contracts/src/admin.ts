@@ -41,6 +41,12 @@ export const AdminOverviewResponseSchema = z.object({
     lessons7d: z.number().int().nonnegative(),
     completedAttempts7d: z.number().int().nonnegative(),
   }),
+  learningMetrics: z.object({
+    questionQualityRate: z.number().min(0).max(100),
+    retryRate: z.number().min(0).max(100),
+    completionRate: z.number().min(0).max(100),
+    correctionRate: z.number().min(0).max(100),
+  }),
   recentFailures: z.array(
     z.object({
       id: z.string(),

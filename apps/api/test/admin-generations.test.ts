@@ -134,6 +134,13 @@ function createDatabase(): SqliteD1Adapter {
       status TEXT NOT NULL,
       completed_at INTEGER
     );
+    CREATE TABLE answers (
+      id TEXT PRIMARY KEY,
+      attempt_id TEXT NOT NULL,
+      question_id TEXT NOT NULL,
+      is_correct INTEGER NOT NULL,
+      variant_index INTEGER NOT NULL
+    );
     CREATE TABLE d1_migrations (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
@@ -274,6 +281,48 @@ function createDatabase(): SqliteD1Adapter {
     null,
     0,
     NOW - 20_000,
+  );
+  sqlite
+    .prepare("INSERT INTO attempts VALUES (?, ?, ?, ?)")
+    .run(
+      "attempt-ready-complete",
+      "33333333-3333-4333-8333-333333333334",
+      "complete",
+      NOW - 2_000,
+    );
+  sqlite
+    .prepare("INSERT INTO attempts VALUES (?, ?, ?, ?)")
+    .run("attempt-ready-active", "33333333-3333-4333-8333-333333333334", "active", null);
+  const insertAnswer = sqlite.prepare(
+    "INSERT INTO answers VALUES (?, ?, ?, ?, ?)",
+  );
+  insertAnswer.run(
+    "answer-1",
+    "attempt-ready-complete",
+    "33333333-3333-4333-8333-333333333334-question-0",
+    1,
+    0,
+  );
+  insertAnswer.run(
+    "answer-2",
+    "attempt-ready-complete",
+    "33333333-3333-4333-8333-333333333334-question-1",
+    0,
+    0,
+  );
+  insertAnswer.run(
+    "answer-3",
+    "attempt-ready-complete",
+    "33333333-3333-4333-8333-333333333334-question-1",
+    1,
+    1,
+  );
+  insertAnswer.run(
+    "answer-4",
+    "attempt-ready-active",
+    "33333333-3333-4333-8333-333333333334-question-2",
+    0,
+    0,
   );
   return new SqliteD1Adapter(sqlite);
 }
@@ -456,6 +505,12 @@ describe("admin progressive generation visibility", () => {
     const body = (await response.json()) as Record<string, any>;
     expect(response.status).toBe(200);
     expect(body.totals).toMatchObject({ activeJobs: 2, failedJobs: 1 });
+    expect(body.learningMetrics).toEqual({
+      questionQualityRate: 33.3,
+      retryRate: 33.3,
+      completionRate: 50,
+      correctionRate: 50,
+    });
     expect(body.recentFailures).toHaveLength(1);
     expect(body.recentFailures[0].errorMessage).toBeNull();
     expect(JSON.stringify(body.recentFailures)).not.toMatch(

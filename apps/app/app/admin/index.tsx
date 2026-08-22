@@ -76,6 +76,39 @@ export default function AdminOverviewScreen() {
                 }
               />
             </View>
+            <AdminSection
+              title={copy.learningQualityKpis}
+              description={copy.learningQualityKpisBody}
+            >
+              <View style={styles.stats}>
+                <StatTile
+                  value={percentValue(data.learningMetrics.questionQualityRate)}
+                  label={copy.questionQualityRate}
+                  tone="success"
+                  icon={<VoxelIcon name="correct" size={23} color={theme.success} />}
+                />
+                <StatTile
+                  value={percentValue(data.learningMetrics.retryRate)}
+                  label={copy.retryRate}
+                  tone="warning"
+                  icon={<VoxelIcon name="refresh" size={23} color={theme.warning} />}
+                />
+                <StatTile
+                  value={percentValue(data.learningMetrics.completionRate)}
+                  label={copy.completionRate}
+                  tone="primary"
+                  icon={<VoxelIcon name="target" size={23} color={theme.primary} />}
+                />
+                <StatTile
+                  value={percentValue(data.learningMetrics.correctionRate)}
+                  label={copy.correctionRate}
+                  tone="secondary"
+                  icon={
+                    <VoxelIcon name="progress" size={23} color={theme.secondary} />
+                  }
+                />
+              </View>
+            </AdminSection>
 
             <AdminTwoColumn>
               <View style={styles.columnWide}>
@@ -207,6 +240,10 @@ function ActivityRow({ label, value }: { label: string; value: number }) {
       </Text>
     </View>
   );
+}
+
+function percentValue(value: number): string {
+  return `${value.toFixed(1)}%`;
 }
 
 const styles = StyleSheet.create({
