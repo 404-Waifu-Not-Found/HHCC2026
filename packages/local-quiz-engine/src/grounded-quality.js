@@ -319,6 +319,8 @@ const CONCEPTUAL_QUESTION_PATTERNS = [
 
 const EXAMPLE_SPECIFIC_QUESTION_PATTERN =
   /^\s*(?:in|from|given|using|consider|based on)\b.{0,100}\b(?:example|scenario|case|sample|demonstration|story)\b/iu;
+const VIDEO_SPECIFIC_TRACE_PATTERN =
+  /\b(?:traced?|trace|traversal|iteration|loop|code snippet|array|matrix|table|diagram)\b.{0,120}\b(?:value|values|output|result|column|row|index|element|inherited|printed|displayed)\b|\bwhat\s+(?:value|values|output|result)s?\b.{0,100}\b(?:array|matrix|column|row|index|iteration|loop)\b/iu;
 
 // Presentation vehicles are not assessment concepts. Keep this deliberately
 // narrow so technical uses such as a network link or a DNA strand remain
@@ -611,6 +613,9 @@ export function questionConceptFailure(candidate) {
     return "source_framing_invalid";
   }
   if (EXAMPLE_SPECIFIC_QUESTION_PATTERN.test(question)) {
+    return "low_pedagogical_value";
+  }
+  if (VIDEO_SPECIFIC_TRACE_PATTERN.test(question)) {
     return "low_pedagogical_value";
   }
   if (CONTRADICTORY_CHEMISTRY_DEFINITION_PATTERN.test(inspected)) {
