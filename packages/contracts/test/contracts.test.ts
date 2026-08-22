@@ -22,6 +22,8 @@ import {
   LocalQuizContextSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
+  QuizStartRequestSchema,
+  QuestionCountSchema,
   CheatSheetDocumentSchema,
   CheatSheetResponseSchema,
   PushRegisterResponseSchema,
@@ -246,6 +248,30 @@ describe("session length", () => {
     ["long", 15],
   ] as const)("maps %s to %i questions", (length, count) => {
     expect(questionLimitForSession(length)).toBe(count);
+  });
+
+  it("accepts a custom question count for quiz starts", () => {
+    expect(questionLimitForSession("custom", 7)).toBe(7);
+    expect(QuestionCountSchema.parse(50)).toBe(50);
+    expect(
+      LocalConceptQuizResultSchema.safeParse(localQuizResult(50)).success,
+    ).toBe(true);
+    expect(
+      QuizStartRequestSchema.safeParse({
+        sessionLength: "custom",
+        questionCount: 7,
+        questionTypes: ["multiple_choice"],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a custom session length without a question count", () => {
+    expect(
+      QuizStartRequestSchema.safeParse({
+        sessionLength: "custom",
+        questionTypes: ["multiple_choice"],
+      }).success,
+    ).toBe(false);
   });
 
   it("carries progressive replay settings on Library cards", () => {
@@ -1344,7 +1370,7 @@ describe("workplace practice-set policy", () => {
 });
 
 function localQuizChunk(
-  questionCount: 5 | 10 | 15,
+  questionCount: number,
   startIndex: number,
 ): LocalConceptQuizChunk {
   const complete = localQuizResult(questionCount);
@@ -1363,7 +1389,7 @@ function localQuizChunk(
   };
 }
 
-function localQuizResult(questionCount: 5 | 10 | 15): LocalConceptQuizResult {
+function localQuizResult(questionCount: number): LocalConceptQuizResult {
   const questionTypes: QuizQuestionType[] = [
     "multiple_choice",
     "true_false",

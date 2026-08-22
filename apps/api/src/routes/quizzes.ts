@@ -14,6 +14,7 @@ import {
   PublicQuestionSchema,
   QuizStartRequestSchema,
   QuizStartResponseSchema,
+  SessionLengthSchema,
   questionLimitForSession,
   type MasteryState,
   type AttemptGenerationAvailability,
@@ -133,7 +134,7 @@ const AttemptRowSchema = z.object({
   mastery_state: MasteryStateSchema.nullable(),
   quiz_pipeline_version: z.number().int(),
   quiz_language: z.string(),
-  quiz_session_length: z.enum(["short", "medium", "long"]),
+  quiz_session_length: SessionLengthSchema,
   quiz_watched: z.number().int(),
   quiz_origin: z.enum(["quest", "workplace"]).default("quest"),
   quiz_affects_mastery: z.number().int().default(1),
@@ -349,7 +350,10 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     questions.data,
     input.questionTypes,
   );
-  const desired = questionLimitForSession(input.sessionLength);
+  const desired = questionLimitForSession(
+    input.sessionLength,
+    input.questionCount,
+  );
   if (
     progressiveSummary &&
     (desired !== progressiveSummary.plannedCount ||
@@ -783,6 +787,7 @@ quizzesRouter.get("/attempts/:attemptId/generation", async (c) => {
               videoId: attempt.video_id,
               quizLanguage: attempt.quiz_language,
               sessionLength: attempt.quiz_session_length,
+              questionCount: summary.plannedCount,
               questionTypes: summary.requestedQuestionTypes,
               watched: Boolean(attempt.quiz_watched),
               startIndex: summary.acceptedCount,
