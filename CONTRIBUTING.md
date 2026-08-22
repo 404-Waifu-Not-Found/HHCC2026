@@ -18,9 +18,8 @@ npm run typecheck -ws
 npm test
 ```
 
-Keep changes focused, follow existing TypeScript and React Native patterns, and update related documentation or tests when behavior changes.
+Keep changes focused, follow existing TypeScript and React patterns, and update related documentation or tests when behavior changes.
 
 ## Pull requests
 
 Describe the problem, the user-visible change, and the verification performed. Link related issues and call out migrations, deployment steps, or known limitations. Pull requests should pass the repository checks and receive review before merging.
-

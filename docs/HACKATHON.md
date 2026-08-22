@@ -8,7 +8,7 @@
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Live product** | <https://clipquest.ccwu.cc> (Chrome + the bundled ClipQuest extension + your own DeepSeek key)                                                                                 |
 | **Repository**   | <https://github.com/404-Waifu-Not-Found/HHCC2026>                                                                                                                              |
-| **Team**         | `@404-Waifu-Not-Found/cos` — UnoxyRich (lead, integration), JimmyfaQwQ (extension & AI workflow), ILikeLayla (web & product design), Justin-Yonardo (mobile, backend, quality) |
+| **Team** | `@404-Waifu-Not-Found/cos` — UnoxyRich (lead, integration), JimmyfaQwQ (extension & AI workflow), ILikeLayla (web & product design), Justin-Yonardo (backend, quality) |
 | **Demo video**   | `UnoxyRich_ClipQuest_Demo.mp4` — script in [`output/video/`](../output/video/UnoxyRich_ClipQuest_Demo_Script.md)                                                               |
 | **Deep dive**    | [README](../README.md) · [docs index](./README.md) · [QA evidence](../qa-results/)                                                                                             |
 
@@ -71,9 +71,6 @@ for the learner or the teacher.
   Cloudflare Workers/D1/R2; extension 0.8.31; the complete learner flow was exercised
   end-to-end on fresh public lessons on 2026-08-21 (question 1 in 6.4 s, 10/10 questions
   answered, 100 % stored, PDF downloaded and inspected). See [`HANDOFF.md`](../HANDOFF.md).
-- **Android / iOS** — the same local quiz engine runs inside an Expo app (v0.2.0). Signed
-  device builds have been installed and launched; store distribution and the full physical
-  device matrix remain open ([Android guide](./ANDROID-BETA.md), [iOS QA](../qa-results/ios-native-full-feature-qa-2026-08-18.md)).
 - **Quality gate** — `npm run format:check`, `lint`, `typecheck`, `test` (700+ unit,
   contract, API, app, extension, and engine tests) and 24 Playwright browser journeys run
   in [GitHub Actions](../.github/workflows/ci.yml) on every pull request and every push to `main`.
@@ -110,16 +107,15 @@ YouTube watch page ──► ClipQuest Local AI extension ──► DeepSeek (le
                             │  captions → plain text, question-by-question JSON
                             │  schema + grounding + duplicate + polarity validation
                             ▼
-                  ClipQuest web / native app  ──► Cloudflare Worker (Hono, Better Auth)
+                  ClipQuest web ───────────────► Cloudflare Worker (Hono, Better Auth)
                             │                          │ stores ONLY validated questions,
                             │                          │ attempts, mastery, cheat sheets
                             ▼                          ▼
                quiz → feedback → recap → PDF        D1 · KV · private R2
 ```
 
-Shared Zod contracts (`packages/contracts`) keep the extension, web, Android, iOS and
-Worker on one versioned quiz schema; `packages/local-quiz-engine` is the platform-neutral
-generation core.
+Shared Zod contracts (`packages/contracts`) keep the extension, web, and Worker on one
+versioned quiz schema; `packages/local-quiz-engine` contains the generation core.
 
 ## 7. Honest status
 
@@ -147,8 +143,8 @@ generation core.
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **UnoxyRich** (lead)   | Scope, shared contracts, cross-platform integration, release engineering, production verification, documentation |
 | **JimmyfaQwQ**         | Chrome extension, caption acquisition, DeepSeek prompt/validation/recovery pipeline, answer feedback and recap   |
-| **ILikeLayla (Layla)** | Learner journey, React Native/web screens, visual system, accessibility                                          |
-| **Justin-Yonardo**     | Expo mobile apps, Hono API and D1 schema, authentication, automated and device QA                                |
+| **ILikeLayla (Layla)** | Learner journey, web screens, visual system, accessibility |
+| **Justin-Yonardo** | Hono API and D1 schema, authentication, automated QA |
 
 Shared code review and joint live acceptance runs kept all platforms on the same quiz
 contract and learning goals.

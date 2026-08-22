@@ -68,10 +68,10 @@
 
 ### 3:45–4:10 — Architecture and proof
 
-**Visual:** One clean diagram: Chrome extension + web + Expo Android/iOS sharing Zod contracts and the local quiz engine; Cloudflare Workers, Hono, D1, Better Auth on the storage side; DeepSeek connected only to the learner's device. Then a quick cut to the GitHub Actions page with a green run and the `qa-results/` folder.
+**Visual:** One clean diagram: Chrome extension + web sharing Zod contracts and the local quiz engine; Cloudflare Workers, Hono, D1, Better Auth on the storage side; DeepSeek connected only to the learner's browser. Then a quick cut to the GitHub Actions page with a green run and the `qa-results/` folder.
 
 **Narration — UnoxyRich:**
-"ClipQuest is a TypeScript monorepo: React web, Expo Android and iOS, a Manifest V3 extension, and a Cloudflare Worker, all sharing one versioned quiz contract. Generation runs on the learner's device; the server stores only validated questions and progress — never captions, prompts, or keys. Seven hundred-plus tests and twenty-four browser journeys run in CI, and every production claim in the repo links to a dated acceptance report."
+"ClipQuest is a TypeScript monorepo: React web, a Manifest V3 extension, and a Cloudflare Worker, all sharing one versioned quiz contract. Generation runs in the learner's browser; the server stores only validated questions and progress — never captions, prompts, or keys. Seven hundred-plus tests and twenty-four browser journeys run in CI, and every production claim in the repo links to a dated acceptance report."
 
 ### 4:10–4:30 — Close
 

@@ -7,10 +7,7 @@ This index separates current operating guidance from dated design and QA evidenc
 - [HHCC 2026 judge brief](./HACKATHON.md): the learning problem, how each feature maps to learning science, what is built and verified, how to try it in two minutes, architecture, honest status, and team roles. Start here if you are evaluating the hackathon submission.
 - [Repository README and release status](../README.md#release-status): product architecture, current source contracts, verified production snapshot, development, verification, and privacy boundary.
 - [Production release](./PRODUCTION-RELEASE.md): migration, version upload, override smoke, promotion, rollback, and post-release generation-profile checks.
-- [Android private beta](./ANDROID-BETA.md): native architecture, SecureStore, caption-only generation, Sharesheet/App Links, EAS packaging, and device acceptance.
-- [Android 0.2.0 implementation QA — 2026-08-22](./QA-ANDROID-BETA-2026-08-22.md): local automated, APK-inspection, and emulator evidence plus the still-open EAS and physical-device gates.
-- [iOS 0.2.0 native QA and physical-install follow-up — 2026-08-22](../qa-results/ios-native-full-feature-qa-2026-08-22.md): simulator feature findings, local remediation, signed arm64 device build, installation evidence, and the remaining trust/credentialed-device gates.
-- [Cumulative local production-readiness remediation — 2026-08-22](../qa-results/local-production-readiness-remediation-2026-08-22.md): current local test, security, native-build, release-integrity, and remaining external-gate evidence. It is not proof of a push or deployment.
+- [Cumulative local production-readiness remediation — 2026-08-22](../qa-results/local-production-readiness-remediation-2026-08-22.md): current local test, security, release-integrity, and remaining external-gate evidence. It is not proof of a push or deployment.
 - [Operations console](./ADMIN-CONSOLE.md): roles, read-only Generation streams, safe telemetry, System metadata, and admin API surface.
 - Public profiles and leaderboard navigation: learner avatars, completed-quiz totals, server-tracked learning time, and year-long activity calendars are available without exposing private account details.
 - [Production quiz-generation QA — extension 0.8.5](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-22.md): latest official-site ten-video, 100-question learner run and current defects.
@@ -20,9 +17,7 @@ This index separates current operating guidance from dated design and QA evidenc
 
 ## Current verified snapshot
 
-The Android 0.2.0 source candidate now shares the local quiz engine with Chrome, builds a managed Android bundle for API 29–36, and passes local automated and emulator launch gates. It is **not yet a distributed private beta**: the EAS project, managed release signer, FCM credentials, App Links fingerprint, physical-device matrix, and ten-video Android acceptance remain unverified. See the dated Android report above.
-
-As observed on 2026-08-22, Worker `8350cd9a-e7ba-4b7e-883e-cd85796b8895` from Git `5d4a9e4146a4968c786439a92ad4b86c98a9332a` receives 100% of production traffic. `/health` reports prompt v5.12 as supported, v5.12 rollout disabled, v5.11 as the effective default, version affinity present, and native Android/iOS plus Chrome local-generation clients enabled. Remote D1 is migrated through `0020_generation_call_lifecycle.sql`. This verifies deployed capability and storage compatibility, not a completed v5.12 canary or real-client generation matrix.
+As observed on 2026-08-22, Worker `8350cd9a-e7ba-4b7e-883e-cd85796b8895` from Git `5d4a9e4146a4968c786439a92ad4b86c98a9332a` receives 100% of production traffic. `/health` reports prompt v5.12 as supported, v5.12 rollout disabled, v5.11 as the effective default, and version affinity present. Remote D1 is migrated through `0020_generation_call_lifecycle.sql`. This verifies deployed capability and storage compatibility, not a completed v5.12 canary or real-browser generation matrix.
 
 The 2026-08-22 Worker `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2` / Git `297747e` canary remains historical evidence. Its live Chrome matrix was stopped when the local network route presented a certificate for `183.192.65.101` instead of `clipquest.ccwu.cc`; it does not clear current general enablement.
 
@@ -37,13 +32,13 @@ Historical 2026-08-22 baseline:
 
 This snapshot is dated. Recheck `/health`, Wrangler deployment status, the D1 migration ledger, the installed extension, and one newly persisted bank before treating it as current.
 
-## Current web and native generation candidate
+## Current web generation candidate
 
-Extension `0.8.31` and native app `0.2.0` share the caption-only local engine. The checked-in rollout assigns `stable_non_thinking_v5_2`: result protocol `6`, capability `question-stream-v2`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, pipeline `9`, and progressive import `v4`. The first non-thinking DeepSeek call requests only question 1; the client validates and imports it before opening the attempt, then generates the remaining questions in small background batches. A rejected later object preserves the accepted prefix and triggers bounded AI repair of the first missing ordinal. There is no learner retry control or fallback generation.
+Extension `0.8.31` uses the caption-only local engine. The checked-in rollout assigns `stable_non_thinking_v5_2`: result protocol `6`, capability `question-stream-v2`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, pipeline `9`, and progressive import `v4`. The first non-thinking DeepSeek call requests only question 1; the client validates and imports it before opening the attempt, then generates the remaining questions in small background batches. A rejected later object preserves the accepted prefix and triggers bounded AI repair of the first missing ordinal. There is no learner retry control or fallback generation.
 
 Automated coverage proves question-1-first admission, exact requested/accepted call accounting, fixed-speed first-question progress, accepted-prefix preservation, later-ordinal repair, mixed question types, option mapping, True/False answers, short-answer rubrics, and an explicit completion-screen PDF download action.
 
-A commit, push, Worker deployment, matching extension installation, authenticated profile check, direct benchmark, and real-client matrices remain distinct evidence. Android additionally requires EAS signing, FCM/App Links configuration, and physical-device acceptance.
+A commit, push, Worker deployment, matching extension installation, authenticated profile check, and direct browser benchmark remain distinct evidence.
 
 ## QA and calibration
 

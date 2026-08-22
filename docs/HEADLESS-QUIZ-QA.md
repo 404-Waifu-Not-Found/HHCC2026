@@ -1,13 +1,12 @@
 # Headless quiz QA
 
 The headless runner exercises ClipQuest's production local DeepSeek generator,
-validators, retry policy, and reason-first answer grader without building or
-launching a mobile application.
+validators, retry policy, and reason-first answer grader.
 
 ## Credential
 
 Provide the local DeepSeek key through the process environment. The runner does
-not read the Chrome extension or native secure stores, and it never prints the
+not read browser extension storage, and it never prints the
 key.
 
 ```bash
@@ -25,12 +24,11 @@ npm run qa:quiz -- \
   --url "https://www.youtube.com/watch?v=JoscDcbAjbY" \
   --count 10 \
   --types all \
-  --transport native-json \
+  --transport stream \
   --answer-and-grade
 ```
 
-Use `--transport stream` for the Chrome/web response path or `--transport both`
-to run the native JSON and streamed response paths sequentially.
+Use `--transport stream` for the browser response path.
 
 ## Automatic recovery
 
