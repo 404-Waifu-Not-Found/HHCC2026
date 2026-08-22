@@ -141,6 +141,8 @@ describe("Android UI regressions", () => {
     expect(tabs).toContain('router.push("/profile" as never)');
     expect(settings).toContain('router.push("/profile" as never)');
     expect(profile).toContain("ProfileLearningStatsResponseSchema");
+    expect(profile).toContain("<QuizContributionCalendar");
+    expect(profile).toContain("stats.dailyQuizCompletions");
     expect(profile).toContain('t("username")');
     expect(profile).toContain('t("email")');
   });

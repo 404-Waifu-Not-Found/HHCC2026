@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { ProfileAvatar } from "../src/components/ProfileAvatar";
 import { IconButton } from "../src/components/IconButton";
+import { QuizContributionCalendar } from "../src/components/QuizContributionCalendar";
 import { Screen } from "../src/components/Screen";
 import { Surface } from "../src/components/Surface";
 import { useAppSession } from "../src/lib/auth-client";
@@ -101,6 +102,27 @@ export default function ProfileScreen() {
             accessibilityRole="header"
             style={[styles.sectionTitle, { color: theme.text }]}
           >
+            {t("quizActivity")}
+          </Text>
+          {stats ? (
+            <QuizContributionCalendar
+              completions={stats.dailyQuizCompletions}
+            />
+          ) : (
+            <ActivityIndicator
+              accessibilityLabel={t("loading")}
+              color={theme.secondary}
+            />
+          )}
+        </Surface>
+      </MotionView>
+
+      <MotionView preset="rise" delay={132}>
+        <Surface style={styles.section}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.sectionTitle, { color: theme.text }]}
+          >
             {t("profileDetails")}
           </Text>
           <ProfileField label={t("username")} value={displayName} />
@@ -113,7 +135,7 @@ export default function ProfileScreen() {
         </Surface>
       </MotionView>
 
-      <MotionView preset="rise" delay={132}>
+      <MotionView preset="rise" delay={176}>
         <Surface style={styles.section}>
           <Text
             accessibilityRole="header"

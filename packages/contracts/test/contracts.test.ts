@@ -19,6 +19,7 @@ import {
   LocalGenerationClientSchema,
   MinimalGenerationFailureCodeSchema,
   PromptFirstQuestionSchema,
+  ProfileLearningStatsResponseSchema,
   LocalQuizContextSchema,
   QuizGenerationProfileResponseSchema,
   QuizQuestionTypesSchema,
@@ -44,6 +45,36 @@ import {
   type WorkplaceSuggestionKind,
   masteryStateForScore,
 } from "../src/index";
+
+describe("profile learning stats", () => {
+  it("accepts bounded daily quiz completion history", () => {
+    expect(
+      ProfileLearningStatsResponseSchema.safeParse({
+        completedLessons: 3,
+        totalDurationSeconds: 900,
+        dailyQuizCompletions: [
+          { date: "2026-08-20", count: 2 },
+          { date: "2026-08-21", count: 1 },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects malformed dates and empty completion counts", () => {
+    for (const entry of [
+      { date: "08/20/2026", count: 2 },
+      { date: "2026-08-20", count: 0 },
+    ]) {
+      expect(
+        ProfileLearningStatsResponseSchema.safeParse({
+          completedLessons: 3,
+          totalDurationSeconds: 900,
+          dailyQuizCompletions: [entry],
+        }).success,
+      ).toBe(false);
+    }
+  });
+});
 
 const validCheatSheetDocument = {
   title: "Anesthesia mechanisms",

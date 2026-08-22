@@ -10,39 +10,59 @@ import type { ApiBindings } from "../middleware/authenticated";
 
 const MAX_AVATAR_BYTES = 1_500_000;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export const PROFILE_DAILY_COMPLETIONS_SQL = `SELECT date(completed_at / 1000, 'unixepoch') AS completion_date,
+              COUNT(*) AS completion_count
+         FROM attempts
+        WHERE user_id = ?
+          AND status = 'complete'
+          AND completed_at IS NOT NULL
+          AND completed_at >= ?
+        GROUP BY completion_date
+        ORDER BY completion_date ASC`;
 
 export const profileRouter = new Hono<ApiBindings>();
 
 profileRouter.get("/stats", async (c) => {
   const user = c.get("user");
-  const stats = await c.env.DB.prepare(
-    `SELECT
-      COUNT(*) AS completed_lessons,
-      COALESCE(SUM(completed.duration_seconds), 0) AS total_duration_seconds
-    FROM (
-      SELECT v.id, MAX(v.duration_seconds) AS duration_seconds
-      FROM videos v
-      WHERE v.owner_id = ?
-        AND EXISTS (
-          SELECT 1
-          FROM quiz_banks qb
-          JOIN attempts a ON a.quiz_id = qb.id
-          WHERE qb.video_id = v.id
-            AND a.user_id = v.owner_id
-            AND a.status = 'complete'
-        )
-      GROUP BY v.id
-    ) completed`,
-  )
-    .bind(user.id)
-    .first<{
-      completed_lessons: number | null;
-      total_duration_seconds: number | null;
-    }>();
+  const [stats, dailyCompletions] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+        COUNT(*) AS completed_lessons,
+        COALESCE(SUM(completed.duration_seconds), 0) AS total_duration_seconds
+      FROM (
+        SELECT v.id, MAX(v.duration_seconds) AS duration_seconds
+        FROM videos v
+        WHERE v.owner_id = ?
+          AND EXISTS (
+            SELECT 1
+            FROM quiz_banks qb
+            JOIN attempts a ON a.quiz_id = qb.id
+            WHERE qb.video_id = v.id
+              AND a.user_id = v.owner_id
+              AND a.status = 'complete'
+          )
+        GROUP BY v.id
+      ) completed`,
+    )
+      .bind(user.id)
+      .first<{
+        completed_lessons: number | null;
+        total_duration_seconds: number | null;
+      }>(),
+    c.env.DB.prepare(PROFILE_DAILY_COMPLETIONS_SQL)
+      .bind(user.id, Math.floor(now() / DAY_MS) * DAY_MS - 370 * DAY_MS)
+      .all<{ completion_date: string; completion_count: number }>(),
+  ]);
   return c.json(
     ProfileLearningStatsResponseSchema.parse({
       completedLessons: Number(stats?.completed_lessons ?? 0),
       totalDurationSeconds: Number(stats?.total_duration_seconds ?? 0),
+      dailyQuizCompletions: dailyCompletions.results.map((entry) => ({
+        date: entry.completion_date,
+        count: Number(entry.completion_count),
+      })),
     }),
   );
 });
