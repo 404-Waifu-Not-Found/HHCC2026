@@ -17,7 +17,6 @@ import {
   questionConceptFailure,
   questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
-  questionMatchesQuizLanguage,
   repairMultipleChoiceQuestionKind,
   stripQuestionSourceFraming,
 } from "./grounded-quality.js";
@@ -7332,8 +7331,7 @@ export async function generateQuizFromPlainText(
     );
   }
   const legacyAutomaticRecoveryMode = legacyMode && continuationStartIndex > 0;
-  const automaticMode =
-    legacyAutomaticRecoveryMode || !legacyMode;
+  const automaticMode = legacyAutomaticRecoveryMode || !legacyMode;
   const groundedMode = !legacyMode && automaticMode && !automaticV53Mode;
   input.groundedMode = groundedMode;
   input.conceptMasteryMode =
