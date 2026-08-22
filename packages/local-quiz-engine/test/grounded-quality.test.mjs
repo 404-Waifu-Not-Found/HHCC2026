@@ -10,6 +10,17 @@ import {
   promptFirstRetryQuestionFailure,
 } from "../src/local-generator.js";
 
+test("quiz questions reject example-specific recall framing", () => {
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "In the given example, which method is inherited by the TradesPerson class?",
+      answerText: "doSkilledWork",
+    }),
+    "low_pedagogical_value",
+  );
+});
+
 test("Simplified Chinese quizzes reject English learner-visible options", () => {
   const candidate = {
     question: "光合作用如何储存能量？",
