@@ -13,6 +13,7 @@ import { useAppSession } from "../../src/lib/auth-client";
 import { BrandLockup } from "../../src/components/BrandLockup";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { observePendingHandoffUser } from "../../src/state/pending-video-handoff";
+import { workplaceEnabled } from "../../src/config/features";
 import {
   borders,
   breakpoints,
@@ -86,15 +87,17 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="workplace"
-        options={{
-          title: t("workplace"),
-          tabBarIcon: ({ color, size }) => (
-            <VoxelIcon name="workplace" color={color} size={size} />
-          ),
-        }}
-      />
+      {workplaceEnabled ? (
+        <Tabs.Screen
+          name="workplace"
+          options={{
+            title: t("workplace"),
+            tabBarIcon: ({ color, size }) => (
+              <VoxelIcon name="workplace" color={color} size={size} />
+            ),
+          }}
+        />
+      ) : null}
       <Tabs.Screen
         name="settings"
         options={{
