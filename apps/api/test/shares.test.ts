@@ -137,7 +137,7 @@ function createDatabase() {
   // Run the real migration so the test exercises the shipped DDL.
   sqlite.exec(
     readFileSync(
-      resolve(import.meta.dirname, "../migrations/0026_quiz_shares.sql"),
+      resolve(import.meta.dirname, "../migrations/0027_quiz_shares.sql"),
       "utf8",
     ),
   );

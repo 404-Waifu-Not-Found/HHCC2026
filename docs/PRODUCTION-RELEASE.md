@@ -51,7 +51,7 @@ The checked-in rollout enables v5.2 and disables v5.3, v5.4, and v5.9-v5.12. `/h
 
 The same release adds backward-compatible Android client metadata, push-token unregister behavior, safe Android generation status, and a certificate-gated App Links endpoint. No D1 migration is required. Worker deployment, extension installation, EAS signing, physical-device acceptance, and real-video matrices remain separate release actions.
 
-Quest sharing adds D1 migration `0026_quiz_shares.sql` (two additive tables: `quiz_shares`, `quiz_share_claims`). Apply it with `npm run db:migrate:remote` **before** promoting the Worker version that mounts `/api/shares`; a Worker rollback leaves the tables unused and is safe. The public preview endpoint is rate limited per IP and exposes no question text.
+Quest sharing adds D1 migration `0027_quiz_shares.sql` (two additive tables: `quiz_shares`, `quiz_share_claims`). Apply it with `npm run db:migrate:remote` **before** promoting the Worker version that mounts `/api/shares`; a Worker rollback leaves the tables unused and is safe. The public preview endpoint is rate limited per IP and exposes no question text.
 
 ## One-time Cloudflare version affinity
 
