@@ -1325,6 +1325,7 @@ test("desktop learning journey and visual states", async ({ page }) => {
   await page.goto("/library");
   await expect(page.getByRole("heading", { name: "Library" })).toBeVisible();
   await capture(page, "desktop-library");
+  await capture(page, "desktop-library-score-actions");
 
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
@@ -1675,6 +1676,46 @@ test("dark theme stays polished across learner, auth, settings, and admin shells
     .toBe("rgb(16, 27, 21)");
   await capture(page, "dark-desktop-home");
 
+  await page.route("**/api/profile/leaderboard", async (route) => {
+    await json(route, {
+      entries: [
+        {
+          userId: "leader-1",
+          rank: 1,
+          name: "Avery Learner",
+          image: null,
+          completedQuizzes: 12,
+        },
+        {
+          userId: "leader-2",
+          rank: 2,
+          name: "Morgan Operator",
+          image: null,
+          completedQuizzes: 9,
+        },
+        {
+          userId: "leader-3",
+          rank: 3,
+          name: "Lin Student",
+          image: null,
+          completedQuizzes: 7,
+        },
+      ],
+    });
+  });
+  await page.goto("/leaderboard");
+  await expect(
+    page.getByTestId("motion-route-content").getByText("Leaderboard", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("motion-route-content").getByText("Avery Learner", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await capture(page, "desktop-leaderboard");
+
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await capture(page, "dark-desktop-settings");
@@ -1789,7 +1830,7 @@ test("admin operations console is responsive and uses real management contracts"
   await expect(page.getByText("Morgan Operator")).toBeVisible();
   await expect(page.getByRole("button", { name: "Suspend" })).toBeVisible();
   await capture(page, "admin-users-desktop-1440");
-  await page.getByRole("button", { name: "Suspend" }).click();
+  await page.getByRole("button", { name: "Suspend" }).click({ force: true });
   await page
     .getByLabel("Reason")
     .fill("Confirmed policy violation after support review");
@@ -1968,6 +2009,12 @@ async function installMocks(page: Page): Promise<Scenario> {
       await json(route, {
         totals: { users: 1284, lessons: 3762, activeJobs: 7, failedJobs: 3 },
         activity: { newUsers7d: 86, lessons7d: 412, completedAttempts7d: 1205 },
+        learningMetrics: {
+          questionQualityRate: 91.4,
+          retryRate: 18.7,
+          completionRate: 82.6,
+          correctionRate: 76.3,
+        },
         recentFailures: [
           {
             id: JOB_ID,
