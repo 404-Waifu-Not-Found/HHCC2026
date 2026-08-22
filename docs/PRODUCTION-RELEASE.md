@@ -6,15 +6,15 @@ ClipQuest deploys its Cloudflare Worker and content-hashed static assets as one 
 
 Verified on 2026-08-22:
 
-| Item                        | Production value                                                        |
-| --------------------------- | ----------------------------------------------------------------------- |
-| Worker version              | `8350cd9a-e7ba-4b7e-883e-cd85796b8895`                                  |
-| Worker tag / Git SHA        | `5d4a9e4146a4968c786439a92ad4b86c98a9332a`                              |
-| Extension source artifact   | `0.8.19`; Chrome 0.8.17 remains the minimum accepted version            |
-| Current generation metadata | prompt v5.12, validator v5.3, protocol 10, pipeline 9                   |
-| Generation rollout          | v5.12 disabled; v5.11 effective default                                 |
-| D1 migration                | `0020_generation_call_lifecycle.sql`                                    |
-| Remaining release gate      | immutable v5.12 canary plus complete Chrome real-browser matrix            |
+| Item                        | Production value                                                |
+| --------------------------- | --------------------------------------------------------------- |
+| Worker version              | `8350cd9a-e7ba-4b7e-883e-cd85796b8895`                          |
+| Worker tag / Git SHA        | `5d4a9e4146a4968c786439a92ad4b86c98a9332a`                      |
+| Extension source artifact   | `0.8.19`; Chrome 0.8.17 remains the minimum accepted version    |
+| Current generation metadata | prompt v5.12, validator v5.3, protocol 10, pipeline 9           |
+| Generation rollout          | v5.12 disabled; v5.11 effective default                         |
+| D1 migration                | `0020_generation_call_lifecycle.sql`                            |
+| Remaining release gate      | immutable v5.12 canary plus complete Chrome real-browser matrix |
 
 The public Cloudflare edge reports the exact SHA, version affinity, supported prompt metadata, and storage-only architecture. This baseline is deployment evidence only: it does not enable v5.12 or clear the official-site and physical-device matrices.
 

@@ -4,13 +4,13 @@
 > grounded quiz in about six seconds, grades every answer with reasoning, shows what you
 > missed, schedules a spaced review, and hands you a one-page cheat sheet.
 
-|                  |                                                                                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Live product** | <https://clipquest.ccwu.cc> (Chrome + the bundled ClipQuest extension + your own DeepSeek key)                                                                                 |
-| **Repository**   | <https://github.com/404-Waifu-Not-Found/HHCC2026>                                                                                                                              |
-| **Team** | `@404-Waifu-Not-Found/cos` — UnoxyRich (lead, integration), JimmyfaQwQ (extension & AI workflow), ILikeLayla (web & product design), Justin-Yonardo (backend, quality) |
-| **Demo video**   | `UnoxyRich_ClipQuest_Demo.mp4` — script in [`output/video/`](../output/video/UnoxyRich_ClipQuest_Demo_Script.md)                                                               |
-| **Deep dive**    | [README](../README.md) · [docs index](./README.md) · [QA evidence](../qa-results/)                                                                                             |
+|                  |                                                                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Live product** | <https://clipquest.ccwu.cc> (Chrome + the bundled ClipQuest extension + your own DeepSeek key)                                                                         |
+| **Repository**   | <https://github.com/404-Waifu-Not-Found/HHCC2026>                                                                                                                      |
+| **Team**         | `@404-Waifu-Not-Found/cos` — UnoxyRich (lead, integration), JimmyfaQwQ (extension & AI workflow), ILikeLayla (web & product design), Justin-Yonardo (backend, quality) |
+| **Demo video**   | `UnoxyRich_ClipQuest_Demo.mp4` — script in [`output/video/`](../output/video/UnoxyRich_ClipQuest_Demo_Script.md)                                                       |
+| **Deep dive**    | [README](../README.md) · [docs index](./README.md) · [QA evidence](../qa-results/)                                                                                     |
 
 ---
 
@@ -143,8 +143,8 @@ versioned quiz schema; `packages/local-quiz-engine` contains the generation core
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **UnoxyRich** (lead)   | Scope, shared contracts, cross-platform integration, release engineering, production verification, documentation |
 | **JimmyfaQwQ**         | Chrome extension, caption acquisition, DeepSeek prompt/validation/recovery pipeline, answer feedback and recap   |
-| **ILikeLayla (Layla)** | Learner journey, web screens, visual system, accessibility |
-| **Justin-Yonardo** | Hono API and D1 schema, authentication, automated QA |
+| **ILikeLayla (Layla)** | Learner journey, web screens, visual system, accessibility                                                       |
+| **Justin-Yonardo**     | Hono API and D1 schema, authentication, automated QA                                                             |
 
 Shared code review and joint live acceptance runs kept all platforms on the same quiz
 contract and learning goals.

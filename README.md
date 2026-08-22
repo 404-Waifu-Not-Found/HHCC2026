@@ -181,7 +181,7 @@ ClipQuest's interface takes product-craft cues from polished learning software�
 | Primary lockup    | The learning prism paired with a custom-cased Fredoka `ClipQuest` wordmark; constrained launcher icons retain the prism alone |
 | Iconography       | Individually generated, transparent, low-density isometric voxel PNGs resolved through a typed static registry                |
 | Typography        | Fredoka for short display copy and DM Sans for body/interface copy, with existing language fallbacks unchanged                |
-| Interaction       | 44 px minimum targets, 16–24 px radii, visible keyboard focus, semantic feedback, and reduced-motion support                |
+| Interaction       | 44 px minimum targets, 16–24 px radii, visible keyboard focus, semantic feedback, and reduced-motion support                  |
 | Platform identity | Deterministic derivatives for favicon, PWA, and browser-extension artwork                                                     |
 
 The learning prism has no face, body, limbs, clothing, pose, mood, or character reactions. Processing, success, and error states are communicated by status copy, semantic panels, and progress—not mascot behavior.
@@ -295,7 +295,7 @@ The language inventory below comes from the tracked repository and the web appli
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TypeScript and TSX                 | Web routes and components, Cloudflare Worker API, shared Zod contracts, Playwright, tests, and build configuration                                                               |
 | JavaScript and ESM (`.js`, `.mjs`) | Manifest V3 extension runtime, caption processing, local quiz generation, web workers, asset scripts, and packaging                                                              |
-| React ecosystem                    | React 19 and React DOM power the web product interface                                                                                                                            |
+| React ecosystem                    | React 19 and React DOM power the web product interface                                                                                                                           |
 | SQL                                | Twenty-six ordered D1 migrations for authentication, quiz storage, reliability, administration, progressive imports, safe call telemetry, recovery claims, and profile analytics |
 | HTML                               | Extension popup markup and the checked-in local extension QA harness                                                                                                             |
 | CSS                                | Extension popup presentation and interaction states                                                                                                                              |
@@ -314,15 +314,15 @@ The primary product runtime is TypeScript/React, the browser extension is JavaSc
 
 | Layer                | Technology                                                       | Responsibility                                                                                                                      |
 | -------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Web app              | React 19, React DOM                                              | Authentication, paste/import, lessons, feedback, mastery, administration, and themes                                                 |
+| Web app              | React 19, React DOM                                              | Authentication, paste/import, lessons, feedback, mastery, administration, and themes                                                |
 | Browser extension    | Chrome Manifest V3, JavaScript                                   | Web caption access, local streamed DeepSeek generation, retries, and canonical option randomization                                 |
 | Edge API             | Cloudflare Workers, Hono, scheduled triggers                     | Better Auth, ordered storage-only question imports, grading, availability, review scheduling, and static assets                     |
 | Data and assets      | D1, KV, private R2                                               | Accounts, videos, generating/passed banks, attempts, mastery, profile analytics, rate limits, thumbnails, avatars, and private PDFs |
-| Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash                             | Progressive prompts, per-question validation, automatic repair, shuffling, and serialization                                          |
+| Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash                             | Progressive prompts, per-question validation, automatic repair, shuffling, and serialization                                        |
 | Caption acquisition  | YouTube public caption tracks                                    | Caption-only source text; missing or incomplete captions fail before generation                                                     |
 | Shared contracts     | TypeScript, Zod                                                  | Versioned page protocol, quiz schemas, API requests, and server validation                                                          |
 | Quality and delivery | Vitest, Node test runner, Playwright, ESLint, Prettier, Wrangler | Contract tests, browser journeys, static checks, builds, and deployment                                                             |
-| Visual identity      | Semantic tokens, typed voxel registry, Sharp                     | Shared light/dark themes and deterministic web and extension assets                                                                    |
+| Visual identity      | Semantic tokens, typed voxel registry, Sharp                     | Shared light/dark themes and deterministic web and extension assets                                                                 |
 
 ### [Web application](./apps/app/)
 
