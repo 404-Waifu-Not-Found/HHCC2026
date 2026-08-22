@@ -3125,6 +3125,7 @@ export const LeaderboardEntrySchema = z
     userId: z.string().min(1).max(128),
     rank: z.number().int().positive(),
     name: z.string().min(1).max(120),
+    image: z.string().nullable(),
     completedQuizzes: z.number().int().nonnegative(),
   })
   .strict();
