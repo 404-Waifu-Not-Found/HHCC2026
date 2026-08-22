@@ -74,6 +74,11 @@ for the learner or the teacher.
 - **Android / iOS** — the same local quiz engine runs inside an Expo app (v0.2.0). Signed
   device builds have been installed and launched; store distribution and the full physical
   device matrix remain open ([Android guide](./ANDROID-BETA.md), [iOS QA](../qa-results/ios-native-full-feature-qa-2026-08-18.md)).
+- **Quest sharing (web-first)** — a finished quest publishes one stable link
+  (`/s/<token>`). Anyone can open the public preview (title, concept names, question
+  count and types — never the questions or answers); a signed-in recipient gets their
+  own copy of the validated bank and works it with the full feedback / recap / mastery
+  loop. Covered by API tests (`apps/api/test/shares.test.ts`) and a Playwright journey.
 - **Quality gate** — `npm run format:check`, `lint`, `typecheck`, `test` (700+ unit,
   contract, API, app, extension, and engine tests) and 24 Playwright browser journeys run
   in [GitHub Actions](../.github/workflows/ci.yml) on every pull request and every push to `main`.
@@ -138,8 +143,10 @@ generation core.
    judge or student can feel the loop before installing the extension or adding a key.
 2. **Expanding spaced-repetition schedule** (1 → 3 → 7 → 21 days) with per-concept, not
    per-video, scheduling, driven by the recap data this release starts collecting.
-3. **Teacher sharing** — publish a quest link so a class works the same validated bank, and
-   a lightweight dashboard of commonly-missed concepts.
+3. **Teacher dashboard on top of quest sharing** — sharing a validated bank with a class
+   ships in this release; next is a lightweight view of commonly-missed concepts across
+   the recipients of one link (the `quiz_share_claims` table already records which copy
+   came from which link).
 4. **Caption-moment citations** on every question and multilingual question generation.
 
 ## 9. Team and contributions

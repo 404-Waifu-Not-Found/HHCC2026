@@ -232,6 +232,10 @@ The page sends each validated question—not the transcript, raw DeepSeek respon
 
 The generation screen uses one fixed-duration, time-linear clock for time to question 1; caption metadata and internal stages cannot reset it or change its speed. The learner enters the quiz route as soon as question 1 is authoritative. Model and schema failures are repaired in the background, and transient attempt-resume failures keep polling with bounded backoff. Invalid credentials or billing still expose local-AI configuration because the model cannot repair account access.
 
+### 7. Share the quest
+
+The completion screen and every Library card offer **Share this quest**. ClipQuest mints one stable link per bank (`https://clipquest.ccwu.cc/s/<token>`), copies it to the clipboard on desktop web and opens the share sheet on touch devices. The link renders a public preview—lesson title, concept names, question count and types, never the questions or answers—and a signed-in recipient gets their own copy of the validated bank with the complete feedback, recap, mastery and cheat-sheet loop. Links require no extension to play.
+
 <p align="right"><a href="#top">↑ Back to top</a></p>
 
 <a id="screenshots"></a>
@@ -477,7 +481,7 @@ npm run cf:types
 npm run cf:dry-run
 ```
 
-The suite covers caption parsing and timestamp removal, one-character SSE/JSON fragmentation, early question emission, resumable suffix generation, retry budgets, the versioned extension channel, mixed question types, true/false balance, two-stage multiple-choice randomization, ordered/idempotent singleton imports, generating-attempt races, waiting and automatic-recovery states, legacy pipeline compatibility, learner feedback, the completion recap, and completion flows.
+The suite covers caption parsing and timestamp removal, one-character SSE/JSON fragmentation, early question emission, resumable suffix generation, retry budgets, the versioned extension channel, mixed question types, true/false balance, two-stage multiple-choice randomization, ordered/idempotent singleton imports, generating-attempt races, waiting and automatic-recovery states, legacy pipeline compatibility, learner feedback, the completion recap, and completion flows, and quest sharing (link creation, the public preview, and copy-on-claim).
 
 The same format, lint, typecheck, unit, extension-packaging, and Playwright steps run on every pull request and every push to `main` in [GitHub Actions](./.github/workflows/ci.yml). The repository forces LF line endings through `.gitattributes`, and the extension packager falls back to a built-in ZIP writer when the `zip` CLI is missing, so the gate behaves identically on macOS, Linux, and Windows. Two notes for Windows contributors: a clone made before the LF policy keeps its CRLF files until you run `git config core.autocrlf false && git rm -r --cached -q . && git reset --hard` from a clean tree; and when the built-in ZIP writer is used, `npm run dev:web`/`build` leave the tracked release archive `apps/app/public/clipquest-captions-extension.zip` untouched (Chrome loads the unpacked `apps/extension/dist` folder), so only machines with the `zip` CLI refresh that asset.
 
