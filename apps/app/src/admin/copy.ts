@@ -95,6 +95,13 @@ const copy = {
     activity7d: "Last 7 days",
     newUsers: "New learners",
     completedAttempts: "Completed attempts",
+    learningQualityKpis: "Learning quality KPIs",
+    learningQualityKpisBody:
+      "Higher quality and correction rates with lower retry rates indicate healthier question generation and grading.",
+    questionQualityRate: "Question quality",
+    retryRate: "Retry rate",
+    completionRate: "Completion rate",
+    correctionRate: "Correction rate",
     recentFailures: "Generations needing attention",
     recentFailuresBody:
       "Only bounded local-stream status is shown. Captions and model responses stay private.",
@@ -232,6 +239,13 @@ const copy = {
     activity7d: "最近 7 天",
     newUsers: "新用户",
     completedAttempts: "已完成答题",
+    learningQualityKpis: "学习质量指标",
+    learningQualityKpisBody:
+      "题目质量与纠错率越高、重试率越低，通常代表题目生成与判分链路更健康。",
+    questionQualityRate: "题目质量",
+    retryRate: "重试率",
+    completionRate: "完成率",
+    correctionRate: "纠错率",
     recentFailures: "需要关注的生成",
     recentFailuresBody:
       "这里只显示有限的本地生成状态，字幕和模型响应始终保持私密。",
