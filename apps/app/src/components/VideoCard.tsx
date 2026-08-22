@@ -146,7 +146,7 @@ export function VideoCard({
             <MasteryBadge state={card.mastery} compact />
           </View>
           {card.bestScore !== null ? (
-            <View style={[styles.scoreBar, { paddingRight: 176 }]}>
+            <View style={styles.scoreBar}>
               <View style={styles.scoreProgress}>
                 <ProgressBar
                   accessibilityLabel={`${t("score")}: ${Math.round(card.bestScore)}%`}
@@ -495,6 +495,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   body: {
+    position: "relative",
     minWidth: 0,
     flex: 1,
     padding: spacing[4],
@@ -516,7 +517,10 @@ const styles = StyleSheet.create({
     paddingRight: spacing[16] + spacing[5],
   },
   scoreBar: {
-    width: "100%",
+    position: "absolute",
+    left: spacing[4],
+    right: 176,
+    bottom: spacing[5],
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
