@@ -292,7 +292,12 @@ function createDatabase(): SqliteD1Adapter {
     );
   sqlite
     .prepare("INSERT INTO attempts VALUES (?, ?, ?, ?)")
-    .run("attempt-ready-active", "33333333-3333-4333-8333-333333333334", "active", null);
+    .run(
+      "attempt-ready-active",
+      "33333333-3333-4333-8333-333333333334",
+      "active",
+      null,
+    );
   const insertAnswer = sqlite.prepare(
     "INSERT INTO answers VALUES (?, ?, ?, ?, ?)",
   );
