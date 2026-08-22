@@ -101,7 +101,7 @@ export default function CreateQuestScreen() {
     if (!videoId || !session?.user.id) return;
     void Promise.all([
       loadImportedVideo(session.user.id, videoId),
-      loadQuestPreferences(session.user.id, videoId),
+      loadQuestPreferences(session.user.id, videoId, locale),
     ]).then(([value, preferences]) => {
       if (value) {
         setVideo(value);
@@ -109,7 +109,7 @@ export default function CreateQuestScreen() {
         setQuestionTypes(preferences.questionTypes);
       } else setError(t("videoSetupExpired"));
     });
-  }, [session?.user.id, t, videoId]);
+  }, [locale, session?.user.id, t, videoId]);
 
   useEffect(() => {
     if (!generationId || !videoId || !session?.user.id) return;
