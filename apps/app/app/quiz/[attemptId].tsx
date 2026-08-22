@@ -1874,17 +1874,23 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.body,
   },
   recapItem: {
+    width: "100%",
+    minWidth: 0,
     gap: spacing[2],
     padding: spacing[4],
     borderRadius: radii.medium,
     borderWidth: borders.hairline,
   },
   recapPrompt: {
+    minWidth: 0,
+    flexShrink: 1,
     fontFamily: typography.bodyBold,
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
   },
   recapLine: {
+    minWidth: 0,
+    flexShrink: 1,
     fontFamily: typography.body,
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,
