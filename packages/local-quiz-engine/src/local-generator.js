@@ -6163,6 +6163,17 @@ function validatePromptFirstQuiz(quiz, input) {
   ) {
     validationFailure("The question is missing a required field.");
   }
+  // Prompt-first generation streams one question at a time through this
+  // path, rather than validateQuiz(). Check the normalized learner-facing
+  // payload here as well so a zh-CN selection can never persist an English
+  // streamed question or its answer choices.
+  if (!questionMatchesQuizLanguage(question, input.quizLanguage)) {
+    validationFailure(
+      "The question contains learner-visible text outside the selected quiz language.",
+      "quiz_language_mismatch",
+      repairContextForCandidate(question, "quiz_language_mismatch"),
+    );
+  }
   if (
     (input.promptFirstV511Mode &&
       promptFirstV511DuplicatesAccepted(
