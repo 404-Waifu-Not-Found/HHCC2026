@@ -65,7 +65,10 @@ export default function LeaderboardScreen() {
               padded={false}
               style={styles.row}
               onPress={() =>
-                router.push(`/profile/${encodeURIComponent(entry.userId)}`)
+                router.push({
+                  pathname: "/profile/[userId]",
+                  params: { userId: entry.userId },
+                })
               }
             >
               <Text style={[styles.rank, { color: theme.primary }]}>
