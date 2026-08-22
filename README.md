@@ -238,6 +238,14 @@ The generation screen uses one fixed-duration, time-linear clock for time to que
 
 ## 🖼️ Product screenshots
 
+### Current production captures — 2026-08-22
+
+These captures show the current deployed library and leaderboard surfaces, including progress cards, learner avatars, and community ranking.
+
+| Library | Leaderboard |
+| ------- | ----------- |
+| ![Current ClipQuest library](./docs/screenshots/final/production-library-2026-08-22.png) | ![Current ClipQuest leaderboard](./docs/screenshots/final/production-leaderboard-2026-08-22.png) |
+
 ### Link-first home
 
 The YouTube-link field remains immediately visible and visually dominant. Saved ClipQuest lessons appear below it without turning the product into a video feed or account dashboard.
@@ -278,7 +286,7 @@ Leaderboard entries are interactive. Selecting a learner opens a read-only publi
 
 | Library progress cards | Leaderboard |
 | ---------------------- | ----------- |
-| ![ClipQuest library progress cards](./docs/screenshots/final/desktop-library-score-actions.png) | ![ClipQuest leaderboard with learner avatars and progress](./docs/screenshots/final/desktop-leaderboard.png) |
+| ![ClipQuest library progress cards](./docs/screenshots/final/production-library-2026-08-22.png) | ![ClipQuest leaderboard with learner avatars and progress](./docs/screenshots/final/production-leaderboard-2026-08-22.png) |
 
 ### Mobile learning and completion
 
