@@ -96,7 +96,8 @@ export default function LibraryScreen() {
           setLoading(false);
           setRefreshing(false);
         }
-        if (refreshRequestRef.current === request) refreshRequestRef.current = null;
+        if (refreshRequestRef.current === request)
+          refreshRequestRef.current = null;
       }
     })();
     refreshRequestRef.current = request;
