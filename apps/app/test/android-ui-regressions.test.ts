@@ -183,12 +183,18 @@ describe("Android UI regressions", () => {
     expect(videoCard).not.toContain("onPress={() => undefined}");
   });
 
-  it("fills desktop library cards so horizontal metadata remains visible", () => {
+  it("fills desktop Home cards so progress rows share the tallest height", () => {
     const library = source("app/(tabs)/library.tsx");
+    const home = source("app/(tabs)/index.tsx");
+    const videoCard = source("src/components/VideoCard.tsx");
 
     expect(library).toContain(
       "<VideoCard\n              compact={compact}\n              fill",
     );
+    expect(home).toContain(
+      'cardGrid: {\n    flexDirection: "row",\n    alignItems: "stretch",',
+    );
+    expect(videoCard).toContain('fill: {\n    flex: 1,\n    width: "100%",\n  }');
   });
 
   it("keeps an explicit PDF action on the quiz completion screen", () => {

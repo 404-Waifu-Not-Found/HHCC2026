@@ -384,6 +384,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   fill: {
+    flex: 1,
     width: "100%",
   },
   horizontal: {
