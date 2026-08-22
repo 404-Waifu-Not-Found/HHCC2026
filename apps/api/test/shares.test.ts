@@ -4,7 +4,11 @@ import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { errorResponse } from "../src/lib/errors";
 import type { ApiBindings } from "../src/middleware/authenticated";
-import { publicSharesRouter, sharesRouter } from "../src/routes/shares";
+import {
+  previewConcepts,
+  publicSharesRouter,
+  sharesRouter,
+} from "../src/routes/shares";
 import { createSqliteD1, type SqliteD1Adapter } from "./support/sqlite-d1";
 
 const OWNER_ID = "owner-1";
@@ -14,6 +18,7 @@ const BANK_ID = "33333333-3333-4333-8333-333333333333";
 const QUESTION_ONE_ID = "55555555-5555-4555-8555-555555555555";
 const QUESTION_TWO_ID = "66666666-6666-4666-8666-666666666666";
 const APP_ORIGIN = "https://clipquest.test";
+const UNKNOWN_TOKEN = "9a9a9a9a-9a9a-49a9-8a9a-9a9a9a9a9a9a";
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -288,5 +293,93 @@ describe("POST /quizzes/:quizId/share", () => {
       last = (await createShare(adapter)).status;
     }
     expect(last).toBe(429);
+  });
+});
+
+describe("GET /shares/:token", () => {
+  it("returns the public preview without question text", async () => {
+    const { adapter } = createDatabase();
+    const { body } = await createShare(adapter);
+    const response = await testApp(adapter).request(
+      `/shares/${body.token}`,
+      { method: "GET" },
+      env(adapter),
+    );
+    expect(response.status).toBe(200);
+    const preview = await response.json();
+    expect(preview).toEqual({
+      token: body.token,
+      title: "How memory really works",
+      originalUrl: "https://www.youtube.com/watch?v=SVb9OV0bLzI",
+      thumbnailUrl: `${APP_ORIGIN}/api/videos/${OWNER_VIDEO_ID}/thumbnail`,
+      sharedBy: "Avery Learner",
+      language: "en",
+      sessionLength: "long",
+      questionCount: 2,
+      questionTypes: ["multiple_choice", "short_answer"],
+      concepts: ["Retrieval practice", "Spacing"],
+    });
+    const serialized = JSON.stringify(preview);
+    expect(serialized).not.toContain("retrieval practice work");
+    expect(serialized).not.toContain("Reconstruction");
+  });
+
+  it("404s for unknown, malformed, and no-longer-passed shares", async () => {
+    const { sqlite, adapter } = createDatabase();
+    const { body } = await createShare(adapter);
+    const unknown = await testApp(adapter).request(
+      `/shares/${UNKNOWN_TOKEN}`,
+      { method: "GET" },
+      env(adapter),
+    );
+    expect(unknown.status).toBe(404);
+    expect(
+      ((await unknown.json()) as { error: { code: string } }).error.code,
+    ).toBe("share_not_found");
+    const malformed = await testApp(adapter).request(
+      "/shares/not-a-token",
+      { method: "GET" },
+      env(adapter),
+    );
+    expect(malformed.status).toBe(404);
+
+    sqlite
+      .prepare(
+        "UPDATE quiz_banks SET quality_status = 'generating' WHERE id = ?",
+      )
+      .run(BANK_ID);
+    const generating = await testApp(adapter).request(
+      `/shares/${body.token}`,
+      { method: "GET" },
+      env(adapter),
+    );
+    expect(generating.status).toBe(404);
+  });
+
+  it("caps and de-duplicates concept titles", () => {
+    expect(
+      previewConcepts(
+        JSON.stringify(
+          Array.from({ length: 20 }, (_, index) => ({
+            id: `c${index}`,
+            title: index % 2 === 0 ? ` Concept ${index} ` : "Repeated",
+          })),
+        ),
+      ),
+    ).toEqual([
+      "Concept 0",
+      "Repeated",
+      "Concept 2",
+      "Concept 4",
+      "Concept 6",
+      "Concept 8",
+      "Concept 10",
+      "Concept 12",
+      "Concept 14",
+      "Concept 16",
+      "Concept 18",
+    ]);
+    expect(previewConcepts("not json")).toEqual([]);
+    expect(previewConcepts("[]")).toEqual([]);
   });
 });
