@@ -9,15 +9,20 @@ vi.mock("expo-asset", () => ({
     fromModule: () => ({
       downloadAsync: async () => undefined,
       uri: "file:///NotoSansKR-Regular.ttf",
+      localUri: undefined,
     }),
   },
 }));
+let assetFetchCount = 0;
 vi.stubGlobal(
   "fetch",
   vi.fn(async () => {
-    const bytes = await readFile(
-      new URL("../assets/fonts/NotoSansKR-Regular.ttf", import.meta.url),
-    );
+    assetFetchCount += 1;
+    const assetUrl =
+      assetFetchCount === 1
+        ? new URL("../assets/fonts/NotoSansKR-Regular.ttf", import.meta.url)
+        : new URL("../assets/platform/app-icon-1024.png", import.meta.url);
+    const bytes = await readFile(assetUrl);
     return new Response(bytes);
   }),
 );
