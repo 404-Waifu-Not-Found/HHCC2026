@@ -194,7 +194,9 @@ describe("Android UI regressions", () => {
     expect(home).toContain(
       'cardGrid: {\n    flexDirection: "row",\n    alignItems: "stretch",',
     );
-    expect(videoCard).toContain('fill: {\n    flex: 1,\n    width: "100%",\n  }');
+    expect(videoCard).toContain(
+      'fill: {\n    flex: 1,\n    width: "100%",\n  }',
+    );
   });
 
   it("keeps an explicit PDF action on the quiz completion screen", () => {

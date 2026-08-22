@@ -83,7 +83,7 @@ const bannerOverlap = spacing[7];
 const emptyLibrary: VisibleLibrary = { dueReviews: [], saved: [] };
 
 export default function HomeScreen() {
-  const { t, theme, locale } = useSettings();
+  const { t, theme } = useSettings();
   const { data: session } = useAppSession();
   const { width } = useWindowDimensions();
   const compact = width < breakpoints.tablet;
@@ -235,7 +235,7 @@ export default function HomeScreen() {
         setImporting(false);
       }
     },
-    [locale, questionTypes, t, url, userId],
+    [questionTypes, t, url, userId],
   );
 
   useEffect(() => {

@@ -8,7 +8,6 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
-import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { apiRequest } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { radii, spacing, typography } from "../../src/theme/tokens";

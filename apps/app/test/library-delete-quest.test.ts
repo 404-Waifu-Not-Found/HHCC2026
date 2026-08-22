@@ -12,13 +12,21 @@ describe("library delete quest", () => {
       "utf8",
     );
 
-    expect(source).toContain("const [refreshing, setRefreshing] = useState(false);");
-    expect(source).toContain("const refreshRequestRef = useRef<Promise<void> | null>(null);");
-    expect(source).toContain("if (refreshRequestRef.current) return refreshRequestRef.current;");
+    expect(source).toContain(
+      "const [refreshing, setRefreshing] = useState(false);",
+    );
+    expect(source).toContain(
+      "const refreshRequestRef = useRef<Promise<void> | null>(null);",
+    );
+    expect(source).toContain(
+      "if (refreshRequestRef.current) return refreshRequestRef.current;",
+    );
     expect(source).toContain("const firstLoad = !hasLoadedLibraryRef.current;");
     expect(source).toContain("if (firstLoad) setLoading(true);");
     expect(source).toContain("else setRefreshing(true);");
-    expect(source).toContain("if (requestId !== refreshRequestIdRef.current) return;");
+    expect(source).toContain(
+      "if (requestId !== refreshRequestIdRef.current) return;",
+    );
     expect(source).toContain("{refreshing && !loading ? (");
   });
 

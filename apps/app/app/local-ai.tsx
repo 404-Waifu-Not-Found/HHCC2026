@@ -17,7 +17,7 @@ import { spacing, typography } from "../src/theme/tokens";
 
 export default function LocalAiSettingsScreen() {
   const { data: session } = useAppSession();
-  const { locale, theme } = useSettings();
+  const { theme } = useSettings();
   const isIos = Platform.OS === "ios";
   const copy = false
     ? {
