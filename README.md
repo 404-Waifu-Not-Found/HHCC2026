@@ -57,6 +57,21 @@
   <a href="./docs/duolingo-ui-research.md">UI research</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/404-Waifu-Not-Found/HHCC2026/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/404-Waifu-Not-Found/HHCC2026/actions/workflows/ci.yml/badge.svg" /></a>
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-2F9859" />
+</p>
+
+> [!TIP]
+> **HHCC 2026 judges — start here.** ClipQuest is the education-track entry from team
+> `@404-Waifu-Not-Found/cos`. The five-minute version — the learning problem, how each
+> feature maps to learning science (retrieval practice, immediate corrective feedback,
+> adaptive retries, a missed-concept recap, spaced review with mastery states, a
+> consolidation cheat sheet), what is verified in production, and how to try it in two
+> minutes — is in **[docs/HACKATHON.md](./docs/HACKATHON.md)**. The demo-video script is
+> in [`output/video/`](./output/video/UnoxyRich_ClipQuest_Demo_Script.md). Everything
+> below is the full engineering reference.
+
 ---
 
 <a id="overview"></a>
@@ -244,6 +259,12 @@ The lesson keeps the question readable while the lower action region changes sta
 | Correct answer                                                                              | Incorrect answer                                                                                |
 | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | ![ClipQuest correct-answer feedback](./docs/screenshots/final/desktop-feedback-correct.png) | ![ClipQuest incorrect-answer feedback](./docs/screenshots/final/desktop-feedback-incorrect.png) |
+
+### Completion recap — what to review
+
+The completion screen pairs the score and mastery state with a "Right first try" count and a **What to review** list: every question missed during the session, the learner's answer, the correct answer, the reasoning, and whether the concept was recovered on its adaptive retry. Reopened historical attempts show the summary tiles only.
+
+![ClipQuest completion recap listing a missed question with the correct answer and reasoning](./docs/screenshots/final/desktop-completion-recap.png)
 
 ### Mobile learning and completion
 
@@ -434,7 +455,9 @@ npm run cf:types
 npm run cf:dry-run
 ```
 
-The suite covers caption parsing and timestamp removal, one-character SSE/JSON fragmentation, early question emission, resumable suffix generation, retry budgets, the versioned extension channel, mixed question types, true/false balance, two-stage multiple-choice randomization, ordered/idempotent singleton imports, generating-attempt races, waiting and automatic-recovery states, legacy pipeline compatibility, learner feedback, and completion flows.
+The suite covers caption parsing and timestamp removal, one-character SSE/JSON fragmentation, early question emission, resumable suffix generation, retry budgets, the versioned extension channel, mixed question types, true/false balance, two-stage multiple-choice randomization, ordered/idempotent singleton imports, generating-attempt races, waiting and automatic-recovery states, legacy pipeline compatibility, learner feedback, the completion recap, and completion flows.
+
+The same format, lint, typecheck, unit, extension-packaging, and Playwright steps run on every pull request and every push to `main` in [GitHub Actions](./.github/workflows/ci.yml). The repository forces LF line endings through `.gitattributes`, and the extension packager falls back to a built-in ZIP writer when the `zip` CLI is missing, so the gate behaves identically on macOS, Linux, and Windows. Two notes for Windows contributors: a clone made before the LF policy keeps its CRLF files until you run `git config core.autocrlf false && git rm -r --cached -q . && git reset --hard` from a clean tree; and when the built-in ZIP writer is used, `npm run dev:web`/`build` leave the tracked release archive `apps/app/public/clipquest-captions-extension.zip` untouched (Chrome loads the unpacked `apps/extension/dist` folder), so only machines with the `zip` CLI refresh that asset.
 
 For a real extension smoke test with Chrome available:
 

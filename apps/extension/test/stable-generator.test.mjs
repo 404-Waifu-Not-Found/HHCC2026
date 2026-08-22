@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
+import { inspect } from "node:util";
 import {
   adaptiveChunkQuestionCount,
   boundedRetryDelayMilliseconds,
@@ -2873,9 +2874,11 @@ function recordedConceptFirstInput(bankIndex, questionCount, questionTypes) {
           "transmission",
           "stabilization",
         ];
+        // The zh-CN bank grounds a Chinese term: the refined quiz-language
+        // check requires every learner-visible value to read as Chinese.
         const groundedSentence = sentence.replace(
           "pathway",
-          `pathway${index + 1}`,
+          bankIndex % 10 === 9 ? `路径${index + 1}` : `pathway${index + 1}`,
         );
         return `${groundedSentence} by objective${objectives[index % objectives.length]} because the defined mechanism changes measurable outcome ${index + 11} under condition ${index + 1}.`;
       },
@@ -2911,7 +2914,7 @@ function conceptFirstTaskFromRequest(request) {
 function conceptFirstResponse(request, mutate = (value) => value) {
   const task = conceptFirstTaskFromRequest(request);
   const evidence = task.focusExcerpt.split(/(?<=[.!?。！？])\s+/u)[0];
-  const pathway = evidence.match(/pathway\d+/u)?.[0];
+  const pathway = evidence.match(/(?:pathway|路径)\d+/u)?.[0];
   assert.ok(pathway, "eligible evidence contains an atomic mechanism term");
   const objective =
     evidence.match(/objective[a-z]+/iu)?.[0] ??
@@ -2953,7 +2956,7 @@ function conceptFirstResponse(request, mutate = (value) => value) {
             {
               ...common,
               answerSpan: pathway,
-              answerText: isChinese ? `能量传递路径${pathway}` : pathway,
+              answerText: isChinese ? `能量传递${pathway}` : pathway,
               distractors: [
                 {
                   text: isChinese
@@ -6055,8 +6058,24 @@ test("v5.8 completes a 100-bank recorded-fixture release benchmark without conte
         (event) => callEvents.push(event),
       );
     } catch (error) {
+      // Surface the underlying reason in the message itself: the TAP reporter
+      // used by CI prints only `error:` and drops the `cause` chain.
+      const reason =
+        error instanceof Error
+          ? `${error.name}: ${error.message}`
+          : String(error);
+      const lastEvent = callEvents.at(-1);
+      const lastCall = lastEvent
+        ? ` Last call event: ${JSON.stringify(lastEvent)}.`
+        : "";
+      // Full diagnostics for CI, where only this test output is available.
+      console.error(
+        "[recorded-benchmark-failure]",
+        inspect(error, { depth: 6, breakLength: 200 }),
+        JSON.stringify(callEvents),
+      );
       throw new Error(
-        `Recorded benchmark bank ${bankIndex + 1} failed (${questionCount} questions).`,
+        `Recorded benchmark bank ${bankIndex + 1} failed (${questionCount} questions, ${questionTypes.join("+")}): ${reason}.${lastCall}`,
         { cause: error },
       );
     }

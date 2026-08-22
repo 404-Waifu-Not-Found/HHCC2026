@@ -4,6 +4,7 @@ import {
   type QuizStartResponse,
 } from "@clipquest/contracts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { parseRecapEntries, type RecapEntry } from "../lib/session-recap";
 
 export type StoredAttempt = {
   version: 2;
@@ -12,6 +13,8 @@ export type StoredAttempt = {
   primer: string | null;
   question: PublicQuestion | null;
   primerSeen: boolean;
+  /** Graded answers from this session, in order, for the completion recap. */
+  recap: RecapEntry[];
 };
 
 const ATTEMPT_PREFIX = "clipquest:attempt:v2:";
@@ -22,7 +25,7 @@ const keyFor = (userId: string, attemptId: string) =>
 const legacyKeyFor = (attemptId: string) =>
   `${LEGACY_ATTEMPT_PREFIX}${attemptId}`;
 
-function parseStoredAttempt(
+export function parseStoredAttempt(
   raw: string,
   userId: string,
   attemptId: string,
@@ -47,6 +50,8 @@ function parseStoredAttempt(
       primer: value.primer as string | null,
       question: question.data,
       primerSeen: value.primerSeen,
+      // Records written before the recap existed simply have no entries.
+      recap: parseRecapEntries(value.recap),
     };
   } catch {
     return null;
@@ -64,6 +69,7 @@ export async function saveAttemptStart(
     primer: start.primer,
     question: start.question,
     primerSeen: !start.primer,
+    recap: [],
   };
   await Promise.all([
     AsyncStorage.setItem(
@@ -100,6 +106,25 @@ export async function saveAttemptQuestion(
     primer: current?.primer ?? null,
     question,
     primerSeen: current?.primerSeen ?? true,
+    recap: current?.recap ?? [],
+  };
+  await AsyncStorage.setItem(keyFor(userId, attemptId), JSON.stringify(value));
+}
+
+export async function saveAttemptRecap(
+  userId: string,
+  attemptId: string,
+  recap: RecapEntry[],
+): Promise<void> {
+  const current = await loadAttempt(userId, attemptId);
+  const value: StoredAttempt = {
+    version: 2,
+    ownerUserId: userId,
+    attemptId,
+    primer: current?.primer ?? null,
+    question: current?.question ?? null,
+    primerSeen: current?.primerSeen ?? true,
+    recap,
   };
   await AsyncStorage.setItem(keyFor(userId, attemptId), JSON.stringify(value));
 }

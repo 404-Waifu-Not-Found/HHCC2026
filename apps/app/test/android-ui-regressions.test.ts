@@ -58,7 +58,7 @@ describe("Android UI regressions", () => {
 
     expect(creation).toContain('nativeCaptionState === "running"');
     expect(creation).toContain("loading={captionsPending}");
-    expect(creation).toContain("disabled={captionsBlocked}");
+    expect(creation).toMatch(/disabled=\{\s*captionsBlocked \|\|/u);
     expect(creation).not.toContain("captionStatus");
     expect(creation).not.toContain("sourceCaptionsUnavailable");
     expect(creation).toContain(

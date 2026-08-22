@@ -56,6 +56,11 @@ import {
   presentQuizText,
 } from "../../src/lib/question-presentation";
 import {
+  attachLocalReason,
+  summarizeRecap,
+  type RecapEntry,
+} from "../../src/lib/session-recap";
+import {
   createChoicePresentation,
   createInitialOrdering,
   type ChoicePresentation,
@@ -82,6 +87,7 @@ import {
   loadAttempt,
   markPrimerSeen,
   saveAttemptQuestion,
+  saveAttemptRecap,
 } from "../../src/state/attempt";
 import {
   borders,
@@ -162,6 +168,7 @@ export default function QuizScreen() {
   const [mastery, setMastery] = useState<MasteryState>();
   const [showCompletion, setShowCompletion] = useState(false);
   const [completedTotal, setCompletedTotal] = useState<number>();
+  const [recapEntries, setRecapEntries] = useState<RecapEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [waitingForQuestions, setWaitingForQuestions] = useState(false);
   const [generation, setGeneration] = useState<AttemptGenerationAvailability>();
@@ -208,6 +215,15 @@ export default function QuizScreen() {
       ),
     [],
   );
+
+  // Persist the session recap beside the stored attempt so a reload or an
+  // app resume mid-quest keeps every earlier answer in the completion recap.
+  useEffect(() => {
+    if (!userId || recapEntries.length === 0) return;
+    void saveAttemptRecap(userId, attemptId, recapEntries).catch(
+      () => undefined,
+    );
+  }, [attemptId, recapEntries, userId]);
 
   const activateQuestion = useCallback((nextQuestion: PublicQuestion) => {
     setQuestionInteractionReady(false);
@@ -396,6 +412,7 @@ export default function QuizScreen() {
       if (!active) return;
       if (stored) {
         if (stored.question) activateQuestion(stored.question);
+        if (stored.recap.length) setRecapEntries(stored.recap);
         setPrimer(stored.primer);
         setShowPrimer(Boolean(stored.primer && !stored.primerSeen));
         if (stored.question) {
@@ -559,6 +576,8 @@ export default function QuizScreen() {
       if (submittedAnswer === undefined) {
         throw new Error(t("answerRequired"));
       }
+      let localGradePromise:
+        Promise<import("@clipquest/contracts").LocalAnswerGrade> | undefined;
       if (question.type !== "ordering") {
         const responseText =
           question.type === "multiple_choice" &&
@@ -573,7 +592,7 @@ export default function QuizScreen() {
         const gradingTimeout = setTimeout(() => {
           gradingController.abort(new Error("Local grading timed out."));
         }, 30_000);
-        const localGradePromise = requestLocalAnswerGrade(
+        localGradePromise = requestLocalAnswerGrade(
           {
             question: presentQuizPrompt(question.prompt),
             response: responseText,
@@ -598,6 +617,33 @@ export default function QuizScreen() {
         AttemptAnswerResponseSchema,
       );
       setFeedback(result);
+      const recapTarget = {
+        questionId: question.id,
+        isRetry: question.isRetry,
+      };
+      setRecapEntries((entries) => [
+        ...entries,
+        {
+          ...recapTarget,
+          prompt: presentQuizPrompt(question.prompt),
+          correct: result.correct,
+          learnerAnswer: presentCorrectAnswer(question, submittedAnswer, t),
+          correctAnswer: result.correct
+            ? undefined
+            : presentCorrectAnswer(question, result.correctAnswer, t),
+          explanation: presentQuizText(result.explanation),
+        },
+      ]);
+      // Keep the recap's reasoning identical to what the feedback panel shows:
+      // when the device-local grade agrees with the server verdict, the panel
+      // prefers its reason, so the recap records that same text.
+      void localGradePromise
+        ?.then((grade) =>
+          setRecapEntries((entries) =>
+            attachLocalReason(entries, recapTarget, grade),
+          ),
+        )
+        .catch(() => undefined);
       updateGeneration(result.generation);
       if (userId)
         await saveAttemptQuestion(userId, attemptId, result.nextQuestion);
@@ -695,6 +741,12 @@ export default function QuizScreen() {
     const masteryRank = masteryPresentation(masteryState);
     const masteryColor = masteryColors(masteryState, theme).color;
     const masteryRankTone = masteryTone(masteryState);
+    const recap = summarizeRecap(recapEntries);
+    const showRecap = recapEntries.length > 0;
+    // Only claim a perfect run when the recap saw every question; a session
+    // restored without its earlier answers must not overstate itself.
+    const recapCoversAttempt =
+      completedTotal === undefined || recap.answered >= completedTotal;
     const showCompactCompletionStats =
       compactCompletion && completedTotal !== undefined;
     const localCheatSheetReady = Boolean(pendingCheatSheetRef.current);
@@ -778,7 +830,117 @@ export default function QuizScreen() {
                 />
               </StaggerItem>
             ) : null}
+            {showRecap ? (
+              <StaggerItem
+                index={completedTotal !== undefined ? 3 : 2}
+                style={[
+                  styles.statItem,
+                  showCompactCompletionStats && styles.statItemCompact,
+                ]}
+              >
+                <StatTile
+                  value={`${recap.firstTryCorrect}/${recap.answered}`}
+                  label={t("firstTry")}
+                  tone={recap.missed.length ? "secondary" : "success"}
+                  icon={
+                    <VoxelIcon
+                      name={recap.missed.length ? "progress" : "correct"}
+                      size={22}
+                      color={
+                        recap.missed.length ? theme.secondary : theme.success
+                      }
+                    />
+                  }
+                />
+              </StaggerItem>
+            ) : null}
           </View>
+          {showRecap ? (
+            <MotionView preset="rise" delay={132} style={styles.recap}>
+              <Surface tone="tinted" style={styles.recapCard}>
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.recapTitle, { color: theme.text }]}
+                >
+                  {t("recapTitle")}
+                </Text>
+                <Text style={[styles.recapBody, { color: theme.textMuted }]}>
+                  {recap.missed.length
+                    ? t("recapSubtitle")
+                    : recapCoversAttempt
+                      ? t("recapPerfect")
+                      : t("recapPartial")}
+                </Text>
+                {recap.missed.map((item, index) => (
+                  <View
+                    key={`${item.questionId}-${index}`}
+                    testID="recap-missed-item"
+                    style={[
+                      styles.recapItem,
+                      {
+                        backgroundColor: theme.surfaceRaised,
+                        borderColor: theme.divider,
+                      },
+                    ]}
+                  >
+                    {/* Each line is one top-level MathText (the FeedbackPanel
+                        pattern) so formula answers typeset and native MathText
+                        is never nested inside Text. */}
+                    <MathText
+                      selectable
+                      style={[styles.recapPrompt, { color: theme.text }]}
+                    >
+                      {item.prompt}
+                    </MathText>
+                    {item.learnerAnswer ? (
+                      <MathText
+                        selectable
+                        style={[styles.recapLine, { color: theme.error }]}
+                      >
+                        {`${t("recapYourAnswer")}: ${item.learnerAnswer}`}
+                      </MathText>
+                    ) : null}
+                    {item.correctAnswer ? (
+                      <MathText
+                        selectable
+                        style={[styles.recapLine, { color: theme.success }]}
+                      >
+                        {`${t("correctAnswer")}: ${item.correctAnswer}`}
+                      </MathText>
+                    ) : null}
+                    <MathText
+                      selectable
+                      style={[styles.recapLine, { color: theme.textMuted }]}
+                    >
+                      {`${t("answerReason")}: ${item.reason ?? item.explanation}`}
+                    </MathText>
+                    {item.recoveredOnRetry ? (
+                      <View
+                        style={[
+                          styles.recapBadge,
+                          { backgroundColor: theme.successSoft },
+                        ]}
+                      >
+                        <VoxelIcon
+                          name="correct"
+                          size={16}
+                          color={theme.success}
+                        />
+                        <Text
+                          style={[
+                            styles.recapBadgeText,
+                            { color: theme.success },
+                          ]}
+                        >
+                          {t("recapRecovered")}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+              </Surface>
+            </MotionView>
+          ) : null}
           <MotionView preset="rise" delay={176} style={styles.completeActions}>
             <PrimaryButton
               testID="download-cheat-sheet-pdf"
@@ -1510,5 +1672,54 @@ const styles = StyleSheet.create({
   completeActions: {
     width: "100%",
     gap: spacing[3],
+  },
+  recap: {
+    width: "100%",
+  },
+  recapCard: {
+    gap: spacing[3],
+  },
+  recapTitle: {
+    fontFamily: typography.display,
+    fontSize: typography.size.titleSmall,
+    lineHeight: typography.lineHeight.titleSmall,
+  },
+  recapBody: {
+    fontFamily: typography.body,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  recapItem: {
+    gap: spacing[2],
+    padding: spacing[4],
+    borderRadius: radii.medium,
+    borderWidth: borders.hairline,
+  },
+  recapPrompt: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  recapLine: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  recapLabel: {
+    fontFamily: typography.bodyBold,
+  },
+  recapBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
+    borderRadius: radii.pill,
+  },
+  recapBadgeText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
   },
 });

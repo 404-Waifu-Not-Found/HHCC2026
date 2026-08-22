@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import {
+  masteryStateForScore,
   DEFAULT_QUIZ_QUESTION_TYPES,
   createTranscriptCompleteness,
   type GenerationRecordV2,
@@ -29,6 +30,7 @@ type Scenario = {
   adminMode: "allowed" | "denied";
   answerCorrect: boolean;
   completedAttempt: boolean;
+  completeOnAnswer: boolean;
   generationMode: "stable" | "failed";
   importMode: "success" | "unavailable";
   thumbnailMode: "stable" | "fail-once" | "failed";
@@ -1341,6 +1343,71 @@ test("desktop learning journey and visual states", async ({ page }) => {
   ).toEqual([]);
 });
 
+test("completion recap lists missed questions with the correct answer and retry recovery", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  const scenario = await installMocks(page);
+  // A one-question quest keeps every completion tile coherent: one question,
+  // missed first, recovered on the retry, 100% once the retry is credited.
+  const singleQuestion = { ...baseQuestion, total: 1 };
+  scenario.question = singleQuestion;
+  await page.goto("/welcome");
+  await seedAttempt(page, ATTEMPT_ID, singleQuestion);
+  scenario.completedAttempt = false;
+  scenario.answerCorrect = false;
+
+  await page.goto(`/quiz/${ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: singleQuestion.prompt }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: singleQuestion.options[1] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(
+    page.getByText("Almost—try this concept another way."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  const retryPrompt = `Try again: ${singleQuestion.prompt}`;
+  await expect(page.getByRole("heading", { name: retryPrompt })).toBeVisible();
+
+  // A refresh in the middle of the quest must not lose the recorded miss.
+  scenario.question = { ...singleQuestion, prompt: retryPrompt, isRetry: true };
+  await page.reload();
+  await expect(page.getByRole("heading", { name: retryPrompt })).toBeVisible();
+
+  scenario.answerCorrect = true;
+  scenario.completeOnAnswer = true;
+  await page.getByRole("button", { name: singleQuestion.options[0] }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expect(page.getByText("Nice! That’s right.")).toBeVisible();
+  await page.getByRole("button", { name: "Finish" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Quest complete!" }),
+  ).toBeVisible();
+  await expect(page.getByText("100%", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "What to review" }),
+  ).toBeVisible();
+  await expect(page.getByText("Right first try")).toBeVisible();
+  await expect(page.getByText("0/1", { exact: true })).toBeVisible();
+  const missed = page.getByTestId("recap-missed-item");
+  await expect(missed).toHaveCount(1);
+  await expect(missed).toContainText(singleQuestion.prompt);
+  await expect(missed).toContainText(
+    `Your answer: ${singleQuestion.options[1]}`,
+  );
+  await expect(missed).toContainText(
+    `Correct answer: ${singleQuestion.options[0]}`,
+  );
+  await expect(missed).toContainText(
+    "Reason: The key is effortful reconstruction: recalling the idea strengthens access to it later.",
+  );
+  await expect(missed).toContainText("Recovered on retry");
+  await capture(page, "desktop-completion-recap");
+  expect(scenario.answerBodies).toHaveLength(2);
+});
+
 test("library card actions align with score and mastery status", async ({
   page,
 }) => {
@@ -1800,6 +1867,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     adminMode: "allowed",
     answerCorrect: true,
     completedAttempt: false,
+    completeOnAnswer: false,
     generationMode: "stable",
     importMode: "success",
     thumbnailMode: "stable",
@@ -2407,25 +2475,40 @@ async function installMocks(page: Page): Promise<Scenario> {
     }
     if (path.endsWith("/answer") && path.includes("/api/attempts/")) {
       scenario.answerBodies.push(request.postDataJSON());
+      const completed = scenario.completeOnAnswer;
+      const score = completed ? (scenario.answerCorrect ? 100 : 0) : null;
+      // Mirror the API's canonical-answer shape per question type: option
+      // index, boolean, item order, or the rubric's model answer string.
+      const correctAnswer =
+        scenario.question.type === "true_false"
+          ? true
+          : scenario.question.type === "ordering"
+            ? (scenario.question.items ?? []).map((_, index) => index)
+            : scenario.question.type === "short_answer"
+              ? "Retrieval practice forces the brain to reconstruct the idea."
+              : 0;
       await json(route, {
         correct: scenario.answerCorrect,
+        correctAnswer,
         explanation: scenario.answerCorrect
           ? "Reconstructing an idea strengthens the retrieval path and reveals what still needs practice."
           : "The key is effortful reconstruction: recalling the idea strengthens access to it later.",
         evidenceSegmentIds: ["segment-1"],
-        nextQuestion: !scenario.answerCorrect
-          ? {
-              ...scenario.question,
-              prompt: `Try again: ${scenario.question.prompt}`,
-              isRetry: true,
-            }
-          : scenario.progressiveState !== "ready" &&
-              scenario.question.position >= scenario.progressiveAvailable
-            ? null
-            : nextQuestion,
-        completed: false,
-        score: null,
-        mastery: null,
+        nextQuestion: completed
+          ? null
+          : !scenario.answerCorrect
+            ? {
+                ...scenario.question,
+                prompt: `Try again: ${scenario.question.prompt}`,
+                isRetry: true,
+              }
+            : scenario.progressiveState !== "ready" &&
+                scenario.question.position >= scenario.progressiveAvailable
+              ? null
+              : nextQuestion,
+        completed,
+        score,
+        mastery: score === null ? null : masteryStateForScore(score),
         generation: generation(),
       });
       return;

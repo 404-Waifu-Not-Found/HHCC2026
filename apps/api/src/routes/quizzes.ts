@@ -156,6 +156,25 @@ const RubricSchema = z.object({
   v2: LocalShortAnswerRubricV2Schema.optional(),
 });
 
+// Locally generated short-answer questions keep their model answer as the first
+// acceptable alternative of the stored rubric instead of correct_answer_json.
+// Surface it with grading so a miss can show what a full-credit answer says.
+export function shortAnswerModelAnswer(question: {
+  type: string;
+  rubric_json: string | null;
+}): string | null {
+  if (question.type !== "short_answer" || !question.rubric_json) return null;
+  try {
+    const rubric = RubricSchema.safeParse(JSON.parse(question.rubric_json));
+    const answer = rubric.success
+      ? rubric.data.acceptableAlternatives[0]?.trim()
+      : undefined;
+    return answer && answer.length <= 2_000 ? answer : null;
+  } catch {
+    return null;
+  }
+}
+
 const QUIZ_STARTS_PER_MINUTE = 8;
 const LEGACY_LOCAL_QUIZ_PIPELINE_VERSION = 7;
 export const ANSWER_RESERVATION_TTL_MS = 90_000;
@@ -500,7 +519,7 @@ quizzesRouter.post("/attempts/:attemptId/answer", async (c) => {
           AnswerValueSchema,
           "correct answer",
         )
-      : null;
+      : shortAnswerModelAnswer(question);
     // Freeze one coherent generation snapshot before any answer write. A
     // concurrent append may become visible on the next poll, but can never turn
     // this committed answer into a generation-state error response.

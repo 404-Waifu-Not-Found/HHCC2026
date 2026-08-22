@@ -25,7 +25,9 @@ export default defineConfig({
     command: "npm run web:e2e -w @clipquest/app",
     url: baseURL,
     reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
-    timeout: 120_000,
+    // A cold Metro web bundle on a 2-vCPU CI runner can exceed the local
+    // two-minute budget; give the dev server more headroom there.
+    timeout: process.env.CI ? 360_000 : 120_000,
     env: {
       ...process.env,
       CI: "1",
