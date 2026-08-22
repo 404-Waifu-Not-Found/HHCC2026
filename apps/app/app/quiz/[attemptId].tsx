@@ -59,6 +59,7 @@ import {
 } from "../../src/lib/question-presentation";
 import {
   attachLocalReason,
+  comboBonusForCount,
   summarizeCombo,
   summarizeRecap,
   type RecapEntry,
@@ -709,7 +710,10 @@ export default function QuizScreen() {
         setMastery(result.mastery ?? "basic");
         setCompletedTotal(question.total);
       }
-      if (result.correct)
+      const nextCombo = result.correct ? comboSummary.current + 1 : 0;
+      if (result.correct && nextCombo >= 5)
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      else if (result.correct)
         void Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
         );
@@ -1328,7 +1332,14 @@ export default function QuizScreen() {
           {feedback.completed ? t("finish") : t("next")}
         </PrimaryButton>
       }
-    />
+    >
+      {feedback.correct && activeCombo >= 2 ? (
+        <ComboBurst
+          combo={activeCombo}
+          bonus={comboBonusForCount(activeCombo)}
+        />
+      ) : null}
+    </FeedbackPanel>
   ) : (
     <View
       style={[
@@ -1410,30 +1421,48 @@ export default function QuizScreen() {
               ) : null}
               {comboActive ? (
                 <MotionView
+                  key={activeCombo}
                   preset="pop"
                   style={[
                     styles.comboBadge,
                     {
                       backgroundColor:
-                        activeCombo > 1
-                          ? theme.warningSoft
-                          : theme.surfaceSunken,
+                        activeCombo >= 5
+                          ? theme.errorSoft
+                          : activeCombo >= 2
+                            ? theme.warningSoft
+                            : theme.surfaceSunken,
                       borderColor:
-                        activeCombo > 1 ? theme.warning : theme.borderStrong,
+                        activeCombo >= 5
+                          ? theme.error
+                          : activeCombo >= 2
+                            ? theme.warning
+                            : theme.borderStrong,
                     },
                   ]}
                 >
                   <VoxelIcon
-                    name="progress"
-                    size={16}
-                    color={activeCombo > 1 ? theme.warning : theme.textMuted}
+                    name="flame"
+                    size={activeCombo >= 5 ? 21 : 18}
+                    color={
+                      activeCombo >= 5
+                        ? theme.error
+                        : activeCombo >= 2
+                          ? theme.warning
+                          : theme.textMuted
+                    }
                   />
                   <Text
                     style={[
                       styles.comboText,
+                      activeCombo >= 5 && styles.comboTextHot,
                       {
                         color:
-                          activeCombo > 1 ? theme.warning : theme.textMuted,
+                          activeCombo >= 5
+                            ? theme.error
+                            : activeCombo >= 2
+                              ? theme.warningText
+                              : theme.textMuted,
                       },
                     ]}
                   >
@@ -1478,6 +1507,39 @@ export default function QuizScreen() {
         ) : null}
       </MotionView>
     </Screen>
+  );
+}
+
+function ComboBurst({ combo, bonus }: { combo: number; bonus: number }) {
+  const { t, theme } = useSettings();
+  const hot = combo >= 5;
+  const color = hot ? theme.error : theme.warning;
+  return (
+    <FeedbackMotion signal={combo} kind="success">
+      <MotionView
+        key={combo}
+        preset="pop"
+        accessibilityRole="summary"
+        accessibilityLabel={`${t("combo")} x${combo}, ${t("comboBonus")} +${bonus}`}
+        style={[
+          styles.comboBurst,
+          {
+            backgroundColor: hot ? theme.errorSoft : theme.warningSoft,
+            borderColor: color,
+          },
+        ]}
+      >
+        <VoxelIcon name="flame" size={hot ? 28 : 24} color={color} />
+        <Text style={[styles.comboBurstValue, { color }]}>
+          {`${t("combo")} x${combo}`}
+        </Text>
+        <View style={[styles.comboBonusPill, { backgroundColor: color }]}>
+          <Text style={[styles.comboBonusText, { color: theme.surface }]}>
+            {`+${bonus}`}
+          </Text>
+        </View>
+      </MotionView>
+    </FeedbackMotion>
   );
 }
 
@@ -1763,6 +1825,36 @@ const styles = StyleSheet.create({
   comboText: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.caption,
+  },
+  comboTextHot: {
+    fontSize: typography.size.body,
+  },
+  comboBurst: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    borderWidth: borders.standard,
+    borderRadius: radii.pill,
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+  },
+  comboBurstValue: {
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.bodyLarge,
+    lineHeight: typography.lineHeight.bodyLarge,
+  },
+  comboBonusPill: {
+    minWidth: 38,
+    alignItems: "center",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+  },
+  comboBonusText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
   },
   question: {
     maxWidth: 680,
