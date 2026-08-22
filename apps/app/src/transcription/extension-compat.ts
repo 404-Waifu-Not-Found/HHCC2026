@@ -8,7 +8,7 @@ import {
   type LocalGenerationProfile,
 } from "@clipquest/contracts";
 
-export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.31";
+export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.33";
 // Workplace chat is a distinct local capability introduced with 0.8.32. Gate it
 // on both the exact capability string and the first extension version that ships
 // the website->background Workplace turn channel.
