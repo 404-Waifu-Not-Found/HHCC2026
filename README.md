@@ -276,8 +276,8 @@ The completion screen pairs the score and mastery state with a "Right first try"
 
 Leaderboard entries are interactive. Selecting a learner opens a read-only public profile with their avatar, completed quizzes, total learning time, and daily activity history.
 
-| Library progress cards | Leaderboard |
-| ---------------------- | ----------- |
+| Library progress cards                                                                          | Leaderboard                                                                                                  |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | ![ClipQuest library progress cards](./docs/screenshots/final/desktop-library-score-actions.png) | ![ClipQuest leaderboard with learner avatars and progress](./docs/screenshots/final/desktop-leaderboard.png) |
 
 ### Mobile learning and completion
@@ -302,23 +302,23 @@ The role-gated operations console uses the same semantic colors and voxel vocabu
 
 The language inventory below comes from the tracked repository, including the native module and platform build definitions—not only the web application.
 
-| Language or format                 | Where ClipQuest uses it                                                                                                                                     |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TypeScript and TSX                 | Expo routes and components, Cloudflare Worker API, shared Zod contracts, Playwright, tests, and build configuration                                         |
-| JavaScript and ESM (`.js`, `.mjs`) | Manifest V3 extension runtime, caption processing, local quiz generation, web workers, asset scripts, and packaging                                         |
-| React ecosystem                    | React 19, React DOM 19, React Native 0.86, and Expo Router power the shared web, iOS, and Android product interface                                         |
+| Language or format                 | Where ClipQuest uses it                                                                                                                                                          |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript and TSX                 | Expo routes and components, Cloudflare Worker API, shared Zod contracts, Playwright, tests, and build configuration                                                              |
+| JavaScript and ESM (`.js`, `.mjs`) | Manifest V3 extension runtime, caption processing, local quiz generation, web workers, asset scripts, and packaging                                                              |
+| React ecosystem                    | React 19, React DOM 19, React Native 0.86, and Expo Router power the shared web, iOS, and Android product interface                                                              |
 | SQL                                | Twenty-six ordered D1 migrations for authentication, quiz storage, reliability, administration, progressive imports, safe call telemetry, recovery claims, and profile analytics |
-| Swift                              | iOS implementation of the local audio-decoder Expo module                                                                                                   |
-| Kotlin                             | Android implementation of the local audio-decoder Expo module                                                                                               |
-| HTML                               | Extension popup markup and the checked-in local extension QA harness                                                                                        |
-| CSS                                | Extension popup presentation and interaction states                                                                                                         |
-| Groovy                             | Android Gradle build definition for the native decoder module                                                                                               |
-| Ruby                               | CocoaPods support for native Expo modules                                                                                                                   |
-| JSON and JSONC                     | Package manifests, Expo/EAS configuration, extension manifest, QA summaries, and Wrangler configuration                                                     |
-| XML                                | Android native resource configuration                                                                                                                       |
-| Markdown                           | Product, operations, design-research, platform-asset, and deployment documentation                                                                          |
-| Web App Manifest                   | Installable PWA identity, icons, theme colors, and launch behavior                                                                                          |
-| WebVTT and plain text              | Non-secret caption QA fixtures and normalized-caption acceptance artifacts                                                                                  |
+| Swift                              | iOS implementation of the local audio-decoder Expo module                                                                                                                        |
+| Kotlin                             | Android implementation of the local audio-decoder Expo module                                                                                                                    |
+| HTML                               | Extension popup markup and the checked-in local extension QA harness                                                                                                             |
+| CSS                                | Extension popup presentation and interaction states                                                                                                                              |
+| Groovy                             | Android Gradle build definition for the native decoder module                                                                                                                    |
+| Ruby                               | CocoaPods support for native Expo modules                                                                                                                                        |
+| JSON and JSONC                     | Package manifests, Expo/EAS configuration, extension manifest, QA summaries, and Wrangler configuration                                                                          |
+| XML                                | Android native resource configuration                                                                                                                                            |
+| Markdown                           | Product, operations, design-research, platform-asset, and deployment documentation                                                                                               |
+| Web App Manifest                   | Installable PWA identity, icons, theme colors, and launch behavior                                                                                                               |
+| WebVTT and plain text              | Non-secret caption QA fixtures and normalized-caption acceptance artifacts                                                                                                       |
 
 The primary product runtime is TypeScript/React Native, the browser extension is JavaScript/HTML/CSS, and the edge and data layer is TypeScript/SQL on Cloudflare.
 
@@ -328,17 +328,17 @@ The primary product runtime is TypeScript/React Native, the browser extension is
 
 ## 🔗 Architecture and module guide
 
-| Layer                | Technology                                                       | Responsibility                                                                                                       |
-| -------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Web/native app       | Expo 57, Expo Router, React 19, React Native 0.86                | Authentication, paste/share import, Android-local generation, lessons, feedback, mastery, administration, and themes |
-| Browser extension    | Chrome Manifest V3, JavaScript                                   | Web caption access, local streamed DeepSeek generation, retries, and canonical option randomization                  |
-| Edge API             | Cloudflare Workers, Hono, scheduled triggers                     | Better Auth, ordered storage-only question imports, grading, availability, review scheduling, and static assets      |
+| Layer                | Technology                                                       | Responsibility                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Web/native app       | Expo 57, Expo Router, React 19, React Native 0.86                | Authentication, paste/share import, Android-local generation, lessons, feedback, mastery, administration, and themes                |
+| Browser extension    | Chrome Manifest V3, JavaScript                                   | Web caption access, local streamed DeepSeek generation, retries, and canonical option randomization                                 |
+| Edge API             | Cloudflare Workers, Hono, scheduled triggers                     | Better Auth, ordered storage-only question imports, grading, availability, review scheduling, and static assets                     |
 | Data and assets      | D1, KV, private R2                                               | Accounts, videos, generating/passed banks, attempts, mastery, profile analytics, rate limits, thumbnails, avatars, and private PDFs |
-| Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash, Expo fetch                 | Platform-neutral progressive prompts, per-question validation, automatic repair, shuffling, and serialization        |
-| Caption acquisition  | YouTube public caption tracks                                    | Caption-only source text; missing or incomplete captions fail before generation                                      |
-| Shared contracts     | TypeScript, Zod                                                  | Versioned page protocol, quiz schemas, API requests, and server validation                                           |
-| Quality and delivery | Vitest, Node test runner, Playwright, ESLint, Prettier, Wrangler | Contract tests, browser journeys, static checks, builds, and deployment                                              |
-| Visual identity      | Semantic tokens, typed voxel registry, Sharp                     | Shared light/dark themes and deterministic web, extension, iOS, Android, and splash assets                           |
+| Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash, Expo fetch                 | Platform-neutral progressive prompts, per-question validation, automatic repair, shuffling, and serialization                       |
+| Caption acquisition  | YouTube public caption tracks                                    | Caption-only source text; missing or incomplete captions fail before generation                                                     |
+| Shared contracts     | TypeScript, Zod                                                  | Versioned page protocol, quiz schemas, API requests, and server validation                                                          |
+| Quality and delivery | Vitest, Node test runner, Playwright, ESLint, Prettier, Wrangler | Contract tests, browser journeys, static checks, builds, and deployment                                                             |
+| Visual identity      | Semantic tokens, typed voxel registry, Sharp                     | Shared light/dark themes and deterministic web, extension, iOS, Android, and splash assets                                          |
 
 ### [Expo application](./apps/app/)
 
