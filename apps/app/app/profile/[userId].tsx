@@ -17,8 +17,10 @@ import { spacing, typography } from "../../src/theme/tokens";
 export default function PublicProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { t, theme } = useSettings();
-  const [profile, setProfile] = useState<PublicProfileResponse>();
-  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState<{
+    userId: string;
+    profile?: PublicProfileResponse;
+  }>();
 
   useEffect(() => {
     if (!userId) return;
@@ -29,18 +31,20 @@ export default function PublicProfileScreen() {
       PublicProfileResponseSchema,
     )
       .then((value) => {
-        if (active) setProfile(value);
+        if (active) setLoaded({ userId, profile: value });
       })
       .catch(() => {
-        if (active) setProfile(undefined);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+        if (active) setLoaded({ userId });
       });
     return () => {
       active = false;
     };
   }, [userId]);
+
+  // Derive the pending state from the loaded user id so the effect never has to
+  // call setState synchronously (react-hooks/set-state-in-effect).
+  const loading = !loaded || loaded.userId !== userId;
+  const profile = loading ? undefined : loaded.profile;
 
   if (loading) {
     return (

@@ -71,9 +71,16 @@ for the learner or the teacher.
   Cloudflare Workers/D1/R2; extension 0.8.31; the complete learner flow was exercised
   end-to-end on fresh public lessons on 2026-08-21 (question 1 in 6.4 s, 10/10 questions
   answered, 100 % stored, PDF downloaded and inspected). See [`HANDOFF.md`](../HANDOFF.md).
-- **Quality gate** — `npm run format:check`, `lint`, `typecheck`, `test` (700+ unit,
-  contract, API, app, extension, and engine tests) and 24 Playwright browser journeys run
-  in [GitHub Actions](../.github/workflows/ci.yml) on every pull request and every push to `main`.
+- **Quest sharing (web-first)** — a finished quest publishes one stable link
+  (`/s/<token>`). Anyone can open the public preview (title, concept names, question
+  count and types — never the questions or answers); a signed-in recipient gets their
+  own copy of the validated bank and works it with the full feedback / recap / mastery
+  loop. Covered by API and app tests (`apps/api/test/shares.test.ts`,
+  `apps/app/test/shared-quest-route.test.ts`).
+- **Quality gate** — `npm run format:check`, `lint`, `typecheck`, and the extension
+  package build run in [GitHub Actions](../.github/workflows/ci.yml) on every pull request
+  and every push to `main`; `npm test` (700+ unit, contract, API, app, extension, and
+  engine tests) runs locally before release.
 - **Evidence culture** — every production claim in [`qa-results/`](../qa-results/) names
   the exact Worker, extension, and profile it measured; dated reports are append-only.
 
@@ -133,8 +140,10 @@ versioned quiz schema; `packages/local-quiz-engine` contains the generation core
    judge or student can feel the loop before installing the extension or adding a key.
 2. **Expanding spaced-repetition schedule** (1 → 3 → 7 → 21 days) with per-concept, not
    per-video, scheduling, driven by the recap data this release starts collecting.
-3. **Teacher sharing** — publish a quest link so a class works the same validated bank, and
-   a lightweight dashboard of commonly-missed concepts.
+3. **Teacher dashboard on top of quest sharing** — sharing a validated bank with a class
+   ships in this release; next is a lightweight view of commonly-missed concepts across
+   the recipients of one link (the `quiz_share_claims` table already records which copy
+   came from which link).
 4. **Caption-moment citations** on every question and multilingual question generation.
 
 ## 9. Team and contributions

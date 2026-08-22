@@ -30,6 +30,8 @@ export function VideoCard({
   onExport,
   onGenerateNotes,
   notesPending = false,
+  onShare,
+  sharePending = false,
   onDelete,
   deletePending = false,
 }: {
@@ -40,13 +42,15 @@ export function VideoCard({
   onExport?(): void | Promise<void>;
   onGenerateNotes?(): void | Promise<void>;
   notesPending?: boolean;
+  onShare?(): void | Promise<void>;
+  sharePending?: boolean;
   onDelete?(): void;
   deletePending?: boolean;
 }) {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const [hoveredAction, setHoveredAction] = useState<
-    "notes" | "open" | "delete" | undefined
+    "notes" | "open" | "share" | "delete" | undefined
   >();
   const horizontal = !compact && width >= 720;
   // Home's compact carousel should read as a deliberate single-card surface
@@ -291,6 +295,77 @@ export function VideoCard({
             </MotionView>
           ) : null}
         </View>
+        {onShare ? (
+          <View style={styles.actionWrap}>
+            <MotionPressable
+              pressDepth={0}
+              pressScale={motion.scale.iconPress}
+              accessibilityRole="button"
+              accessibilityLabel={t("shareQuest")}
+              accessibilityHint={t("shareQuest")}
+              accessibilityState={{
+                busy: sharePending,
+                disabled: sharePending,
+              }}
+              disabled={sharePending}
+              testID={`video-card-share-${card.videoId}`}
+              onBlur={() => setHoveredAction(undefined)}
+              onFocus={() => setHoveredAction("share")}
+              onHoverIn={() => setHoveredAction("share")}
+              onHoverOut={() => setHoveredAction(undefined)}
+              onPress={() => {
+                if (sharePending) return;
+                void Promise.resolve(onShare()).catch((cause) => {
+                  Alert.alert(
+                    t("shareQuest"),
+                    cause instanceof Error ? cause.message : t("shareFailed"),
+                  );
+                });
+              }}
+              style={({ pressed, hovered }) => [
+                styles.iconButton,
+                {
+                  backgroundColor: hovered
+                    ? theme.surfaceTint
+                    : theme.surfaceSunken,
+                  borderColor: hovered ? theme.primary : theme.border,
+                  opacity: sharePending ? 0.45 : pressed ? 0.7 : 1,
+                  transform: [{ scale: hovered ? 1.06 : 1 }],
+                },
+                Platform.OS === "web" && {
+                  transitionDuration: `${motion.fast}ms`,
+                  transitionProperty:
+                    "transform, background-color, border-color",
+                  outlineColor: theme.focus,
+                },
+              ]}
+            >
+              {sharePending ? (
+                <ActivityIndicator color={theme.secondary} size="small" />
+              ) : (
+                <VoxelIcon name="link" size={18} />
+              )}
+            </MotionPressable>
+            {hoveredAction === "share" ? (
+              <MotionView
+                duration={motion.fast}
+                pointerEvents="none"
+                preset="pop"
+                style={[
+                  styles.tooltip,
+                  {
+                    backgroundColor: theme.surfaceRaised,
+                    borderColor: theme.borderStrong,
+                  },
+                ]}
+              >
+                <Text style={[styles.tooltipText, { color: theme.text }]}>
+                  {t("shareQuest")}
+                </Text>
+              </MotionView>
+            ) : null}
+          </View>
+        ) : null}
         {onDelete ? (
           <View style={styles.actionWrap}>
             <MotionPressable

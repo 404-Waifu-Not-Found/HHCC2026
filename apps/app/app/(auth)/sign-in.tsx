@@ -11,6 +11,11 @@ import {
   parseQuickOpenRequest,
   type QuickOpenSearchParams,
 } from "../../src/lib/quick-open";
+import {
+  parseNextPath,
+  withNextParam,
+  type AuthNextSearchParams,
+} from "../../src/lib/auth-next";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { persistAuthJourneyQuickOpenHandoff } from "../../src/state/pending-video-handoff";
 import { radii, spacing, typography } from "../../src/theme/tokens";
@@ -22,8 +27,12 @@ import {
 
 export default function SignInScreen() {
   const { t, theme } = useSettings();
-  const params = useLocalSearchParams<QuickOpenSearchParams>();
+  const params = useLocalSearchParams<
+    QuickOpenSearchParams & AuthNextSearchParams
+  >();
   const quickOpen = parseQuickOpenRequest(params);
+  const next = parseNextPath(params);
+  const authLinkParams = withNextParam(quickOpen, next);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
@@ -51,7 +60,7 @@ export default function SignInScreen() {
         setError(result.error.message ?? t("signInFailed"));
         return;
       }
-      router.replace("/(tabs)");
+      router.replace(next ? (next as never) : "/(tabs)");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signInFailed"));
     } finally {
@@ -71,8 +80,8 @@ export default function SignInScreen() {
           </Text>
           <Link
             href={
-              quickOpen
-                ? { pathname: "/(auth)/sign-up", params: quickOpen }
+              authLinkParams
+                ? { pathname: "/(auth)/sign-up", params: authLinkParams }
                 : "/(auth)/sign-up"
             }
             style={[styles.link, styles.footerLink, { color: theme.text }]}

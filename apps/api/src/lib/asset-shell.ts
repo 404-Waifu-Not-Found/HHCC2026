@@ -22,6 +22,7 @@ const dynamicShells: readonly (readonly [RegExp, string])[] = [
   [/^\/create\/[^/]+$/, "/create/[videoId].html"],
   [/^\/generation\/[^/]+$/, "/generation/[videoId].html"],
   [/^\/quiz\/[^/]+$/, "/quiz/[attemptId].html"],
+  [/^\/s\/[^/]+$/, "/s/[token].html"],
 ];
 
 export function publicAssetShell(pathname: string): string | null {

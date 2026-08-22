@@ -42,6 +42,7 @@ import { Screen } from "../../src/components/Screen";
 import { StatTile } from "../../src/components/StatTile";
 import { Surface } from "../../src/components/Surface";
 import { apiRequest, ClientApiError, jsonBody } from "../../src/lib/api";
+import { createQuizShareLink, shareQuizLink } from "../../src/lib/quiz-share";
 import {
   exportCheatSheet,
   exportCheatSheetPdf,
@@ -191,6 +192,11 @@ export default function QuizScreen() {
   const [cheatSheetTitle, setCheatSheetTitle] = useState<string>(
     "ClipQuest cheat sheet",
   );
+  const [shareQuizId, setShareQuizId] = useState<string>();
+  const [shareState, setShareState] = useState<
+    "idle" | "working" | "copied" | "shared"
+  >("idle");
+  const [shareFallbackUrl, setShareFallbackUrl] = useState<string>();
   const cheatSheetStartedRef = useRef(false);
   const pendingCheatSheetRef = useRef<
     | {
@@ -229,6 +235,36 @@ export default function QuizScreen() {
       () => undefined,
     );
   }, [attemptId, recapEntries, userId]);
+
+  // "Link copied" is a transient confirmation; return to the neutral label.
+  useEffect(() => {
+    if (shareState !== "copied" && shareState !== "shared") return;
+    const timer = setTimeout(() => setShareState("idle"), 2_500);
+    return () => clearTimeout(timer);
+  }, [shareState]);
+
+  const shareQuest = useCallback(async () => {
+    if (!shareQuizId || shareState === "working") return;
+    setShareState("working");
+    setShareFallbackUrl(undefined);
+    setError(undefined);
+    let url: string | undefined;
+    try {
+      url = (await createQuizShareLink(shareQuizId)).url;
+    } catch (cause) {
+      setShareState("idle");
+      setError(cause instanceof Error ? cause.message : t("shareFailed"));
+      return;
+    }
+    try {
+      setShareState(await shareQuizLink({ url, title: cheatSheetTitle }));
+    } catch {
+      // The link exists but the clipboard/share sheet refused: show it so
+      // the learner can copy it by hand.
+      setShareFallbackUrl(url);
+      setShareState("idle");
+    }
+  }, [cheatSheetTitle, shareQuizId, shareState, t]);
 
   const activateQuestion = useCallback((nextQuestion: PublicQuestion) => {
     setQuestionInteractionReady(false);
@@ -310,6 +346,7 @@ export default function QuizScreen() {
       setFeedback(undefined);
       setError(undefined);
       updateGeneration(resumed.generation);
+      if (resumed.quizId) setShareQuizId(resumed.quizId);
       if (resumed.quizId && resumed.videoId && !cheatSheetStartedRef.current) {
         cheatSheetStartedRef.current = true;
         cheatSheetContextRef.current = {
@@ -1072,6 +1109,36 @@ export default function QuizScreen() {
                   ? t("downloadPdf")
                   : t("preparingPdf")}
             </PrimaryButton>
+            {shareQuizId ? (
+              <PrimaryButton
+                testID="share-quest"
+                variant="secondary"
+                loading={shareState === "working"}
+                leadingIcon={
+                  <VoxelIcon
+                    name="link"
+                    size={20}
+                    color={theme.textOnPrimary}
+                  />
+                }
+                onPress={() => void shareQuest()}
+              >
+                {shareState === "copied"
+                  ? t("shareLinkCopied")
+                  : shareState === "shared"
+                    ? t("shareLinkShared")
+                    : t("shareQuest")}
+              </PrimaryButton>
+            ) : null}
+            {shareFallbackUrl ? (
+              <Text
+                selectable
+                testID="share-quest-fallback"
+                style={[styles.shareFallback, { color: theme.textMuted }]}
+              >
+                {`${t("shareCopyManually")} ${shareFallbackUrl}`}
+              </Text>
+            ) : null}
             <PrimaryButton
               trailingIcon={
                 <VoxelIcon name="next" size={20} color={theme.textOnAction} />
@@ -1856,6 +1923,12 @@ const styles = StyleSheet.create({
   completeActions: {
     width: "100%",
     gap: spacing[3],
+  },
+  shareFallback: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+    textAlign: "center",
   },
   recap: {
     width: "100%",
