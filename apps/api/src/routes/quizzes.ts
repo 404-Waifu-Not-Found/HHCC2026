@@ -219,7 +219,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
     );
   }
   const quiz = await c.env.DB.prepare(
-    "SELECT id, video_id, pipeline_version, language, session_length FROM quiz_banks WHERE id = ? AND user_id = ? AND ((pipeline_version = ? AND quality_status = 'passed') OR (pipeline_version = ? AND quality_status IN ('generating', 'passed')))",
+    "SELECT qb.id, qb.video_id, qb.pipeline_version, qb.language, qb.session_length, v.duration_seconds FROM quiz_banks qb JOIN videos v ON v.id = qb.video_id WHERE qb.id = ? AND qb.user_id = ? AND ((qb.pipeline_version = ? AND qb.quality_status = 'passed') OR (qb.pipeline_version = ? AND qb.quality_status IN ('generating', 'passed')))",
   )
     .bind(
       quizId,
@@ -233,6 +233,7 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
       pipeline_version: number;
       language: string;
       session_length: "short" | "medium" | "long";
+      duration_seconds: number | null;
     }>();
   if (!quiz) throw new ApiError(404, "quiz_not_found", "Quiz not found.");
   const quizSnapshot = await readProgressiveGenerationSnapshot(
@@ -421,11 +422,12 @@ quizzesRouter.post("/quizzes/:quizId/start", async (c) => {
   try {
     await c.env.DB.batch([
       c.env.DB.prepare(
-        "INSERT INTO attempts (id, user_id, quiz_id, mode, status, current_index, current_variant, retry_pending, target_difficulty, correct_count, total_answered, item_count, start_key, start_request_json, start_response_json, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', 0, 0, 0, 2, 0, 0, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO attempts (id, user_id, quiz_id, video_duration_seconds, mode, status, current_index, current_variant, retry_pending, target_difficulty, correct_count, total_answered, item_count, start_key, start_request_json, start_response_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'active', 0, 0, 0, 2, 0, 0, ?, ?, ?, ?, ?, ?)",
       ).bind(
         attemptId,
         user.id,
         quiz.id,
+        quiz.duration_seconds,
         input.mode,
         itemCount,
         idempotencyKey,

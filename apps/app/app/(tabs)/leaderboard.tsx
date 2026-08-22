@@ -2,7 +2,7 @@ import {
   LeaderboardResponseSchema,
   type LeaderboardEntry,
 } from "@clipquest/contracts";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Screen } from "../../src/components/Screen";
@@ -64,6 +64,9 @@ export default function LeaderboardScreen() {
               key={`${entry.rank}-${entry.name}`}
               padded={false}
               style={styles.row}
+              onPress={() =>
+                router.push(`/profile/${encodeURIComponent(entry.userId)}`)
+              }
             >
               <Text style={[styles.rank, { color: theme.primary }]}>
                 {entry.rank}
