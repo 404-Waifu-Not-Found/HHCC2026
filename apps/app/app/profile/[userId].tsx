@@ -9,6 +9,7 @@ import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { IconButton } from "../../src/components/IconButton";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
+import { QuizContributionCalendar } from "../../src/components/QuizContributionCalendar";
 import { apiRequest } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { spacing, typography } from "../../src/theme/tokens";
@@ -53,7 +54,11 @@ export default function PublicProfileScreen() {
   return (
     <Screen contentWidth="reading">
       <View style={styles.header}>
-        <IconButton icon="back" label={t("back")} onPress={() => router.back()} />
+        <IconButton
+          icon="back"
+          label={t("back")}
+          onPress={() => router.back()}
+        />
         <Text
           accessibilityRole="header"
           style={[styles.title, { color: theme.text }]}
@@ -78,6 +83,14 @@ export default function PublicProfileScreen() {
               </Text>
             </View>
           </Surface>
+          <Surface style={styles.activity}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              {t("quizActivity")}
+            </Text>
+            <QuizContributionCalendar
+              completions={profile.dailyQuizCompletions}
+            />
+          </Surface>
           <Surface style={styles.stats}>
             <ProfileStat
               label={t("completedLessons")}
@@ -91,7 +104,9 @@ export default function PublicProfileScreen() {
         </>
       ) : (
         <Surface tone="error">
-          <Text style={{ color: theme.error }}>{t("leaderboardLoadFailed")}</Text>
+          <Text style={{ color: theme.error }}>
+            {t("leaderboardLoadFailed")}
+          </Text>
         </Surface>
       )}
     </Screen>
@@ -103,7 +118,9 @@ function ProfileStat({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.stat}>
       <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: theme.textMuted }]}>{label}</Text>
+      <Text style={[styles.statLabel, { color: theme.textMuted }]}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -148,6 +165,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     padding: spacing[5],
     gap: spacing[5],
+  },
+  activity: {
+    padding: spacing[5],
+    marginBottom: spacing[5],
+  },
+  sectionTitle: {
+    marginBottom: spacing[3],
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.titleSmall,
   },
   stat: { flex: 1, alignItems: "center", gap: spacing[1] },
   statValue: {
