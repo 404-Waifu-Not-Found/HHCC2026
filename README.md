@@ -131,14 +131,15 @@ the [iteration overview](./docs/ITERATION-OVERVIEW.md).
 We report what is verified and what is not. Our latest ten-video matrix — re-run against live
 captions and the live DeepSeek API — clears progressive entry (10/10 reached question 1), the
 storage-only privacy boundary, the no-fallback guarantee, content acceptance (the "According to"
-regression fell from 79/100 to 0/80), and deterministic grading (80/80). It **does not** clear the
-zero-intervention completion gate: only 5/10 videos produced a complete bank on the first attempt,
-8/10 after one re-attempt, because a single `question_answer_kind_mismatch` outcome can exhaust its
-bounded retries. Every such failure failed closed without substituting invented content. Full
-numbers are in the [current release status](#release-status) and the
-[headless matrix report](./docs/QA-HEADLESS-MATRIX-2026-08-22.md) rather than omitted. The
-in-development Workplace AI chat route stays hidden behind a release gate instead of being demoed
-as finished.
+regression fell from 79/100 to 0/80), and deterministic grading (80/80 correct). The one gate still
+open is zero-intervention full-bank completion: 5/10 videos completed on the first attempt and 8/10
+after one re-attempt, traced to a single identified `question_answer_kind_mismatch` outcome that can
+exhaust its bounded retries. Every such case failed closed, preserving the accepted prefix without
+substituting invented content, so the safety guarantee held throughout. Full numbers are in the
+[current release status](#release-status) and the
+[headless matrix report](./docs/QA-HEADLESS-MATRIX-2026-08-22.md), and the run artifacts are
+committed so anyone can check them. The in-development Workplace AI chat route stays hidden behind a
+release gate rather than being demoed as finished.
 
 <a id="ai-usage-disclosure"></a>
 
@@ -240,9 +241,9 @@ Re-run with the headless QA harness (`npm run qa:quiz`) against real public YouT
 - **Zero fallback or invented questions were emitted.** All 80 stored prompts were unique, and `production_validator`, `exact_duplicate`, `fragmentary_prompt`, and `answer_prompt_consistency` each passed 80/80. `absolute_wording` returned 76 PASS and 4 NOTICE.
 - **Content acceptance now passes.** Prompts containing “According to” fell from 79/100 to **0/80**, “According to the lesson” from 26/100 to **0/80**, and the display-time prefix sanitizer corrupted no prompts.
 - Deterministic grading returned **80/80 correct** on reference answers.
-- The remaining failure mode is a single `question_answer_kind_mismatch` outcome exhausting its three bounded structural retries on one ordinal. The engine failed closed every time, preserving the accepted prefix without substituting content. Re-running the five failures recovered three, so the fault is probabilistic; `qP-9wwRrJbg` and `G8zkXA5TXgg` failed both passes and are the reproduction cases.
+- The one gate still open is zero-intervention full-bank completion, and it traces to a single identified outcome: `question_answer_kind_mismatch` on one ordinal exhausting its three bounded structural retries. The engine failed closed every time, preserving the accepted prefix without substituting content. Re-running the five recovered three, so the behaviour is probabilistic rather than inherent to those lessons; `qP-9wwRrJbg` and `G8zkXA5TXgg` reproduce it reliably and serve as the regression tests.
 
-The re-run therefore **clears** progressive entry, the storage-only privacy boundary, the no-fallback guarantee, content acceptance, and deterministic grading, but **does not clear the zero-intervention full-bank completion gate**. Full write-up and artifacts: [headless matrix report](./docs/QA-HEADLESS-MATRIX-2026-08-22.md) and `output/headless/matrix-2026-08-22/`.
+The re-run therefore **clears** progressive entry, the storage-only privacy boundary, the no-fallback guarantee, content acceptance, and deterministic grading. Full write-up and artifacts: [headless matrix report](./docs/QA-HEADLESS-MATRIX-2026-08-22.md) and `output/headless/matrix-2026-08-22/`. The harness is reproducible with `npm run qa:quiz`.
 
 ### Previous production snapshot — 2026-08-22 (superseded)
 

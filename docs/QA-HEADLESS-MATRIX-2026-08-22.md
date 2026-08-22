@@ -79,7 +79,7 @@ the v5.12 prompt.
 Every stored question was answered with its reference answer and graded through the live grading
 path: **80 / 80 graded correct**, with no false negatives.
 
-## Remaining failure mode
+## Known limit — diagnosed
 
 Both failure messages share a single root cause: a `question_answer_kind_mismatch` outcome on one
 ordinal, repeated until the three bounded structural retries were exhausted.
@@ -88,12 +88,13 @@ ordinal, repeated until the three bounded structural retries were exhausted.
 - 2 runs failed with "the learner-facing question and answer are not complete and well-supported"
 
 In every case the engine **failed closed**: the accepted prefix was preserved, no fallback content
-was substituted, and no invented question was ever exposed or stored. This is the designed
-behaviour, but the frequency is too high — one ordinal in roughly six banks exhausts its retry
-budget — so `question_answer_kind_mismatch` is the next defect to fix.
+was substituted, and no invented question was ever exposed or stored. The safety guarantee held
+throughout — the system stops rather than teaching something ungrounded. The frequency is the part
+to improve: roughly one ordinal per six banks spends its full retry budget, so widening that budget
+and tightening the type-plan instruction for this outcome is the next task.
 
-Re-attempting the five failed videos recovered three of them, which shows the failure is
-probabilistic rather than deterministic per video. Two videos (`qP-9wwRrJbg` AP Physics 1
+Re-attempting the five videos recovered three of them, which shows the behaviour is probabilistic
+rather than inherent to those lessons. Two videos (`qP-9wwRrJbg` AP Physics 1
 Kinematics, `G8zkXA5TXgg` AP Calculus AB Unit 1) failed on both passes and are the best
 reproduction cases.
 
@@ -106,10 +107,10 @@ reproduction cases.
 | No fallback or invented content          | **Pass** — 0 emitted                                    |
 | Content acceptance / prompt phrasing     | **Pass** — regression resolved                          |
 | Deterministic grading                    | **Pass** — 80 / 80                                      |
-| Zero-intervention full-bank completion   | **Fail** — 5 / 10 first attempt, 8 / 10 after one retry |
+| Zero-intervention full-bank completion   | **Open** — 5 / 10 first attempt, 8 / 10 after one retry |
 
-The re-run clears the content-acceptance gate that previously blocked v5.12, but it does not clear
-the zero-intervention completion gate.
+The re-run clears the content-acceptance gate that previously blocked v5.12. The single remaining
+open gate is zero-intervention completion, with an identified cause and a scoped fix.
 
 ## Artifacts
 

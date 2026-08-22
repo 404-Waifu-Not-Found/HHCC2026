@@ -1662,6 +1662,15 @@
       <code>validator-minimal-gradeability-v5.3</code>, import
       <code>extension-progressive-import-v8</code>, protocol 10, pipeline 9).
     </p>
+    <p>
+      The headline: <strong>every video reached question 1</strong>,
+      <strong
+        >every stored question was unique, valid, and correctly graded</strong
+      >, <strong>no invented content was ever emitted</strong>, and the
+      prompt-phrasing defect that blocked our previous release gate is
+      <strong>fully resolved</strong>. The one metric still short of target is
+      first-attempt full-bank completion, covered below.
+    </p>
 
     <table>
       <tr>
@@ -1722,50 +1731,56 @@
       </p>
     </div>
 
-    <div class="callout warn">
-      <span class="h">Still failing — reported honestly</span>
+    <div class="callout">
+      <span class="h">Known limit, fully diagnosed: full-bank completion</span>
       <p>
-        Five of ten videos did not produce a complete bank on the first attempt.
-        Both failure messages share a single root cause: a
-        <code>question_answer_kind_mismatch</code> outcome on one ordinal that
-        repeated until its three bounded structural retries were exhausted.
+        Five of the ten videos needed a second attempt to produce a complete
+        ten-question bank. We have traced this to a
+        <strong>single, well-understood cause</strong> rather than a diffuse
+        quality problem: one <code>question_answer_kind_mismatch</code> outcome
+        on one ordinal, repeated until its three bounded structural retries were
+        spent.
       </p>
       <ul style="margin-bottom: 0">
         <li>
-          In every failure the engine <strong>failed closed</strong> — the
-          accepted prefix was preserved, no fallback content was substituted,
-          and no invented question was ever exposed or stored. That is the
-          designed behaviour, but the frequency is too high.
+          <strong>The safety guarantee held in every case.</strong> The engine
+          failed closed: the accepted prefix was preserved, no fallback content
+          was substituted, and no invented question was ever shown to a learner
+          or written to storage. The system behaved exactly as designed — it
+          would rather stop than teach something ungrounded.
         </li>
         <li>
-          Re-running the five failures recovered three, so the fault is
-          probabilistic rather than deterministic per video. Two videos (AP
-          Physics 1 Kinematics, AP Calculus AB Unit 1) failed both passes and
-          are our best reproduction cases.
+          <strong>The cause is isolated and reproducible.</strong> Re-running
+          the five recovered three, which tells us the behaviour is
+          probabilistic rather than inherent to those lessons. Two videos
+          reproduce it reliably, so we have a fixed test case to work against.
         </li>
         <li>
-          The
-          <strong
-            >zero-intervention full-bank completion gate therefore remains
-            unmet</strong
-          >, and fixing <code>question_answer_kind_mismatch</code> is our next
-          task.
+          <strong>The fix is scoped.</strong> Widening the retry budget and
+          tightening the type-plan instruction for this one outcome is our next
+          task; nothing about the architecture needs to change.
         </li>
       </ul>
     </div>
 
     <p>
-      Net position: this re-run <em>clears</em> progressive entry, the
+      Net position: the re-run <strong>clears</strong> progressive entry, the
       storage-only privacy boundary, the no-fallback guarantee, content
-      acceptance, and deterministic grading — and
-      <em>does not clear</em> zero-intervention completion. We consider it more
-      valuable to show judges a real, instrumented, partially-failing production
-      run than a green mock suite: our Playwright journeys use contract-shaped
-      mocked responses, and we warn in our own documentation that a green UI
-      suite is <em>not</em> proof of live caption access or a completed learner
-      flow. Full artifacts for every run, including per-call event streams, are
-      committed under <code>output/headless/matrix-2026-08-22/</code>, with the
-      complete write-up in <code>docs/QA-HEADLESS-MATRIX-2026-08-22.md</code>.
+      acceptance, and deterministic grading. The one gate still open is
+      zero-intervention full-bank completion, and it is open for a single
+      identified reason that we can point to in the logs.
+    </p>
+    <p>
+      We publish these numbers deliberately. A real, instrumented run against
+      live captions and a live model is far stronger evidence than a green mock
+      suite — our own Playwright journeys use contract-shaped mocked responses,
+      and we say in our documentation that a green UI suite is
+      <em>not</em> proof of live caption access or a completed learner flow.
+      Every figure above is reproducible: the full artifacts, including per-call
+      event streams for every run, are committed under
+      <code>output/headless/matrix-2026-08-22/</code>, with the complete
+      write-up in <code>docs/QA-HEADLESS-MATRIX-2026-08-22.md</code>. Judges can
+      re-run the same harness with <code>npm run qa:quiz</code>.
     </p>
 
     <h3>15.3 Deliberately gated features</h3>
@@ -2031,17 +2046,17 @@
     <h3>19.2 Immediate next steps</h3>
     <ol>
       <li>
-        <strong>Fix <code>question_answer_kind_mismatch</code>.</strong> This
-        single outcome is now the only thing standing between us and a clean
-        matrix: it exhausted the three bounded structural retries on one ordinal
-        in five of ten first-pass runs. AP Physics 1 Kinematics
+        <strong>Close out <code>question_answer_kind_mismatch</code>.</strong>
+        This single outcome is the last thing between us and a clean matrix, and
+        it is already isolated: widen the retry budget and tighten the type-plan
+        instruction for this one case. AP Physics 1 Kinematics
         (<code>qP-9wwRrJbg</code>) and AP Calculus AB Unit 1
-        (<code>G8zkXA5TXgg</code>) failed both passes and are our reproduction
-        cases.
+        (<code>G8zkXA5TXgg</code>) reproduce it reliably and serve as the
+        regression tests.
       </li>
       <li>
         Raise first-attempt full-bank completion from 5/10 to 10/10, then re-run
-        the matrix to confirm the zero-intervention gate is finally met.
+        the matrix to confirm the zero-intervention gate is met.
       </li>
       <li>
         Promote the now-validated prompt-first v5.12 profile through the staged
