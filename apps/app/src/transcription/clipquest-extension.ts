@@ -263,7 +263,7 @@ function isGenerationProgressMessage(
     (message.retryOrdinal === undefined ||
       (Number.isInteger(message.retryOrdinal) &&
         message.retryOrdinal >= 1 &&
-        message.retryOrdinal <= 15)) &&
+        message.retryOrdinal <= 50)) &&
     (message.ordinalAttempt === undefined ||
       (Number.isInteger(message.ordinalAttempt) &&
         message.ordinalAttempt >= 1 &&

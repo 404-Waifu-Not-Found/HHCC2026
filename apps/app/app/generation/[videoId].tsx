@@ -131,6 +131,7 @@ export default function GenerationScreen() {
     generationId: string;
     quizLanguage: AppLanguage;
     sessionLength: SessionLength;
+    questionCount?: string;
     questionTypes?: string;
   }>();
   const { locale, t, theme } = useSettings();
@@ -152,8 +153,10 @@ export default function GenerationScreen() {
     );
     return parsed.success ? parsed.data : [...DEFAULT_QUIZ_QUESTION_TYPES];
   }, [params.questionTypes]);
-  const questionCount = questionLimitForSession(params.sessionLength) as
-    5 | 10 | 15;
+  const questionCount = questionLimitForSession(
+    params.sessionLength,
+    params.questionCount ? Number(params.questionCount) : undefined,
+  );
   const firstQuestionType = questionTypes[0] ?? "multiple_choice";
   const taskKey = useMemo(
     () => `${params.generationId}:${runNumber}`,
@@ -348,6 +351,7 @@ export default function GenerationScreen() {
             body: jsonBody({
               mode: "learn",
               sessionLength: params.sessionLength,
+              questionCount,
               questionTypes,
               watched: true,
             }),
@@ -651,6 +655,7 @@ export default function GenerationScreen() {
                       videoId: imported.video.id,
                       quizLanguage: params.quizLanguage,
                       sessionLength: params.sessionLength,
+                      questionCount,
                       questionTypes,
                       watched: true,
                       chunk,

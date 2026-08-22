@@ -85,6 +85,10 @@ export const messages = {
     short: "Short · 5",
     medium: "Medium · 10",
     long: "Long · 15",
+    custom: "Custom",
+    customQuestionCount: "Number of questions",
+    customQuestionCountError:
+      "Enter a whole number from 5 to 50, with at least one question per selected type.",
     generate: "Create my quiz",
     gettingVideo: "Getting video",
     checkingCaptions: "Verifying captions",
@@ -386,6 +390,10 @@ export const messages = {
     short: "短 · 5 题",
     medium: "中 · 10 题",
     long: "长 · 15 题",
+    custom: "自定义",
+    customQuestionCount: "题目数量",
+    customQuestionCountError:
+      "请输入 5 到 50 之间的整数，且每种所选题型至少一题。",
     generate: "生成测验",
     gettingVideo: "正在获取视频",
     checkingCaptions: "正在验证字幕",

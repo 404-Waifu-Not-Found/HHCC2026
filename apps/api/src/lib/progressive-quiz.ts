@@ -14,6 +14,8 @@ import {
   LocalQuizPromptVersionSchema,
   LocalQuizResultProtocolVersionSchema,
   LocalQuizValidatorVersionSchema,
+  QUESTION_COUNT_MAX,
+  QuestionCountSchema,
   QuizQuestionTypesSchema,
   questionTypePlanForSelection,
   type AttemptGenerationAvailability,
@@ -28,11 +30,7 @@ import { z } from "zod";
 import { ApiError } from "./errors";
 import { compareFormulaAnswer } from "./math-expression";
 
-const PlannedQuestionCountSchema = z.union([
-  z.literal(5),
-  z.literal(10),
-  z.literal(15),
-]);
+const PlannedQuestionCountSchema = QuestionCountSchema;
 
 const ENGLISH_STOP_WORDS = new Set([
   "a",
@@ -181,7 +179,7 @@ export const ProgressiveQuizSummarySchema = z
       "ready",
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
-    retryOrdinal: z.number().int().min(1).max(15).optional(),
+    retryOrdinal: z.number().int().min(1).max(QUESTION_COUNT_MAX).optional(),
     ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: z
       .enum([
@@ -200,13 +198,13 @@ export const ProgressiveQuizSummarySchema = z
     plannedQuestionTypes: z
       .array(z.enum(["multiple_choice", "true_false", "short_answer"]))
       .min(5)
-      .max(15)
+      .max(QUESTION_COUNT_MAX)
       .optional(),
     generatedQuestionTypes: z.array(
       z.enum(["multiple_choice", "true_false", "short_answer"]),
     ),
     plannedCount: PlannedQuestionCountSchema,
-    acceptedCount: z.number().int().min(1).max(15),
+    acceptedCount: z.number().int().min(1).max(QUESTION_COUNT_MAX),
     lastProgressAt: z.number().int().positive(),
     lastQuestionAt: z.number().int().positive().optional(),
     stateChangedAt: z.number().int().positive().optional(),
@@ -215,7 +213,11 @@ export const ProgressiveQuizSummarySchema = z
       .array(
         z
           .object({
-            ordinal: z.number().int().min(0).max(14),
+            ordinal: z
+              .number()
+              .int()
+              .min(0)
+              .max(QUESTION_COUNT_MAX - 1),
             codes: z
               .array(
                 z.enum([
@@ -230,12 +232,12 @@ export const ProgressiveQuizSummarySchema = z
           })
           .strict(),
       )
-      .max(15)
+      .max(QUESTION_COUNT_MAX)
       .optional(),
     acceptedQuestionSummaries: z
       .array(LocalAcceptedQuestionSummarySchema)
       .min(1)
-      .max(15),
+      .max(QUESTION_COUNT_MAX),
     transcriptStored: z.literal(false),
     aiCalls: z.number().int().nonnegative(),
     retryCount: z.number().int().nonnegative(),
@@ -1291,7 +1293,9 @@ function parseRetryOrdinals(value: string): number[] {
     return [...new Set(parsed)]
       .filter(
         (ordinal): ordinal is number =>
-          Number.isInteger(ordinal) && ordinal >= 1 && ordinal <= 15,
+          Number.isInteger(ordinal) &&
+          ordinal >= 1 &&
+          ordinal <= QUESTION_COUNT_MAX,
       )
       .sort((left, right) => left - right);
   } catch {

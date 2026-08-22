@@ -1,6 +1,6 @@
 import type { QuizQuestionType, TranscriptSegment } from "@clipquest/contracts";
 
-export type SupportedQuestionCount = 5 | 10 | 15;
+export type SupportedQuestionCount = number;
 
 export type FirstQuestionEtaInput = {
   captionWordCount?: number;
