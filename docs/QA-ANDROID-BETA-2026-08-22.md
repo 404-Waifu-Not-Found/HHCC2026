@@ -1,8 +1,8 @@
-# Android private beta 0.2.0 implementation QA — 2026-08-16
+# Android private beta 0.2.0 implementation QA — 2026-08-22
 
 Status: **backward-compatible Worker/app changes are live and the source candidate passes local automated and emulator gates; private APK distribution remains blocked by external release credentials and device acceptance.**
 
-This report records only actions observed on 2026-08-16. It does not claim an EAS build, physical-device acceptance, FCM delivery, verified App Links, or a ten-video Android matrix.
+This report records only actions observed on 2026-08-22. It does not claim an EAS build, physical-device acceptance, FCM delivery, verified App Links, or a ten-video Android matrix.
 
 ## Candidate identity
 

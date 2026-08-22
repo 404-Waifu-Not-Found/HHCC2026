@@ -1,6 +1,6 @@
-# First-question ETA calibration — 2026-08-09
+# First-question ETA calibration — 2026-08-22
 
-> Historical calibration with a 2026-08-11 production revalidation. The original 15-run dataset below used extension 0.8.0. The latest official-site evidence is the [extension-0.8.5 ten-video report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md).
+> Historical calibration with a 2026-08-22 production revalidation. The original 15-run dataset below used extension 0.8.0. The latest official-site evidence is the [extension-0.8.5 ten-video report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-22.md).
 
 ## Scope
 
@@ -23,7 +23,7 @@ caption words:
 4. [Physics in the 20th Century](https://www.youtube.com/watch?v=PbITFIGLciI)
 5. [Introduction to Superposition](https://www.youtube.com/watch?v=lZ3bPUKo5zc)
 
-## Original 2026-08-09 results
+## Original 2026-08-22 results
 
 The first-question type was balanced across the 15 runs: five multiple-choice,
 five true/false, and five short-answer cases. All first chunks passed without
@@ -96,7 +96,7 @@ The learner-facing countdown is rounded to five-second steps. If a long-tail
 request exceeds the modeled interval, the UI stops promising a number and says
 that question 1 is taking longer than usual while streaming continues.
 
-## Production revalidation — 2026-08-11
+## Production revalidation — 2026-08-22
 
 The model was rechecked during ten complete official-site quiz runs with Chrome extension 0.8.5. The visible countdowns were 15 or 20 seconds, and the learner reached an interactive first question in every counted run.
 
@@ -131,7 +131,7 @@ The countdown remained reasonably conservative, but it was not tightly calibrate
 
 The excluded first Run 8 attempt reached question 1 in 9.113 seconds, later stopped at 11/15, and is not part of the ETA statistics above. Its failure affects completion reliability, not the measured healthy first-question distribution.
 
-Extension 0.8.6 adds local automated coverage for reclaiming that same accepted prefix and completing the original bank, but it does not add a new timing sample. Do not combine source-level recovery tests with this production latency dataset. Recalibrate only from the required immutable 0.8.6 benchmark and canary; see the [0.8.6 implementation report](../qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-11.md).
+Extension 0.8.6 adds local automated coverage for reclaiming that same accepted prefix and completing the original bank, but it does not add a new timing sample. Do not combine source-level recovery tests with this production latency dataset. Recalibrate only from the required immutable 0.8.6 benchmark and canary; see the [0.8.6 implementation report](../qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-22.md).
 
 ## Data handling
 

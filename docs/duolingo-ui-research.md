@@ -1,6 +1,6 @@
 # Duolingo UI research for the ClipQuest rebuild
 
-Accessed and refreshed: 2026-08-06.
+Accessed and refreshed: 2026-08-22.
 
 ## Purpose and boundaries
 
@@ -224,7 +224,7 @@ Baseline behavior and issues recorded before visual replacement:
 - The old visual layer emits Expo warnings for legacy `shadow*` props. The rebuild will use the supported `boxShadow` style.
 - The repository has no lint, format, Playwright, Detox, or browser-integration script at baseline.
 
-The baseline counts and limitations above are intentionally historical. As of 2026-08-04, the repository has ESLint, Prettier, Playwright journeys, 66 Vitest tests, complete-transcript integrity contracts, paste-time pre-generation, and learner-selected question types. Use the README release status—not this research baseline—for release decisions.
+The baseline counts and limitations above are intentionally historical. As of 2026-08-22, the repository has ESLint, Prettier, Playwright journeys, 66 Vitest tests, complete-transcript integrity contracts, paste-time pre-generation, and learner-selected question types. Use the README release status—not this research baseline—for release decisions.
 
 ## Legal-safe adaptation checklist
 
