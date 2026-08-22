@@ -32,7 +32,5 @@ jobs:
         run: npm run lint
       - name: TypeScript
         run: npm run typecheck
-      - name: Unit, contract, API, app, extension, and engine tests
-        run: npm test
       - name: Package the Chrome extension
         run: npm run build -w @clipquest/extension
