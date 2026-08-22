@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
     paddingRight: spacing[16] + spacing[5],
-    transform: [{ translateY: -spacing[2] }],
+    transform: [{ translateY: -spacing[3] }],
   },
   scoreBar: {
     position: "absolute",
