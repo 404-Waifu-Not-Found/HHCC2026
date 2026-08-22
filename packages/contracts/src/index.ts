@@ -3142,6 +3142,16 @@ export const PublicProfileResponseSchema = z
     image: z.string().nullable(),
     completedQuizzes: z.number().int().nonnegative(),
     totalDurationSeconds: z.number().int().nonnegative(),
+    dailyQuizCompletions: z
+      .array(
+        z
+          .object({
+            date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            count: z.number().int().positive(),
+          })
+          .strict(),
+      )
+      .max(371),
   })
   .strict();
 export type PublicProfileResponse = z.infer<typeof PublicProfileResponseSchema>;

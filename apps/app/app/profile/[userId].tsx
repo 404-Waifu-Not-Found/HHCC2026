@@ -9,6 +9,7 @@ import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { IconButton } from "../../src/components/IconButton";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
+import { QuizContributionCalendar } from "../../src/components/QuizContributionCalendar";
 import { apiRequest } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { spacing, typography } from "../../src/theme/tokens";
@@ -81,6 +82,14 @@ export default function PublicProfileScreen() {
                 {t("leaderboard")}
               </Text>
             </View>
+          </Surface>
+          <Surface style={styles.activity}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              {t("quizActivity")}
+            </Text>
+            <QuizContributionCalendar
+              completions={profile.dailyQuizCompletions}
+            />
           </Surface>
           <Surface style={styles.stats}>
             <ProfileStat
@@ -156,6 +165,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     padding: spacing[5],
     gap: spacing[5],
+  },
+  activity: {
+    padding: spacing[5],
+    marginBottom: spacing[5],
+  },
+  sectionTitle: {
+    marginBottom: spacing[3],
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.titleSmall,
   },
   stat: { flex: 1, alignItems: "center", gap: spacing[1] },
   statValue: {

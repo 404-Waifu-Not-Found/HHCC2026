@@ -72,8 +72,9 @@ profileRouter.get("/stats", async (c) => {
 
 publicProfileRouter.get("/public/:userId", async (c) => {
   const userId = c.req.param("userId");
-  const profile = await c.env.DB.prepare(
-    `SELECT u.id, u.name, u.image,
+  const [profile, dailyCompletions] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT u.id, u.name, u.image,
             COUNT(DISTINCT CASE WHEN a.status = 'complete' THEN a.quiz_id END) AS completed_quizzes,
             COALESCE((
               SELECT SUM(completed.duration_seconds)
@@ -91,16 +92,21 @@ publicProfileRouter.get("/public/:userId", async (c) => {
        FROM user u
        LEFT JOIN attempts a ON a.user_id = u.id
       WHERE u.id = ?
-      GROUP BY u.id, u.name, u.image`,
-  )
-    .bind(userId)
-    .first<{
-      id: string;
-      name: string | null;
-      image: string | null;
-      completed_quizzes: number | null;
-      total_duration_seconds: number | null;
-    }>();
+       GROUP BY u.id, u.name, u.image`,
+    )
+      .bind(userId)
+      .first<{
+        id: string;
+        name: string | null;
+        image: string | null;
+        completed_quizzes: number | null;
+        total_duration_seconds: number | null;
+      }>(),
+    c.env.DB.prepare(PROFILE_DAILY_COMPLETIONS_SQL).bind(
+      userId,
+      Math.floor(now() / DAY_MS) * DAY_MS - 370 * DAY_MS,
+    ).all<{ completion_date: string; completion_count: number }>(),
+  ]);
   if (!profile) {
     throw new ApiError(404, "profile_not_found", "Profile not found.");
   }
@@ -114,6 +120,10 @@ publicProfileRouter.get("/public/:userId", async (c) => {
           : null,
       completedQuizzes: Number(profile.completed_quizzes ?? 0),
       totalDurationSeconds: Number(profile.total_duration_seconds ?? 0),
+      dailyQuizCompletions: dailyCompletions.results.map((entry) => ({
+        date: entry.completion_date,
+        count: Number(entry.completion_count),
+      })),
     }),
   );
 });
