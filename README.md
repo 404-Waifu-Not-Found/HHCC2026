@@ -276,7 +276,9 @@ The completion screen pairs the score and mastery state with a "Right first try"
 
 Leaderboard entries are interactive. Selecting a learner opens a read-only public profile with their avatar, completed quizzes, total learning time, and daily activity history.
 
-![ClipQuest leaderboard with learner avatars and progress](./docs/screenshots/final/desktop-leaderboard.png)
+| Library progress cards | Leaderboard |
+| ---------------------- | ----------- |
+| ![ClipQuest library progress cards](./docs/screenshots/final/desktop-library-score-actions.png) | ![ClipQuest leaderboard with learner avatars and progress](./docs/screenshots/final/desktop-leaderboard.png) |
 
 ### Mobile learning and completion
 
