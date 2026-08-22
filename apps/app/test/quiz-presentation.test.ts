@@ -57,7 +57,7 @@ describe("quiz answer presentation", () => {
     const source = await quizSource();
     const completionBranch = source.slice(
       source.indexOf("if (showCompletion && score !== undefined)"),
-      source.indexOf("if (error && !question)"),
+      source.indexOf("if (waitingForQuestions)"),
     );
 
     expect(completionBranch).toContain('router.replace("/(tabs)/library")');
@@ -84,5 +84,25 @@ describe("quiz answer presentation", () => {
     const source = await quizSource();
     expect(source).toContain("{completedTotal !== undefined ? (");
     expect(source).not.toContain("{completedTotal ? (");
+  });
+
+  it("offers a choice after the next-question wait timeout", async () => {
+    const source = await quizSource();
+    const waitingBranch = source.slice(
+      source.indexOf("if (waitingForQuestions)"),
+      source.indexOf("if (error && !question)"),
+    );
+
+    expect(source).toContain("QUESTION_WAIT_TIMEOUT_MS");
+    expect(waitingBranch).toContain('testID="quiz-stay-here"');
+    expect(waitingBranch).toContain('testID="quiz-return-home"');
+    expect(waitingBranch).toContain('router.replace("/(tabs)")');
+    expect(waitingBranch).toContain("setWaitingTooLong(false)");
+    expect(
+      source.slice(
+        source.indexOf("if (!waitingForQuestions) return;"),
+        source.indexOf("subscribeToAttemptGeneration"),
+      ),
+    ).not.toContain("setWaitingTooLong(false)");
   });
 });

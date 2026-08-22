@@ -15,7 +15,6 @@ import {
   groundedTrueFalseQuestion,
   multipleChoiceQuestionAnswerIsCoherent,
   questionConceptFailure,
-  questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
   repairMultipleChoiceQuestionKind,
   stripQuestionSourceFraming,
@@ -31,6 +30,16 @@ const PROMPT_VERSION = "quiz-local-json-stream-v5.12";
 const VALIDATOR_VERSION = "validator-minimal-gradeability-v5.3";
 const IMPORT_VERSION = "extension-progressive-import-v8";
 const GENERATION_PROFILE = "prompt_first_auto_v5_12";
+
+function quizLanguageInstruction(language) {
+  const name =
+    language === "zh-CN"
+      ? "Simplified Chinese (简体中文)"
+      : language === "en"
+        ? "English"
+        : String(language || "the selected quiz language");
+  return `MANDATORY QUIZ LANGUAGE: Write every learner-visible field entirely in ${name}. Translate the question, concept, explanation, answer, correction, aliases, distractors, choices, and rubric text into ${name}. Keep private evidence fields in the original caption language because they are not shown to the learner. Do not mix languages in learner-visible text, except standard formulas, symbols, acronyms, and proper technical terms.`;
+}
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
 // Complete captions stay on the client. Prompt-first requests send only the
 // bounded evidence window to DeepSeek, so the local selection guard can honor
@@ -3121,7 +3130,7 @@ function generationMessagesV512(input) {
     { role: "system", content: PROMPT_FIRST_SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Topic hint — never test this title: ${input.title}\nQuiz language: ${input.quizLanguage}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Required objective: ${objective}.${type === "true_false" ? ` Required truth value, assigned locally by ClipQuest: ${String(polarity)}.` : ""}\n\nAssigned assessment fact — this is the required objective when it is complete, literal, and not blocked. Do not abandon a valid assigned fact for a neighboring fact:\n${primaryClaim}\n\nAdditional private context — preserve its original order. Use it to clarify the assigned fact. Select an alternative from it only when the assigned fact is forbidden, incomplete, corrected later, or duplicates a blocked grading target:\n${focusExcerpt}\n\nBLOCKED prior questions and grading targets — these are unavailable evidence. Do not quote, paraphrase, negate, reverse, define, apply, or otherwise reuse any fact below:\n${accepted}\n\nDistinctness has priority over the assigned fact. Compare both the proposed question and its complete grading target with every blocked question and answer. A definition and a purpose question are duplicates when both are answered by the same underlying fact. Reusing the same principal mechanism in another stem is also a duplicate. The new answer or correction must teach information that was not sufficient to answer a prior question. Choose a different subject, condition, cause, mechanism, operation, consequence, limitation, or application.\n\nType contract:\n${typeInstruction}${retryInstruction ? `\n\n${retryInstruction}` : ""}\n\nFinal consistency check: silently read the question and its grading target together. They must form a complete, non-circular question-and-answer pair; True/False fields must agree on one truth value; and no learner-visible field may depend on unseen presentation context. If the assigned fact conflicts with a later qualification, uses colloquial wording, or repeats a blocked fact, discard it. ABSOLUTE OUTPUT BAN: no learner-visible field may contain \"according to,\" \"the evidence indicates,\" \"the context specifies,\" \"the material states,\" \"the source shows,\" or an equivalent attribution. State the concept directly.\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example — do not copy its subject matter:\n${JSON.stringify({ questions: [promptFirstV512ExampleQuestion(type, polarity, objective, requiredShortAnswerMode)] })}\n\nReturn JSON only.`,
+      content: `Topic hint — never test this title: ${input.title}\nQuiz language: ${input.quizLanguage}\n${quizLanguageInstruction(input.quizLanguage)}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Required objective: ${objective}.${type === "true_false" ? ` Required truth value, assigned locally by ClipQuest: ${String(polarity)}.` : ""}\n\nAssigned assessment fact — this is the required objective when it is complete, literal, and not blocked. Do not abandon a valid assigned fact for a neighboring fact:\n${primaryClaim}\n\nAdditional private context — preserve its original order. Use it to clarify the assigned fact. Select an alternative from it only when the assigned fact is forbidden, incomplete, corrected later, or duplicates a blocked grading target:\n${focusExcerpt}\n\nBLOCKED prior questions and grading targets — these are unavailable evidence. Do not quote, paraphrase, negate, reverse, define, apply, or otherwise reuse any fact below:\n${accepted}\n\nDistinctness has priority over the assigned fact. Compare both the proposed question and its complete grading target with every blocked question and answer. A definition and a purpose question are duplicates when both are answered by the same underlying fact. Reusing the same principal mechanism in another stem is also a duplicate. The new answer or correction must teach information that was not sufficient to answer a prior question. Choose a different subject, condition, cause, mechanism, operation, consequence, limitation, or application.\n\nType contract:\n${typeInstruction}${retryInstruction ? `\n\n${retryInstruction}` : ""}\n\nFinal consistency check: silently read the question and its grading target together. They must form a complete, non-circular question-and-answer pair; True/False fields must agree on one truth value; and no learner-visible field may depend on unseen presentation context. If the assigned fact conflicts with a later qualification, uses colloquial wording, or repeats a blocked fact, discard it. ABSOLUTE OUTPUT BAN: no learner-visible field may contain \"according to,\" \"the evidence indicates,\" \"the context specifies,\" \"the material states,\" \"the source shows,\" or an equivalent attribution. State the concept directly.\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example — do not copy its subject matter:\n${JSON.stringify({ questions: [promptFirstV512ExampleQuestion(type, polarity, objective, requiredShortAnswerMode)] })}\n\nReturn JSON only.`,
     },
   ];
 }
@@ -3177,7 +3186,7 @@ function generationMessagesV511(input) {
     { role: "system", content: PROMPT_FIRST_V511_SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Topic hint — never test this title: ${input.title}\nQuiz language: ${input.quizLanguage}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Required objective: ${objective}.${type === "true_false" ? ` Required truth value, assigned locally by ClipQuest: ${String(polarity)}.` : ""}\n\nAssigned assessment fact — test this exact subject and relationship:\n${primaryClaim}\n\nAdditional instructional context — clarify only; do not switch the assessed subject:\n${input.focusExcerpt}\n\nAlready accepted grading targets — do not repeat or reverse them:\n${accepted}\n\nType contract:\n${typeInstruction}${retryInstruction ? `\n\n${retryInstruction}` : ""}\n\nFinal check: every learner-visible field is direct educational content, the grading target fully answers the question, and no field refers to a recording, presentation, statement, wording, material, example shown, diagram, graph, analogy, person speaking, sponsor, brand, or disclaimer. Never ask what a statement indicates or means. Never ask for an unseen location, direction, label, or quantity. The answer must supply information absent from the stem rather than restate it. A False question and its correction must differ in one explicit factual relationship and must not use this or that principle as a substitute for the complete correction. Explanations must state the concept directly and must not begin with "the statement is true" or "the statement is false."\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example — do not copy its subject matter:\n${JSON.stringify({ questions: [promptFirstV511ExampleQuestion(type, polarity, objective)] })}\n\nReturn JSON only.`,
+      content: `Topic hint — never test this title: ${input.title}\nQuiz language: ${input.quizLanguage}\n${quizLanguageInstruction(input.quizLanguage)}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Required objective: ${objective}.${type === "true_false" ? ` Required truth value, assigned locally by ClipQuest: ${String(polarity)}.` : ""}\n\nAssigned assessment fact — test this exact subject and relationship:\n${primaryClaim}\n\nAdditional instructional context — clarify only; do not switch the assessed subject:\n${input.focusExcerpt}\n\nAlready accepted grading targets — do not repeat or reverse them:\n${accepted}\n\nType contract:\n${typeInstruction}${retryInstruction ? `\n\n${retryInstruction}` : ""}\n\nFinal check: every learner-visible field is direct educational content, the grading target fully answers the question, and no field refers to a recording, presentation, statement, wording, material, example shown, diagram, graph, analogy, person speaking, sponsor, brand, or disclaimer. Never ask what a statement indicates or means. Never ask for an unseen location, direction, label, or quantity. The answer must supply information absent from the stem rather than restate it. A False question and its correction must differ in one explicit factual relationship and must not use this or that principle as a substitute for the complete correction. Explanations must state the concept directly and must not begin with "the statement is true" or "the statement is false."\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example — do not copy its subject matter:\n${JSON.stringify({ questions: [promptFirstV511ExampleQuestion(type, polarity, objective)] })}\n\nReturn JSON only.`,
     },
   ];
 }
@@ -3220,7 +3229,7 @@ function generationMessagesV510(input) {
     { role: "system", content: PROMPT_FIRST_V510_SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Topic hint: ${input.title}\nQuiz language: ${input.quizLanguage}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Required assessment objective: ${objective}.${type === "true_false" ? ` Required answer polarity: ${String(polarity)}.` : ""}\n\nPrimary assessment claim — the question must test this claim, not a neighboring claim:\n${primaryClaim}\n\nInstructional material — this is the only answer-bearing content:\n${input.focusExcerpt}\n\nAlready accepted objectives — do not test the same underlying claim with another wording, type, or polarity:\n${accepted}\n\nType requirements:\n${typeInstruction}${structuralRetryInstruction ? `\n\n${structuralRetryInstruction}` : ""}\n\nFinal check before returning JSON: the grading target completely answers the question; every explanation states the concept directly and ends without saying that material, evidence, a source, or a lesson says, states, shows, or supports anything.\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example — do not copy its subject matter:\n${JSON.stringify({ questions: [promptFirstV510ExampleQuestion(type, polarity, objective)] })}\n\nReturn JSON only.`,
+      content: `Topic hint: ${input.title}\nQuiz language: ${input.quizLanguage}\n${quizLanguageInstruction(input.quizLanguage)}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Required assessment objective: ${objective}.${type === "true_false" ? ` Required answer polarity: ${String(polarity)}.` : ""}\n\nPrimary assessment claim — the question must test this claim, not a neighboring claim:\n${primaryClaim}\n\nInstructional material — this is the only answer-bearing content:\n${input.focusExcerpt}\n\nAlready accepted objectives — do not test the same underlying claim with another wording, type, or polarity:\n${accepted}\n\nType requirements:\n${typeInstruction}${structuralRetryInstruction ? `\n\n${structuralRetryInstruction}` : ""}\n\nFinal check before returning JSON: the grading target completely answers the question; every explanation states the concept directly and ends without saying that material, evidence, a source, or a lesson says, states, shows, or supports anything.\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example — do not copy its subject matter:\n${JSON.stringify({ questions: [promptFirstV510ExampleQuestion(type, polarity, objective)] })}\n\nReturn JSON only.`,
     },
   ];
 }
@@ -3302,7 +3311,7 @@ function generationMessagesV59(input) {
     { role: "system", content: PROMPT_FIRST_V59_SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Topic hint: ${input.title}\nQuiz language: ${input.quizLanguage}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Preferred objective: ${objective}.${type === "true_false" ? ` Required answer polarity: ${String(polarity)}.` : ""}\n\nInstructional evidence:\n${input.focusExcerpt}\n\nAlready accepted questions and concepts:\n${accepted}\n\nType requirements:\n${typeInstruction}\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example:\n${JSON.stringify({ questions: [promptFirstExampleQuestion(type, polarity)] })}\n\nReturn JSON only.`,
+      content: `Topic hint: ${input.title}\nQuiz language: ${input.quizLanguage}\n${quizLanguageInstruction(input.quizLanguage)}\nCreate q${ordinal} of ${input.totalQuestionCount}. Required type: ${type}. Preferred objective: ${objective}.${type === "true_false" ? ` Required answer polarity: ${String(polarity)}.` : ""}\n\nInstructional evidence:\n${input.focusExcerpt}\n\nAlready accepted questions and concepts:\n${accepted}\n\nType requirements:\n${typeInstruction}\n\nExact JSON schema:\n${JSON.stringify(schema)}\n\nStructure-only example:\n${JSON.stringify({ questions: [promptFirstExampleQuestion(type, polarity)] })}\n\nReturn JSON only.`,
     },
   ];
 }
@@ -5314,17 +5323,6 @@ function validateQuiz(quiz, input) {
     });
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       validationFailure(`Question ${index + 1} is not a JSON object.`);
-    }
-    // Validate the normalized object because prompt-first True/False items
-    // derive their learner-facing statement during normalization. Checking
-    // the raw model object misses that field and allowed English questions
-    // through when the learner had selected Simplified Chinese.
-    if (!questionMatchesQuizLanguage(question, input.quizLanguage)) {
-      validationFailure(
-        `Question ${index + 1} contains learner-visible text outside the selected quiz language.`,
-        "quiz_language_mismatch",
-        repairContextForCandidate(question, "quiz_language_mismatch"),
-      );
     }
     const expectedType = input.questionTypePlan[index];
     if (

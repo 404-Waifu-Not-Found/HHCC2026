@@ -100,6 +100,8 @@ import {
 
 type Answer = number | boolean | number[] | string;
 
+const QUESTION_WAIT_TIMEOUT_MS = 30_000;
+
 function learnerFeedbackDetail(
   feedback: AttemptAnswerResponse,
   localGrade: import("@clipquest/contracts").LocalAnswerGrade | undefined,
@@ -171,6 +173,7 @@ export default function QuizScreen() {
   const [recapEntries, setRecapEntries] = useState<RecapEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [waitingForQuestions, setWaitingForQuestions] = useState(false);
+  const [waitingTooLong, setWaitingTooLong] = useState(false);
   const [generation, setGeneration] = useState<AttemptGenerationAvailability>();
   const [choicePresentation, setChoicePresentation] =
     useState<ChoicePresentation>();
@@ -318,6 +321,7 @@ export default function QuizScreen() {
         setQuestion(undefined);
         setAnswer(undefined);
         setWaitingForQuestions(false);
+        setWaitingTooLong(false);
         setScore(resumed.score ?? 0);
         setMastery(resumed.mastery ?? "basic");
         setShowCompletion(true);
@@ -335,6 +339,7 @@ export default function QuizScreen() {
           return;
         }
         setWaitingForQuestions(false);
+        setWaitingTooLong(false);
         setError(t("quizResumeMissing"));
         return;
       }
@@ -462,6 +467,15 @@ export default function QuizScreen() {
       if (timeout) clearTimeout(timeout);
     };
   }, [resume, waitingForQuestions]);
+
+  useEffect(() => {
+    if (!waitingForQuestions) return;
+    const timeout = setTimeout(
+      () => setWaitingTooLong(true),
+      QUESTION_WAIT_TIMEOUT_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [waitingForQuestions]);
 
   useEffect(
     () =>
@@ -706,6 +720,7 @@ export default function QuizScreen() {
       return;
     }
     setWaitingForQuestions(false);
+    setWaitingTooLong(false);
     setError(t("quizResumeMissing"));
   };
 
@@ -1065,6 +1080,32 @@ export default function QuizScreen() {
             delay={100}
             style={styles.loadingLineShort}
           />
+          {waitingTooLong ? (
+            <MotionView preset="rise" style={styles.waitingActions}>
+              <Text style={[styles.waitingTimeoutTitle, { color: theme.text }]}>
+                {t("quizTakingLonger")}
+              </Text>
+              <Text style={[styles.waitingBody, { color: theme.textMuted }]}>
+                {t("quizTakingLongerBody")}
+              </Text>
+              <View style={styles.waitingButtons}>
+                <PrimaryButton
+                  testID="quiz-stay-here"
+                  variant="secondary"
+                  onPress={() => setWaitingTooLong(false)}
+                >
+                  {t("stayOnQuiz")}
+                </PrimaryButton>
+                <PrimaryButton
+                  testID="quiz-return-home"
+                  variant="ghost"
+                  onPress={() => router.replace("/(tabs)")}
+                >
+                  {t("returnHome")}
+                </PrimaryButton>
+              </View>
+            </MotionView>
+          ) : null}
         </MotionView>
       </Screen>
     );
@@ -1480,6 +1521,25 @@ const styles = StyleSheet.create({
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
     textAlign: "center",
+  },
+  waitingActions: {
+    width: "100%",
+    maxWidth: 460,
+    alignItems: "center",
+    gap: spacing[3],
+    marginTop: spacing[2],
+  },
+  waitingTimeoutTitle: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+    textAlign: "center",
+  },
+  waitingButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: spacing[3],
   },
   quizBody: {
     width: "100%",

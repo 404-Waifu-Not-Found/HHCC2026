@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import {
   ProfileAvatarResponseSchema,
+  LeaderboardResponseSchema,
   ProfileLearningStatsResponseSchema,
 } from "@clipquest/contracts";
 import { ApiError } from "../lib/errors";
@@ -42,6 +43,27 @@ profileRouter.get("/stats", async (c) => {
     ProfileLearningStatsResponseSchema.parse({
       completedLessons: Number(stats?.completed_lessons ?? 0),
       totalDurationSeconds: Number(stats?.total_duration_seconds ?? 0),
+    }),
+  );
+});
+
+profileRouter.get("/leaderboard", async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT u.name,
+            COUNT(DISTINCT CASE WHEN a.status = 'complete' THEN a.quiz_id END) AS completed_quizzes
+       FROM user u
+       LEFT JOIN attempts a ON a.user_id = u.id
+      GROUP BY u.id, u.name
+      ORDER BY completed_quizzes DESC, u.name COLLATE NOCASE ASC
+      LIMIT 500`,
+  ).all<{ name: string | null; completed_quizzes: number | null }>();
+  return c.json(
+    LeaderboardResponseSchema.parse({
+      entries: rows.results.map((row, index) => ({
+        rank: index + 1,
+        name: row.name?.trim() || "ClipQuest learner",
+        completedQuizzes: Number(row.completed_quizzes ?? 0),
+      })),
     }),
   );
 });

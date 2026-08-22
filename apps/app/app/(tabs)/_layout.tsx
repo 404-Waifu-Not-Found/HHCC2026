@@ -101,6 +101,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="leaderboard"
+        options={{
+          title: t("leaderboard"),
+          tabBarIcon: ({ color, size }) => (
+            <VoxelIcon name="lessons" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="workplace"
         options={{
           href: workplaceEnabled ? undefined : null,
