@@ -574,7 +574,7 @@ export default function QuizScreen() {
   const streamIndicator = generation ? (
     <QuestionStreamIndicator generation={generation} />
   ) : undefined;
-  const comboSummary = useMemo(() => summarizeCombo(recapEntries), [recapEntries]);
+  const comboSummary = summarizeCombo(recapEntries);
 
   const submit = async () => {
     if (!question || !canSubmit || answer === undefined) {
@@ -766,6 +766,8 @@ export default function QuizScreen() {
     const showCompactCompletionStats =
       compactCompletion && completedTotal !== undefined;
     const localCheatSheetReady = Boolean(pendingCheatSheetRef.current);
+    const bestComboStatIndex =
+      (showRecap ? 4 : 3) - (completedTotal === undefined ? 1 : 0);
     return (
       <Screen contentWidth="lesson" centered>
         <FeedbackMotion signal={score} kind="success" style={styles.complete}>
@@ -871,7 +873,7 @@ export default function QuizScreen() {
               </StaggerItem>
             ) : null}
             <StaggerItem
-              index={(showRecap ? 4 : 3) - (completedTotal === undefined ? 1 : 0)}
+              index={bestComboStatIndex}
               style={[
                 styles.statItem,
                 showCompactCompletionStats && styles.statItemCompact,
@@ -1649,7 +1651,7 @@ const styles = StyleSheet.create({
     gap: spacing[1],
     borderRadius: radii.pill,
     paddingHorizontal: spacing[3],
-    paddingVertical: 6,
+    paddingVertical: spacing[1],
   },
   comboText: {
     fontFamily: typography.bodyBold,
