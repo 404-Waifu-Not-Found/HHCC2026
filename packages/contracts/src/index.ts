@@ -2977,6 +2977,48 @@ export const LibraryResponseSchema = z.object({
 });
 export type LibraryResponse = z.infer<typeof LibraryResponseSchema>;
 
+export const QuizShareResponseSchema = z.object({
+  token: z.string().uuid(),
+  url: httpUrl,
+});
+export type QuizShareResponse = z.infer<typeof QuizShareResponseSchema>;
+
+// Public preview of a shared quest. Deliberately no question text and no
+// answers: the recipient only learns what the quest covers before claiming it.
+export const QuizSharePreviewSchema = z.object({
+  token: z.string().uuid(),
+  title: z.string(),
+  originalUrl: httpUrl,
+  thumbnailUrl: z.string().url(),
+  sharedBy: z.string().nullable(),
+  language: z.string(),
+  sessionLength: SessionLengthSchema,
+  questionCount: z.number().int().nonnegative(),
+  questionTypes: z.array(QuizQuestionTypeSchema),
+  concepts: z.array(z.string()).max(12),
+});
+export type QuizSharePreview = z.infer<typeof QuizSharePreviewSchema>;
+
+// Mirrors the Library start settings but keeps `questionCount` so a cloned
+// custom-length bank can be started with the settings it was generated with.
+export const QuizShareStartSettingsSchema = z.object({
+  sessionLength: SessionLengthSchema,
+  questionTypes: QuizQuestionTypesSchema.optional(),
+  questionCount: QuestionCountSchema.optional(),
+});
+export type QuizShareStartSettings = z.infer<
+  typeof QuizShareStartSettingsSchema
+>;
+
+export const QuizShareClaimResponseSchema = z.object({
+  quizId: z.string().uuid(),
+  videoId: z.string().uuid(),
+  startSettings: QuizShareStartSettingsSchema,
+});
+export type QuizShareClaimResponse = z.infer<
+  typeof QuizShareClaimResponseSchema
+>;
+
 export const VideoDeleteResponseSchema = z.object({
   videoId: z.string().uuid(),
   deleted: z.literal(true),
