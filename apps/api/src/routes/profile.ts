@@ -88,7 +88,12 @@ profileRouter.get("/leaderboard", async (c) => {
         userId: row.id,
         rank: index + 1,
         name: row.name?.trim() || "ClipQuest learner",
-        image: row.image,
+        // Only expose an avatar object owned by this user. Legacy/shared
+        // profile values must fall back to the per-user identicon.
+        image:
+          row.image?.startsWith(`avatars/${row.id}/`) === true
+            ? row.image
+            : null,
         completedQuizzes: Number(row.completed_quizzes ?? 0),
       })),
     }),
