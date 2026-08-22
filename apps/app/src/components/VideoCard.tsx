@@ -324,7 +324,8 @@ export function VideoCard({
                 },
                 Platform.OS === "web" && {
                   transitionDuration: `${motion.fast}ms`,
-                  transitionProperty: "transform, background-color, border-color",
+                  transitionProperty:
+                    "transform, background-color, border-color",
                   outlineColor: theme.focus,
                 },
               ]}

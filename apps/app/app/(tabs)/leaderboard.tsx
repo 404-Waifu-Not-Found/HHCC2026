@@ -39,7 +39,9 @@ export default function LeaderboardScreen() {
 
   return (
     <Screen contentWidth="reading">
-      <Text style={[styles.title, { color: theme.text }]}>{t("leaderboard")}</Text>
+      <Text style={[styles.title, { color: theme.text }]}>
+        {t("leaderboard")}
+      </Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>
         {t("leaderboardSubtitle")}
       </Text>
@@ -57,13 +59,20 @@ export default function LeaderboardScreen() {
       ) : (
         <View style={styles.list}>
           {entries.map((entry) => (
-            <Surface key={`${entry.rank}-${entry.name}`} padded={false} style={styles.row}>
+            <Surface
+              key={`${entry.rank}-${entry.name}`}
+              padded={false}
+              style={styles.row}
+            >
               <Text style={[styles.rank, { color: theme.primary }]}>
                 {entry.rank}
               </Text>
               <View style={styles.identity}>
                 <VoxelIcon name="lessons" size={20} color={theme.secondary} />
-                <Text numberOfLines={1} style={[styles.name, { color: theme.text }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.name, { color: theme.text }]}
+                >
                   {entry.name}
                 </Text>
               </View>
@@ -106,8 +115,17 @@ const styles = StyleSheet.create({
     fontSize: typography.size.title,
     textAlign: "center",
   },
-  identity: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing[3] },
-  name: { flex: 1, fontFamily: typography.bodyBold, fontSize: typography.size.body },
+  identity: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  name: {
+    flex: 1,
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.body,
+  },
   score: {
     minWidth: 48,
     fontFamily: typography.display,
