@@ -258,7 +258,10 @@ export default function SharedQuestScreen() {
             ) : null}
             <View style={styles.actions}>
               {isPending ? (
-                <ActivityIndicator color={theme.primary} />
+                <ActivityIndicator
+                  accessibilityLabel={t("loading")}
+                  color={theme.primary}
+                />
               ) : session ? (
                 <PrimaryButton
                   testID="start-shared-quest"

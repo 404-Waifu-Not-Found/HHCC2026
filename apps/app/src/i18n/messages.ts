@@ -563,7 +563,7 @@ export const messages = {
     shareFailed: "无法创建分享链接。",
     shareCopyManually: "请复制这个链接：",
     sharePreviewEyebrow: "分享给你的学习任务",
-    sharedBy: "分享者：",
+    sharedBy: "分享者",
     shareConceptsTitle: "涵盖的概念",
     watchLesson: "在 YouTube 观看这节课",
     startSharedQuest: "开始这个任务",

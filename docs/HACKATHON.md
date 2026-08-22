@@ -80,7 +80,7 @@ for the learner or the teacher.
   own copy of the validated bank and works it with the full feedback / recap / mastery
   loop. Covered by API tests (`apps/api/test/shares.test.ts`) and a Playwright journey.
 - **Quality gate** — `npm run format:check`, `lint`, `typecheck`, `test` (700+ unit,
-  contract, API, app, extension, and engine tests) and 24 Playwright browser journeys run
+  contract, API, app, extension, and engine tests) and 26 Playwright browser journeys run
   in [GitHub Actions](../.github/workflows/ci.yml) on every pull request and every push to `main`.
 - **Evidence culture** — every production claim in [`qa-results/`](../qa-results/) names
   the exact Worker, extension, and profile it measured; dated reports are append-only.
