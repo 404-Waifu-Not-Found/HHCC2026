@@ -20,6 +20,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,7 +41,15 @@ import { Surface } from "../../src/components/Surface";
 import { VideoCard } from "../../src/components/VideoCard";
 import { useOpenVideoCard } from "../../src/hooks/useOpenVideoCard";
 import { apiRequest, jsonBody } from "../../src/lib/api";
-import { exportCheatSheet } from "../../src/lib/cheat-sheet";
+import {
+  createLibraryCheatSheetContext,
+  exportCheatSheet,
+  exportCheatSheetPdf,
+  generateCheatSheetDocumentWithLocalAi,
+  loadCheatSheetContext,
+  renderCheatSheetPdf,
+  uploadCheatSheet,
+} from "../../src/lib/cheat-sheet";
 import { useAppSession } from "../../src/lib/auth-client";
 import {
   parseQuickOpenRequest,
@@ -111,6 +120,7 @@ export default function HomeScreen() {
     ...DEFAULT_QUIZ_QUESTION_TYPES,
   ]);
   const [libraryError, setLibraryError] = useState<string>();
+  const [notesGeneratingId, setNotesGeneratingId] = useState<string>();
   const { open, openingId, error: openError } = useOpenVideoCard();
 
   const refresh = useCallback(async () => {
@@ -162,6 +172,7 @@ export default function HomeScreen() {
             userId,
             "in_flight",
           );
+
           if (!inFlight) return;
           importHandoff = inFlight;
           setActiveHandoff(inFlight);
@@ -236,6 +247,52 @@ export default function HomeScreen() {
       }
     },
     [questionTypes, t, url, userId],
+  );
+
+  const generateNotes = useCallback(
+    async (card: LibraryCard) => {
+      if (notesGeneratingId) return;
+      setNotesGeneratingId(card.videoId);
+      try {
+        const context = card.quizId
+          ? await loadCheatSheetContext(card.quizId)
+          : createLibraryCheatSheetContext(card);
+        const document = await generateCheatSheetDocumentWithLocalAi(context);
+        const pdf = await renderCheatSheetPdf(document);
+        let persistenceError: unknown;
+        try {
+          await uploadCheatSheet({
+            videoId: card.videoId,
+            quizId: context.quizId,
+            document,
+            pdf,
+          });
+        } catch (cause) {
+          persistenceError = cause;
+        }
+        await exportCheatSheetPdf(pdf, card.title);
+        if (persistenceError) {
+          const detail =
+            persistenceError instanceof Error
+              ? persistenceError.message
+              : "The notes could not be saved.";
+          throw new Error(
+            `Notes downloaded, but could not be saved: ${detail}`,
+          );
+        }
+        await refresh();
+      } catch (cause) {
+        Alert.alert(
+          t("generateNotes"),
+          cause instanceof Error
+            ? cause.message
+            : "The notes could not be generated.",
+        );
+      } finally {
+        setNotesGeneratingId(undefined);
+      }
+    },
+    [notesGeneratingId, refresh, t],
   );
 
   useEffect(() => {
@@ -509,6 +566,8 @@ export default function HomeScreen() {
                 compact={compact}
                 openingId={openingId}
                 onOpen={(card) => void open(card)}
+                notesGeneratingId={notesGeneratingId}
+                onGenerateNotes={(card) => void generateNotes(card)}
               />
             ) : null}
 
@@ -559,6 +618,8 @@ export default function HomeScreen() {
                                     )
                                 : undefined
                           }
+                          onGenerateNotes={() => void generateNotes(card)}
+                          notesPending={notesGeneratingId === card.videoId}
                         />
                       </StaggerItem>
                     ))}
@@ -587,6 +648,8 @@ export default function HomeScreen() {
                                     )
                                 : undefined
                           }
+                          onGenerateNotes={() => void generateNotes(card)}
+                          notesPending={notesGeneratingId === card.videoId}
                         />
                       </StaggerItem>
                     ))}
@@ -643,12 +706,16 @@ function CardSection({
   compact,
   openingId,
   onOpen,
+  notesGeneratingId,
+  onGenerateNotes,
 }: {
   title: string;
   cards: LibraryCard[];
   compact: boolean;
   openingId?: string;
   onOpen(card: LibraryCard): void;
+  notesGeneratingId?: string;
+  onGenerateNotes(card: LibraryCard): void;
 }) {
   const { theme } = useSettings();
   return (
@@ -678,6 +745,8 @@ function CardSection({
                           exportCheatSheet(card.cheatSheet.sheetId!, card.title)
                       : undefined
                 }
+                onGenerateNotes={() => onGenerateNotes(card)}
+                notesPending={notesGeneratingId === card.videoId}
               />
               {openingId === card.videoId ? (
                 <ActivityIndicator
@@ -712,6 +781,8 @@ function CardSection({
                           exportCheatSheet(card.cheatSheet.sheetId!, card.title)
                       : undefined
                 }
+                onGenerateNotes={() => onGenerateNotes(card)}
+                notesPending={notesGeneratingId === card.videoId}
               />
               {openingId === card.videoId ? (
                 <ActivityIndicator
