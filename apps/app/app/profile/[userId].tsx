@@ -53,7 +53,11 @@ export default function PublicProfileScreen() {
   return (
     <Screen contentWidth="reading">
       <View style={styles.header}>
-        <IconButton icon="back" label={t("back")} onPress={() => router.back()} />
+        <IconButton
+          icon="back"
+          label={t("back")}
+          onPress={() => router.back()}
+        />
         <Text
           accessibilityRole="header"
           style={[styles.title, { color: theme.text }]}
@@ -91,7 +95,9 @@ export default function PublicProfileScreen() {
         </>
       ) : (
         <Surface tone="error">
-          <Text style={{ color: theme.error }}>{t("leaderboardLoadFailed")}</Text>
+          <Text style={{ color: theme.error }}>
+            {t("leaderboardLoadFailed")}
+          </Text>
         </Surface>
       )}
     </Screen>
@@ -103,7 +109,9 @@ function ProfileStat({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.stat}>
       <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: theme.textMuted }]}>{label}</Text>
+      <Text style={[styles.statLabel, { color: theme.textMuted }]}>
+        {label}
+      </Text>
     </View>
   );
 }
