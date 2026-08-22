@@ -1,8 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
 
 vi.mock("react-native", () => ({ Platform: { OS: "web" } }));
 vi.mock("expo-file-system/legacy", () => ({}));
 vi.mock("expo-sharing", () => ({}));
+vi.mock("expo-asset", () => ({
+  Asset: {
+    fromModule: () => ({
+      downloadAsync: async () => undefined,
+      uri: "file:///NotoSansKR-Regular.ttf",
+    }),
+  },
+}));
+vi.stubGlobal(
+  "fetch",
+  vi.fn(async () => {
+    const bytes = await readFile(
+      new URL("../assets/fonts/NotoSansKR-Regular.ttf", import.meta.url),
+    );
+    return new Response(bytes);
+  }),
+);
 vi.mock("../src/lib/api", () => ({
   apiBinaryRequest: vi.fn(),
   apiRequest: vi.fn(),
@@ -19,9 +37,9 @@ describe("cheat-sheet PDF rendering", () => {
   it("renders Unicode arrows from generated notes with the built-in fonts", async () => {
     await expect(
       renderCheatSheetPdf({
-        title: "Limits → continuity",
+        title: "한국어 → continuity",
         source: "youtube",
-        summary: "As x → a, compare the left and right behavior.",
+        summary: "한국어 요약: As x → a, compare the left and right behavior.",
         keyConcepts: ["A limit can exist even when f(a) is undefined."],
         definitions: [],
         formulas: ["x ≤ a and x ≥ a"],

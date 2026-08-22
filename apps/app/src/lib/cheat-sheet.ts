@@ -5,13 +5,16 @@ import {
   type CheatSheetDocument,
   type LibraryCard,
 } from "@clipquest/contracts";
+import fontkit from "@pdf-lib/fontkit";
 // Use pdf-lib's prebundled ESM artifact on Expo web/native. The package module
 // entry imports tslib as a bare dependency, which Expo's web resolver exposes
 // as an undefined default export during app bootstrap.
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib/dist/pdf-lib.esm.js";
+import { PDFDocument, rgb } from "pdf-lib/dist/pdf-lib.esm.js";
+import { Asset } from "expo-asset";
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import unicodeFontAsset from "../../assets/fonts/NotoSansKR-Regular.ttf";
 import { apiBinaryRequest, apiRequest, ClientApiError, jsonBody } from "./api";
 import { requestLocalCheatSheet } from "../generation/local-generation-client";
 
@@ -54,8 +57,10 @@ export async function renderCheatSheetPdf(
   document: CheatSheetDocument,
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  pdf.registerFontkit(fontkit);
+  const unicodeFont = await pdf.embedFont(await loadUnicodeFont());
+  const font = unicodeFont;
+  const bold = unicodeFont;
   let page = pdf.addPage([612, 792]);
   let y = 748;
   const margin = 48;
@@ -71,8 +76,7 @@ export async function renderCheatSheetPdf(
     color = rgb(0.12, 0.2, 0.16),
   ) => {
     const activeFont = isBold ? bold : font;
-    const safeText = toPdfSafeText(text, activeFont);
-    for (const line of wrap(safeText, size, width, activeFont)) {
+    for (const line of wrap(text, size, width, activeFont)) {
       if (y < 56) nextPage();
       page.drawText(line, {
         x: margin,
@@ -110,6 +114,16 @@ export async function renderCheatSheetPdf(
     y -= 8;
   }
   return pdf.save();
+}
+
+async function loadUnicodeFont(): Promise<Uint8Array> {
+  const asset = Asset.fromModule(unicodeFontAsset);
+  await asset.downloadAsync();
+  const response = await fetch(asset.localUri ?? asset.uri);
+  if (!response.ok) {
+    throw new Error(`Unable to load the PDF font (${response.status}).`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
 }
 
 export async function exportCheatSheet(
@@ -222,49 +236,6 @@ export async function recordCheatSheetFailure(input: {
     method: "POST",
     body: jsonBody({ ...input, promptVersion: "cheat-sheet-v1" }),
   });
-}
-
-const pdfTextReplacements: Record<string, string> = {
-  "\u00a0": " ",
-  "\u00b7": ".",
-  "\u2022": "*",
-  "\u2013": "-",
-  "\u2014": "-",
-  "\u2018": "'",
-  "\u2019": "'",
-  "\u201c": '"',
-  "\u201d": '"',
-  "\u2026": "...",
-  "\u00d7": "x",
-  "\u00f7": "/",
-  "\u2212": "-",
-  "\u2190": "<-",
-  "\u2192": "->",
-  "\u2194": "<->",
-  "\u21d0": "<=",
-  "\u21d2": "=>",
-  "\u21d4": "<=>",
-  "\u2248": "~",
-  "\u2260": "!=",
-  "\u2264": "<=",
-  "\u2265": ">=",
-};
-
-function toPdfSafeText(
-  text: string,
-  font: { encodeText(value: string): unknown },
-): string {
-  let safeText = "";
-  for (const character of text.normalize("NFKC")) {
-    const candidate = pdfTextReplacements[character] ?? character;
-    try {
-      font.encodeText(candidate);
-      safeText += candidate;
-    } catch {
-      safeText += "?";
-    }
-  }
-  return safeText;
 }
 
 function wrap(
