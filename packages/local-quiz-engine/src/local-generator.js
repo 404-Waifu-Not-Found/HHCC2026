@@ -15,6 +15,7 @@ import {
   groundedTrueFalseQuestion,
   multipleChoiceQuestionAnswerIsCoherent,
   questionConceptFailure,
+  questionMatchesQuizLanguage,
   questionTestsTaughtConcept,
   repairMultipleChoiceQuestionKind,
   stripQuestionSourceFraming,
