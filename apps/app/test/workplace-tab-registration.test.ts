@@ -12,7 +12,7 @@ describe("Workplace tab registration", () => {
   it("keeps Workplace hidden behind the release gate", () => {
     const layout = source("app/(tabs)/_layout.tsx");
     expect(layout).toContain("workplaceEnabled");
-    expect(layout).toContain("{workplaceEnabled ? (");
+    expect(layout).toContain("href: workplaceEnabled ? undefined : null");
   });
 
   it("gives the Workplace tab its own icon and localized title", () => {

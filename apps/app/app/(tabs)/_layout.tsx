@@ -87,17 +87,16 @@ export default function TabLayout() {
           ),
         }}
       />
-      {workplaceEnabled ? (
-        <Tabs.Screen
-          name="workplace"
-          options={{
-            title: t("workplace"),
-            tabBarIcon: ({ color, size }) => (
-              <VoxelIcon name="workplace" color={color} size={size} />
-            ),
-          }}
-        />
-      ) : null}
+      <Tabs.Screen
+        name="workplace"
+        options={{
+          href: workplaceEnabled ? undefined : null,
+          title: t("workplace"),
+          tabBarIcon: ({ color, size }) => (
+            <VoxelIcon name="workplace" color={color} size={size} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="settings"
         options={{
