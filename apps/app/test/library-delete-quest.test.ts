@@ -6,6 +6,22 @@ import { describe, expect, it } from "vitest";
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("library delete quest", () => {
+  it("deduplicates refresh requests and uses soft refresh after first load", async () => {
+    const source = await readFile(
+      resolve(appRoot, "app/(tabs)/library.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("const [refreshing, setRefreshing] = useState(false);");
+    expect(source).toContain("const refreshRequestRef = useRef<Promise<void> | null>(null);");
+    expect(source).toContain("if (refreshRequestRef.current) return refreshRequestRef.current;");
+    expect(source).toContain("const firstLoad = !hasLoadedLibraryRef.current;");
+    expect(source).toContain("if (firstLoad) setLoading(true);");
+    expect(source).toContain("else setRefreshing(true);");
+    expect(source).toContain("if (requestId !== refreshRequestIdRef.current) return;");
+    expect(source).toContain("{refreshing && !loading ? (");
+  });
+
   it("does not block deletion on session state before calling the API", async () => {
     const source = await readFile(
       resolve(appRoot, "app/(tabs)/library.tsx"),
