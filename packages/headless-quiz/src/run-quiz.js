@@ -230,8 +230,12 @@ export async function runHeadlessQuiz(rawOptions) {
     );
   }
   const questionCount = Number(options.questionCount ?? 10);
-  if (![5, 10, 15].includes(questionCount)) {
-    throw new Error("Question count must be exactly 5, 10, or 15.");
+  if (
+    !Number.isInteger(questionCount) ||
+    questionCount < 5 ||
+    questionCount > 50
+  ) {
+    throw new Error("Question count must be between 5 and 50.");
   }
   const questionTypes = parseQuestionTypes(options.questionTypes);
   const transport = options.transport ?? "native-json";

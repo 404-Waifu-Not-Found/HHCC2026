@@ -77,8 +77,8 @@ test("the bridge advertises the workplace-chat capability and port", () => {
   assert.match(bridge, /WORKPLACE_AI_PORT = "clipquest-workplace-ai-v1"/);
   assert.match(background, /WORKPLACE_AI_PORT/);
   assert.match(background, /attachWorkplaceChannel/);
-  assert.equal(manifest.version, "0.8.32");
-  assert.equal(packageJson.version, "0.8.32");
+  assert.equal(manifest.version, "0.8.33");
+  assert.equal(packageJson.version, "0.8.33");
 });
 
 test("version and capability gating uses the exact ClipQuest origin", () => {

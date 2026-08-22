@@ -1,4 +1,5 @@
 import { captionsToPlainText } from "./caption-text.js";
+import { QUESTION_COUNT_MAX, QUESTION_COUNT_MIN } from "@clipquest/contracts";
 import {
   answerSupportedByEvidence,
   buildConceptFirstInstructionalSelection,
@@ -6447,7 +6448,12 @@ export function buildQuestionTypePlanFromSeed(
   seedHex,
 ) {
   const selected = validateQuestionTypes(questionTypes);
-  if (![5, 10, 15].includes(questionCount) || !/^[a-f0-9]{64}$/.test(seedHex)) {
+  if (
+    !Number.isInteger(questionCount) ||
+    questionCount < QUESTION_COUNT_MIN ||
+    questionCount > QUESTION_COUNT_MAX ||
+    !/^[a-f0-9]{64}$/.test(seedHex)
+  ) {
     throw new Error("The seeded question plan input is invalid.");
   }
   if (selected.length === 1) {
@@ -7192,8 +7198,14 @@ export async function generateQuizFromPlainText(
     disableStreaming: rawInput?.disableStreaming === true,
   };
   if (!input.title) throw new Error("The lesson title is missing.");
-  if (![5, 10, 15].includes(input.questionCount)) {
-    throw new Error("The quiz must contain exactly 5, 10, or 15 questions.");
+  if (
+    !Number.isInteger(input.questionCount) ||
+    input.questionCount < QUESTION_COUNT_MIN ||
+    input.questionCount > QUESTION_COUNT_MAX
+  ) {
+    throw new Error(
+      `The quiz must contain between ${QUESTION_COUNT_MIN} and ${QUESTION_COUNT_MAX} questions.`,
+    );
   }
   if (input.plainText.length < 100) {
     throw new Error("The plain-text transcript is too short for a quiz.");

@@ -191,14 +191,14 @@ test("rejects unsupported counts before contacting the model", async () => {
     runHeadlessQuiz({
       url: "https://youtu.be/JoscDcbAjbY",
       apiKey: "test-key",
-      questionCount: 7,
+      questionCount: 4,
       source: sourceFixture(),
       reporter: createHeadlessReporter({ output() {} }),
       async fetch() {
         throw new Error("fetch should not run");
       },
     }),
-    /exactly 5, 10, or 15/,
+    /between 5 and 50/,
   );
 });
 
