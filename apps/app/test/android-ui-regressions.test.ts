@@ -148,6 +148,8 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain("styles.actions");
     expect(videoCard).toContain("styles.actionsWithScore");
     expect(videoCard).toContain("styles.actionsWithStatus");
+    expect(videoCard).toContain("fill && styles.mainFill");
+    expect(videoCard).toContain("mainFill: {\n    flex: 1,");
     expect(videoCard).toContain("paddingRight: spacing[16] + spacing[5]");
     expect(videoCard).toContain("width: 32");
     expect(videoCard).toContain("height: 32");

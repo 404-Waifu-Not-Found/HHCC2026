@@ -95,6 +95,7 @@ export function VideoCard({
         onPress={onPress}
         style={({ pressed, hovered }) => [
           styles.main,
+          fill && styles.mainFill,
           horizontal && styles.mainHorizontal,
           {
             borderColor: hovered ? theme.primary : "transparent",
@@ -307,6 +308,9 @@ const styles = StyleSheet.create({
     width: "100%",
     borderWidth: borders.hairline,
     borderRadius: radii.feature,
+  },
+  mainFill: {
+    flex: 1,
   },
   mainHorizontal: {
     flexDirection: "row",
