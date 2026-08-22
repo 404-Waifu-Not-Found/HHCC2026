@@ -6,7 +6,7 @@ import {
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +34,7 @@ import {
   renderCheatSheetPdf,
   uploadCheatSheet,
 } from "../../src/lib/cheat-sheet";
+import { createQuizShareLink, shareQuizLink } from "../../src/lib/quiz-share";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { clearImportedVideo } from "../../src/state/creation";
 import { breakpoints, spacing, typography } from "../../src/theme/tokens";
@@ -65,6 +66,9 @@ export default function LibraryScreen() {
   const refreshRequestRef = useRef<Promise<void> | null>(null);
   const refreshRequestIdRef = useRef(0);
   const hasLoadedLibraryRef = useRef(false);
+  const [sharingId, setSharingId] = useState<string>();
+  const [shareError, setShareError] = useState<string>();
+  const [shareNotice, setShareNotice] = useState<string>();
   const { open, openingId, error: openError } = useOpenVideoCard();
 
   const refresh = useCallback(async () => {
@@ -205,6 +209,38 @@ export default function LibraryScreen() {
     [deleteQuest, t],
   );
 
+  const shareQuest = useCallback(
+    async (card: LibraryCard) => {
+      if (!card.quizId || sharingId) return;
+      setSharingId(card.videoId);
+      setShareError(undefined);
+      setShareNotice(undefined);
+      try {
+        const link = await createQuizShareLink(card.quizId);
+        const outcome = await shareQuizLink({
+          url: link.url,
+          title: card.title,
+        });
+        setShareNotice(
+          outcome === "copied" ? t("shareLinkCopied") : t("shareLinkShared"),
+        );
+      } catch (cause) {
+        setShareError(
+          cause instanceof Error ? cause.message : t("shareFailed"),
+        );
+      } finally {
+        setSharingId(undefined);
+      }
+    },
+    [sharingId, t],
+  );
+
+  useEffect(() => {
+    if (!shareNotice) return;
+    const timer = setTimeout(() => setShareNotice(undefined), 2_500);
+    return () => clearTimeout(timer);
+  }, [shareNotice]);
+
   const allCards = useMemo(() => {
     const unique = new Map<string, LibraryCard>();
     [...library.dueReviews, ...library.saved].forEach((card) =>
@@ -269,14 +305,30 @@ export default function LibraryScreen() {
         </View>
       ) : null}
 
-      {error || openError || notesError ? (
-        <FeedbackMotion signal={error ?? openError ?? notesError} kind="error">
+      {error || openError || notesError || shareError ? (
+        <FeedbackMotion
+          signal={error ?? openError ?? notesError ?? shareError}
+          kind="error"
+        >
           <MotionView preset="rise" exiting>
             <Text
               accessibilityRole="alert"
               style={[styles.error, { color: theme.error }]}
             >
-              {error ?? openError ?? notesError}
+              {error ?? openError ?? notesError ?? shareError}
+            </Text>
+          </MotionView>
+        </FeedbackMotion>
+      ) : null}
+      {shareNotice ? (
+        <FeedbackMotion signal={shareNotice} kind="success">
+          <MotionView preset="rise" exiting>
+            <Text
+              accessibilityLiveRegion="polite"
+              testID="library-share-notice"
+              style={[styles.error, { color: theme.success }]}
+            >
+              {shareNotice}
             </Text>
           </MotionView>
         </FeedbackMotion>
@@ -309,6 +361,8 @@ export default function LibraryScreen() {
               onOpen={(card) => void open(card)}
               notesGeneratingId={notesGeneratingId}
               onGenerateNotes={(card) => void generateNotes(card)}
+              sharingId={sharingId}
+              onShare={(card) => void shareQuest(card)}
               deletingId={deletingId}
               onDelete={(card) => void confirmDeleteQuest(card)}
             />
@@ -323,6 +377,8 @@ export default function LibraryScreen() {
                   onOpen={(card) => void open(card)}
                   notesGeneratingId={notesGeneratingId}
                   onGenerateNotes={(card) => void generateNotes(card)}
+                  sharingId={sharingId}
+                  onShare={(card) => void shareQuest(card)}
                   deletingId={deletingId}
                   onDelete={(card) => void confirmDeleteQuest(card)}
                 />
@@ -336,6 +392,8 @@ export default function LibraryScreen() {
                   onOpen={(card) => void open(card)}
                   notesGeneratingId={notesGeneratingId}
                   onGenerateNotes={(card) => void generateNotes(card)}
+                  sharingId={sharingId}
+                  onShare={(card) => void shareQuest(card)}
                   deletingId={deletingId}
                   onDelete={(card) => void confirmDeleteQuest(card)}
                 />
@@ -366,6 +424,8 @@ function QuestList({
   onOpen,
   notesGeneratingId,
   onGenerateNotes,
+  sharingId,
+  onShare,
   deletingId,
   onDelete,
 }: {
@@ -376,6 +436,8 @@ function QuestList({
   onOpen(card: LibraryCard): void;
   notesGeneratingId?: string;
   onGenerateNotes(card: LibraryCard): void;
+  sharingId?: string;
+  onShare(card: LibraryCard): void;
   deletingId?: string;
   onDelete(card: LibraryCard): void;
 }) {
@@ -406,6 +468,8 @@ function QuestList({
               }
               onGenerateNotes={() => onGenerateNotes(card)}
               notesPending={notesGeneratingId === card.videoId}
+              onShare={card.quizId ? () => onShare(card) : undefined}
+              sharePending={sharingId === card.videoId}
               onDelete={() => onDelete(card)}
               deletePending={deletingId === card.videoId}
             />
