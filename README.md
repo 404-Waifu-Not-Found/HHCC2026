@@ -32,6 +32,7 @@
 </p>
 
 <p align="center">
+  <a href="#judge-briefing"><strong>Judge briefing</strong></a> ·
   <a href="#overview">Overview</a> ·
   <a href="#release-status">Release status</a> ·
   <a href="#visual-system">Visual system</a> ·
@@ -62,14 +63,94 @@
 </p>
 
 > [!TIP]
-> **HHCC 2026 judges — start here.** ClipQuest is the education-track entry from team
-> `@404-Waifu-Not-Found/cos`. The five-minute version — the learning problem, how each
-> feature maps to learning science (retrieval practice, immediate corrective feedback,
-> adaptive retries, a missed-concept recap, spaced review with mastery states, a
-> consolidation cheat sheet), what is verified in production, and how to try it in two
-> minutes — is in **[docs/HACKATHON.md](./docs/HACKATHON.md)**. The demo-video script is
-> in [`output/video/`](./output/video/UnoxyRich_ClipQuest_Demo_Script.md). Everything
-> below is the full engineering reference.
+> **HHCC 2026 judges — start here.** ClipQuest is the **Iteration Track** entry from team
+> `@404-Waifu-Not-Found/cos`, submitted under the **Education** theme. The five-minute
+> version — the learning problem, how each feature maps to learning science (retrieval
+> practice, immediate corrective feedback, adaptive retries, a missed-concept recap,
+> spaced review with mastery states, a consolidation cheat sheet), what is verified in
+> production, and how to try it in two minutes — is in
+> **[docs/HACKATHON.md](./docs/HACKATHON.md)**. The [judge briefing](#judge-briefing)
+> directly below maps this repository to the handbook's five scoring dimensions.
+> Everything after it is the full engineering reference.
+>
+> **Pre-event baseline:** one week before HHCC 2026 this repository contained only a short
+> written README describing the product idea. No product flow, frontend, quiz engine,
+> persistence layer, browser extension, native client, or deployment existed. Every line of
+> product code in this repository was written during the 36-hour challenge.
+
+---
+
+<a id="judge-briefing"></a>
+
+## 🏆 HHCC 2026 judge briefing
+
+### Submission at a glance
+
+| Item                | Entry                                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Project name        | **ClipQuest** — turn any public YouTube lesson into an evidence-grounded mastery quest                       |
+| Track / theme       | Iteration Track · **Education**                                                                              |
+| Team                | `@404-Waifu-Not-Found/cos`                                                                                   |
+| Iteration code      | This repository — [github.com/404-Waifu-Not-Found/HHCC2026](https://github.com/404-Waifu-Not-Found/HHCC2026) |
+| Iteration overview  | [`docs/ITERATION-OVERVIEW.md`](./docs/ITERATION-OVERVIEW.md) · [PDF](./docs/ITERATION-OVERVIEW.pdf)          |
+| Live product        | [clipquest.ccwu.cc](https://clipquest.ccwu.cc) — deployed and reachable during judging                       |
+| AI usage disclosure | [Declared below](#ai-usage-disclosure), as required by the handbook's AI Usage Guidelines                    |
+
+### Evidence of improvement — pre-event versus post-event
+
+The Iteration Track scores _clear evidence of improvement from the pre-event version_. This is the
+before-and-after in one table; the full stage-by-stage log with the problem each stage solved is in
+the [iteration overview](./docs/ITERATION-OVERVIEW.md).
+
+| Area          | Pre-event (one week before) | Post-event (submitted here)                                                                   |
+| ------------- | --------------------------- | --------------------------------------------------------------------------------------------- |
+| Product state | Short README only           | Deployed web product with a browser-extension bridge and native implementation paths          |
+| Input         | Product idea                | Public YouTube URL validation, metadata preview, and caption acquisition                      |
+| AI            | No implemented AI flow      | Learner-owned DeepSeek key used locally for structured, schema-validated generation           |
+| Learning      | No quiz experience          | Multiple-choice, true/false, and short-answer quizzes with immediate corrective feedback      |
+| Progress      | No persistence, no mastery  | Authenticated attempts, ordered storage, mastery ranks, review state, and Library             |
+| Reliability   | No validation or recovery   | Contract validation, bounded retries, first-missing-ordinal repair, cancellation, idempotency |
+| UX            | No interface                | Responsive UI, light/dark themes, motion, accessibility, and explicit states                  |
+| Platforms     | No working client           | Web, Chrome extension bridge, iOS path, and Android path sharing the core engine              |
+| Delivery      | No deployment               | Cloudflare Worker plus static assets live at clipquest.ccwu.cc                                |
+| Verification  | No test suite               | Automated contract, API, app, engine, extension, UI, build, and asset checks in CI            |
+
+### Where to look for each scoring dimension
+
+| Dimension (Iteration weight)          | What we claim                                                                                                                                                                                                                                                 | Verify here                                                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Creativity and Originality** (30%)  | The generation boundary sits in the learner's own browser with the learner's own key, so lesson content is grounded in real captions rather than model invention — and the visual system, iconography, and brand object are authored from scratch, not stock. | [Product overview](#overview) · [Original visual system](#visual-system) · [Privacy boundary](#privacy)                         |
+| **Technical Complexity** (30%)        | A four-surface system — React 19 web app, Chrome extension, shared local quiz engine, Cloudflare Worker + D1 — joined by typed contracts, a streaming question-at-a-time protocol, strict ordinal validation, and bounded automatic repair.                   | [Architecture and module guide](#architecture) · [Tech stack](#tech-stack) · [`packages/contracts/`](./packages/contracts/)     |
+| **Functionality and Usability** (20%) | The live product completes real quests end to end; progressive generation opens the attempt on question 1 instead of making learners wait for a full bank; failures are explicit rather than silently faked.                                                  | [Release status](#release-status) · [Learning journey](#journey) · [Screenshots](#screenshots) · [QA reports](./docs/README.md) |
+| **Branding and Social Impact** (10%)  | An original brand system and a zero-server-cost-per-learner model: learners bring their own key, so open educational video becomes practice material without a paywall.                                                                                       | [Original visual system](#visual-system) · [docs/HACKATHON.md](./docs/HACKATHON.md)                                             |
+| **Teamwork and Collaboration** (10%)  | Documented role division, technical decisions, and the reasoning behind each iteration stage.                                                                                                                                                                 | [Iteration overview — team decisions](./docs/ITERATION-OVERVIEW.md)                                                             |
+
+### Honest release status
+
+We report what is verified and what is not. The 2026-08-22 ten-video production matrix confirms
+progressive entry, full-length completion, storage-only privacy, and authoritative call accounting,
+but it **does not** clear the evidence-grounded rollout gate — content acceptance failed on prompt
+phrasing, and one attempt needed a restart. Those results are written up in full in the
+[current release status](#release-status) and the linked QA reports rather than omitted. The
+in-development Workplace AI chat route stays hidden behind a release gate instead of being demoed
+as finished.
+
+<a id="ai-usage-disclosure"></a>
+
+### AI usage disclosure
+
+Per the handbook's AI Usage Guidelines:
+
+- **Tools used:** GitHub Copilot and Claude Code CLI, totalling roughly $240 in API-token usage.
+- **Team-owned:** the core product concept and UX flow, feature scope and prioritization, project
+  architecture and file structure, the caption-only privacy boundary, the validation/recovery
+  algorithms, the mastery and review model, the testing and CI strategy, and the visual direction.
+- **AI-assisted only:** boilerplate and repetitive code, syntax lookup and autocomplete, refactoring
+  and formatting, documentation drafting, and debugging assistance.
+- Every key decision and creative direction was made by the team; AI served as an auxiliary coding
+  tool, and the team can explain the principles and implementation of every module.
+
+<p align="right"><a href="#top">↑ Back to top</a></p>
 
 ---
 
