@@ -146,7 +146,7 @@ export function VideoCard({
             <MasteryBadge state={card.mastery} compact />
           </View>
           {card.bestScore !== null ? (
-            <View style={[styles.scoreBar, { paddingRight: 136 }]}>
+            <View style={[styles.scoreBar, { paddingRight: 176 }]}>
               <View style={styles.scoreProgress}>
                 <ProgressBar
                   accessibilityLabel={`${t("score")}: ${Math.round(card.bestScore)}%`}
