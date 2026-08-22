@@ -49,6 +49,7 @@
   <strong>Project guides:</strong>
   <a href="./docs/README.md">Documentation index</a> ·
   <a href="./docs/PRODUCTION-RELEASE.md">Production release</a> ·
+  <a href="./docs/ITERATION-OVERVIEW.pdf">Event iteration overview</a> ·
   <a href="./docs/ADMIN-CONSOLE.md">Operations console</a> ·
   <a href="./docs/QA-YOUTUBE-BROWSER-10X-2026-08-22.md">Current live QA</a> ·
   <a href="./docs/QA-FIRST-QUESTION-ETA-2026-08-22.md">Progressive generation QA</a> ·
