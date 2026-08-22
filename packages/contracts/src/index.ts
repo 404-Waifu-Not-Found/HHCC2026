@@ -2985,6 +2985,16 @@ export const ProfileAvatarResponseSchema = z
   .strict();
 export type ProfileAvatarResponse = z.infer<typeof ProfileAvatarResponseSchema>;
 
+export const ProfileLearningStatsResponseSchema = z
+  .object({
+    completedLessons: z.number().int().nonnegative(),
+    totalDurationSeconds: z.number().int().nonnegative(),
+  })
+  .strict();
+export type ProfileLearningStatsResponse = z.infer<
+  typeof ProfileLearningStatsResponseSchema
+>;
+
 export const PushRegisterRequestSchema = z.object({
   token: z.string().min(8).max(1_000),
   platform: z.enum(["ios", "android", "web"]),

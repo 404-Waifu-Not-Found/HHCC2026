@@ -712,6 +712,17 @@ const NON_ENGLISH_PROSE_SCRIPT_PATTERN =
 const NON_CHINESE_PROSE_SCRIPT_PATTERN =
   /[\p{Script=Arabic}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}\p{Script=Hebrew}\p{Script=Devanagari}\p{Script=Thai}]/u;
 const HAN_SCRIPT_PATTERN = /\p{Script=Han}/u;
+const CHINESE_TECHNICAL_TOKEN_PATTERN =
+  /^(?:[A-Z][A-Z0-9]{1,9}|(?:[A-Z][a-z]?\d*)+(?:[+\-−=<>→⇌][A-Za-z0-9]+)*|[\d\s.,:%+\-−=*/^()<>≤≥→⇌]+)$/u;
+
+function matchesChineseLearnerLanguage(value) {
+  const text = String(value ?? "").trim();
+  return (
+    HAN_SCRIPT_PATTERN.test(text) ||
+    CHINESE_TECHNICAL_TOKEN_PATTERN.test(text) ||
+    Boolean(formulaFingerprint(text))
+  );
+}
 
 /**
  * Fail closed when learner-visible model output drifts away from the selected
@@ -749,10 +760,7 @@ export function questionMatchesQuizLanguage(candidate, quizLanguage) {
     if (values.some((value) => NON_CHINESE_PROSE_SCRIPT_PATTERN.test(value))) {
       return false;
     }
-    const requiredProse = [candidate?.question, candidate?.explanation].filter(
-      (value) => typeof value === "string" && value.trim(),
-    );
-    return requiredProse.every((value) => HAN_SCRIPT_PATTERN.test(value));
+    return values.every(matchesChineseLearnerLanguage);
   }
   return false;
 }

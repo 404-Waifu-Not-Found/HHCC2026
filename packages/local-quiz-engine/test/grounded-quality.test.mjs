@@ -3,12 +3,35 @@ import test from "node:test";
 import {
   buildConceptFirstInstructionalSelection,
   questionConceptFailure,
+  questionMatchesQuizLanguage,
 } from "../src/grounded-quality.js";
 import {
   promptFirstLearnerQualityFailure,
   promptFirstRetryQuestionFailure,
 } from "../src/local-generator.js";
 
+test("Simplified Chinese quizzes reject English learner-visible options", () => {
+  const candidate = {
+    question: "光合作用如何储存能量？",
+    concept: "光合作用",
+    explanation: "光合作用把光能转化为化学能。",
+    answerText: "It converts light energy into chemical energy.",
+    distractors: ["It releases all energy as heat.", "ATP", "H2O"],
+  };
+
+  assert.equal(questionMatchesQuizLanguage(candidate, "zh-CN"), false);
+  assert.equal(
+    questionMatchesQuizLanguage(
+      {
+        ...candidate,
+        answerText: "它把光能转化为化学能。",
+        distractors: ["它把全部能量释放为热。", "ATP", "H2O"],
+      },
+      "zh-CN",
+    ),
+    true,
+  );
+});
 test("learner-facing quality rejects presentation characterization wording", () => {
   assert.equal(
     questionConceptFailure({
