@@ -3065,7 +3065,9 @@ export const CheatSheetUploadRequestSchema = z
     quizId: z.string().uuid().nullable(),
     sourceRevision: z.string().min(1).max(128),
     document: CheatSheetDocumentSchema,
-    pdfBase64: z.string().min(1).max(2_000_000),
+    // The embedded Unicode font makes otherwise small PDFs several megabytes.
+    // Keep the encoded request bounded while allowing multilingual exports.
+    pdfBase64: z.string().min(1).max(10_000_000),
     contentHash: z.string().min(1).max(128),
     promptVersion: z.string().min(1).max(64),
   })

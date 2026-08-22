@@ -124,7 +124,7 @@ cheatSheetsRouter.post("/", async (c) => {
   if (new TextDecoder().decode(pdf.slice(0, 4)) !== "%PDF") {
     throw new ApiError(400, "pdf_invalid", "The cheat sheet PDF is malformed.");
   }
-  if (pdf.byteLength > 2_000_000)
+  if (pdf.byteLength > 7_500_000)
     throw new ApiError(
       413,
       "pdf_too_large",
