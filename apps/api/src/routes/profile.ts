@@ -102,10 +102,9 @@ publicProfileRouter.get("/public/:userId", async (c) => {
         completed_quizzes: number | null;
         total_duration_seconds: number | null;
       }>(),
-    c.env.DB.prepare(PROFILE_DAILY_COMPLETIONS_SQL).bind(
-      userId,
-      Math.floor(now() / DAY_MS) * DAY_MS - 370 * DAY_MS,
-    ).all<{ completion_date: string; completion_count: number }>(),
+    c.env.DB.prepare(PROFILE_DAILY_COMPLETIONS_SQL)
+      .bind(userId, Math.floor(now() / DAY_MS) * DAY_MS - 370 * DAY_MS)
+      .all<{ completion_date: string; completion_count: number }>(),
   ]);
   if (!profile) {
     throw new ApiError(404, "profile_not_found", "Profile not found.");
