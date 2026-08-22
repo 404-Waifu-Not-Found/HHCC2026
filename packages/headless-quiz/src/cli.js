@@ -14,7 +14,7 @@ Options:
   --types <csv|all>              Question types (default: all)
   --transport <native-json|stream|both>
                                   DeepSeek response transport (default: native-json)
-  --language <en|zh-CN>          Quiz language (default: en)
+  --language <en>               Quiz language (default: en)
   --caption-language <code>      Preferred caption language
   --answer-and-grade             Grade every stored correct answer through DeepSeek
   --interrupt-after <number>     Inject one network interruption after N accepted questions
@@ -54,6 +54,10 @@ if ((!values.url && !values.file) || (values.url && values.file)) {
   process.stderr.write(
     `${usage()}\nError: provide exactly one of --url or --file.\n`,
   );
+  process.exit(2);
+}
+if (values.language !== "en") {
+  process.stderr.write("Error: only English quiz output is supported.\n");
   process.exit(2);
 }
 

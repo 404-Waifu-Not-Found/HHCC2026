@@ -68,7 +68,7 @@ export default function CreateQuestScreen() {
   const { width } = useWindowDimensions();
   const [video, setVideo] = useState<VideoImportResponse>();
   const [error, setError] = useState<string>();
-  const [quizLanguage, setQuizLanguage] = useState<AppLanguage>(locale);
+  const [quizLanguage, setQuizLanguage] = useState<AppLanguage>("en");
   const [sessionLength, setSessionLength] = useState<SessionLength>("medium");
   const [customQuestionCount, setCustomQuestionCount] = useState("10");
   const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
@@ -105,7 +105,7 @@ export default function CreateQuestScreen() {
     if (!videoId || !session?.user.id) return;
     void Promise.all([
       loadImportedVideo(session.user.id, videoId),
-      loadQuestPreferences(session.user.id, videoId, locale),
+      loadQuestPreferences(session.user.id, videoId, "en"),
     ]).then(([value, preferences]) => {
       if (value) {
         setVideo(value);
@@ -343,7 +343,6 @@ export default function CreateQuestScreen() {
                 options={
                   [
                     { value: "en", label: t("languageEnglish") },
-                    { value: "zh-CN", label: t("languageChinese") },
                   ] as const
                 }
               />

@@ -20,7 +20,7 @@ export default function LocalAiSettingsScreen() {
   const { locale, theme } = useSettings();
   const isIos = Platform.OS === "ios";
   const copy =
-    locale === "zh-CN"
+    false
       ? {
           back: "返回",
           title: "本地 AI",

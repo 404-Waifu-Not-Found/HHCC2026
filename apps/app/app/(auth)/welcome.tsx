@@ -5,14 +5,13 @@ import { StyleSheet, Text, View } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
 import { AuthShell } from "../../src/components/AuthShell";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
-import { SegmentedControl } from "../../src/components/SegmentedControl";
 import { Surface } from "../../src/components/Surface";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { createAndSavePendingVideoHandoff } from "../../src/state/pending-video-handoff";
 import { spacing, typography } from "../../src/theme/tokens";
 
 export default function WelcomeScreen() {
-  const { t, theme, locale, setLocale } = useSettings();
+  const { t, theme } = useSettings();
   const params = useLocalSearchParams<{ url?: string | string[] }>();
   const [url, setUrl] = useState(() => {
     const candidate = Array.isArray(params.url) ? params.url[0] : params.url;
@@ -88,19 +87,6 @@ export default function WelcomeScreen() {
         >
           {t("signIn")}
         </Link>
-      </View>
-      <View style={styles.languageBlock}>
-        <SegmentedControl
-          label={t("appLanguage")}
-          value={locale}
-          onChange={setLocale}
-          options={
-            [
-              { value: "en", label: "English" },
-              { value: "zh-CN", label: "简体中文" },
-            ] as const
-          }
-        />
       </View>
     </AuthShell>
   );

@@ -32,12 +32,7 @@ const IMPORT_VERSION = "extension-progressive-import-v8";
 const GENERATION_PROFILE = "prompt_first_auto_v5_12";
 
 function quizLanguageInstruction(language) {
-  const name =
-    language === "zh-CN"
-      ? "Simplified Chinese (简体中文)"
-      : language === "en"
-        ? "English"
-        : String(language || "the selected quiz language");
+  const name = "English";
   return `MANDATORY QUIZ LANGUAGE: Write every learner-visible field entirely in ${name}. Translate the question, concept, explanation, answer, correction, aliases, distractors, choices, and rubric text into ${name}. Keep private evidence fields in the original caption language because they are not shown to the learner. Do not mix languages in learner-visible text, except standard formulas, symbols, acronyms, and proper technical terms.`;
 }
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1_000;
@@ -3789,8 +3784,7 @@ function generationMessagesV58(input, isTransientRetry) {
   // grounding and duplicate retries. The local selector remains authoritative
   // and the model sees only the current answer-bearing window.
   const referenceMessage = `Topic hint — never test this label: ${input.title}\nQuiz language: ${input.quizLanguage}\n\nContext boundary: the eligible instructional evidence in the next message is the only answer-bearing material for this request. Do not infer or recall facts outside it.`;
-  const quizLanguageName =
-    input.quizLanguage === "zh-CN" ? "Simplified Chinese" : "English";
+  const quizLanguageName = "English";
   const taskMessage = `Create the singleton ${type} item for ${id} of ${input.totalQuestionCount}. This is ${isTransientRetry ? "an automatic retry" : "the planned primary call"}. Preferred objective category: ${objectiveCategory}. Use it only when the eligible evidence contains a complete answer of that kind; otherwise choose the strongest supported category from definition, condition, relationship, mechanism, method, application, or formula. The returned objectiveCategory must describe the actual question and answer, and you must never invent a mechanism to satisfy the preference. Selected quiz language: ${quizLanguageName} (${input.quizLanguage}). Every learner-visible field must be written entirely in ${quizLanguageName}.${repair}${repairContext}
 
 Eligible instructional evidence — every answer-bearing field must be supported here:\n${focusExcerpt}

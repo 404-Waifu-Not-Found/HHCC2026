@@ -8,7 +8,7 @@ export * from "./admin.js";
 export const SourceSchema = z.literal("youtube");
 export type VideoSource = z.infer<typeof SourceSchema>;
 
-export const LanguageSchema = z.enum(["en", "zh-CN"]);
+export const LanguageSchema = z.literal("en");
 export type AppLanguage = z.infer<typeof LanguageSchema>;
 
 export const SessionLengthSchema = z.enum([

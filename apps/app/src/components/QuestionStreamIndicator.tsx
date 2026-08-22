@@ -75,7 +75,7 @@ export function QuestionStreamIndicator({
           ]}
         >
           <Text style={[styles.actionText, { color: theme.textOnAction }]}>
-            {locale === "zh-CN"
+            {false
               ? Platform.OS !== "web"
                 ? "打开本地 AI 设置"
                 : "打开扩展设置"

@@ -46,7 +46,7 @@ export default function AndroidShareHandoffScreen() {
             fontSize: typography.size.body,
           }}
         >
-          {locale === "zh-CN"
+          {false
             ? "正在 ClipQuest 中打开此 YouTube 视频…"
             : "Opening this YouTube video in ClipQuest…"}
         </Text>

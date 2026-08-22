@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Localization from "expo-localization";
 import {
   createContext,
   type PropsWithChildren,
@@ -40,9 +39,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: PropsWithChildren) {
   const systemScheme = useColorScheme();
-  const [locale, setLocaleState] = useState<Locale>(() =>
-    Localization.getLocales()[0]?.languageCode === "zh" ? "zh-CN" : "en",
-  );
+  const [locale, setLocaleState] = useState<Locale>("en");
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
   const [reduceMotion, setReduceMotionState] = useState(true);
   const [ready, setReady] = useState(false);
@@ -56,7 +53,6 @@ export function SettingsProvider({ children }: PropsWithChildren) {
     ]).then(([stored, systemReduceMotion]) => {
       if (cancelled) return;
       const parsed = parseStoredSettings(stored);
-      if (parsed.locale) setLocaleState(parsed.locale);
       if (parsed.themeMode) setThemeModeState(parsed.themeMode);
       // Reduced motion is the calm, predictable default for a new install.
       // An explicit stored choice still wins so existing learners retain the

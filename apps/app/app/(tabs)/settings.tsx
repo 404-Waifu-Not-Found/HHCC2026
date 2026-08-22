@@ -313,7 +313,7 @@ export default function SettingsScreen() {
                 variant="secondary"
                 onPress={() => router.push("/local-ai" as never)}
               >
-                {locale === "zh-CN" ? "本地 AI" : "Local AI"}
+                {"Local AI"}
               </PrimaryButton>
             ) : null}
             <PrimaryButton
@@ -404,7 +404,6 @@ export default function SettingsScreen() {
               options={
                 [
                   { value: "en", label: t("languageEnglish") },
-                  { value: "zh-CN", label: t("languageChinese") },
                 ] as const
               }
             />
@@ -424,7 +423,7 @@ export default function SettingsScreen() {
                   setError(undefined);
                   void (
                     enabled
-                      ? enableReviewReminders(session.user.id, locale)
+                      ? enableReviewReminders(session.user.id, "en")
                       : disableReviewReminders(session.user.id)
                   )
                     .then(() => setNotificationsEnabled(enabled))

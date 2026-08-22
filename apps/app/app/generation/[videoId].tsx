@@ -1174,7 +1174,7 @@ export default function GenerationScreen() {
                 disabled={cancelling}
                 onPress={resumePausedGeneration}
               >
-                {locale === "zh-CN" ? "恢复" : "Resume"}
+                {false ? "恢复" : "Resume"}
               </PrimaryButton>
             </View>
           ) : failed && configurationRequired ? (

@@ -171,7 +171,7 @@ export default function HomeScreen() {
         await Promise.all([
           saveImportedVideo(userId, imported),
           saveQuestPreferences(userId, imported.video.id, {
-            quizLanguage: locale,
+            quizLanguage: "en",
             questionTypes,
           }),
           saveGenerationRecord({
@@ -181,7 +181,7 @@ export default function HomeScreen() {
             idempotencyKey,
             ownerUserId: userId,
             videoId: imported.video.id,
-            quizLanguage: locale,
+            quizLanguage: "en",
             questionTypes,
             sessionLength: "medium",
             watched: true,
@@ -197,7 +197,7 @@ export default function HomeScreen() {
         void preGenerateImportedQuiz(imported, {
           ownerUserId: userId,
           generationId,
-          quizLanguage: locale,
+          quizLanguage: "en",
           questionTypes,
         });
         if (importHandoff) await clearPendingVideoHandoff(importHandoff.id);

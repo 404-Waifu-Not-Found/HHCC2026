@@ -334,7 +334,7 @@ function formatLearningDuration(
 ): string {
   const hours = Math.floor(totalSeconds / 3_600);
   const minutes = Math.floor((totalSeconds % 3_600) / 60);
-  if (locale === "zh-CN")
+  if (false)
     return hours > 0 ? `${hours}小时 ${minutes}分钟` : `${minutes}分钟`;
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
