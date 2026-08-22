@@ -47,8 +47,9 @@ const ShareRowSchema = z.object({
 });
 type ShareRow = z.infer<typeof ShareRowSchema>;
 
-// Only shares whose source bank is still a passed, startable pipeline-7/9 bank
-// resolve; a deleted or regressed bank makes the link 404 everywhere.
+// Only shares whose source bank is still a passed, startable pipeline-7/9
+// quest bank resolve; a deleted, regressed, or Workplace-origin bank makes the
+// link 404 everywhere.
 const SHARE_ROW_SQL = `
   SELECT s.id AS share_id, s.owner_id, qb.id AS quiz_id, qb.video_id,
          qb.pipeline_version, qb.session_length, qb.quality_summary_json,
@@ -57,6 +58,7 @@ const SHARE_ROW_SQL = `
   FROM quiz_shares s
   JOIN quiz_banks qb ON qb.id = s.quiz_id AND qb.user_id = s.owner_id
     AND qb.quality_status = 'passed' AND qb.pipeline_version IN (?, ?)
+    AND qb.origin = 'quest'
   JOIN videos v ON v.id = qb.video_id
   LEFT JOIN user u ON u.id = s.owner_id
   WHERE s.id = ?`;
@@ -154,8 +156,9 @@ sharesRouter.post("/quizzes/:quizId/share", async (c) => {
     maximum: 30,
     windowSeconds: 60,
   });
+  // Workplace practice banks stay private: only ordinary quests are shareable.
   const bank = await c.env.DB.prepare(
-    "SELECT id FROM quiz_banks WHERE id = ? AND user_id = ? AND quality_status = 'passed' AND pipeline_version IN (?, ?)",
+    "SELECT id FROM quiz_banks WHERE id = ? AND user_id = ? AND quality_status = 'passed' AND pipeline_version IN (?, ?) AND origin = 'quest'",
   )
     .bind(
       c.req.param("quizId"),

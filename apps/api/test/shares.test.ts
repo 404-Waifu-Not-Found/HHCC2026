@@ -288,6 +288,25 @@ describe("POST /quizzes/:quizId/share", () => {
     expect(generating.status).toBe(404);
   });
 
+  it("refuses Workplace practice banks and revokes links to them", async () => {
+    const { sqlite, adapter } = createDatabase();
+    const { body: share } = await createShare(adapter);
+    sqlite
+      .prepare("UPDATE quiz_banks SET origin = 'workplace' WHERE id = ?")
+      .run(BANK_ID);
+
+    const workplace = await createShare(adapter);
+    expect(workplace.status).toBe(404);
+    expect(workplace.body.error?.code).toBe("quiz_not_found");
+
+    const preview = await testApp(adapter).request(
+      `/shares/${share.token}`,
+      { method: "GET" },
+      env(adapter),
+    );
+    expect(preview.status).toBe(404);
+  });
+
   it("rate limits link creation per user", async () => {
     const { adapter } = createDatabase();
     let last = 0;
