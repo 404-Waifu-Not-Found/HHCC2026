@@ -26,7 +26,9 @@ export function ProfileAvatar({
   const uri = image
     ? image.startsWith("http")
       ? image
-      : `${API_ORIGIN}/api/profile/avatar?v=${encodeURIComponent(image)}`
+      : image.startsWith("/")
+        ? `${API_ORIGIN}${image}`
+        : `${API_ORIGIN}/api/profile/avatar?v=${encodeURIComponent(image)}`
     : `https://github.com/identicons/${encodeURIComponent(name)}.png`;
   return (
     <View

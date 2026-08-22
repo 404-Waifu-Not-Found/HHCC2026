@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import {
   ProfileAvatarResponseSchema,
   LeaderboardResponseSchema,
@@ -23,6 +24,11 @@ export const PROFILE_DAILY_COMPLETIONS_SQL = `SELECT date(completed_at / 1000, '
         ORDER BY completion_date ASC`;
 
 export const profileRouter = new Hono<ApiBindings>();
+export const publicProfileRouter = new Hono<ApiBindings>();
+
+publicProfileRouter.get("/avatar/:userId", async (c) => {
+  return serveAvatar(c, c.req.param("userId"), "public");
+});
 
 profileRouter.get("/stats", async (c) => {
   const user = c.get("user");
@@ -73,7 +79,7 @@ profileRouter.get("/leaderboard", async (c) => {
             COUNT(DISTINCT CASE WHEN a.status = 'complete' THEN a.quiz_id END) AS completed_quizzes
        FROM user u
        LEFT JOIN attempts a ON a.user_id = u.id
-      GROUP BY u.id, u.name
+      GROUP BY u.id, u.name, u.image
       ORDER BY completed_quizzes DESC, u.name COLLATE NOCASE ASC
       LIMIT 500`,
   ).all<{
@@ -92,7 +98,7 @@ profileRouter.get("/leaderboard", async (c) => {
         // profile values must fall back to the per-user identicon.
         image:
           row.image?.startsWith(`avatars/${row.id}/`) === true
-            ? row.image
+            ? `/api/profile/avatar/${encodeURIComponent(row.id)}?revision=${encodeURIComponent(row.image)}`
             : null,
         completedQuizzes: Number(row.completed_quizzes ?? 0),
       })),
@@ -155,10 +161,18 @@ profileRouter.put("/avatar", async (c) => {
 
 profileRouter.get("/avatar", async (c) => {
   const user = c.get("user");
+  return serveAvatar(c, user.id, "private");
+});
+
+async function serveAvatar(
+  c: Context<ApiBindings>,
+  userId: string,
+  visibility: "private" | "public",
+): Promise<Response> {
   const row = await c.env.DB.prepare("SELECT image FROM user WHERE id = ?")
-    .bind(user.id)
+    .bind(userId)
     .first<{ image: string | null }>();
-  if (!row?.image?.startsWith(`avatars/${user.id}/`)) {
+  if (!row?.image?.startsWith(`avatars/${userId}/`)) {
     return new Response(null, {
       status: 404,
       headers: { "Cache-Control": "no-store" },
@@ -173,9 +187,12 @@ profileRouter.get("/avatar", async (c) => {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("ETag", object.httpEtag);
-  headers.set("Cache-Control", "private, max-age=300");
+  headers.set(
+    "Cache-Control",
+    visibility === "public" ? "public, max-age=300" : "private, max-age=300",
+  );
   return new Response(object.body, { headers });
-});
+}
 
 profileRouter.delete("/avatar", async (c) => {
   const user = c.get("user");
