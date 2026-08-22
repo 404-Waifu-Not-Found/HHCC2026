@@ -1,6 +1,6 @@
-# Production YouTube browser-caption QA — 2026-08-03
+# Production YouTube browser-caption QA — 2026-08-22
 
-> Historical pre-extension production evidence. This report exercised the retired transcript-upload/backend-generation path and does not describe the current extension-local storage-only architecture. The 2026-08-04 full-subtitle changes below were verified locally but were not deployed during that implementation run. Use the [documentation index](./README.md), [README release status](../README.md#release-status), and [extension-0.8.5 production report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md) for current release decisions.
+> Historical pre-extension production evidence. This report exercised the retired transcript-upload/backend-generation path and does not describe the current extension-local storage-only architecture. The 2026-08-22 full-subtitle changes below were verified locally but were not deployed during that implementation run. Use the [documentation index](./README.md), [README release status](../README.md#release-status), and [extension-0.8.5 production report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-22.md) for current release decisions.
 
 ## Scope
 
@@ -43,7 +43,7 @@ Historical production result for that artifact: **10/10 passed**. It is not evid
 - `GET /health`: healthy with authentication, generation, email, and YouTube open-source acquisition configured
 - Live CSP allows the text-only browser endpoint in `connect-src` and retains the existing restrictive media policy.
 
-## 2026-08-04 full-subtitle regression evidence
+## 2026-08-22 full-subtitle regression evidence
 
 The caption pipeline now carries a completeness manifest through import, prework, upload, R2 storage, classification, and quiz generation. The manifest records source and normalized segment counts, canonical character count, first/last timing, expected duration, and a text fingerprint. A partial or changed upload is rejected with `incomplete_transcript`.
 

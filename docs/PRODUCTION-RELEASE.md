@@ -4,7 +4,7 @@ ClipQuest deploys its Cloudflare Worker and content-hashed static assets as one 
 
 ## Last verified production baseline
 
-Verified on 2026-08-18:
+Verified on 2026-08-22:
 
 | Item                        | Production value                                                        |
 | --------------------------- | ----------------------------------------------------------------------- |
@@ -19,13 +19,13 @@ Verified on 2026-08-18:
 
 The public Cloudflare edge reports the exact SHA, version affinity, supported prompt metadata, and storage-only architecture. This baseline is deployment evidence only: it does not enable v5.12 or clear the official-site and physical-device matrices.
 
-### Historical 2026-08-13 baseline
+### Historical 2026-08-22 baseline
 
-Worker `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2` from Git `297747e` served the 0.8.8/v5.8 canary configuration. Its official-site Chrome matrix was halted rather than bypassing `NET::ERR_CERT_COMMON_NAME_INVALID`. See the [dated 0.8.8 canary report](../qa-results/concept-first-extension-0.8.8-canary-blocked-2026-08-13.md).
+Worker `c1ceecc8-4e6e-4b9a-bdea-49f48031fae2` from Git `297747e` served the 0.8.8/v5.8 canary configuration. Its official-site Chrome matrix was halted rather than bypassing `NET::ERR_CERT_COMMON_NAME_INVALID`. See the [dated 0.8.8 canary report](../qa-results/concept-first-extension-0.8.8-canary-blocked-2026-08-22.md).
 
-### Historical 2026-08-11 baseline
+### Historical 2026-08-22 baseline
 
-Verified on 2026-08-11:
+Verified on 2026-08-22:
 
 | Item                                       | Production value                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------------- |
@@ -39,7 +39,7 @@ Verified on 2026-08-11:
 | Generation rollout                         | disabled                                                                     |
 | Profile actually persisted by new QA banks | `legacy_reasoning_v5_1`, prompt v5.1                                         |
 
-The current [ten-video production report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md) completed ten final banks and all 100 planned learner questions, but only 9/10 first attempts completed. It also found legacy source-referential prompts, display-time prompt corruption, and an automatic recovery recorded as `manual_continuation`. This baseline is deployed, but the evidence-grounded rollout is **not cleared for enablement**.
+The current [ten-video production report](../qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-22.md) completed ten final banks and all 100 planned learner questions, but only 9/10 first attempts completed. It also found legacy source-referential prompts, display-time prompt corruption, and an automatic recovery recorded as `manual_continuation`. This baseline is deployed, but the evidence-grounded rollout is **not cleared for enablement**.
 
 This table is a dated observation, not a substitute for checking the live service before the next release.
 
@@ -170,7 +170,7 @@ The Worker/app rollout may proceed before the private APK because the API additi
 7. Verify notification delivery/tap routing, install and upgrade behavior, and the full API 29/API 36/physical-device matrix.
 8. Run and complete the ten-video Android matrix before sharing the restricted APK URL.
 
-Do not distribute a locally debug-signed Gradle artifact. See [Android private beta](./ANDROID-BETA.md) and the [current dated QA report](./QA-ANDROID-BETA-2026-08-16.md).
+Do not distribute a locally debug-signed Gradle artifact. See [Android private beta](./ANDROID-BETA.md) and the [current dated QA report](./QA-ANDROID-BETA-2026-08-22.md).
 
 ## Generation rollout gate
 

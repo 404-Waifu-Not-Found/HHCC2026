@@ -50,9 +50,9 @@
   <a href="./docs/README.md">Documentation index</a> ·
   <a href="./docs/PRODUCTION-RELEASE.md">Production release</a> ·
   <a href="./docs/ADMIN-CONSOLE.md">Operations console</a> ·
-  <a href="./qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md">Current live QA</a> ·
-  <a href="./qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-11.md">0.8.6 implementation evidence</a> ·
-  <a href="./qa-results/concept-first-extension-0.8.7-implementation-2026-08-11.md">0.8.7 concept-first evidence</a> ·
+  <a href="./qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-22.md">Current live QA</a> ·
+  <a href="./qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-22.md">0.8.6 implementation evidence</a> ·
+  <a href="./qa-results/concept-first-extension-0.8.7-implementation-2026-08-22.md">0.8.7 concept-first evidence</a> ·
   <a href="./docs/duolingo-ui-research.md">UI research</a>
 </p>
 
@@ -104,15 +104,15 @@ ClipQuest page ───── ordered singleton questions ─────► st
 
 ## 🚦 Current release status
 
-As of **2026-08-20**, native app 0.2.0 and Chrome extension 0.8.31 use one caption-only local quiz engine. New banks are assigned the non-thinking `stable_non_thinking_v5_2` profile: question 1 is requested and validated first, the attempt opens as soon as that question is stored, and the remaining questions continue in adaptive background batches. A rejected later question preserves the accepted prefix and triggers bounded AI repair for the first missing ordinal; it never creates a learner-facing retry action. A signed arm64 iOS Release build has compiled, installed, launched, and remained running on a connected iPhone 15 Pro under Personal Team provisioning. This is not EAS/TestFlight distribution evidence or a completed funded-key real-video device matrix. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc).
+As of **2026-08-22**, native app 0.2.0 and Chrome extension 0.8.31 use one caption-only local quiz engine. New banks are assigned the non-thinking `stable_non_thinking_v5_2` profile: question 1 is requested and validated first, the attempt opens as soon as that question is stored, and the remaining questions continue in adaptive background batches. A rejected later question preserves the accepted prefix and triggers bounded AI repair for the first missing ordinal; it never creates a learner-facing retry action. A signed arm64 iOS Release build has compiled, installed, launched, and remained running on a connected iPhone 15 Pro under Personal Team provisioning. This is not EAS/TestFlight distribution evidence or a completed funded-key real-video device matrix. The live `/health` response and Wrangler deployment history remain authoritative for [clipquest.ccwu.cc](https://clipquest.ccwu.cc).
 
 - Android uses package `cc.ccwu.clipquest`, version `0.2.0` / code `2`, minimum API 29, and compile/target API 36. The internal EAS profile produces an APK with Expo Updates disabled.
 - Chrome, iOS, and Android share prompt construction, question planning, incremental DeepSeek JSON parsing, per-question validation, option mapping, and serialization through `@clipquest/local-quiz-engine`.
 - Android and iOS report native client metadata; Chrome 0.8.31 reports `chrome_extension`. Older extensions are rejected for new progressive banks.
 - Native clients store a successfully tested DeepSeek key in user-scoped SecureStore/Keychain and generate only in the foreground. No platform downloads video audio or runs a speech model.
-- iOS uses the same account-scoped native generation boundary and Keychain-backed SecureStore path. The 2026-08-18 physical-device build verified a signed 57 MB arm64 Release artifact, embedded Hermes bundle, Personal Team provisioning, and installation on iOS 27.0 beta; launch, push notifications, a funded-key generation run, VoiceOver, and the 5/10/15 device matrix remain open.
+- iOS uses the same account-scoped native generation boundary and Keychain-backed SecureStore path. The 2026-08-22 physical-device build verified a signed 57 MB arm64 Release artifact, embedded Hermes bundle, Personal Team provisioning, and installation on iOS 27.0 beta; launch, push notifications, a funded-key generation run, VoiceOver, and the 5/10/15 device matrix remain open.
 - Android accepts pasted and Sharesheet YouTube links, requires usable captions, performs no media-resolution or native transcription call, renders math with local KaTeX MathML, and supports opt-in review notifications.
-- The 2026-08-16 local gate passed contracts, API, app, shared-engine, extension, Playwright, TypeScript, lint, formatting, Android Metro export, web build, asset verification, Worker dry run, and API 29/API 36 emulator launches. EAS authentication/project/signing, FCM, verified App Links, physical-device acceptance, and the ten-video Android matrix remain open release blockers. See the [Android guide](./docs/ANDROID-BETA.md) and [dated QA report](./docs/QA-ANDROID-BETA-2026-08-16.md).
+- The 2026-08-22 local gate passed contracts, API, app, shared-engine, extension, Playwright, TypeScript, lint, formatting, Android Metro export, web build, asset verification, Worker dry run, and API 29/API 36 emulator launches. EAS authentication/project/signing, FCM, verified App Links, physical-device acceptance, and the ten-video Android matrix remain open release blockers. See the [Android guide](./docs/ANDROID-BETA.md) and [dated QA report](./docs/QA-ANDROID-BETA-2026-08-22.md).
 
 - The assigned new-bank contract is result protocol `6`, capability `question-stream-v2`, pipeline `9`, prompt `quiz-local-json-stream-v5.2`, validator `validator-local-progressive-v4.1`, progressive import `v4`, and profile `stable_non_thinking_v5_2`.
 - The checked-in rollout enables v5.2 and disables v5.3, v5.4, and v5.9-v5.12. `/api/local-ai/profile` remains authoritative for each authenticated learner.
@@ -132,7 +132,7 @@ As of **2026-08-20**, native app 0.2.0 and Chrome extension 0.8.31 use one capti
 
 The live `/health` response and Wrangler deployment history are the authoritative production checks. Health exposes the model and pipeline versions plus `backendQuizGeneration`, `extensionQuizGeneration`, and `extensionRequired` readiness flags without exposing secrets or relying on a stale version number in this document.
 
-### Verified production snapshot — 2026-08-11
+### Verified production snapshot — 2026-08-22
 
 - Active Worker version: `a8d8cda5-ea66-4e87-afae-388b2cf237dd`, tagged from Git SHA `9c1bc3b75929819cc18f1a7bb4a50b7cd954dc03`.
 - Latest applied D1 migration: `0019_grounded_generation_telemetry.sql`.
@@ -142,13 +142,13 @@ The live `/health` response and Wrangler deployment history are the authoritativ
 - First-attempt completion was only 9/10. One excluded 15-question attempt stopped at 11/15 after two schema-invalid calls; its automatic recovery was incorrectly recorded as a legacy `manual_continuation`, and a fresh quiz was required.
 - Content acceptance failed: 26/100 stored prompts used the exact phrase “According to the lesson,” 79/100 included “According to,” and a display-time prefix sanitizer visibly corrupted at least five prompts.
 
-The production matrix therefore verifies progressive entry, full-length completion after restart, storage-only privacy, and authoritative call accounting, but it **does not clear the evidence-grounded rollout or zero-intervention release gate**. See the [full extension-0.8.5 production report](./qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-11.md).
+The production matrix therefore verifies progressive entry, full-length completion after restart, storage-only privacy, and authoritative call accounting, but it **does not clear the evidence-grounded rollout or zero-intervention release gate**. See the [full extension-0.8.5 production report](./qa-results/live-production-quiz-generation-10-runs-extension-0.8.5-2026-08-22.md).
 
-The 2026-08-09 source gate passed **138 unit, contract, API, app, and extension tests** plus **21 Playwright Chrome journeys**, repository-wide TypeScript and ESLint checks, the Expo static export, extension packaging, Worker bundling, and a Wrangler dry run. This is historical automated evidence, not a substitute for the current production matrix.
+The 2026-08-22 source gate passed **138 unit, contract, API, app, and extension tests** plus **21 Playwright Chrome journeys**, repository-wide TypeScript and ESLint checks, the Expo static export, extension packaging, Worker bundling, and a Wrangler dry run. This is historical automated evidence, not a substitute for the current production matrix.
 
-The source-level 0.8.6 remediation now reproduces the Run 8 history, reclaims the same 11/15 bank, requests q12-q13 as singleton `automatic_retry` calls, requests unseen q14-q15 as `primary`, rejects new `manual_continuation` inserts after exact historical replay handling, and reaches 15/15 without replacing q1-q11. It also replaces the corrupting presentation transformation and enforces raw concept-only validation. This is local automated evidence—not a production rollout or benchmark result. See the [0.8.6 implementation report](./qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-11.md).
+The source-level 0.8.6 remediation now reproduces the Run 8 history, reclaims the same 11/15 bank, requests q12-q13 as singleton `automatic_retry` calls, requests unseen q14-q15 as `primary`, rejects new `manual_continuation` inserts after exact historical replay handling, and reaches 15/15 without replacing q1-q11. It also replaces the corrupting presentation transformation and enforces raw concept-only validation. This is local automated evidence—not a production rollout or benchmark result. See the [0.8.6 implementation report](./qa-results/run-8-recovery-extension-0.8.6-implementation-2026-08-22.md).
 
-The historical 0.8.7 candidate added the concept-first private-evidence prompt, strict instructional excerpt selection, precise repair outcomes, minimal rubric validation, and the sensory-neuron grading regression fix. Its focused automated tests and repository typechecks were source evidence only; see the [0.8.7 implementation report](./qa-results/concept-first-extension-0.8.7-implementation-2026-08-11.md).
+The historical 0.8.7 candidate added the concept-first private-evidence prompt, strict instructional excerpt selection, precise repair outcomes, minimal rubric validation, and the sensory-neuron grading regression fix. Its focused automated tests and repository typechecks were source evidence only; see the [0.8.7 implementation report](./qa-results/concept-first-extension-0.8.7-implementation-2026-08-22.md).
 
 Before enabling the current prompt-first v5.12 profile, deploy one immutable extension-0.8.19 candidate with `QUIZ_V5_12_ROLLOUT` disabled, install its matching ZIP, complete the recorded and direct benchmarks, assign the `unoxyrich` canary, and rerun the ten-video matrix against the v5.12 profile. Separate remaining acceptance still includes captionless local transcription on supported web hardware, Resend and push delivery, EAS-signed native builds, App Links, and physical-device verification.
 
