@@ -52,6 +52,9 @@ export function StatTile({
       <View style={styles.valueRow}>
         {icon}
         <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
           style={[styles.value, emphasis && styles.valueEmphasis, { color }]}
         >
           {value}
@@ -88,6 +91,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   value: {
+    flexShrink: 1,
     fontFamily: typography.displayMedium,
     fontSize: typography.size.titleSmall,
     lineHeight: typography.lineHeight.titleSmall,
