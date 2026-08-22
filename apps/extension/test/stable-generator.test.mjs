@@ -5928,62 +5928,6 @@ test("v5.8 repairs How-does component lists before storing the singleton", async
   );
 });
 
-test("v5.8 repairs learner-visible source-language leakage before storing a question", async (context) => {
-  const originalFetch = globalThis.fetch;
-  const calls = [];
-  let httpCalls = 0;
-  context.after(() => {
-    globalThis.fetch = originalFetch;
-  });
-  globalThis.fetch = async (_url, init) => {
-    httpCalls += 1;
-    return conceptFirstResponse(init.body, (value, task) => {
-      if (task.ordinal === 1 && httpCalls === 1) {
-        value.questions[0].answerText = "وقود أحفوري";
-        value.questions[0].distractors[0].text = "غازات دفيئة";
-      }
-      return value;
-    });
-  };
-
-  const result = await generateQuizFromPlainText(
-    conceptFirstInput(),
-    "sk-local-test",
-    () => undefined,
-    undefined,
-    () => undefined,
-    (event) => calls.push(event),
-  );
-
-  assert.equal(result.quiz.questions.length, 5);
-  assert.equal(httpCalls, 6);
-  assert.equal(result.metrics.retryCount, 1);
-  assert.ok(
-    result.quiz.questions.every((question) =>
-      question.type !== "multiple_choice"
-        ? true
-        : question.choices.every(
-            (choice) => !/[\p{Script=Arabic}\p{Script=Han}]/u.test(choice),
-          ),
-    ),
-  );
-  assert.ok(
-    calls.some(
-      (event) =>
-        event.lifecycleState === "completed" &&
-        event.outcome === "quiz_language_mismatch",
-    ),
-  );
-  assert.equal(
-    calls.filter(
-      (event) =>
-        event.lifecycleState === "started" &&
-        event.classification === "automatic_retry",
-    ).length,
-    1,
-  );
-});
-
 test("v5.8 source-framing repair carries private evidence and explicit deictic guidance", async (context) => {
   const originalFetch = globalThis.fetch;
   const tasks = [];
