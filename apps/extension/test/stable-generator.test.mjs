@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
+import { inspect } from "node:util";
 import {
   adaptiveChunkQuestionCount,
   boundedRetryDelayMilliseconds,
@@ -6065,6 +6066,12 @@ test("v5.8 completes a 100-bank recorded-fixture release benchmark without conte
       const lastCall = lastEvent
         ? ` Last call event: ${JSON.stringify(lastEvent)}.`
         : "";
+      // Full diagnostics for CI, where only this test output is available.
+      console.error(
+        "[recorded-benchmark-failure]",
+        inspect(error, { depth: 6, breakLength: 200 }),
+        JSON.stringify(callEvents),
+      );
       throw new Error(
         `Recorded benchmark bank ${bankIndex + 1} failed (${questionCount} questions, ${questionTypes.join("+")}): ${reason}.${lastCall}`,
         { cause: error },
