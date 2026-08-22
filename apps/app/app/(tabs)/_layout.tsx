@@ -151,6 +151,7 @@ function LearningTabBar({
         ]}
       >
         {state.routes.map((route, index) => {
+          if (route.name === "workplace" && !workplaceEnabled) return null;
           const descriptor = descriptors[route.key];
           if (!descriptor) return null;
           const { options } = descriptor;
