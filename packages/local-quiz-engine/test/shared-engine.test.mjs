@@ -11,6 +11,15 @@ test("Chrome and Android import the same generation engine", () => {
   );
 });
 
+test("custom question counts are accepted by the shared question planner", () => {
+  const plan = shared.buildQuestionTypePlanFromSeed(
+    ["multiple_choice", "true_false"],
+    7,
+    "d".repeat(64),
+  );
+  assert.equal(plan.length, 7);
+});
+
 test("local recovery uses a bounded three-attempt policy", () => {
   assert.deepEqual(shared.LOCAL_GENERATION_RETRY_POLICY, {
     maxTransportRetriesPerOrdinal: 2,
