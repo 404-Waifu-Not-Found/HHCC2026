@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import {
+  masteryStateForScore,
   DEFAULT_QUIZ_QUESTION_TYPES,
   createTranscriptCompleteness,
   type GenerationRecordV2,
@@ -2475,6 +2476,7 @@ async function installMocks(page: Page): Promise<Scenario> {
     if (path.endsWith("/answer") && path.includes("/api/attempts/")) {
       scenario.answerBodies.push(request.postDataJSON());
       const completed = scenario.completeOnAnswer;
+      const score = completed ? (scenario.answerCorrect ? 100 : 0) : null;
       // Mirror the API's canonical-answer shape per question type: option
       // index, boolean, item order, or the rubric's model answer string.
       const correctAnswer =
@@ -2505,8 +2507,8 @@ async function installMocks(page: Page): Promise<Scenario> {
               ? null
               : nextQuestion,
         completed,
-        score: completed ? (scenario.answerCorrect ? 100 : 0) : null,
-        mastery: completed ? "learning" : null,
+        score,
+        mastery: score === null ? null : masteryStateForScore(score),
         generation: generation(),
       });
       return;

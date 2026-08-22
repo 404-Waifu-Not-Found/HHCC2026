@@ -112,10 +112,15 @@ export function writeZipArchive(
   relativeFiles,
   options = {},
 ) {
-  const entries = relativeFiles.map((relativePath) => ({
-    name: relativePath.split(/[\\/]+/).join("/"),
-    data: readFileSync(resolve(baseDirectory, relativePath)),
-  }));
+  const entries = relativeFiles.map((relativePath) => {
+    // Accept either separator on every platform: Linux treats a backslash as
+    // an ordinary filename character, so resolve through the split segments.
+    const segments = relativePath.split(/[\\/]+/).filter(Boolean);
+    return {
+      name: segments.join("/"),
+      data: readFileSync(resolve(baseDirectory, ...segments)),
+    };
+  });
   const archive = createZipArchive(entries, options);
   writeFileSync(archivePath, archive);
   return archive;
