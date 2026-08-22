@@ -137,7 +137,7 @@ export default function LibraryScreen() {
 
   const deleteQuest = useCallback(
     async (card: LibraryCard) => {
-      if (!session?.user.id || deletingId) return;
+      if (deletingId) return;
       setDeletingId(card.videoId);
       setError(undefined);
       try {
@@ -146,7 +146,9 @@ export default function LibraryScreen() {
           { method: "DELETE" },
           VideoDeleteResponseSchema,
         );
-        await clearImportedVideo(session.user.id, card.videoId);
+        if (session?.user.id) {
+          await clearImportedVideo(session.user.id, card.videoId);
+        }
         setLibrary((current) => ({
           dueReviews: current.dueReviews.filter(
             (item) => item.videoId !== card.videoId,

@@ -6,6 +6,21 @@ import { describe, expect, it } from "vitest";
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("library delete quest", () => {
+  it("does not block deletion on session state before calling the API", async () => {
+    const source = await readFile(
+      resolve(appRoot, "app/(tabs)/library.tsx"),
+      "utf8",
+    );
+
+    expect(source).not.toContain("if (!session?.user.id || deletingId) return;");
+    expect(source).toContain("if (deletingId) return;");
+    expect(source).toContain(
+      "await apiRequest(\n          `/api/videos/${encodeURIComponent(card.videoId)}`",
+    );
+    expect(source).toContain("if (session?.user.id) {");
+    expect(source).toContain("await clearImportedVideo(session.user.id, card.videoId);");
+  });
+
   it("uses an explicit web confirm fallback before destructive delete", async () => {
     const source = await readFile(
       resolve(appRoot, "app/(tabs)/library.tsx"),
