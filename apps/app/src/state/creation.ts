@@ -203,13 +203,15 @@ export async function saveQuestPreferences(
 export async function loadQuestPreferences(
   ownerUserId: string,
   videoId: string,
+  defaultQuizLanguage: AppLanguage,
 ): Promise<QuestPreferences> {
+  const fallbackQuizLanguage = LanguageSchema.parse(defaultQuizLanguage);
   await AsyncStorage.removeItem(legacyPreferencesKeyFor(videoId));
   const storageKey = preferencesKeyFor(ownerUserId, videoId);
   const raw = await AsyncStorage.getItem(storageKey);
   if (!raw) {
     return {
-      quizLanguage: "en",
+      quizLanguage: fallbackQuizLanguage,
       questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
     };
   }
@@ -222,7 +224,7 @@ export async function loadQuestPreferences(
   } catch {
     await AsyncStorage.removeItem(storageKey);
     return {
-      quizLanguage: "en",
+      quizLanguage: fallbackQuizLanguage,
       questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
     };
   }
