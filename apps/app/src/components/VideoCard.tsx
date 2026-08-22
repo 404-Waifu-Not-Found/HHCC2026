@@ -145,7 +145,7 @@ export function VideoCard({
             <View
               style={[
                 styles.scoreBar,
-                { paddingRight: spacing[16] + spacing[5] },
+                { paddingRight: spacing[16] + spacing[8] },
               ]}
             >
               <View style={styles.scoreProgress}>
@@ -384,6 +384,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   fill: {
+    flex: 1,
     width: "100%",
   },
   horizontal: {

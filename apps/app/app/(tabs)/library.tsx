@@ -6,7 +6,7 @@ import {
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -57,30 +57,50 @@ export default function LibraryScreen() {
   const [library, setLibrary] = useState<VisibleLibrary>(emptyLibrary);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>();
   const [notesGeneratingId, setNotesGeneratingId] = useState<string>();
   const [notesError, setNotesError] = useState<string>();
   const [deletingId, setDeletingId] = useState<string>();
+  const refreshRequestRef = useRef<Promise<void> | null>(null);
+  const refreshRequestIdRef = useRef(0);
+  const hasLoadedLibraryRef = useRef(false);
   const { open, openingId, error: openError } = useOpenVideoCard();
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await apiRequest(
-        "/api/library",
-        {},
-        LibraryResponseSchema,
-      );
-      setLibrary({ dueReviews: response.dueReviews, saved: response.saved });
-      setError(undefined);
-    } catch {
-      // Keep transport and platform details out of the learner-facing UI.
-      // Android can surface verbose TLS/OkHttp messages that are neither
-      // actionable nor safe to treat as product copy.
-      setError(t("libraryLoadFailed"));
-    } finally {
-      setLoading(false);
-    }
+    if (refreshRequestRef.current) return refreshRequestRef.current;
+    const requestId = refreshRequestIdRef.current + 1;
+    refreshRequestIdRef.current = requestId;
+    const firstLoad = !hasLoadedLibraryRef.current;
+    if (firstLoad) setLoading(true);
+    else setRefreshing(true);
+    const request = (async () => {
+      try {
+        const response = await apiRequest(
+          "/api/library",
+          {},
+          LibraryResponseSchema,
+        );
+        if (requestId !== refreshRequestIdRef.current) return;
+        setLibrary({ dueReviews: response.dueReviews, saved: response.saved });
+        setError(undefined);
+        hasLoadedLibraryRef.current = true;
+      } catch {
+        if (requestId !== refreshRequestIdRef.current) return;
+        // Keep transport and platform details out of the learner-facing UI.
+        // Android can surface verbose TLS/OkHttp messages that are neither
+        // actionable nor safe to treat as product copy.
+        setError(t("libraryLoadFailed"));
+      } finally {
+        if (requestId === refreshRequestIdRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+        if (refreshRequestRef.current === request) refreshRequestRef.current = null;
+      }
+    })();
+    refreshRequestRef.current = request;
+    return request;
   }, [t]);
 
   useFocusEffect(
@@ -240,6 +260,14 @@ export default function LibraryScreen() {
           onChangeText={setQuery}
         />
       </View>
+      {refreshing && !loading ? (
+        <View style={styles.refreshing}>
+          <ActivityIndicator size="small" color={theme.secondary} />
+          <Text style={[styles.refreshingText, { color: theme.textMuted }]}>
+            {t("loading")}
+          </Text>
+        </View>
+      ) : null}
 
       {error || openError || notesError ? (
         <FeedbackMotion signal={error ?? openError ?? notesError} kind="error">
@@ -413,6 +441,17 @@ const styles = StyleSheet.create({
   search: {
     marginTop: spacing[6],
     marginBottom: spacing[3],
+  },
+  refreshing: {
+    marginBottom: spacing[3],
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  refreshingText: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
   },
   error: {
     marginBottom: spacing[3],
