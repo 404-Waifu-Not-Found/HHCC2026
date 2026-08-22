@@ -7,8 +7,10 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Screen } from "../../src/components/Screen";
 import { Surface } from "../../src/components/Surface";
+import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { apiRequest } from "../../src/lib/api";
+import { API_ORIGIN } from "../../src/lib/config";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { radii, spacing, typography } from "../../src/theme/tokens";
 
@@ -68,7 +70,11 @@ export default function LeaderboardScreen() {
                 {entry.rank}
               </Text>
               <View style={styles.identity}>
-                <VoxelIcon name="lessons" size={20} color={theme.secondary} />
+                <ProfileAvatar
+                  name={entry.name}
+                  image={`${API_ORIGIN}/api/profile/leaderboard/avatar/${encodeURIComponent(entry.userId)}`}
+                  size={40}
+                />
                 <Text
                   numberOfLines={1}
                   style={[styles.name, { color: theme.text }]}

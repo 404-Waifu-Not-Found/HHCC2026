@@ -3112,6 +3112,7 @@ export type ProfileLearningStatsResponse = z.infer<
 
 export const LeaderboardEntrySchema = z
   .object({
+    userId: z.string().min(1).max(128),
     rank: z.number().int().positive(),
     name: z.string().min(1).max(120),
     completedQuizzes: z.number().int().nonnegative(),
