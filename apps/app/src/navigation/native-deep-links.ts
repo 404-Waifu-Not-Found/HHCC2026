@@ -4,7 +4,8 @@ export type NativeDeepLinkRoute =
   | `/(auth)/reset-password?${string}`
   | `/(auth)/verify-email?${string}`
   | "/(tabs)/library"
-  | `/quiz/${string}`;
+  | `/quiz/${string}`
+  | `/s/${string}`;
 
 export function createRecentNativeEventGate(windowMs = 1_500) {
   if (!Number.isFinite(windowMs) || windowMs <= 0) {
@@ -61,6 +62,8 @@ export function nativeRouteForUrl(rawUrl: string): NativeDeepLinkRoute | null {
     if (email) query.set("email", email);
     return `/(auth)/verify-email?${query.toString()}`;
   }
+  const share = path.match(/^\/s\/([0-9a-f-]+)$/i);
+  if (share) return `/s/${share[1]}`;
   const quiz = path.match(/^\/quiz\/([0-9a-f-]+)$/i);
   return quiz ? `/quiz/${quiz[1]}` : null;
 }

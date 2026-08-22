@@ -71,4 +71,25 @@ describe("native deep links", () => {
       layout.match(/\.catch\(\(\) => undefined\)/g)?.length,
     ).toBeGreaterThanOrEqual(3);
   });
+
+  it("opens shared quest links in the preview route", () => {
+    const token = "9a9a9a9a-9a9a-49a9-8a9a-9a9a9a9a9a9a";
+    expect(nativeRouteForUrl(`https://clipquest.ccwu.cc/s/${token}`)).toBe(
+      `/s/${token}`,
+    );
+    expect(nativeRouteForUrl(`https://clipquest.ccwu.cc/s/${token}/`)).toBe(
+      `/s/${token}`,
+    );
+    expect(nativeRouteForUrl(`clipquest:///s/${token}`)).toBe(`/s/${token}`);
+    expect(nativeRouteForUrl("https://clipquest.ccwu.cc/s/")).toBeNull();
+    expect(
+      nativeRouteForUrl(`https://clipquest.ccwu.cc/s/${token}/extra`),
+    ).toBeNull();
+    expect(nativeRouteForUrl("https://clipquest.ccwu.cc/settings")).toBeNull();
+    const config = readFileSync(
+      resolve(import.meta.dirname, "../app.config.ts"),
+      "utf8",
+    );
+    expect(config).toContain('pathPrefix: "/s/"');
+  });
 });
