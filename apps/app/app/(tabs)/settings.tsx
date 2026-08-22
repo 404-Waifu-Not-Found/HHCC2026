@@ -18,6 +18,7 @@ import {
   Platform,
 } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
+import { GradientWash } from "../../src/components/Backdrops";
 import { useAdminCopy } from "../../src/admin/copy";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
@@ -268,34 +269,53 @@ export default function SettingsScreen() {
           style={[styles.column, desktop && styles.columnDesktop]}
         >
           <SettingsSection title={t("account")} icon="people">
-            <MotionPressable
-              accessibilityRole="button"
-              accessibilityLabel={t("openProfile")}
-              onPress={() => router.push("/profile" as never)}
-              style={({ hovered, pressed }) => [
-                styles.accountRow,
-                {
-                  backgroundColor: hovered
-                    ? theme.surfaceSunken
-                    : "transparent",
-                  opacity: pressed ? 0.76 : 1,
-                },
-              ]}
-            >
-              <ProfileAvatar
-                name={session?.user.name ?? session?.user.email ?? "CQ"}
-                image={effectiveAvatarRevision}
-                size={64}
+            <View style={styles.profileBand}>
+              <GradientWash
+                color={theme.surfaceTint}
+                opacity={theme.mode === "dark" ? 0.8 : 1}
               />
-              <View style={styles.accountCopy}>
-                <Text style={[styles.accountName, { color: theme.text }]}>
-                  {session?.user.name ?? t("appName")}
-                </Text>
-                <Text style={[styles.accountEmail, { color: theme.textMuted }]}>
-                  {session?.user.email}
-                </Text>
-              </View>
-            </MotionPressable>
+              <MotionPressable
+                accessibilityRole="button"
+                accessibilityLabel={t("openProfile")}
+                onPress={() => router.push("/profile" as never)}
+                style={({ hovered, pressed }) => [
+                  styles.accountRow,
+                  {
+                    backgroundColor: hovered
+                      ? theme.surfaceSunken
+                      : "transparent",
+                    opacity: pressed ? 0.76 : 1,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.avatarRing,
+                    {
+                      backgroundColor: theme.surface,
+                      borderColor: theme.primary,
+                    },
+                  ]}
+                >
+                  <ProfileAvatar
+                    name={session?.user.name ?? session?.user.email ?? "CQ"}
+                    image={effectiveAvatarRevision}
+                    size={64}
+                  />
+                </View>
+                <View style={styles.accountCopy}>
+                  <Text style={[styles.accountName, { color: theme.text }]}>
+                    {session?.user.name ?? t("appName")}
+                  </Text>
+                  <Text
+                    style={[styles.accountEmail, { color: theme.textMuted }]}
+                  >
+                    {session?.user.email}
+                  </Text>
+                </View>
+                <VoxelIcon name="next" size={18} color={theme.textMuted} />
+              </MotionPressable>
+            </View>
             <View style={styles.avatarActions}>
               <PrimaryButton
                 variant="secondary"
@@ -672,10 +692,28 @@ const styles = StyleSheet.create({
     gap: spacing[4],
     padding: spacing[5],
   },
+  profileBand: {
+    position: "relative",
+    overflow: "hidden",
+    marginHorizontal: -spacing[5],
+    marginTop: -spacing[5],
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[5],
+    paddingBottom: spacing[4],
+  },
+  avatarRing: {
+    padding: 3,
+    borderWidth: 2,
+    borderRadius: (64 + 10) / 3,
+  },
   accountRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing[3],
+    gap: spacing[4],
+    marginHorizontal: -spacing[2],
+    borderRadius: radii.large,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
   },
   avatarActions: {
     flexDirection: "row",
@@ -699,8 +737,9 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   accountName: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.size.body,
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.bodyLarge,
+    lineHeight: typography.lineHeight.bodyLarge,
   },
   accountEmail: {
     fontFamily: typography.body,

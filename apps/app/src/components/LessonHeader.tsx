@@ -55,7 +55,14 @@ export function LessonHeader({
         <ProgressBar progress={progress} accessibilityLabel={progressLabel} />
       </MotionView>
       {statusLabel ? (
-        <MotionView key={statusLabel} preset="pop">
+        <MotionView
+          key={statusLabel}
+          preset="pop"
+          style={[
+            styles.statusPill,
+            { backgroundColor: theme.surfaceSunken, borderColor: theme.border },
+          ]}
+        >
           <Text style={[styles.status, { color: theme.textMuted }]}>
             {statusLabel}
           </Text>
@@ -85,11 +92,20 @@ const styles = StyleSheet.create({
   progress: {
     flex: 1,
   },
-  status: {
+  statusPill: {
     minWidth: 44,
+    minHeight: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: borders.hairline,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[3],
+  },
+  status: {
     fontFamily: typography.bodyBold,
-    fontSize: typography.size.label,
-    textAlign: "right",
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
+    textAlign: "center",
   },
   placeholder: {
     width: 44,

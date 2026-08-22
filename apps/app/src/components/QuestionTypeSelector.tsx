@@ -109,6 +109,8 @@ export function QuestionTypeSelector({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   choiceWrap: { flexShrink: 0 },
+  // Phones keep a deliberate two-up row plus one full-width row; the e2e
+  // journey asserts this geometry, so only the chip styling varies here.
   choiceWrapCompact: { width: "48%" },
   choiceWrapCompactLast: { width: "100%" },
   choice: {
@@ -121,10 +123,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   choiceCompact: {
-    minHeight: 46,
-    justifyContent: "flex-start",
+    minHeight: 44,
+    justifyContent: "center",
     gap: spacing[2],
-    paddingHorizontal: spacing[2],
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing[3],
   },
   pressed: { opacity: 0.72 },
   label: {

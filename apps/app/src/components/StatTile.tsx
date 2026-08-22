@@ -8,11 +8,14 @@ export function StatTile({
   label,
   icon,
   tone = "primary",
+  emphasis = false,
 }: {
   value: string;
   label: string;
   icon?: ReactNode;
   tone?: "primary" | "success" | "warning" | "secondary" | "error";
+  /** Lead stat: tinted surface, coloured rule, larger display value. */
+  emphasis?: boolean;
 }) {
   const { theme } = useSettings();
   const color =
@@ -25,18 +28,43 @@ export function StatTile({
           : tone === "error"
             ? theme.error
             : theme.primary;
+  const soft =
+    tone === "success"
+      ? theme.successSoft
+      : tone === "warning"
+        ? theme.warningSoft
+        : tone === "secondary"
+          ? theme.secondarySoft
+          : tone === "error"
+            ? theme.errorSoft
+            : theme.primarySoft;
   return (
     <View
       style={[
         styles.tile,
-        { backgroundColor: theme.surface, borderColor: theme.border },
+        emphasis && styles.tileEmphasis,
+        {
+          backgroundColor: emphasis ? soft : theme.surface,
+          borderColor: emphasis ? color : theme.border,
+        },
       ]}
     >
       <View style={styles.valueRow}>
         {icon}
-        <Text style={[styles.value, { color }]}>{value}</Text>
+        <Text
+          style={[styles.value, emphasis && styles.valueEmphasis, { color }]}
+        >
+          {value}
+        </Text>
       </View>
-      <Text style={[styles.label, { color: theme.textMuted }]}>{label}</Text>
+      <Text
+        style={[
+          styles.label,
+          { color: emphasis ? theme.text : theme.textMuted },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -51,6 +79,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[4],
   },
+  tileEmphasis: {
+    borderBottomWidth: borders.tactileDepth,
+  },
   valueRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -60,6 +91,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.displayMedium,
     fontSize: typography.size.titleSmall,
     lineHeight: typography.lineHeight.titleSmall,
+  },
+  valueEmphasis: {
+    fontFamily: typography.display,
+    fontSize: typography.size.title,
+    lineHeight: typography.lineHeight.title,
   },
   label: {
     fontFamily: typography.bodyMedium,

@@ -354,7 +354,7 @@ function QuestList({
   const { theme } = useSettings();
   return (
     <View>
-      <SectionHeader title={title} />
+      <SectionHeader title={title} count={cards.length} />
       <View style={styles.list}>
         {cards.map((card, index) => (
           <StaggerItem

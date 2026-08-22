@@ -28,9 +28,11 @@ import {
   View,
 } from "react-native";
 import { AppTextInput } from "../../src/components/AppTextInput";
+import { GradientWash, PrismFrames } from "../../src/components/Backdrops";
 import { EmptyState } from "../../src/components/EmptyState";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
 import { Screen } from "../../src/components/Screen";
 import { SectionHeader } from "../../src/components/SectionHeader";
@@ -67,12 +69,16 @@ import {
 import {
   borders,
   breakpoints,
+  layout,
   radii,
   spacing,
   typography,
 } from "../../src/theme/tokens";
 
 type VisibleLibrary = Pick<LibraryResponse, "dueReviews" | "saved">;
+
+// How far the import card rises into the Home banner on phones and tablets.
+const bannerOverlap = spacing[7];
 
 const emptyLibrary: VisibleLibrary = { dueReviews: [], saved: [] };
 
@@ -83,6 +89,11 @@ export default function HomeScreen() {
   const compact = width < breakpoints.tablet;
   const narrow = width < breakpoints.compact;
   const desktop = width >= breakpoints.desktop;
+  // Phones and tablets open on a full-bleed banner, so Home owns its gutters
+  // there and mirrors the Screen padding rules for the rest of the content.
+  const banner = !desktop;
+  const gutter = compact ? layout.compactGutter : layout.gutter;
+  const bannerTop = compact ? spacing[5] : spacing[6];
   const params = useLocalSearchParams<QuickOpenSearchParams>();
   const quickOpen = parseQuickOpenRequest(params);
   const quickOpenUrl = quickOpen?.url;
@@ -286,247 +297,318 @@ export default function HomeScreen() {
   const accountLabel = session?.user.name ?? session?.user.email;
   const secondaryError = libraryError ?? openError;
 
-  return (
-    <Screen>
-      <MotionView preset="from-left" style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text
-            accessibilityRole="header"
-            style={[
-              styles.greeting,
-              narrow && styles.greetingNarrow,
-              { color: theme.text },
-            ]}
-          >
-            {t("homeGreeting")}
-          </Text>
-          {accountLabel ? (
+  const header = (
+    <MotionView
+      preset="from-left"
+      style={[styles.header, banner && styles.headerInBanner]}
+    >
+      <View style={styles.headerCopy}>
+        <Text
+          accessibilityRole="header"
+          style={[
+            styles.greeting,
+            narrow && styles.greetingNarrow,
+            { color: theme.text },
+          ]}
+        >
+          {t("homeGreeting")}
+        </Text>
+        {accountLabel ? (
+          banner ? (
+            <View
+              style={[
+                styles.accountChip,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
+              <ProfileAvatar
+                name={accountLabel}
+                image={session?.user.image}
+                size={22}
+              />
+              <Text
+                numberOfLines={1}
+                style={[styles.accountChipText, { color: theme.text }]}
+              >
+                {accountLabel}
+              </Text>
+            </View>
+          ) : (
             <Text
               numberOfLines={1}
               style={[styles.account, { color: theme.textMuted }]}
             >
               {accountLabel}
             </Text>
-          ) : null}
+          )
+        ) : null}
+      </View>
+      <LearningPrism size={narrow ? 68 : compact ? 84 : 90} variant="tile" />
+    </MotionView>
+  );
+
+  return (
+    <Screen padded={!banner}>
+      {banner ? (
+        <View
+          style={[
+            styles.banner,
+            {
+              paddingTop: bannerTop,
+              paddingHorizontal: gutter,
+              paddingBottom: bannerOverlap + spacing[6],
+            },
+          ]}
+        >
+          <GradientWash
+            color={theme.surfaceTint}
+            opacity={theme.mode === "dark" ? 0.85 : 1}
+          />
+          <PrismFrames
+            color={theme.primary}
+            size={narrow ? 168 : 208}
+            style={styles.bannerFrames}
+          />
+          {header}
         </View>
-        <LearningPrism size={narrow ? 62 : compact ? 76 : 90} variant="tile" />
-      </MotionView>
+      ) : (
+        header
+      )}
 
-      <FeedbackMotion signal={importing} kind="progress">
-        <MotionView preset="rise" delay={44}>
-          <Surface
-            elevated
-            style={
-              compact
-                ? [styles.importSurface, styles.importSurfaceCompact]
-                : styles.importSurface
-            }
-          >
-            <View style={styles.platforms}>
-              <PlatformBadge icon="video" label="YouTube" />
-            </View>
-
-            <View style={styles.questionTypeSetup}>
-              <Text style={[styles.questionTypeTitle, { color: theme.text }]}>
-                {t("questionTypes")}
-              </Text>
-              <Text
-                style={[styles.questionTypeHelp, { color: theme.textMuted }]}
-              >
-                {t("questionTypesHelp")}
-              </Text>
-              <QuestionTypeSelector
-                value={questionTypes}
-                onChange={setQuestionTypes}
-                disabled={importing}
-              />
-            </View>
-
-            <AppTextInput
-              large
-              label={t("pastePlaceholder")}
-              placeholder="https://youtube.com/watch?v=..."
-              value={url}
-              error={importError}
-              leading={
-                <VoxelIcon name="link" size={24} color={theme.primary} />
+      <View
+        style={
+          banner
+            ? [
+                styles.bannerBody,
+                { paddingHorizontal: gutter, marginTop: -bannerOverlap },
+              ]
+            : null
+        }
+      >
+        <FeedbackMotion signal={importing} kind="progress">
+          <MotionView preset="rise" delay={44}>
+            <Surface
+              elevated
+              style={
+                compact
+                  ? [styles.importSurface, styles.importSurfaceCompact]
+                  : styles.importSurface
               }
-              onChangeText={(value) => {
-                const pastedSupportedLink =
-                  value.length - url.length > 8 &&
-                  Boolean(identifyVideoSource(value.trim()));
-                userEditedUrl.current = true;
-                if (activeHandoff && value !== activeHandoff.url) {
-                  void clearPendingVideoHandoff(activeHandoff.id);
-                  setActiveHandoff(undefined);
-                }
-                setUrl(value);
-                setImportError(undefined);
-                if (pastedSupportedLink) void importVideo(value);
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              returnKeyType="go"
-              editable={!importing}
-              onSubmitEditing={() => void importVideo(url, activeHandoff)}
-            />
-
-            <View
-              style={[
-                styles.importAction,
-                compact && styles.importActionCompact,
-              ]}
             >
-              <PrimaryButton
-                disabled={!url.trim()}
-                loading={importing}
-                trailingIcon={
-                  <VoxelIcon name="next" size={20} color={theme.textOnAction} />
+              <View style={styles.questionTypeSetup}>
+                <View style={styles.questionTypeTitleRow}>
+                  <Text
+                    style={[styles.questionTypeTitle, { color: theme.text }]}
+                  >
+                    {t("questionTypes")}
+                  </Text>
+                  <PlatformBadge icon="video" label="YouTube" />
+                </View>
+                <Text
+                  style={[styles.questionTypeHelp, { color: theme.textMuted }]}
+                >
+                  {t("questionTypesHelp")}
+                </Text>
+                <QuestionTypeSelector
+                  value={questionTypes}
+                  onChange={setQuestionTypes}
+                  disabled={importing}
+                />
+              </View>
+
+              <AppTextInput
+                large
+                label={t("pastePlaceholder")}
+                placeholder="https://youtube.com/watch?v=..."
+                value={url}
+                error={importError}
+                leading={
+                  <VoxelIcon name="link" size={24} color={theme.primary} />
                 }
-                onPress={() => void importVideo(url, activeHandoff)}
+                onChangeText={(value) => {
+                  const pastedSupportedLink =
+                    value.length - url.length > 8 &&
+                    Boolean(identifyVideoSource(value.trim()));
+                  userEditedUrl.current = true;
+                  if (activeHandoff && value !== activeHandoff.url) {
+                    void clearPendingVideoHandoff(activeHandoff.id);
+                    setActiveHandoff(undefined);
+                  }
+                  setUrl(value);
+                  setImportError(undefined);
+                  if (pastedSupportedLink) void importVideo(value);
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                returnKeyType="go"
+                editable={!importing}
+                onSubmitEditing={() => void importVideo(url, activeHandoff)}
+              />
+
+              <View
+                style={[
+                  styles.importAction,
+                  compact && styles.importActionCompact,
+                ]}
               >
-                {activeHandoff?.state === "retry_required"
-                  ? t("retry")
-                  : t("makeQuest")}
-              </PrimaryButton>
-            </View>
-          </Surface>
-        </MotionView>
-      </FeedbackMotion>
-
-      {secondaryError ? (
-        <FeedbackMotion signal={secondaryError} kind="error">
-          <MotionView preset="rise" exiting>
-            <Text
-              accessibilityRole="alert"
-              style={[styles.error, { color: theme.error }]}
-            >
-              {secondaryError}
-            </Text>
+                <PrimaryButton
+                  disabled={!url.trim()}
+                  loading={importing}
+                  trailingIcon={
+                    <VoxelIcon
+                      name="next"
+                      size={20}
+                      color={theme.textOnAction}
+                    />
+                  }
+                  onPress={() => void importVideo(url, activeHandoff)}
+                >
+                  {activeHandoff?.state === "retry_required"
+                    ? t("retry")
+                    : t("makeQuest")}
+                </PrimaryButton>
+              </View>
+            </Surface>
           </MotionView>
         </FeedbackMotion>
-      ) : null}
 
-      {loadingLibrary ? (
-        <MotionView preset="fade" style={styles.loading}>
-          <ActivityIndicator color={theme.secondary} />
-          <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-            {t("loading")}
-          </Text>
-          <MotionSkeleton
-            color={theme.primarySoft}
-            style={styles.librarySkeleton}
-          />
-        </MotionView>
-      ) : (
-        <View style={styles.sections}>
-          {library.dueReviews.length ? (
-            <CardSection
-              title={t("dueReviews")}
-              cards={library.dueReviews}
-              compact={compact}
-              openingId={openingId}
-              onOpen={(card) => void open(card)}
+        {secondaryError ? (
+          <FeedbackMotion signal={secondaryError} kind="error">
+            <MotionView preset="rise" exiting>
+              <Text
+                accessibilityRole="alert"
+                style={[styles.error, { color: theme.error }]}
+              >
+                {secondaryError}
+              </Text>
+            </MotionView>
+          </FeedbackMotion>
+        ) : null}
+
+        {loadingLibrary ? (
+          <MotionView preset="fade" style={styles.loading}>
+            <ActivityIndicator color={theme.secondary} />
+            <Text style={[styles.loadingText, { color: theme.textMuted }]}>
+              {t("loading")}
+            </Text>
+            <MotionSkeleton
+              color={theme.primarySoft}
+              style={styles.librarySkeleton}
             />
-          ) : null}
-
-          {library.saved.length || !library.dueReviews.length ? (
-            <View>
-              <SectionHeader
-                title={t("savedVideos")}
-                action={
-                  <Pressable
-                    accessibilityRole="link"
-                    accessibilityLabel={t("library")}
-                    onPress={() => router.push("/(tabs)/library")}
-                    style={({ pressed }) => [
-                      styles.viewAll,
-                      pressed && styles.viewAllPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[styles.viewAllText, { color: theme.primary }]}
-                    >
-                      {t("library")}
-                    </Text>
-                    <VoxelIcon name="next" color={theme.primary} size={18} />
-                  </Pressable>
-                }
+          </MotionView>
+        ) : (
+          <View style={styles.sections}>
+            {library.dueReviews.length ? (
+              <CardSection
+                title={t("dueReviews")}
+                cards={library.dueReviews}
+                compact={compact}
+                openingId={openingId}
+                onOpen={(card) => void open(card)}
               />
-              {library.saved.length && desktop ? (
-                <View style={styles.cardGrid}>
-                  {library.saved.slice(0, 3).map((card, index) => (
-                    <StaggerItem
-                      key={card.videoId}
-                      index={index}
-                      style={styles.cardGridItem}
+            ) : null}
+
+            {library.saved.length || !library.dueReviews.length ? (
+              <View>
+                <SectionHeader
+                  title={t("savedVideos")}
+                  action={
+                    <Pressable
+                      accessibilityRole="link"
+                      accessibilityLabel={t("library")}
+                      onPress={() => router.push("/(tabs)/library")}
+                      style={({ pressed }) => [
+                        styles.viewAll,
+                        pressed && styles.viewAllPressed,
+                      ]}
                     >
-                      <VideoCard
-                        compact
-                        fill
-                        card={card}
-                        onPress={() => void open(card)}
-                        onExport={
-                          card.cheatSheet.status === "failed"
-                            ? () => void open(card)
-                            : card.cheatSheet.sheetId
-                              ? () =>
-                                  exportCheatSheet(
-                                    card.cheatSheet.sheetId!,
-                                    card.title,
-                                  )
-                              : undefined
-                        }
-                      />
-                    </StaggerItem>
-                  ))}
-                </View>
-              ) : library.saved.length ? (
-                <View style={compact ? styles.cardStack : styles.cardRow}>
-                  {library.saved.slice(0, 8).map((card, index) => (
-                    <StaggerItem
-                      key={card.videoId}
-                      index={index}
-                      style={compact ? styles.cardStackItem : undefined}
-                    >
-                      <VideoCard
-                        compact
-                        fill={compact}
-                        card={card}
-                        onPress={() => void open(card)}
-                        onExport={
-                          card.cheatSheet.status === "failed"
-                            ? () => void open(card)
-                            : card.cheatSheet.sheetId
-                              ? () =>
-                                  exportCheatSheet(
-                                    card.cheatSheet.sheetId!,
-                                    card.title,
-                                  )
-                              : undefined
-                        }
-                      />
-                    </StaggerItem>
-                  ))}
-                </View>
-              ) : (
-                <Surface
-                  padded={false}
-                  tone="sunken"
-                  style={styles.emptySurface}
-                >
-                  <EmptyState
-                    icon="video"
-                    title={t("emptyLibrary")}
-                    description={t("tagline")}
-                  />
-                </Surface>
-              )}
-            </View>
-          ) : null}
-        </View>
-      )}
+                      <Text
+                        style={[styles.viewAllText, { color: theme.primary }]}
+                      >
+                        {t("library")}
+                      </Text>
+                      <VoxelIcon name="next" color={theme.primary} size={18} />
+                    </Pressable>
+                  }
+                />
+                {library.saved.length && desktop ? (
+                  <View style={styles.cardGrid}>
+                    {library.saved.slice(0, 3).map((card, index) => (
+                      <StaggerItem
+                        key={card.videoId}
+                        index={index}
+                        style={styles.cardGridItem}
+                      >
+                        <VideoCard
+                          compact
+                          fill
+                          card={card}
+                          onPress={() => void open(card)}
+                          onExport={
+                            card.cheatSheet.status === "failed"
+                              ? () => void open(card)
+                              : card.cheatSheet.sheetId
+                                ? () =>
+                                    exportCheatSheet(
+                                      card.cheatSheet.sheetId!,
+                                      card.title,
+                                    )
+                                : undefined
+                          }
+                        />
+                      </StaggerItem>
+                    ))}
+                  </View>
+                ) : library.saved.length ? (
+                  <View style={compact ? styles.cardStack : styles.cardRow}>
+                    {library.saved.slice(0, 8).map((card, index) => (
+                      <StaggerItem
+                        key={card.videoId}
+                        index={index}
+                        style={compact ? styles.cardStackItem : undefined}
+                      >
+                        <VideoCard
+                          compact
+                          fill={compact}
+                          card={card}
+                          onPress={() => void open(card)}
+                          onExport={
+                            card.cheatSheet.status === "failed"
+                              ? () => void open(card)
+                              : card.cheatSheet.sheetId
+                                ? () =>
+                                    exportCheatSheet(
+                                      card.cheatSheet.sheetId!,
+                                      card.title,
+                                    )
+                                : undefined
+                          }
+                        />
+                      </StaggerItem>
+                    ))}
+                  </View>
+                ) : (
+                  <Surface
+                    padded={false}
+                    tone="sunken"
+                    style={styles.emptySurface}
+                  >
+                    <EmptyState
+                      icon="video"
+                      title={t("emptyLibrary")}
+                      description={t("tagline")}
+                    />
+                  </Surface>
+                )}
+              </View>
+            ) : null}
+          </View>
+        )}
+      </View>
     </Screen>
   );
 }
@@ -571,7 +653,7 @@ function CardSection({
   const { theme } = useSettings();
   return (
     <View>
-      <SectionHeader title={title} />
+      <SectionHeader title={title} count={cards.length} />
       {compact ? (
         <View style={styles.cardStack}>
           {cards.map((card, index) => (
@@ -646,6 +728,18 @@ function CardSection({
 }
 
 const styles = StyleSheet.create({
+  banner: {
+    position: "relative",
+    overflow: "hidden",
+  },
+  bannerFrames: {
+    position: "absolute",
+    top: -spacing[6],
+    right: -spacing[10],
+  },
+  bannerBody: {
+    paddingBottom: spacing[10],
+  },
   header: {
     minHeight: 0,
     flexDirection: "row",
@@ -654,9 +748,32 @@ const styles = StyleSheet.create({
     gap: spacing[4],
     marginBottom: spacing[3],
   },
+  headerInBanner: {
+    alignItems: "center",
+    marginBottom: 0,
+  },
   headerCopy: {
     minWidth: 0,
     flex: 1,
+  },
+  accountChip: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    marginTop: spacing[3],
+    borderWidth: borders.hairline,
+    borderRadius: radii.pill,
+    paddingVertical: 4,
+    paddingLeft: 4,
+    paddingRight: spacing[3],
+  },
+  accountChipText: {
+    flexShrink: 1,
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
   },
   greeting: {
     fontFamily: typography.display,
@@ -680,13 +797,16 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     gap: spacing[3],
   },
-  platforms: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing[2],
-  },
   questionTypeSetup: { gap: spacing[2] },
+  questionTypeTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3],
+  },
   questionTypeTitle: {
+    minWidth: 0,
+    flexShrink: 1,
     fontFamily: typography.displayMedium,
     fontSize: typography.size.titleSmall,
     lineHeight: typography.lineHeight.titleSmall,

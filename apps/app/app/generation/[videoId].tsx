@@ -33,6 +33,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { CelebrationHalo } from "../../src/components/Backdrops";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { Screen } from "../../src/components/Screen";
@@ -1199,7 +1200,14 @@ export default function GenerationScreen() {
     >
       <View style={styles.page}>
         <MotionView preset="drop" style={styles.top}>
-          <LearningPrism size={112} variant="tile" />
+          <View style={styles.heroArt}>
+            <CelebrationHalo
+              color={failed ? theme.error : theme.primary}
+              size={196}
+              style={styles.heroHalo}
+            />
+            <LearningPrism size={112} variant="tile" />
+          </View>
           <MotionView key={stageTitle} preset="rise" exiting>
             <Text
               accessibilityRole="header"
@@ -1459,6 +1467,12 @@ function formatRetryTransition(
 const styles = StyleSheet.create({
   page: { width: "100%", gap: spacing[5], paddingTop: spacing[2] },
   top: { alignItems: "center", gap: spacing[4], paddingVertical: spacing[3] },
+  heroArt: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroHalo: { top: -42, left: -42 },
   title: {
     fontFamily: typography.display,
     fontSize: typography.size.displaySmall,

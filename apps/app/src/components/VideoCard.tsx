@@ -20,6 +20,7 @@ import {
 } from "./MasteryBadge";
 import { ProgressBar } from "./ProgressBar";
 import { ReliableThumbnail } from "./ReliableThumbnail";
+import { ThumbnailScrim } from "./Backdrops";
 
 export function VideoCard({
   card,
@@ -120,15 +121,16 @@ export function VideoCard({
             testID={`video-card-thumbnail-${card.videoId}`}
             style={styles.image}
           />
+          <ThumbnailScrim />
           <MotionView
             preset="from-left"
             delay={80}
             style={[
               styles.sourceBadge,
-              { backgroundColor: "rgba(11,20,48,0.78)" },
+              { backgroundColor: "rgba(11,20,48,0.62)" },
             ]}
           >
-            <VoxelIcon name="video" size={15} color="#FFFFFF" />
+            <VoxelIcon name="video" size={14} color="#FFFFFF" />
             <Text style={styles.source}>YouTube</Text>
           </MotionView>
         </View>
@@ -407,15 +409,19 @@ const styles = StyleSheet.create({
     bottom: spacing[3],
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing[1],
+    gap: 5,
+    borderWidth: borders.hairline,
+    borderColor: "rgba(255,255,255,0.22)",
     borderRadius: radii.pill,
     paddingHorizontal: spacing[2],
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   source: {
     color: "#FFFFFF",
     fontFamily: typography.bodyBold,
     fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.2,
   },
   body: {
     minWidth: 0,

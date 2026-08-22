@@ -262,6 +262,8 @@ export const safeArea = {
 export const shadows = {
   subtle: "0 2px 8px rgba(36, 125, 73, 0.08)",
   floating: "0 10px 28px rgba(25, 104, 58, 0.14)",
+  dock: "0 8px 24px rgba(25, 104, 58, 0.16)",
   darkSubtle: "0 2px 8px rgba(0, 0, 0, 0.24)",
   darkFloating: "0 12px 30px rgba(0, 0, 0, 0.34)",
+  darkDock: "0 10px 26px rgba(0, 0, 0, 0.42)",
 } as const;

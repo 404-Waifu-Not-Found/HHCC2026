@@ -28,6 +28,7 @@ import {
   motion,
   radii,
   safeArea,
+  shadows,
   spacing,
   typography,
 } from "../../src/theme/tokens";
@@ -177,8 +178,9 @@ function LearningTabBar({
                 Math.max(insets.bottom, safeArea.minimumBottom) + spacing[3],
             }
           : {
-              backgroundColor: theme.surface,
-              borderTopColor: theme.divider,
+              // The phone dock floats on the canvas; the surface colour lives
+              // on the dock itself so the bar never reads as a second toolbar.
+              backgroundColor: theme.background,
               paddingBottom: Math.max(insets.bottom, safeArea.minimumBottom),
             },
       ]}
@@ -189,6 +191,28 @@ function LearningTabBar({
         style={[
           styles.items,
           desktop ? styles.desktopItems : styles.mobileItems,
+          desktop
+            ? null
+            : {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              },
+          !desktop && Platform.OS === "web"
+            ? {
+                boxShadow:
+                  theme.mode === "dark" ? shadows.darkDock : shadows.dock,
+              }
+            : null,
+          !desktop && Platform.OS !== "web"
+            ? {
+                shadowColor:
+                  theme.mode === "dark" ? "#000000" : theme.primaryPressed,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: theme.mode === "dark" ? 0.32 : 0.16,
+                shadowRadius: 16,
+                elevation: 8,
+              }
+            : null,
         ]}
       >
         {state.routes.map((route, index) => {
@@ -367,12 +391,11 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     width: "100%",
-    minHeight: controls.navigationHeight,
-    // The tab bar already has a strong surface change from the content. A
-    // full-width rule here reads like an accidental extra toolbar on phones.
+    // The dock is its own bounded surface. A full-width rule here reads like
+    // an accidental extra toolbar on phones, so the bar stays rule-free.
     borderTopWidth: 0,
-    paddingTop: spacing[1],
-    paddingHorizontal: spacing[2],
+    paddingTop: spacing[2],
+    paddingHorizontal: spacing[3],
   },
   brand: {
     minHeight: 58,
@@ -387,11 +410,14 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   mobileItems: {
-    minHeight: controls.navigationHeight - spacing[1],
+    minHeight: controls.navigationHeight,
     flexDirection: "row",
     alignItems: "stretch",
     justifyContent: "space-between",
     gap: spacing[1],
+    borderWidth: borders.hairline,
+    borderRadius: radii.feature,
+    padding: spacing[1] + 2,
   },
   item: {
     minWidth: 0,
@@ -406,13 +432,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   mobileItem: {
-    minHeight: 60,
+    minHeight: 54,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 0,
+    gap: 2,
     paddingHorizontal: spacing[1],
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderWidth: 0,
     borderRadius: radii.medium,
   },

@@ -28,6 +28,7 @@ import { EmptyState } from "../../src/components/EmptyState";
 import { FeedbackPanel } from "../../src/components/FeedbackPanel";
 import { IconButton } from "../../src/components/IconButton";
 import { LessonHeader } from "../../src/components/LessonHeader";
+import { CelebrationHalo } from "../../src/components/Backdrops";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { MathText } from "../../src/components/MathText";
 import {
@@ -772,6 +773,14 @@ export default function QuizScreen() {
       <Screen contentWidth="lesson" centered>
         <FeedbackMotion signal={score} kind="success" style={styles.complete}>
           <MotionView preset="pop" duration={520} style={styles.celebrationArt}>
+            <CelebrationHalo
+              color={masteryColor}
+              size={showCompactCompletionStats ? 232 : 300}
+              style={{
+                top: showCompactCompletionStats ? -50 : -62,
+                left: showCompactCompletionStats ? -50 : -62,
+              }}
+            />
             <LearningPrism
               size={showCompactCompletionStats ? 132 : 176}
               variant="hero"
@@ -802,11 +811,12 @@ export default function QuizScreen() {
               ]}
             >
               <StatTile
+                emphasis
                 value={`${Math.round(score)}%`}
                 label={t("score")}
                 tone={masteryRankTone}
                 icon={
-                  <VoxelIcon name="target" size={22} color={masteryColor} />
+                  <VoxelIcon name="target" size={24} color={masteryColor} />
                 }
               />
             </StaggerItem>
@@ -1792,6 +1802,8 @@ const styles = StyleSheet.create({
   },
   celebrationArt: {
     position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
   },
   completeCopy: {
     maxWidth: 560,
