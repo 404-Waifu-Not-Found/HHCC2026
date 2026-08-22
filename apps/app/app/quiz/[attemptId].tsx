@@ -57,6 +57,7 @@ import {
 } from "../../src/lib/question-presentation";
 import {
   attachLocalReason,
+  summarizeCombo,
   summarizeRecap,
   type RecapEntry,
 } from "../../src/lib/session-recap";
@@ -574,6 +575,7 @@ export default function QuizScreen() {
   const streamIndicator = generation ? (
     <QuestionStreamIndicator generation={generation} />
   ) : undefined;
+  const comboSummary = useMemo(() => summarizeCombo(recapEntries), [recapEntries]);
 
   const submit = async () => {
     if (!question || !canSubmit || answer === undefined) {
@@ -757,6 +759,7 @@ export default function QuizScreen() {
     const masteryColor = masteryColors(masteryState, theme).color;
     const masteryRankTone = masteryTone(masteryState);
     const recap = summarizeRecap(recapEntries);
+    const showComboStats = comboSummary.best > 1;
     const showRecap = recapEntries.length > 0;
     // Only claim a perfect run when the recap saw every question; a session
     // restored without its earlier answers must not overstate itself.
@@ -865,6 +868,42 @@ export default function QuizScreen() {
                         recap.missed.length ? theme.secondary : theme.success
                       }
                     />
+                  }
+                />
+              </StaggerItem>
+            ) : null}
+            {showComboStats ? (
+              <StaggerItem
+                index={completedTotal !== undefined ? 4 : 3}
+                style={[
+                  styles.statItem,
+                  showCompactCompletionStats && styles.statItemCompact,
+                ]}
+              >
+                <StatTile
+                  value={`x${comboSummary.best}`}
+                  label={t("bestCombo")}
+                  tone="warning"
+                  icon={
+                    <VoxelIcon name="progress" size={22} color={theme.warning} />
+                  }
+                />
+              </StaggerItem>
+            ) : null}
+            {showComboStats ? (
+              <StaggerItem
+                index={completedTotal !== undefined ? 5 : 4}
+                style={[
+                  styles.statItem,
+                  showCompactCompletionStats && styles.statItemCompact,
+                ]}
+              >
+                <StatTile
+                  value={`+${comboSummary.bonus}`}
+                  label={t("comboBonus")}
+                  tone="secondary"
+                  icon={
+                    <VoxelIcon name="target" size={22} color={theme.secondary} />
                   }
                 />
               </StaggerItem>
@@ -1180,6 +1219,8 @@ export default function QuizScreen() {
 
   const progress = (question.position - 1) / question.total;
   const progressLabel = `${t("question")} ${question.position} of ${question.total}`;
+  const activeCombo = comboSummary.current;
+  const comboActive = activeCombo > 0;
   const footer = feedback ? (
     <FeedbackPanel
       status={feedback.correct ? "correct" : "incorrect"}
@@ -1254,26 +1295,58 @@ export default function QuizScreen() {
           <Text style={[styles.eyebrow, { color: theme.primary }]}>
             {questionTypeLabel(question.type)}
           </Text>
-          {question.isRetry ? (
-            <MotionView
-              preset="pop"
-              style={[
-                styles.retryBadge,
-                { backgroundColor: theme.secondarySoft },
-              ]}
-            >
-              <VoxelIcon
-                name="refresh"
-                size={16}
-                color={theme.secondaryPressed}
-              />
-              <Text
-                style={[styles.retryText, { color: theme.secondaryPressed }]}
-              >
-                {t("retryingConcept")}
-              </Text>
-            </MotionView>
-          ) : null}
+          {(question.isRetry || comboActive) && (
+            <View style={styles.metaBadges}>
+              {question.isRetry ? (
+                <MotionView
+                  preset="pop"
+                  style={[
+                    styles.retryBadge,
+                    { backgroundColor: theme.secondarySoft },
+                  ]}
+                >
+                  <VoxelIcon
+                    name="refresh"
+                    size={16}
+                    color={theme.secondaryPressed}
+                  />
+                  <Text
+                    style={[styles.retryText, { color: theme.secondaryPressed }]}
+                  >
+                    {t("retryingConcept")}
+                  </Text>
+                </MotionView>
+              ) : null}
+              {comboActive ? (
+                <MotionView
+                  preset="pop"
+                  style={[
+                    styles.comboBadge,
+                    {
+                      backgroundColor:
+                        activeCombo > 1 ? theme.warningSoft : theme.surfaceSunken,
+                      borderColor:
+                        activeCombo > 1 ? theme.warning : theme.borderStrong,
+                    },
+                  ]}
+                >
+                  <VoxelIcon
+                    name="progress"
+                    size={16}
+                    color={activeCombo > 1 ? theme.warning : theme.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.comboText,
+                      { color: activeCombo > 1 ? theme.warning : theme.textMuted },
+                    ]}
+                  >
+                    {`${t("combo")} x${activeCombo}`}
+                  </Text>
+                </MotionView>
+              ) : null}
+            </View>
+          )}
         </View>
         <MotionView preset="rise" delay={44}>
           <MathText
@@ -1557,6 +1630,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing[3],
   },
+  metaBadges: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: spacing[2],
+  },
   eyebrow: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.caption,
@@ -1572,6 +1652,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   retryText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.caption,
+  },
+  comboBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    borderRadius: radii.pill,
+    borderWidth: borders.hairline,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+  },
+  comboText: {
     fontFamily: typography.bodyBold,
     fontSize: typography.size.caption,
   },

@@ -86,6 +86,14 @@ describe("quiz answer presentation", () => {
     expect(source).not.toContain("{completedTotal ? (");
   });
 
+  it("shows combo progress in-question and on completion stats", async () => {
+    const source = await quizSource();
+    expect(source).toContain("summarizeCombo(recapEntries)");
+    expect(source).toContain('label={t("bestCombo")}');
+    expect(source).toContain('label={t("comboBonus")}');
+    expect(source).toContain('`${t("combo")} x${activeCombo}`');
+  });
+
   it("offers a choice after the next-question wait timeout", async () => {
     const source = await quizSource();
     const waitingBranch = source.slice(

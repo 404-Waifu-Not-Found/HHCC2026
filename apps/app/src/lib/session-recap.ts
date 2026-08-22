@@ -45,6 +45,39 @@ export type RecapSummary = {
   missed: RecapItem[];
 };
 
+export type ComboSummary = {
+  /** Current consecutive correct answers at the latest graded item. */
+  current: number;
+  /** Highest consecutive-correct combo reached in this session. */
+  best: number;
+  /** Lightweight local bonus points earned from combos. */
+  bonus: number;
+};
+
+function comboBonusForCount(count: number): number {
+  if (count < 2) return 0;
+  if (count < 4) return 1;
+  if (count < 6) return 2;
+  if (count < 10) return 3;
+  return 5;
+}
+
+export function summarizeCombo(entries: readonly RecapEntry[]): ComboSummary {
+  let current = 0;
+  let best = 0;
+  let bonus = 0;
+  for (const entry of entries) {
+    if (!entry.correct) {
+      current = 0;
+      continue;
+    }
+    current += 1;
+    if (current > best) best = current;
+    bonus += comboBonusForCount(current);
+  }
+  return { current, best, bonus };
+}
+
 export function summarizeRecap(entries: readonly RecapEntry[]): RecapSummary {
   const seen = new Set<string>();
   const firstMissByQuestion = new Map<string, RecapEntry>();

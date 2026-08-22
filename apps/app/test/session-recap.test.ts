@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachLocalReason,
   parseRecapEntries,
+  summarizeCombo,
   summarizeRecap,
   type RecapEntry,
 } from "../src/lib/session-recap";
@@ -192,5 +193,32 @@ describe("parseRecapEntries", () => {
   it("returns an empty list for non-array input", () => {
     expect(parseRecapEntries(undefined)).toEqual([]);
     expect(parseRecapEntries({ entries: [] })).toEqual([]);
+  });
+});
+
+describe("summarizeCombo", () => {
+  it("reports zero combo stats for an empty session", () => {
+    expect(summarizeCombo([])).toEqual({ current: 0, best: 0, bonus: 0 });
+  });
+
+  it("resets the combo on incorrect answers and tracks the session best", () => {
+    const summary = summarizeCombo([
+      entry({ correct: true }),
+      entry({ questionId: "q2", correct: true }),
+      entry({ questionId: "q3", correct: false }),
+      entry({ questionId: "q4", correct: true }),
+      entry({ questionId: "q5", correct: true }),
+      entry({ questionId: "q6", correct: true }),
+    ]);
+    expect(summary).toEqual({ current: 3, best: 3, bonus: 3 });
+  });
+
+  it("awards larger bonus increments at higher combo tiers", () => {
+    const summary = summarizeCombo(
+      Array.from({ length: 10 }, (_, index) =>
+        entry({ questionId: `q${index + 1}`, correct: true }),
+      ),
+    );
+    expect(summary).toEqual({ current: 10, best: 10, bonus: 23 });
   });
 });
