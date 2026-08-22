@@ -31,6 +31,7 @@ import {
 } from "./routes/cheat-sheets";
 import { quizImportsRouter } from "./routes/quiz-imports";
 import { quizzesRouter } from "./routes/quizzes";
+import { publicSharesRouter, sharesRouter } from "./routes/shares";
 import { thumbnailRouter, videosRouter } from "./routes/videos";
 import { workplaceRouter } from "./routes/workplace";
 import { youtubeRouter } from "./routes/youtube";
@@ -196,6 +197,9 @@ app.on(["GET", "POST"], "/api/auth/*", (c) =>
 // do not need to expose the Better Auth session cookie in an image URL.
 app.route("/api/videos", thumbnailRouter);
 app.route("/api/profile", publicProfileRouter);
+// The quest-share preview is public by design: it exposes title, counts and
+// concept names only (see routes/shares.ts) and is rate limited per IP.
+app.route("/api/shares", publicSharesRouter);
 
 app.use("/api/*", authenticated);
 app.route("/api/admin", adminRouter);
@@ -203,6 +207,7 @@ app.route("/api/videos", videosRouter);
 app.route("/api/local-ai", generationRouter);
 app.route("/api/quiz-imports", quizImportsRouter);
 app.route("/api", quizzesRouter);
+app.route("/api", sharesRouter);
 app.route("/api/library", libraryRouter);
 app.route("/api/push", pushRouter);
 app.route("/api/profile", profileRouter);

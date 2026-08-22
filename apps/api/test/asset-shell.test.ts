@@ -16,12 +16,19 @@ describe("public route asset shells", () => {
       "/generation/[videoId].html",
     );
     expect(publicAssetShell("/quiz/attempt-id")).toBe("/quiz/[attemptId].html");
+    expect(publicAssetShell("/s/9a9a9a9a-9a9a-49a9-8a9a-9a9a9a9a9a9a")).toBe(
+      "/s/[token].html",
+    );
+    expect(publicAssetShell("/s/token/")).toBe("/s/[token].html");
   });
 
   it("does not rewrite nested, empty, or unrelated paths", () => {
     expect(publicAssetShell("/create/")).toBeNull();
     expect(publicAssetShell("/create/video-id/extra")).toBeNull();
     expect(publicAssetShell("/library/video-id")).toBeNull();
+    expect(publicAssetShell("/s/")).toBeNull();
+    expect(publicAssetShell("/s/token/extra")).toBeNull();
+    expect(publicAssetShell("/settings")).toBe("/settings.html");
   });
 
   it("prevents browsers from retaining an app shell across deployments", async () => {
