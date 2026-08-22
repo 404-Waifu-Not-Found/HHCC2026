@@ -6055,8 +6055,18 @@ test("v5.8 completes a 100-bank recorded-fixture release benchmark without conte
         (event) => callEvents.push(event),
       );
     } catch (error) {
+      // Surface the underlying reason in the message itself: the TAP reporter
+      // used by CI prints only `error:` and drops the `cause` chain.
+      const reason =
+        error instanceof Error
+          ? `${error.name}: ${error.message}`
+          : String(error);
+      const lastEvent = callEvents.at(-1);
+      const lastCall = lastEvent
+        ? ` Last call event: ${JSON.stringify(lastEvent)}.`
+        : "";
       throw new Error(
-        `Recorded benchmark bank ${bankIndex + 1} failed (${questionCount} questions).`,
+        `Recorded benchmark bank ${bankIndex + 1} failed (${questionCount} questions, ${questionTypes.join("+")}): ${reason}.${lastCall}`,
         { cause: error },
       );
     }
