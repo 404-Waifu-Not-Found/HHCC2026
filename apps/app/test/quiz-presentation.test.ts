@@ -42,6 +42,17 @@ describe("quiz answer presentation", () => {
     );
   });
 
+  it("marks the correct option after an incorrect grade", async () => {
+    const source = await quizSource();
+
+    expect(source).toContain(
+      'if (feedback && isCorrectChoice) return "correct"',
+    );
+    expect(source).toContain("displayToCanonical?.[index] ?? index");
+    expect(source).toContain("feedback?.correctAnswer === true");
+    expect(source).toContain("feedback?.correctAnswer === false");
+  });
+
   it("sends the completion action to the Library route named by its label", async () => {
     const source = await quizSource();
     const completionBranch = source.slice(

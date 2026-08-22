@@ -147,7 +147,9 @@ function createDatabase(): {
       quality_status TEXT NOT NULL,
       quality_summary_json TEXT NOT NULL,
       import_key TEXT,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      origin TEXT NOT NULL DEFAULT 'quest',
+      affects_mastery INTEGER NOT NULL DEFAULT 1
     );
     CREATE TABLE questions (
       id TEXT PRIMARY KEY,
@@ -254,7 +256,7 @@ function createDatabase(): {
   `);
   sqlite
     .prepare(
-      "INSERT INTO quiz_banks VALUES (?, ?, ?, 'en', 'short', 'Primer', '[]', 1, 9, 'generating', ?, 'import-1', ?)",
+      "INSERT INTO quiz_banks VALUES (?, ?, ?, 'en', 'short', 'Primer', '[]', 1, 9, 'generating', ?, 'import-1', ?, 'quest', 1)",
     )
     .run(QUIZ_ID, USER_ID, VIDEO_ID, JSON.stringify(progressiveSummary(1)), 1);
   sqlite

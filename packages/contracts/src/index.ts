@@ -3014,6 +3014,518 @@ export const YouTubeDeviceStatusSchema = z.object({
   message: z.string().optional(),
 });
 
+// ---------------------------------------------------------------------------
+// Workplace: a synced chat surface backed by workplace_threads/
+// workplace_messages. Every persisted schema below is `.strict()` so secret-
+// shaped keys, raw caption arrays, full transcripts, note documents, and
+// hidden answers can never slip into a stored payload -- only bounded,
+// learner-visible fields and already-validated artifacts (like a complete
+// LocalConceptQuizQuestionSchema) are accepted.
+// ---------------------------------------------------------------------------
+
+export const WorkplaceSuggestionKindSchema = z.enum([
+  "recent",
+  "unmastered",
+  "due",
+]);
+export type WorkplaceSuggestionKind = z.infer<
+  typeof WorkplaceSuggestionKindSchema
+>;
+export const WORKPLACE_SUGGESTION_KINDS: readonly WorkplaceSuggestionKind[] = [
+  "recent",
+  "unmastered",
+  "due",
+] as const;
+
+export const WorkplaceSuggestionSchema = z
+  .object({
+    kind: WorkplaceSuggestionKindSchema,
+    videoId: z.string().uuid(),
+    quizId: z.string().uuid().nullable(),
+    title: z.string().trim().min(1).max(300),
+    reason: z.string().trim().min(1).max(300),
+  })
+  .strict();
+export type WorkplaceSuggestion = z.infer<typeof WorkplaceSuggestionSchema>;
+
+export const WorkplaceSuggestionsResponseSchema = z
+  .object({
+    suggestions: z.array(WorkplaceSuggestionSchema).length(3),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const kinds = value.suggestions.map((suggestion) => suggestion.kind);
+    if (new Set(kinds).size !== WORKPLACE_SUGGESTION_KINDS.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["suggestions"],
+        message: "Suggestions must not repeat a kind.",
+      });
+      return;
+    }
+    for (const kind of WORKPLACE_SUGGESTION_KINDS) {
+      if (!kinds.includes(kind)) {
+        context.addIssue({
+          code: "custom",
+          path: ["suggestions"],
+          message: `Suggestions must include a ${kind} recommendation.`,
+        });
+      }
+    }
+  });
+export type WorkplaceSuggestionsResponse = z.infer<
+  typeof WorkplaceSuggestionsResponseSchema
+>;
+
+const WORKPLACE_MESSAGE_TEXT_MAX_LENGTH = 4_000;
+const WORKPLACE_CITATION_QUOTE_MAX_LENGTH = 320;
+
+// A citation points at a bounded excerpt of an owned video, never at the raw
+// caption array or full transcript backing it.
+export const WorkplaceCitationSchema = z
+  .object({
+    videoId: z.string().uuid(),
+    title: z.string().trim().min(1).max(300),
+    startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().positive(),
+    quote: z.string().trim().min(1).max(WORKPLACE_CITATION_QUOTE_MAX_LENGTH),
+  })
+  .strict()
+  .refine((citation) => citation.endMs > citation.startMs, {
+    message: "endMs must be greater than startMs",
+    path: ["endMs"],
+  });
+export type WorkplaceCitation = z.infer<typeof WorkplaceCitationSchema>;
+
+export const WorkplaceToolNameSchema = z.enum([
+  "search_videos",
+  "search_transcript",
+  "generate_practice_set",
+  "lookup_mastery",
+  "find_due_reviews",
+]);
+export type WorkplaceToolName = z.infer<typeof WorkplaceToolNameSchema>;
+
+export const WorkplaceToolCallStatusSchema = z.enum([
+  "requested",
+  "running",
+  "complete",
+  "error",
+]);
+export type WorkplaceToolCallStatus = z.infer<
+  typeof WorkplaceToolCallStatusSchema
+>;
+
+// Sanitized status embedded in a persisted message: a tool name, its status,
+// a bounded learner-visible summary, and optional grounding citations. Raw
+// tool arguments/output are intentionally never part of this shape.
+export const WorkplaceToolStatusSchema = z
+  .object({
+    name: WorkplaceToolNameSchema,
+    status: WorkplaceToolCallStatusSchema,
+    summary: z.string().trim().min(1).max(300),
+    citations: z.array(WorkplaceCitationSchema).max(5).default([]),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.status === "error" && value.citations.length > 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["citations"],
+        message: "A failed tool call cannot carry grounding citations.",
+      });
+    }
+  });
+export type WorkplaceToolStatus = z.infer<typeof WorkplaceToolStatusSchema>;
+
+export const WORKPLACE_PRACTICE_SET_QUESTION_COUNT = 5 as const;
+
+export const WorkplacePracticePolicySchema = z.enum(["practice", "diagnostic"]);
+export type WorkplacePracticePolicy = z.infer<
+  typeof WorkplacePracticePolicySchema
+>;
+
+// A fully validated practice artifact the local AI may hand back to the
+// Workplace thread: exactly five already-validated quiz questions, the
+// requested vs. effective assessment policy, a learner-visible rationale for
+// any downgrade, the owned videos it was grounded in, and citation metadata
+// -- never raw captions, transcripts, or a separate "hidden" answer key.
+export const WorkplacePracticeSetSchema = z
+  .object({
+    questions: z
+      .array(LocalConceptQuizQuestionSchema)
+      .length(WORKPLACE_PRACTICE_SET_QUESTION_COUNT),
+    requestedPolicy: WorkplacePracticePolicySchema,
+    effectivePolicy: WorkplacePracticePolicySchema,
+    rationale: z.string().trim().min(1).max(600),
+    videoIds: z.array(z.string().uuid()).min(1).max(20),
+    transcriptComplete: z.boolean(),
+    citations: z.array(WorkplaceCitationSchema).min(1).max(20),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    value.questions.forEach((question, index) => {
+      if (question.id !== `q${index + 1}`) {
+        context.addIssue({
+          code: "custom",
+          path: ["questions", index, "id"],
+          message: "Practice set question IDs must be ordered q1 through q5.",
+        });
+      }
+    });
+    if (
+      value.requestedPolicy === "practice" &&
+      value.effectivePolicy !== "practice"
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["effectivePolicy"],
+        message:
+          "A practice request cannot be silently upgraded into a diagnostic assessment.",
+      });
+    }
+    const ownedVideoIds = new Set(value.videoIds);
+    value.citations.forEach((citation, index) => {
+      if (!ownedVideoIds.has(citation.videoId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["citations", index, "videoId"],
+          message: "Citations must ground into one of the owned video IDs.",
+        });
+      }
+    });
+  });
+export type WorkplacePracticeSet = z.infer<typeof WorkplacePracticeSetSchema>;
+
+export const WorkplaceTextPartSchema = z
+  .object({
+    type: z.literal("text"),
+    text: z.string().trim().min(1).max(WORKPLACE_MESSAGE_TEXT_MAX_LENGTH),
+  })
+  .strict();
+
+export const WorkplaceCitationPartSchema = z
+  .object({
+    type: z.literal("citation"),
+    citation: WorkplaceCitationSchema,
+  })
+  .strict();
+
+export const WorkplaceToolStatusPartSchema = z
+  .object({
+    type: z.literal("tool_status"),
+    tool: WorkplaceToolStatusSchema,
+  })
+  .strict();
+
+export const WorkplacePracticeSetPartSchema = z
+  .object({
+    type: z.literal("practice_set"),
+    practiceSet: WorkplacePracticeSetSchema,
+  })
+  .strict();
+
+export const WorkplaceMessagePartSchema = z.discriminatedUnion("type", [
+  WorkplaceTextPartSchema,
+  WorkplaceCitationPartSchema,
+  WorkplaceToolStatusPartSchema,
+  WorkplacePracticeSetPartSchema,
+]);
+export type WorkplaceMessagePart = z.infer<typeof WorkplaceMessagePartSchema>;
+
+export const WorkplaceMessageRoleSchema = z.enum(["user", "assistant"]);
+export type WorkplaceMessageRole = z.infer<typeof WorkplaceMessageRoleSchema>;
+
+export const WorkplaceMessageSchema = z
+  .object({
+    id: z.string().uuid(),
+    threadId: z.string().uuid(),
+    clientMessageId: z.string().trim().min(1).max(100),
+    role: WorkplaceMessageRoleSchema,
+    parts: z.array(WorkplaceMessagePartSchema).min(1).max(20),
+    createdAt: z.number().int().nonnegative(),
+  })
+  .strict();
+export type WorkplaceMessage = z.infer<typeof WorkplaceMessageSchema>;
+
+export const WorkplaceMessageSyncRequestSchema = z
+  .object({
+    threadId: z.string().uuid(),
+    clientMessageId: z.string().trim().min(1).max(100),
+    role: WorkplaceMessageRoleSchema,
+    parts: z.array(WorkplaceMessagePartSchema).min(1).max(20),
+  })
+  .strict();
+export type WorkplaceMessageSyncRequest = z.infer<
+  typeof WorkplaceMessageSyncRequestSchema
+>;
+
+export const WorkplaceMessageSyncResponseSchema = z
+  .object({ message: WorkplaceMessageSchema })
+  .strict();
+export type WorkplaceMessageSyncResponse = z.infer<
+  typeof WorkplaceMessageSyncResponseSchema
+>;
+
+export const WorkplaceThreadSummarySchema = z
+  .object({
+    id: z.string().uuid(),
+    title: z.string().trim().min(1).max(200),
+    messageCount: z.number().int().nonnegative(),
+    lastMessageAt: z.number().int().nonnegative().nullable(),
+    createdAt: z.number().int().nonnegative(),
+    updatedAt: z.number().int().nonnegative(),
+  })
+  .strict();
+export type WorkplaceThreadSummary = z.infer<
+  typeof WorkplaceThreadSummarySchema
+>;
+
+export const WorkplaceThreadCreateRequestSchema = z
+  .object({ title: z.string().trim().min(1).max(200).optional() })
+  .strict();
+export type WorkplaceThreadCreateRequest = z.infer<
+  typeof WorkplaceThreadCreateRequestSchema
+>;
+
+export const WorkplaceThreadResponseSchema = z
+  .object({ thread: WorkplaceThreadSummarySchema })
+  .strict();
+export type WorkplaceThreadResponse = z.infer<
+  typeof WorkplaceThreadResponseSchema
+>;
+
+export const WorkplaceThreadRenameRequestSchema = z
+  .object({ title: z.string().trim().min(1).max(200) })
+  .strict();
+export type WorkplaceThreadRenameRequest = z.infer<
+  typeof WorkplaceThreadRenameRequestSchema
+>;
+
+export const WorkplaceThreadListResponseSchema = z
+  .object({ threads: z.array(WorkplaceThreadSummarySchema).max(200) })
+  .strict();
+export type WorkplaceThreadListResponse = z.infer<
+  typeof WorkplaceThreadListResponseSchema
+>;
+
+export const WorkplaceThreadDeleteResponseSchema = z
+  .object({ deleted: z.literal(true) })
+  .strict();
+export type WorkplaceThreadDeleteResponse = z.infer<
+  typeof WorkplaceThreadDeleteResponseSchema
+>;
+
+export const WORKPLACE_MESSAGES_DEFAULT_PAGE_SIZE = 50;
+export const WORKPLACE_MESSAGES_MAX_PAGE_SIZE = 100;
+
+export const WorkplaceMessagesRequestSchema = z
+  .object({
+    threadId: z.string().uuid(),
+    cursor: z.string().trim().min(1).max(200).nullable().optional(),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(WORKPLACE_MESSAGES_MAX_PAGE_SIZE)
+      .default(WORKPLACE_MESSAGES_DEFAULT_PAGE_SIZE),
+  })
+  .strict();
+export type WorkplaceMessagesRequest = z.infer<
+  typeof WorkplaceMessagesRequestSchema
+>;
+
+export const WorkplaceMessagesResponseSchema = z
+  .object({
+    messages: z
+      .array(WorkplaceMessageSchema)
+      .max(WORKPLACE_MESSAGES_MAX_PAGE_SIZE),
+    nextCursor: z.string().trim().min(1).max(200).nullable(),
+  })
+  .strict();
+export type WorkplaceMessagesResponse = z.infer<
+  typeof WorkplaceMessagesResponseSchema
+>;
+
+const WORKPLACE_TOOL_ARGUMENT_KEY_SCHEMA = z.string().trim().min(1).max(64);
+const WorkplaceToolArgumentValueSchema = z.union([
+  z.string().trim().max(500),
+  z.number(),
+  z.boolean(),
+]);
+const WORKPLACE_MAX_TOOL_ARGUMENT_KEYS = 12;
+// Credential-shaped keys must never appear in a tool call, even inside an
+// otherwise free-form arguments map.
+const WORKPLACE_FORBIDDEN_ARGUMENT_KEYS = new Set([
+  "apikey",
+  "api_key",
+  "secret",
+  "token",
+  "password",
+  "authorization",
+  "credential",
+  "credentials",
+]);
+
+export const WorkplaceLocalToolCallSchema = z
+  .object({
+    id: z.string().trim().min(1).max(80),
+    name: WorkplaceToolNameSchema,
+    arguments: z
+      .record(
+        WORKPLACE_TOOL_ARGUMENT_KEY_SCHEMA,
+        WorkplaceToolArgumentValueSchema,
+      )
+      .refine(
+        (value) =>
+          Object.keys(value).length <= WORKPLACE_MAX_TOOL_ARGUMENT_KEYS,
+        { message: "Tool arguments must stay within a bounded key count." },
+      ),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const forbiddenKey = Object.keys(value.arguments).find((key) =>
+      WORKPLACE_FORBIDDEN_ARGUMENT_KEYS.has(key.trim().toLowerCase()),
+    );
+    if (forbiddenKey) {
+      context.addIssue({
+        code: "custom",
+        path: ["arguments", forbiddenKey],
+        message:
+          "Tool arguments cannot carry credential-shaped keys such as API keys or tokens.",
+      });
+    }
+  });
+export type WorkplaceLocalToolCall = z.infer<
+  typeof WorkplaceLocalToolCallSchema
+>;
+
+export const WorkplaceLocalToolResultSchema = z
+  .object({
+    id: z.string().trim().min(1).max(80),
+    name: WorkplaceToolNameSchema,
+    status: z.enum(["ok", "error"]),
+    summary: z.string().trim().min(1).max(500),
+    citations: z.array(WorkplaceCitationSchema).max(5).default([]),
+  })
+  .strict();
+export type WorkplaceLocalToolResult = z.infer<
+  typeof WorkplaceLocalToolResultSchema
+>;
+
+export const WorkplaceLocalChatRequestSchema = z
+  .object({
+    threadId: z.string().uuid(),
+    clientMessageId: z.string().trim().min(1).max(100),
+    text: z.string().trim().min(1).max(WORKPLACE_MESSAGE_TEXT_MAX_LENGTH),
+    recentVideoIds: z.array(z.string().uuid()).max(10).optional(),
+  })
+  .strict();
+export type WorkplaceLocalChatRequest = z.infer<
+  typeof WorkplaceLocalChatRequestSchema
+>;
+
+export const WorkplaceTextDeltaEventSchema = z
+  .object({
+    type: z.literal("text_delta"),
+    delta: z.string().min(1).max(2_000),
+  })
+  .strict();
+
+export const WorkplaceTextCompleteEventSchema = z
+  .object({
+    type: z.literal("text_complete"),
+    text: z.string().min(1).max(WORKPLACE_MESSAGE_TEXT_MAX_LENGTH),
+  })
+  .strict();
+
+export const WorkplaceToolRequestedEventSchema = z
+  .object({
+    type: z.literal("tool_requested"),
+    toolCall: WorkplaceLocalToolCallSchema,
+  })
+  .strict();
+
+export const WorkplaceToolRunningEventSchema = z
+  .object({
+    type: z.literal("tool_running"),
+    toolCallId: z.string().trim().min(1).max(80),
+    name: WorkplaceToolNameSchema,
+  })
+  .strict();
+
+export const WorkplaceToolResultEventSchema = z
+  .object({
+    type: z.literal("tool_result"),
+    toolResult: WorkplaceLocalToolResultSchema,
+  })
+  .strict();
+
+export const WorkplaceToolErrorEventSchema = z
+  .object({
+    type: z.literal("tool_error"),
+    toolCallId: z.string().trim().min(1).max(80),
+    name: WorkplaceToolNameSchema,
+    errorCode: z.string().trim().min(1).max(64),
+    message: z.string().trim().min(1).max(500),
+  })
+  .strict();
+
+export const WorkplacePracticeSetEventSchema = z
+  .object({
+    type: z.literal("practice_set"),
+    practiceSet: WorkplacePracticeSetSchema,
+  })
+  .strict();
+
+export const WorkplaceErrorEventSchema = z
+  .object({
+    type: z.literal("error"),
+    code: z.string().trim().min(1).max(64),
+    message: z.string().trim().min(1).max(500),
+  })
+  .strict();
+
+export const WorkplaceCompleteEventSchema = z
+  .object({ type: z.literal("complete") })
+  .strict();
+
+export const WorkplaceLocalChatEventSchema = z.discriminatedUnion("type", [
+  WorkplaceTextDeltaEventSchema,
+  WorkplaceTextCompleteEventSchema,
+  WorkplaceToolRequestedEventSchema,
+  WorkplaceToolRunningEventSchema,
+  WorkplaceToolResultEventSchema,
+  WorkplaceToolErrorEventSchema,
+  WorkplacePracticeSetEventSchema,
+  WorkplaceErrorEventSchema,
+  WorkplaceCompleteEventSchema,
+]);
+export type WorkplaceLocalChatEvent = z.infer<
+  typeof WorkplaceLocalChatEventSchema
+>;
+
+export const WorkplacePracticeSetImportRequestSchema = z
+  .object({
+    threadId: z.string().uuid(),
+    practiceSet: WorkplacePracticeSetSchema,
+  })
+  .strict();
+export type WorkplacePracticeSetImportRequest = z.infer<
+  typeof WorkplacePracticeSetImportRequestSchema
+>;
+
+export const WorkplacePracticeSetImportResponseSchema = z
+  .object({
+    quizId: z.string().uuid(),
+    messageId: z.string().uuid(),
+    affectsMastery: z.boolean(),
+  })
+  .strict();
+export type WorkplacePracticeSetImportResponse = z.infer<
+  typeof WorkplacePracticeSetImportResponseSchema
+>;
+
 const youtubeHosts = new Set([
   "youtube.com",
   "www.youtube.com",

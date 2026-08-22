@@ -32,6 +32,7 @@ import {
 import { quizImportsRouter } from "./routes/quiz-imports";
 import { quizzesRouter } from "./routes/quizzes";
 import { thumbnailRouter, videosRouter } from "./routes/videos";
+import { workplaceRouter } from "./routes/workplace";
 import { youtubeRouter } from "./routes/youtube";
 import type { AppEnv } from "./types";
 
@@ -207,6 +208,7 @@ app.route("/api/profile", profileRouter);
 app.route("/api/cheat-sheets", cheatSheetsRouter);
 app.route("/api", cheatSheetContextRouter);
 app.route("/api/youtube", youtubeRouter);
+app.route("/api/workplace", workplaceRouter);
 
 app.notFound((c) => {
   if (c.req.path.startsWith("/api/")) {

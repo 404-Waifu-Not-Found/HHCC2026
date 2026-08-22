@@ -135,7 +135,12 @@ describe("Android UI regressions", () => {
     expect(videoCard).toContain('accessibilityRole="button"');
     expect(videoCard).toContain("styles.main");
     expect(videoCard).toContain("styles.actions");
-    expect(videoCard).toContain("paddingRight: spacing[20] + spacing[5]");
+    expect(videoCard).toContain("styles.actionsWithScore");
+    expect(videoCard).toContain("styles.actionsWithStatus");
+    expect(videoCard).toContain("paddingRight: spacing[16] + spacing[5]");
+    expect(videoCard).toContain("width: 32");
+    expect(videoCard).toContain("height: 32");
+    expect(videoCard).toContain('name="next" size={18}');
     expect(videoCard).toContain("accessibilityLabel={");
     expect(videoCard).toContain("card.cheatSheet.status");
     expect(videoCard).toContain("onGenerateNotes");

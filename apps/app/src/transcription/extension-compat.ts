@@ -9,6 +9,11 @@ import {
 } from "@clipquest/contracts";
 
 export const MINIMUM_LOCAL_AI_EXTENSION_VERSION = "0.8.31";
+// Workplace chat is a distinct local capability introduced with 0.8.32. Gate it
+// on both the exact capability string and the first extension version that ships
+// the website->background Workplace turn channel.
+export const WORKPLACE_LOCAL_CHAT_CAPABILITY = "workplace-chat-v1" as const;
+export const MINIMUM_WORKPLACE_CHAT_EXTENSION_VERSION = "0.8.32";
 export const MINIMUM_PROMPT_FIRST_V511_LOCAL_AI_EXTENSION_VERSION = "0.8.16";
 export const MINIMUM_PROMPT_FIRST_V510_LOCAL_AI_EXTENSION_VERSION = "0.8.15";
 export const MINIMUM_PROMPT_FIRST_V59_LOCAL_AI_EXTENSION_VERSION = "0.8.14";
@@ -37,6 +42,12 @@ export function isCompatibleClipQuestExtensionVersion(
     if ((actual[index] ?? 0) < requiredPart) return false;
   }
   return true;
+}
+
+export function supportsWorkplaceChat(
+  capabilities: readonly string[],
+): boolean {
+  return capabilities.includes(WORKPLACE_LOCAL_CHAT_CAPABILITY);
 }
 
 export function supportsQuestionStream(

@@ -138,7 +138,7 @@ export function VideoCard({
             <View
               style={[
                 styles.scoreBar,
-                { paddingRight: spacing[20] + spacing[5] },
+                { paddingRight: spacing[16] + spacing[5] },
               ]}
             >
               <View style={styles.scoreProgress}>
@@ -156,7 +156,14 @@ export function VideoCard({
           ) : null}
         </View>
       </MotionPressable>
-      <View style={styles.actions}>
+      <View
+        style={[
+          styles.actions,
+          card.bestScore !== null
+            ? styles.actionsWithScore
+            : styles.actionsWithStatus,
+        ]}
+      >
         <View style={styles.actionWrap}>
           <MotionPressable
             pressDepth={0}
@@ -210,7 +217,7 @@ export function VideoCard({
             {notesPending ? (
               <ActivityIndicator color={theme.secondary} size="small" />
             ) : (
-              <VoxelIcon name={notesIcon} size={26} />
+              <VoxelIcon name={notesIcon} size={18} />
             )}
           </MotionPressable>
           {hoveredAction === "notes" ? (
@@ -261,7 +268,7 @@ export function VideoCard({
               },
             ]}
           >
-            <VoxelIcon name="next" size={26} />
+            <VoxelIcon name="next" size={18} />
           </MotionPressable>
           {hoveredAction === "open" ? (
             <MotionView
@@ -359,7 +366,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
-    paddingRight: spacing[20] + spacing[5],
+    paddingRight: spacing[16] + spacing[5],
   },
   scoreBar: {
     flexDirection: "row",
@@ -377,17 +384,22 @@ const styles = StyleSheet.create({
   actions: {
     position: "absolute",
     right: spacing[3],
-    bottom: spacing[3],
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
+  },
+  actionsWithScore: {
+    bottom: spacing[5],
+  },
+  actionsWithStatus: {
+    bottom: spacing[7],
   },
   actionWrap: {
     position: "relative",
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: borders.standard,

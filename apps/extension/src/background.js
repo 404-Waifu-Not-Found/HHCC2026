@@ -8,6 +8,10 @@ import {
 } from "./local-generator.js";
 import { replayGenerationOutboxEntries } from "./generation-outbox.js";
 import { isClipQuestPageOrigin } from "./origin-policy.js";
+import {
+  WORKPLACE_AI_PORT,
+  attachWorkplaceChannel,
+} from "./workplace-channel.js";
 
 const CLIPQUEST_MATCHES = ["https://clipquest.ccwu.cc/*"];
 const TAB_READY_TIMEOUT_MS = 20_000;
@@ -762,6 +766,53 @@ chrome.runtime.onConnect.addListener((port) => {
           },
         }),
       );
+  });
+});
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== WORKPLACE_AI_PORT) return;
+  // The Workplace channel is bound to the exact ClipQuest origin, exactly like
+  // local quiz generation. Extension pages do not run Workplace turns.
+  if (!senderAllowed(port.sender)) {
+    port.postMessage({
+      type: "workplace-result",
+      requestId: "",
+      response: {
+        ok: false,
+        code: "origin_forbidden",
+        error: "This website is not allowed to use Workplace chat.",
+      },
+    });
+    port.disconnect();
+    return;
+  }
+  attachWorkplaceChannel(port, {
+    // The DeepSeek key is read here and handed straight to the orchestrator's
+    // Authorization header. It is never posted to the page or an event.
+    getApiKey: async () => {
+      const stored = await chrome.storage.local
+        .get(API_KEY_STORAGE_KEY)
+        .catch(() => ({}));
+      return stored[API_KEY_STORAGE_KEY];
+    },
+    // Local caption reads reuse the existing source-readiness cache/tab path so
+    // raw captions stay inside the extension; only bounded excerpts are emitted.
+    extractCaptions: async (videoId) => {
+      try {
+        return await extractCaptions(
+          { videoId, preferredLanguage: undefined },
+          { ensureSource: true },
+        );
+      } catch (error) {
+        return {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Local captions could not be read.",
+        };
+      }
+    },
   });
 });
 

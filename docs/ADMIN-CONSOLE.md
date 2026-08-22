@@ -1,6 +1,6 @@
 # ClipQuest operations console
 
-Status reviewed: 2026-08-16. This document describes the local-client operations surface: Chrome generates through the ClipQuest extension, while Android generates inside the native app. Release implementation and live acceptance are recorded in the [README release status](../README.md#release-status), [Android QA report](./QA-ANDROID-BETA-2026-08-16.md), and dated web-generation reports.
+Status reviewed: 2026-08-22. This document describes the local-client operations surface: Chrome generates through the ClipQuest extension, while Android generates inside the native app. Release implementation and live acceptance are recorded in the [README release status](../README.md#release-status), [Android QA report](./QA-ANDROID-BETA-2026-08-22.md), and dated web-generation reports.
 
 The private operations console lives at `/admin`. It uses ClipQuest's Expo application and visual system but remains isolated from learner navigation.
 
@@ -60,7 +60,7 @@ Progressive-generation visibility additionally depends on:
 - `0018_automatic_generation_recovery.sql`: automatic retry metadata and short recovery claims.
 - `0019_grounded_generation_telemetry.sql`: evidence-grounded generation telemetry.
 
-Admin System reads the newest applied migration from Wrangler's `d1_migrations` ledger. It does not use a hard-coded filename. The production ledger was verified through `0019_grounded_generation_telemetry.sql` on 2026-08-11.
+Admin System reads the newest applied migration from Wrangler's `d1_migrations` ledger. It does not use a hard-coded filename. The production ledger was verified through `0019_grounded_generation_telemetry.sql` on 2026-08-22.
 
 Verify a local database and the current source:
 

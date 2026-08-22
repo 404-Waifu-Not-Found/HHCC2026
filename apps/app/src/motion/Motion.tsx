@@ -330,6 +330,41 @@ export function MotionProgressFill({
   );
 }
 
+/**
+ * A pulsing text cursor that communicates a live, still-streaming turn. Falls
+ * back to a static block when reduced motion is enabled.
+ */
+export function StreamingCursor({ color }: { color: string }) {
+  const { reduceMotion } = useSettings();
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    cancelAnimation(opacity);
+    if (reduceMotion) {
+      opacity.value = 0.7;
+      return;
+    }
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.25, { duration: motion.route }),
+        withTiming(1, { duration: motion.route }),
+      ),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(opacity);
+  }, [opacity, reduceMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return (
+    <Animated.View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[styles.cursor, { backgroundColor: color }, animatedStyle]}
+    />
+  );
+}
+
 export function MotionSkeleton({
   color,
   delay = 0,
@@ -380,6 +415,13 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     transformOrigin: "left center",
+  },
+  cursor: {
+    width: 9,
+    height: 18,
+    borderRadius: 2,
+    marginLeft: 3,
+    transform: [{ translateY: 3 }],
   },
   skeleton: {
     overflow: "hidden",

@@ -1245,6 +1245,7 @@ export default function QuizScreen() {
         <QuestionInput
           question={question}
           displayOptions={choicePresentation?.options}
+          displayToCanonical={choicePresentation?.displayToCanonical}
           answer={answer}
           feedback={feedback}
           setAnswer={setAnswer}
@@ -1273,6 +1274,7 @@ export default function QuizScreen() {
 function QuestionInput({
   question,
   displayOptions,
+  displayToCanonical,
   answer,
   feedback,
   setAnswer,
@@ -1281,6 +1283,7 @@ function QuestionInput({
 }: {
   question: PublicQuestion;
   displayOptions?: string[];
+  displayToCanonical?: number[];
   answer: Answer | undefined;
   feedback?: AttemptAnswerResponse;
   setAnswer(answer: Answer): void;
@@ -1288,7 +1291,11 @@ function QuestionInput({
   disabled: boolean;
 }) {
   const { t, theme } = useSettings();
-  const stateFor = (selected: boolean): AnswerState => {
+  const stateFor = (
+    selected: boolean,
+    isCorrectChoice: boolean,
+  ): AnswerState => {
+    if (feedback && isCorrectChoice) return "correct";
     if (feedback && selected) return feedback.correct ? "correct" : "incorrect";
     if (selected) return "selected";
     return disabled ? "disabled" : "default";
@@ -1302,7 +1309,12 @@ function QuestionInput({
             <AnswerCard
               indexLabel={String.fromCharCode(65 + index)}
               label={option}
-              state={stateFor(answer === index)}
+              state={stateFor(
+                answer === index,
+                typeof feedback?.correctAnswer === "number" &&
+                  (displayToCanonical?.[index] ?? index) ===
+                    feedback.correctAnswer,
+              )}
               onPress={() => setAnswer(index)}
             />
           </StaggerItem>
@@ -1316,14 +1328,17 @@ function QuestionInput({
         <StaggerItem index={0} preset="from-left" style={styles.binaryOption}>
           <AnswerCard
             label={t("true")}
-            state={stateFor(answer === true)}
+            state={stateFor(answer === true, feedback?.correctAnswer === true)}
             onPress={() => setAnswer(true)}
           />
         </StaggerItem>
         <StaggerItem index={1} preset="from-right" style={styles.binaryOption}>
           <AnswerCard
             label={t("false")}
-            state={stateFor(answer === false)}
+            state={stateFor(
+              answer === false,
+              feedback?.correctAnswer === false,
+            )}
             onPress={() => setAnswer(false)}
           />
         </StaggerItem>
