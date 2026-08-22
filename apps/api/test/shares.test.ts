@@ -7,6 +7,7 @@ import type { ApiBindings } from "../src/middleware/authenticated";
 import {
   previewConcepts,
   publicSharesRouter,
+  shareStartSettings,
   sharesRouter,
 } from "../src/routes/shares";
 import { createSqliteD1, type SqliteD1Adapter } from "./support/sqlite-d1";
@@ -381,5 +382,176 @@ describe("GET /shares/:token", () => {
     ]);
     expect(previewConcepts("not json")).toEqual([]);
     expect(previewConcepts("[]")).toEqual([]);
+  });
+});
+
+async function claimShare(
+  adapter: SqliteD1Adapter,
+  token: string,
+  userId = RECIPIENT_ID,
+) {
+  const response = await testApp(adapter, userId).request(
+    `/shares/${token}/claim`,
+    { method: "POST" },
+    env(adapter),
+  );
+  return {
+    status: response.status,
+    body: (await response.json()) as {
+      quizId?: string;
+      videoId?: string;
+      startSettings?: Record<string, unknown>;
+      error?: { code: string };
+    },
+  };
+}
+
+describe("POST /shares/:token/claim", () => {
+  it("clones the bank, questions, video and mastery into the recipient account", async () => {
+    const { sqlite, adapter } = createDatabase();
+    const { body: share } = await createShare(adapter);
+    const claim = await claimShare(adapter, share.token!);
+    expect(claim.status).toBe(200);
+    expect(claim.body.quizId).toMatch(UUID);
+    expect(claim.body.quizId).not.toBe(BANK_ID);
+    expect(claim.body.videoId).toMatch(UUID);
+    expect(claim.body.videoId).not.toBe(OWNER_VIDEO_ID);
+    expect(claim.body.startSettings).toEqual({
+      sessionLength: "long",
+      questionTypes: ["short_answer"],
+    });
+
+    const bank = sqlite
+      .prepare(
+        "SELECT user_id, video_id, language, session_length, primer, concepts_json, pipeline_version, quality_status, quality_summary_json, import_key, origin, affects_mastery FROM quiz_banks WHERE id = ?",
+      )
+      .get(claim.body.quizId!) as Record<string, unknown>;
+    expect(bank).toMatchObject({
+      user_id: RECIPIENT_ID,
+      video_id: claim.body.videoId,
+      language: "en",
+      session_length: "long",
+      primer: "Memory primer",
+      pipeline_version: 9,
+      quality_status: "passed",
+      quality_summary_json: JSON.stringify(readySummary()),
+      import_key: null,
+      origin: "quest",
+      affects_mastery: 1,
+    });
+
+    const questions = sqlite
+      .prepare(
+        "SELECT id, ordinal, type, prompt, options_json, rubric_json FROM questions WHERE quiz_id = ? ORDER BY ordinal",
+      )
+      .all(claim.body.quizId!) as {
+      id: string;
+      ordinal: number;
+      type: string;
+      prompt: string;
+      options_json: string | null;
+      rubric_json: string | null;
+    }[];
+    expect(questions).toHaveLength(2);
+    expect(questions.map((question) => question.id)).not.toContain(
+      QUESTION_ONE_ID,
+    );
+    expect(questions.map((question) => question.id)).not.toContain(
+      QUESTION_TWO_ID,
+    );
+    expect(questions.map((question) => question.prompt)).toEqual([
+      "Why does retrieval practice work?",
+      "Name one benefit of spacing.",
+    ]);
+    expect(questions[0]!.options_json).toContain("Reconstruction");
+    expect(questions[1]!.rubric_json).toContain("acceptableAlternatives");
+
+    const video = sqlite
+      .prepare(
+        "SELECT owner_id, source, source_video_id, title, thumbnail_key, thumbnail_remote_url, origin FROM videos WHERE id = ?",
+      )
+      .get(claim.body.videoId!);
+    expect(video).toEqual({
+      owner_id: RECIPIENT_ID,
+      source: "youtube",
+      source_video_id: "SVb9OV0bLzI",
+      title: "How memory really works",
+      thumbnail_key: null,
+      thumbnail_remote_url: "https://i.ytimg.com/vi/SVb9OV0bLzI/hqdefault.jpg",
+      origin: "paste",
+    });
+    expect(
+      sqlite
+        .prepare("SELECT state FROM mastery WHERE user_id = ? AND video_id = ?")
+        .get(RECIPIENT_ID, claim.body.videoId!),
+    ).toEqual({ state: "not_started" });
+    expect(
+      sqlite
+        .prepare(
+          "SELECT quiz_id FROM quiz_share_claims WHERE share_id = ? AND user_id = ?",
+        )
+        .get(share.token!, RECIPIENT_ID),
+    ).toEqual({ quiz_id: claim.body.quizId });
+  });
+
+  it("is idempotent per recipient and reuses an existing video row", async () => {
+    const { sqlite, adapter } = createDatabase();
+    sqlite
+      .prepare(
+        `INSERT INTO videos (id, owner_id, source, source_video_id, original_url, title, thumbnail_remote_url, created_at, updated_at)
+         VALUES ('22222222-2222-4222-8222-222222222222', ?, 'youtube', 'SVb9OV0bLzI', 'https://www.youtube.com/watch?v=SVb9OV0bLzI', 'My own copy', 'https://i.ytimg.com/vi/SVb9OV0bLzI/hqdefault.jpg', 1, 1)`,
+      )
+      .run(RECIPIENT_ID);
+    const { body: share } = await createShare(adapter);
+    const first = await claimShare(adapter, share.token!);
+    const second = await claimShare(adapter, share.token!);
+    expect(first.body.videoId).toBe("22222222-2222-4222-8222-222222222222");
+    expect(second.status).toBe(200);
+    expect(second.body.quizId).toBe(first.body.quizId);
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS count FROM quiz_banks WHERE user_id = ?")
+        .get(RECIPIENT_ID),
+    ).toEqual({ count: 1 });
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS count FROM videos WHERE owner_id = ?")
+        .get(RECIPIENT_ID),
+    ).toEqual({ count: 1 });
+  });
+
+  it("hands the owner their original bank without cloning", async () => {
+    const { sqlite, adapter } = createDatabase();
+    const { body: share } = await createShare(adapter);
+    const claim = await claimShare(adapter, share.token!, OWNER_ID);
+    expect(claim.body.quizId).toBe(BANK_ID);
+    expect(claim.body.videoId).toBe(OWNER_VIDEO_ID);
+    expect(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM quiz_banks").get(),
+    ).toEqual({ count: 1 });
+  });
+
+  it("404s for unknown tokens", async () => {
+    const { adapter } = createDatabase();
+    const claim = await claimShare(adapter, UNKNOWN_TOKEN);
+    expect(claim.status).toBe(404);
+    expect(claim.body.error?.code).toBe("share_not_found");
+  });
+
+  it("falls back to the stored session length for legacy banks", () => {
+    expect(
+      shareStartSettings({
+        pipeline_version: 7,
+        session_length: "medium",
+        quality_summary_json: "{}",
+      }),
+    ).toEqual({ sessionLength: "medium" });
+    expect(
+      shareStartSettings({
+        pipeline_version: 9,
+        session_length: "long",
+        quality_summary_json: JSON.stringify(readySummary()),
+      }),
+    ).toEqual({ sessionLength: "long", questionTypes: ["short_answer"] });
   });
 });
