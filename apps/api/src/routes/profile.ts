@@ -1,5 +1,8 @@
 import { Hono } from "hono";
-import { ProfileAvatarResponseSchema } from "@clipquest/contracts";
+import {
+  ProfileAvatarResponseSchema,
+  ProfileLearningStatsResponseSchema,
+} from "@clipquest/contracts";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
 import type { ApiBindings } from "../middleware/authenticated";
@@ -8,6 +11,40 @@ const MAX_AVATAR_BYTES = 1_500_000;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export const profileRouter = new Hono<ApiBindings>();
+
+profileRouter.get("/stats", async (c) => {
+  const user = c.get("user");
+  const stats = await c.env.DB.prepare(
+    `SELECT
+      COUNT(*) AS completed_lessons,
+      COALESCE(SUM(completed.duration_seconds), 0) AS total_duration_seconds
+    FROM (
+      SELECT v.id, MAX(v.duration_seconds) AS duration_seconds
+      FROM videos v
+      WHERE v.owner_id = ?
+        AND EXISTS (
+          SELECT 1
+          FROM quiz_banks qb
+          JOIN attempts a ON a.quiz_id = qb.id
+          WHERE qb.video_id = v.id
+            AND a.user_id = v.owner_id
+            AND a.status = 'complete'
+        )
+      GROUP BY v.id
+    ) completed`,
+  )
+    .bind(user.id)
+    .first<{
+      completed_lessons: number | null;
+      total_duration_seconds: number | null;
+    }>();
+  return c.json(
+    ProfileLearningStatsResponseSchema.parse({
+      completedLessons: Number(stats?.completed_lessons ?? 0),
+      totalDurationSeconds: Number(stats?.total_duration_seconds ?? 0),
+    }),
+  );
+});
 
 profileRouter.put("/avatar", async (c) => {
   const user = c.get("user");

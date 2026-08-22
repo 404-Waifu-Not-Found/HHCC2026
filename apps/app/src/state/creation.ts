@@ -2,6 +2,7 @@ import {
   DEFAULT_QUIZ_QUESTION_TYPES,
   GenerationRecordSchema,
   LanguageSchema,
+  QuestionCountSchema,
   QuizQuestionTypesSchema,
   VideoImportResponseSchema,
   type AppLanguage,
@@ -55,7 +56,7 @@ export type StoredGeneration = {
   quizId?: string;
   attemptId?: string;
   acceptedCount?: number;
-  plannedCount?: 5 | 10 | 15;
+  plannedCount?: number;
   preworkStatus?: "running" | "ready" | "unavailable" | "failed";
 };
 
@@ -203,13 +204,15 @@ export async function saveQuestPreferences(
 export async function loadQuestPreferences(
   ownerUserId: string,
   videoId: string,
+  defaultQuizLanguage: AppLanguage,
 ): Promise<QuestPreferences> {
+  const fallbackQuizLanguage = LanguageSchema.parse(defaultQuizLanguage);
   await AsyncStorage.removeItem(legacyPreferencesKeyFor(videoId));
   const storageKey = preferencesKeyFor(ownerUserId, videoId);
   const raw = await AsyncStorage.getItem(storageKey);
   if (!raw) {
     return {
-      quizLanguage: "en",
+      quizLanguage: fallbackQuizLanguage,
       questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
     };
   }
@@ -222,7 +225,7 @@ export async function loadQuestPreferences(
   } catch {
     await AsyncStorage.removeItem(storageKey);
     return {
-      quizLanguage: "en",
+      quizLanguage: fallbackQuizLanguage,
       questionTypes: [...DEFAULT_QUIZ_QUESTION_TYPES],
     };
   }
@@ -376,7 +379,7 @@ export async function migrateLegacyGenerationRecord(input: {
   ownerUserId: string;
   generationId: string;
   generationSessionId: string;
-  plannedCount: 5 | 10 | 15;
+  plannedCount: number;
   acceptedCount: number;
   sessionLength: SessionLength;
   quizLanguage: AppLanguage;
@@ -441,16 +444,16 @@ export async function loadGenerationState(
       (value.questionTypes !== undefined &&
         !QuizQuestionTypesSchema.safeParse(value.questionTypes).success) ||
       (value.sessionLength !== undefined &&
-        !["short", "medium", "long"].includes(value.sessionLength)) ||
+        !["short", "medium", "long", "custom"].includes(value.sessionLength)) ||
       (value.watched !== undefined && typeof value.watched !== "boolean") ||
       (value.quizId !== undefined && !isUuid(value.quizId)) ||
       (value.attemptId !== undefined && !isUuid(value.attemptId)) ||
       (value.acceptedCount !== undefined &&
         (!Number.isInteger(value.acceptedCount) ||
           value.acceptedCount < 1 ||
-          value.acceptedCount > 15)) ||
+          value.acceptedCount > 50)) ||
       (value.plannedCount !== undefined &&
-        ![5, 10, 15].includes(value.plannedCount))
+        !QuestionCountSchema.safeParse(value.plannedCount).success)
     ) {
       throw new Error("Invalid generation state");
     }

@@ -11,8 +11,20 @@ export type VideoSource = z.infer<typeof SourceSchema>;
 export const LanguageSchema = z.enum(["en", "zh-CN"]);
 export type AppLanguage = z.infer<typeof LanguageSchema>;
 
-export const SessionLengthSchema = z.enum(["short", "medium", "long"]);
+export const SessionLengthSchema = z.enum([
+  "short",
+  "medium",
+  "long",
+  "custom",
+]);
 export type SessionLength = z.infer<typeof SessionLengthSchema>;
+export const QUESTION_COUNT_MIN = 5;
+export const QUESTION_COUNT_MAX = 50;
+export const QuestionCountSchema = z
+  .number()
+  .int()
+  .min(QUESTION_COUNT_MIN)
+  .max(QUESTION_COUNT_MAX);
 
 export const QuizQuestionTypeSchema = z.enum([
   "multiple_choice",
@@ -540,24 +552,20 @@ export type GenerationAvailabilityReasonCode = z.infer<
   typeof GenerationAvailabilityReasonCodeSchema
 >;
 
-const PlannedQuestionCountSchema = z.union([
-  z.literal(5),
-  z.literal(10),
-  z.literal(15),
-]);
+const PlannedQuestionCountSchema = QuestionCountSchema;
 
 export const LocalQuestionPlanSchema = z
   .object({
     seed: z.string().regex(/^[a-f0-9]{64}$/),
-    types: z.array(QuizQuestionTypeSchema).min(5).max(15),
+    types: z.array(QuizQuestionTypeSchema).min(1).max(QUESTION_COUNT_MAX),
   })
   .strict()
   .superRefine((value, context) => {
-    if (![5, 10, 15].includes(value.types.length)) {
+    if (value.types.length < 1 || value.types.length > QUESTION_COUNT_MAX) {
       context.addIssue({
         code: "custom",
         path: ["types"],
-        message: "A question plan must contain exactly 5, 10, or 15 slots.",
+        message: "A question plan must contain no more than 50 slots.",
       });
     }
     const distinctTypes = new Set(value.types).size;
@@ -725,7 +733,7 @@ export type QuizGenerationProfileResponse = z.infer<
 
 export const LocalAcceptedQuestionSummarySchema = z
   .object({
-    id: z.string().regex(/^q(?:[1-9]|1[0-5])$/),
+    id: z.string().regex(/^q(?:[1-9]|[1-4][0-9]|50)$/),
     type: z.enum(["multiple_choice", "true_false", "short_answer"]),
     concept: z.string().trim().min(1).max(200),
     question: z.string().trim().min(1).max(700),
@@ -793,7 +801,11 @@ export const LegacyLocalGenerationCallEventSchema = z
     client: LocalGenerationClientSchema.optional(),
     generationSessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(127),
-    startIndex: z.number().int().min(0).max(14),
+    startIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(QUESTION_COUNT_MAX - 1),
     requestedCount: z.number().int().min(1).max(3),
     acceptedCount: z.number().int().min(0).max(3),
     classification: LocalGenerationCallClassificationSchema,
@@ -814,11 +826,11 @@ export const LegacyLocalGenerationCallEventSchema = z
         message: "A call cannot accept more questions than it requested.",
       });
     }
-    if (value.startIndex + value.requestedCount > 15) {
+    if (value.startIndex + value.requestedCount > QUESTION_COUNT_MAX) {
       context.addIssue({
         code: "custom",
         path: ["requestedCount"],
-        message: "A call cannot request positions beyond q15.",
+        message: "A call cannot request positions beyond q50.",
       });
     }
     if (
@@ -866,7 +878,11 @@ export const LegacyAutomaticRecoveryCallEventSchema = z
     generationSessionId: z.string().uuid(),
     recoverySessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(127),
-    startIndex: z.number().int().min(0).max(14),
+    startIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(QUESTION_COUNT_MAX - 1),
     ordinalAttempt: z.number().int().min(1).max(24),
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]),
@@ -928,7 +944,11 @@ export const LocalGenerationCallEventV3Schema = z
     generationSessionId: z.string().uuid(),
     recoverySessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(127),
-    startIndex: z.number().int().min(0).max(14),
+    startIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(QUESTION_COUNT_MAX - 1),
     ordinalAttempt: z.number().int().min(1).max(12),
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]),
@@ -992,7 +1012,11 @@ export const LocalGenerationCallEventV4Schema = z
     generationSessionId: z.string().uuid(),
     recoverySessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(127),
-    startIndex: z.number().int().min(0).max(14),
+    startIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(QUESTION_COUNT_MAX - 1),
     ordinalAttempt: z.number().int().min(1).max(24),
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]),
@@ -1059,7 +1083,11 @@ export const LocalGenerationCallEventV5Schema = z
     generationSessionId: z.string().uuid(),
     recoverySessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(255),
-    startIndex: z.number().int().min(0).max(14),
+    startIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(QUESTION_COUNT_MAX - 1),
     ordinalAttempt: z.number().int().min(1).max(24),
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]).default(0),
@@ -1164,7 +1192,11 @@ export const LocalGenerationCallEventV6Schema = z
     generationSessionId: z.string().uuid(),
     recoverySessionId: z.string().uuid(),
     callIndex: z.number().int().min(0).max(255),
-    startIndex: z.number().int().min(0).max(14),
+    startIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(QUESTION_COUNT_MAX - 1),
     ordinalAttempt: z.number().int().min(1).max(24),
     requestedCount: z.literal(1),
     acceptedCount: z.union([z.literal(0), z.literal(1)]).default(0),
@@ -1257,8 +1289,8 @@ export type LocalGenerationCallEvent = z.infer<
 >;
 
 const RetryOrdinalsSchema = z
-  .array(z.number().int().min(1).max(15))
-  .max(15)
+  .array(z.number().int().min(1).max(QUESTION_COUNT_MAX))
+  .max(QUESTION_COUNT_MAX)
   .superRefine((value, context) => {
     for (let index = 0; index < value.length; index += 1) {
       if (index > 0 && value[index]! <= value[index - 1]!) {
@@ -1287,7 +1319,7 @@ export const GenerationRecordV2Schema = z
     generationProfile: LocalGenerationProfileSchema.optional(),
     quizId: z.string().uuid().optional(),
     attemptId: z.string().uuid().optional(),
-    acceptedCount: z.number().int().min(0).max(15),
+    acceptedCount: z.number().int().min(0).max(QUESTION_COUNT_MAX),
     plannedCount: PlannedQuestionCountSchema,
     state: z.enum([
       "pending",
@@ -1352,7 +1384,7 @@ export const GenerationRecordV3Schema = z
     generationProfile: z.literal("stable_auto_recovery_v5_3"),
     quizId: z.string().uuid().optional(),
     attemptId: z.string().uuid().optional(),
-    acceptedCount: z.number().int().min(0).max(15),
+    acceptedCount: z.number().int().min(0).max(QUESTION_COUNT_MAX),
     plannedCount: PlannedQuestionCountSchema,
     state: z.enum([
       "pending",
@@ -1364,14 +1396,14 @@ export const GenerationRecordV3Schema = z
       "ready",
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
-    retryOrdinal: z.number().int().min(1).max(15).optional(),
+    retryOrdinal: z.number().int().min(1).max(QUESTION_COUNT_MAX).optional(),
     ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
     nextCallIndex: z.number().int().min(0).max(128),
     ordinalAttempts: z
       .record(
-        z.string().regex(/^(?:[1-9]|1[0-5])$/),
+        z.string().regex(/^(?:[1-9]|[1-4][0-9]|50)$/),
         z.number().int().min(0).max(12),
       )
       .default({}),
@@ -1481,7 +1513,7 @@ export const GenerationRecordV4Schema = z
     ]),
     quizId: z.string().uuid().optional(),
     attemptId: z.string().uuid().optional(),
-    acceptedCount: z.number().int().min(0).max(15),
+    acceptedCount: z.number().int().min(0).max(QUESTION_COUNT_MAX),
     plannedCount: PlannedQuestionCountSchema,
     state: z.enum([
       "pending",
@@ -1494,7 +1526,7 @@ export const GenerationRecordV4Schema = z
       "ready",
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
-    retryOrdinal: z.number().int().min(1).max(15).optional(),
+    retryOrdinal: z.number().int().min(1).max(QUESTION_COUNT_MAX).optional(),
     ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
@@ -1505,7 +1537,7 @@ export const GenerationRecordV4Schema = z
     nextCallIndex: z.number().int().min(0).max(256),
     ordinalAttempts: z
       .record(
-        z.string().regex(/^(?:[1-9]|1[0-5])$/),
+        z.string().regex(/^(?:[1-9]|[1-4][0-9]|50)$/),
         z.number().int().min(0).max(24),
       )
       .default({}),
@@ -1643,7 +1675,7 @@ export const LocalQuizContextSchema = z
     title: z.string().min(1).max(500),
     quizLanguage: LanguageSchema,
     questionTypes: QuizQuestionTypesSchema,
-    questionCount: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    questionCount: QuestionCountSchema,
     transcriptFingerprint: z.string().regex(/^[a-f0-9]{8}$/),
     transcriptLanguage: z.string().min(2).max(35),
     segments: z
@@ -1652,7 +1684,11 @@ export const LocalQuizContextSchema = z
       .max(MAX_COMPLETE_TRANSCRIPT_SEGMENTS),
     continuation: z
       .object({
-        startIndex: z.number().int().min(1).max(14),
+        startIndex: z
+          .number()
+          .int()
+          .min(1)
+          .max(QUESTION_COUNT_MAX - 1),
         resultProtocolVersion: LocalQuizResultProtocolVersionSchema.optional(),
         promptVersion: LocalQuizPromptVersionSchema.optional(),
         validatorVersion: LocalQuizValidatorVersionSchema.optional(),
@@ -1675,7 +1711,7 @@ export const LocalQuizContextSchema = z
         acceptedQuestions: z
           .array(LocalAcceptedQuestionSummarySchema)
           .min(1)
-          .max(14),
+          .max(QUESTION_COUNT_MAX - 1),
       })
       .strict()
       .optional(),
@@ -1769,7 +1805,7 @@ export type LocalQuizContext = z.infer<typeof LocalQuizContextSchema>;
 
 const LocalQuestionBaseSchema = z
   .object({
-    id: z.string().regex(/^q(?:[1-9]|1[0-5])$/),
+    id: z.string().regex(/^q(?:[1-9]|[1-4][0-9]|50)$/),
     concept: z.string().trim().min(1).max(200),
     question: z.string().trim().min(1).max(700),
     retryQuestion: z.string().trim().min(1).max(700).optional(),
@@ -1998,15 +2034,21 @@ export type LocalConceptQuizQuestion = z.infer<
 export const LocalConceptQuizSchema = z
   .object({
     title: z.string().trim().min(1).max(300),
-    questions: z.array(LocalConceptQuizQuestionSchema).min(5).max(15),
+    questions: z
+      .array(LocalConceptQuizQuestionSchema)
+      .min(QUESTION_COUNT_MIN)
+      .max(QUESTION_COUNT_MAX),
   })
   .strict()
   .superRefine((quiz, context) => {
-    if (![5, 10, 15].includes(quiz.questions.length)) {
+    if (
+      quiz.questions.length < QUESTION_COUNT_MIN ||
+      quiz.questions.length > QUESTION_COUNT_MAX
+    ) {
       context.addIssue({
         code: "custom",
         path: ["questions"],
-        message: "A local quiz must contain exactly 5, 10, or 15 questions.",
+        message: "A local quiz must contain between 5 and 50 questions.",
       });
     }
     quiz.questions.forEach((question, index) => {
@@ -2014,7 +2056,7 @@ export const LocalConceptQuizSchema = z
         context.addIssue({
           code: "custom",
           path: ["questions", index, "id"],
-          message: "Question IDs must be ordered q1 through q15.",
+          message: "Question IDs must be ordered from q1 onward.",
         });
       }
     });
@@ -2251,8 +2293,12 @@ export const LocalConceptQuizContinuationResultSchema = z
       .regex(/^[a-f0-9]{64}$/)
       .optional(),
     title: z.string().trim().min(1).max(300),
-    generatedStartIndex: z.number().int().min(1).max(14),
-    totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    generatedStartIndex: z
+      .number()
+      .int()
+      .min(1)
+      .max(QUESTION_COUNT_MAX - 1),
+    totalQuestions: QuestionCountSchema,
     metrics: LocalQuizMetricsSchema,
   })
   .strict()
@@ -2287,8 +2333,12 @@ export const LocalConceptQuizQuestionChunkSchema = z
       .regex(/^[a-f0-9]{64}$/)
       .optional(),
     title: z.string().trim().min(1).max(300),
-    startIndex: z.number().int().min(0).max(14),
-    totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    startIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(QUESTION_COUNT_MAX - 1),
+    totalQuestions: QuestionCountSchema,
     question: LocalConceptQuizQuestionSchema,
     metrics: LocalQuizChunkMetricsSchema,
   })
@@ -2335,13 +2385,25 @@ export const ExtensionQuizProgressiveImportRequestSchema = z
     videoId: z.string().uuid(),
     quizLanguage: LanguageSchema,
     sessionLength: SessionLengthSchema,
+    questionCount: QuestionCountSchema.optional(),
     questionTypes: QuizQuestionTypesSchema,
     watched: z.boolean(),
     chunk: LocalConceptQuizQuestionChunkSchema,
   })
   .strict()
   .superRefine((value, context) => {
-    const expectedCount = questionLimitForSession(value.sessionLength);
+    if (value.sessionLength === "custom" && value.questionCount === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["questionCount"],
+        message: "A custom session length requires a question count.",
+      });
+      return;
+    }
+    const expectedCount = questionLimitForSession(
+      value.sessionLength,
+      value.questionCount,
+    );
     if (value.chunk.totalQuestions !== expectedCount) {
       context.addIssue({
         code: "custom",
@@ -2414,10 +2476,10 @@ export const AttemptGenerationAvailabilitySchema = z
       "generation_failed",
       "ready",
     ]),
-    availableQuestions: z.number().int().min(1).max(15),
-    totalQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    availableQuestions: z.number().int().min(1).max(QUESTION_COUNT_MAX),
+    totalQuestions: QuestionCountSchema,
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
-    retryOrdinal: z.number().int().min(1).max(15).optional(),
+    retryOrdinal: z.number().int().min(1).max(QUESTION_COUNT_MAX).optional(),
     ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
@@ -2509,7 +2571,7 @@ export const ExtensionQuizGenerationProgressRequestSchema = z
       "generation_failed",
     ]),
     reasonCode: GenerationAvailabilityReasonCodeSchema.optional(),
-    retryOrdinal: z.number().int().min(1).max(15).optional(),
+    retryOrdinal: z.number().int().min(1).max(QUESTION_COUNT_MAX).optional(),
     ordinalAttempt: z.number().int().min(1).max(24).optional(),
     retryKind: AutomaticRetryKindSchema.optional(),
     retryDelayMs: z.number().int().min(0).max(300_000).optional(),
@@ -2568,9 +2630,14 @@ export const AttemptGenerationResponseSchema = z
         videoId: z.string().uuid(),
         quizLanguage: LanguageSchema,
         sessionLength: SessionLengthSchema,
+        questionCount: QuestionCountSchema.optional(),
         questionTypes: QuizQuestionTypesSchema,
         watched: z.boolean(),
-        startIndex: z.number().int().min(1).max(14),
+        startIndex: z
+          .number()
+          .int()
+          .min(1)
+          .max(QUESTION_COUNT_MAX - 1),
         resultProtocolVersion: LocalQuizResultProtocolVersionSchema,
         pipelineVersion: z.literal(LOCAL_QUIZ_PIPELINE_VERSION),
         model: z.literal(LOCAL_QUIZ_MODEL),
@@ -2599,7 +2666,11 @@ export const AttemptGenerationResponseSchema = z
           .object({
             lifecycleState: z.literal("started"),
             callIndex: z.number().int().min(0).max(255),
-            startIndex: z.number().int().min(0).max(14),
+            startIndex: z
+              .number()
+              .int()
+              .min(0)
+              .max(QUESTION_COUNT_MAX - 1),
             ordinalAttempt: z.number().int().min(1).max(24),
           })
           .strict()
@@ -2609,7 +2680,7 @@ export const AttemptGenerationResponseSchema = z
         acceptedQuestions: z
           .array(LocalAcceptedQuestionSummarySchema)
           .min(1)
-          .max(14),
+          .max(QUESTION_COUNT_MAX - 1),
       })
       .strict()
       .optional(),
@@ -2618,12 +2689,25 @@ export const AttemptGenerationResponseSchema = z
   .superRefine((value, context) => {
     if (!value.continuation) return;
     if (
+      value.continuation.sessionLength === "custom" &&
+      value.continuation.questionCount === undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["continuation", "questionCount"],
+        message: "A custom session length requires a question count.",
+      });
+      return;
+    }
+    if (
       value.generation.state === "ready" ||
       value.continuation.startIndex !== value.generation.availableQuestions ||
       value.continuation.acceptedQuestions.length !==
         value.continuation.startIndex ||
-      questionLimitForSession(value.continuation.sessionLength) !==
-        value.generation.totalQuestions
+      questionLimitForSession(
+        value.continuation.sessionLength,
+        value.continuation.questionCount,
+      ) !== value.generation.totalQuestions
     ) {
       context.addIssue({
         code: "custom",
@@ -2711,13 +2795,25 @@ export const ExtensionQuizImportRequestSchema = z
     videoId: z.string().uuid(),
     quizLanguage: LanguageSchema,
     sessionLength: SessionLengthSchema,
+    questionCount: QuestionCountSchema.optional(),
     questionTypes: QuizQuestionTypesSchema,
     watched: z.boolean(),
     quiz: LocalConceptQuizResultSchema,
   })
   .strict()
   .superRefine((value, context) => {
-    const expectedCount = questionLimitForSession(value.sessionLength);
+    if (value.sessionLength === "custom" && value.questionCount === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["questionCount"],
+        message: "A custom session length requires a question count.",
+      });
+      return;
+    }
+    const expectedCount = questionLimitForSession(
+      value.sessionLength,
+      value.questionCount,
+    );
     if (value.quiz.quiz.questions.length !== expectedCount) {
       context.addIssue({
         code: "custom",
@@ -2765,12 +2861,23 @@ export type ExtensionQuizImportResponse = z.infer<
   typeof ExtensionQuizImportResponseSchema
 >;
 
-export const QuizStartRequestSchema = z.object({
-  mode: z.enum(["learn", "review"]).default("learn"),
-  sessionLength: SessionLengthSchema,
-  questionTypes: QuizQuestionTypesSchema.default(DEFAULT_QUIZ_QUESTION_TYPES),
-  watched: z.boolean().optional(),
-});
+export const QuizStartRequestSchema = z
+  .object({
+    mode: z.enum(["learn", "review"]).default("learn"),
+    sessionLength: SessionLengthSchema,
+    questionCount: QuestionCountSchema.optional(),
+    questionTypes: QuizQuestionTypesSchema.default(DEFAULT_QUIZ_QUESTION_TYPES),
+    watched: z.boolean().optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.sessionLength === "custom" && value.questionCount === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["questionCount"],
+        message: "A custom session length requires a question count.",
+      });
+    }
+  });
 export type QuizStartRequest = z.infer<typeof QuizStartRequestSchema>;
 
 export const PublicQuestionSchema = z.object({
@@ -2984,6 +3091,16 @@ export const ProfileAvatarResponseSchema = z
   .object({ image: z.string().nullable(), revision: z.string().nullable() })
   .strict();
 export type ProfileAvatarResponse = z.infer<typeof ProfileAvatarResponseSchema>;
+
+export const ProfileLearningStatsResponseSchema = z
+  .object({
+    completedLessons: z.number().int().nonnegative(),
+    totalDurationSeconds: z.number().int().nonnegative(),
+  })
+  .strict();
+export type ProfileLearningStatsResponse = z.infer<
+  typeof ProfileLearningStatsResponseSchema
+>;
 
 export const PushRegisterRequestSchema = z.object({
   token: z.string().min(8).max(1_000),
@@ -3542,7 +3659,13 @@ export function identifyVideoSource(rawUrl: string): VideoSource | null {
   }
 }
 
-export function questionLimitForSession(length: SessionLength): number {
+export function questionLimitForSession(
+  length: SessionLength,
+  customQuestionCount?: number,
+): number {
+  if (length === "custom") {
+    return QuestionCountSchema.parse(customQuestionCount);
+  }
   return length === "short" ? 5 : length === "medium" ? 10 : 15;
 }
 
@@ -3551,8 +3674,11 @@ export function questionTypePlanForSelection(
   questionCount: number,
 ): QuizQuestionType[] {
   const selected = QuizQuestionTypesSchema.parse(types);
-  if (![5, 10, 15].includes(questionCount)) {
-    throw new Error("A question type plan must contain 5, 10, or 15 slots.");
+  QuestionCountSchema.parse(questionCount);
+  if (questionCount < selected.length) {
+    throw new Error(
+      "A question type plan needs at least one question for each selected type.",
+    );
   }
   return Array.from(
     { length: questionCount },

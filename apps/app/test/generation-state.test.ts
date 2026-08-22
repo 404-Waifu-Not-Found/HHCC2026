@@ -171,11 +171,15 @@ describe("generation-scoped local state", () => {
       questionTypes: ["short_answer"],
     });
 
-    await expect(loadQuestPreferences("owner-one", VIDEO_ID)).resolves.toEqual({
+    await expect(
+      loadQuestPreferences("owner-one", VIDEO_ID, "zh-CN"),
+    ).resolves.toEqual({
       quizLanguage: "en",
       questionTypes: ["multiple_choice"],
     });
-    await expect(loadQuestPreferences("owner-two", VIDEO_ID)).resolves.toEqual({
+    await expect(
+      loadQuestPreferences("owner-two", VIDEO_ID, "en"),
+    ).resolves.toEqual({
       quizLanguage: "zh-CN",
       questionTypes: ["short_answer"],
     });
@@ -187,6 +191,15 @@ describe("generation-scoped local state", () => {
     );
   });
 
+  it("defaults new quiz preferences to the selected app language", async () => {
+    await expect(
+      loadQuestPreferences("owner-one", VIDEO_ID, "zh-CN"),
+    ).resolves.toEqual({
+      quizLanguage: "zh-CN",
+      questionTypes: ["multiple_choice", "true_false", "short_answer"],
+    });
+  });
+
   it("discards ambiguous unscoped preference records", async () => {
     storage.set(
       `clipquest:preferences:${VIDEO_ID}`,
@@ -195,7 +208,9 @@ describe("generation-scoped local state", () => {
         questionTypes: ["short_answer"],
       }),
     );
-    await expect(loadQuestPreferences("owner-one", VIDEO_ID)).resolves.toEqual({
+    await expect(
+      loadQuestPreferences("owner-one", VIDEO_ID, "en"),
+    ).resolves.toEqual({
       quizLanguage: "en",
       questionTypes: ["multiple_choice", "true_false", "short_answer"],
     });

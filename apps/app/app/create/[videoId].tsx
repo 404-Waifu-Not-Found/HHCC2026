@@ -1,5 +1,7 @@
 import {
   DEFAULT_QUIZ_QUESTION_TYPES,
+  QUESTION_COUNT_MAX,
+  QUESTION_COUNT_MIN,
   type AppLanguage,
   type QuizQuestionType,
   type SessionLength,
@@ -20,6 +22,7 @@ import {
 } from "react-native";
 import { LearningPrism } from "../../src/components/LearningPrism";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
+import { AppTextInput } from "../../src/components/AppTextInput";
 import { QuestionTypeSelector } from "../../src/components/QuestionTypeSelector";
 import { ReliableThumbnail } from "../../src/components/ReliableThumbnail";
 import { Screen } from "../../src/components/Screen";
@@ -67,6 +70,7 @@ export default function CreateQuestScreen() {
   const [error, setError] = useState<string>();
   const [quizLanguage, setQuizLanguage] = useState<AppLanguage>(locale);
   const [sessionLength, setSessionLength] = useState<SessionLength>("medium");
+  const [customQuestionCount, setCustomQuestionCount] = useState("10");
   const [questionTypes, setQuestionTypes] = useState<QuizQuestionType[]>([
     ...DEFAULT_QUIZ_QUESTION_TYPES,
   ]);
@@ -101,7 +105,7 @@ export default function CreateQuestScreen() {
     if (!videoId || !session?.user.id) return;
     void Promise.all([
       loadImportedVideo(session.user.id, videoId),
-      loadQuestPreferences(session.user.id, videoId),
+      loadQuestPreferences(session.user.id, videoId, locale),
     ]).then(([value, preferences]) => {
       if (value) {
         setVideo(value);
@@ -109,7 +113,7 @@ export default function CreateQuestScreen() {
         setQuestionTypes(preferences.questionTypes);
       } else setError(t("videoSetupExpired"));
     });
-  }, [session?.user.id, t, videoId]);
+  }, [locale, session?.user.id, t, videoId]);
 
   useEffect(() => {
     if (!generationId || !videoId || !session?.user.id) return;
@@ -186,12 +190,27 @@ export default function CreateQuestScreen() {
   const captionsBlocked =
     captionsUnavailable || captionsFailed || video.captions.available === false;
   const localAiMissing = Platform.OS !== "web" && localAiConfigured === false;
+  const parsedCustomQuestionCount = Number(customQuestionCount);
+  const customQuestionCountValid =
+    Number.isInteger(parsedCustomQuestionCount) &&
+    parsedCustomQuestionCount >= QUESTION_COUNT_MIN &&
+    parsedCustomQuestionCount <= QUESTION_COUNT_MAX &&
+    parsedCustomQuestionCount >= questionTypes.length;
+  const plannedCount =
+    sessionLength === "custom"
+      ? parsedCustomQuestionCount
+      : sessionLength === "short"
+        ? 5
+        : sessionLength === "medium"
+          ? 10
+          : 15;
   const proceed = async () => {
     blurActiveWebElement();
     if (!session?.user.id) {
       setError("Sign in again before creating a quiz.");
       return;
     }
+    if (sessionLength === "custom" && !customQuestionCountValid) return;
     await saveQuestPreferences(session.user.id, video.video.id, {
       quizLanguage,
       questionTypes,
@@ -202,8 +221,6 @@ export default function CreateQuestScreen() {
       video.video.id,
     );
     const nextGenerationId = existing?.generationId ?? Crypto.randomUUID();
-    const plannedCount =
-      sessionLength === "short" ? 5 : sessionLength === "medium" ? 10 : 15;
     if (existing) {
       await updateGenerationRecord(nextGenerationId, {
         quizLanguage,
@@ -240,6 +257,7 @@ export default function CreateQuestScreen() {
         generationId: nextGenerationId,
         quizLanguage,
         sessionLength,
+        questionCount: String(plannedCount),
         questionTypes: questionTypes.join(","),
       },
     });
@@ -256,7 +274,10 @@ export default function CreateQuestScreen() {
             // Video ready screen. The generation route re-checks the key
             // before dispatching any AI request.
             loading={captionsPending}
-            disabled={captionsBlocked}
+            disabled={
+              captionsBlocked ||
+              (sessionLength === "custom" && !customQuestionCountValid)
+            }
             onPress={
               localAiMissing
                 ? openLocalGenerationClientSettings
@@ -337,9 +358,27 @@ export default function CreateQuestScreen() {
                     { value: "short", label: t("short") },
                     { value: "medium", label: t("medium") },
                     { value: "long", label: t("long") },
+                    { value: "custom", label: t("custom") },
                   ] as const
                 }
               />
+              {sessionLength === "custom" ? (
+                <AppTextInput
+                  label={t("customQuestionCount")}
+                  value={customQuestionCount}
+                  onChangeText={(value) =>
+                    setCustomQuestionCount(value.replace(/[^0-9]/g, ""))
+                  }
+                  keyboardType="number-pad"
+                  inputMode="numeric"
+                  maxLength={2}
+                  error={
+                    customQuestionCountValid
+                      ? undefined
+                      : t("customQuestionCountError")
+                  }
+                />
+              ) : null}
             </SettingGroup>
             <SettingGroup
               divided

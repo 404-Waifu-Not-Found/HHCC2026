@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ClipQuest - Iteration Overview</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 17mm;
+      }
+      :root {
+        color: #17231d;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      body {
+        font-size: 10.5pt;
+        line-height: 1.45;
+      }
+      h1 {
+        color: #17643a;
+        font-size: 28pt;
+        margin: 0 0 2pt;
+      }
+      h2 {
+        color: #17643a;
+        font-size: 17pt;
+        border-bottom: 2px solid #9bd9ad;
+        padding-bottom: 4pt;
+        margin-top: 20pt;
+      }
+      h3 {
+        color: #235c3b;
+        font-size: 12.5pt;
+        margin-top: 15pt;
+      }
+      p {
+        margin: 6pt 0;
+      }
+      ul,
+      ol {
+        margin-top: 4pt;
+      }
+      li {
+        margin: 3pt 0;
+      }
+      .dek {
+        color: #4c6254;
+        font-size: 13pt;
+        margin-bottom: 14pt;
+      }
+      .meta {
+        background: #eef8f0;
+        border-left: 4px solid #38a967;
+        padding: 9pt 11pt;
+        margin: 10pt 0 15pt;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 8pt 0 13pt;
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+      th {
+        background: #17643a;
+        color: white;
+        text-align: left;
+      }
+      th,
+      td {
+        border: 1px solid #bed4c3;
+        padding: 5pt 6pt;
+        vertical-align: top;
+      }
+      tr:nth-child(even) td {
+        background: #f5faf6;
+      }
+      code {
+        background: #edf2ee;
+        padding: 1pt 3pt;
+      }
+      .break {
+        page-break-before: always;
+      }
+      .footer {
+        color: #607366;
+        font-size: 8.5pt;
+        border-top: 1px solid #c9d8cc;
+        margin-top: 24pt;
+        padding-top: 6pt;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ClipQuest</h1>
+    <p class="dek">Iteration overview for the 36-hour challenge</p>
+    <div class="meta">
+      <strong>Project:</strong> ClipQuest<br />
+      <strong>Repository:</strong>
+      https://github.com/404-Waifu-Not-Found/HHCC2026<br />
+      <strong>Live product:</strong> https://clipquest.ccwu.cc
+    </div>
+    <h2>Submission summary</h2>
+    <p>
+      This document describes the work completed during the event and the
+      difference between the pre-event foundation and the post-event iteration.
+    </p>
+    <h2>Pre-event foundation</h2>
+    <p>
+      Before the event, the project had only a short written README describing
+      the initial product idea. There was no implemented product flow, completed
+      frontend, quiz engine, persistence layer, browser extension, native client
+      flow, or production deployment to evaluate.
+    </p>
+    <p>
+      The event iteration turned that written concept into the codebase and
+      working product submitted here.
+    </p>
+    <h2>What changed during the event</h2>
+    <p>
+      The team built the full product in this project. The work was iterative:
+      each stage addressed a concrete product risk discovered in the previous
+      stage.
+    </p>
+    <table>
+      <tr>
+        <th>Iteration</th>
+        <th>Problem or goal</th>
+        <th>Improvement delivered</th>
+      </tr>
+      <tr>
+        <td>Product foundation</td>
+        <td>A written idea needed a usable learning flow.</td>
+        <td>
+          Built the web app, authentication, URL import, lesson preview, quiz
+          flow, feedback, completion state, and Library.
+        </td>
+      </tr>
+      <tr>
+        <td>Evidence-grounded generation</td>
+        <td>AI questions needed reliable lesson context.</td>
+        <td>
+          Added caption-only public YouTube acquisition, normalization,
+          structured DeepSeek generation, strict schemas, and explicit caption
+          failure states.
+        </td>
+      </tr>
+      <tr>
+        <td>Progressive learning</td>
+        <td>Waiting for a complete quiz felt slow.</td>
+        <td>
+          Added question-first progressive generation so the first validated
+          question opens the attempt while the rest continue in bounded batches.
+        </td>
+      </tr>
+      <tr>
+        <td>Correctness and recovery</td>
+        <td>A malformed question could break an attempt.</td>
+        <td>
+          Added ordinal validation, duplicate checks, repair of the first
+          missing question, idempotent imports, cancellation, timeouts, and safe
+          recovery.
+        </td>
+      </tr>
+      <tr>
+        <td>Mastery loop</td>
+        <td>A result alone did not create repeatable learning.</td>
+        <td>
+          Added Library history, color-coded mastery, review state, progress
+          bars, due reviews, saved lessons, and practice presentation.
+        </td>
+      </tr>
+      <tr>
+        <td>Cross-platform access</td>
+        <td>The experience needed to work beyond one browser screen.</td>
+        <td>
+          Added a Chrome extension bridge plus native iOS and Android paths
+          sharing the local quiz engine and privacy boundary.
+        </td>
+      </tr>
+      <tr>
+        <td>Product polish</td>
+        <td>The first UI needed stronger hierarchy and feedback.</td>
+        <td>
+          Redesigned cards, hover/theme states, progress treatment, streaming
+          feedback, empty/error states, responsive layouts, accessibility, and
+          reduced motion.
+        </td>
+      </tr>
+      <tr>
+        <td>Release readiness</td>
+        <td>A working feature needed repeatable delivery.</td>
+        <td>
+          Added contracts, migrations, API routes, tests, asset verification,
+          extension packaging, Wrangler deployment, health checks, and release
+          docs.
+        </td>
+      </tr>
+    </table>
+    <h2>Pre-event versus post-event</h2>
+    <table>
+      <tr>
+        <th>Area</th>
+        <th>Pre-event</th>
+        <th>Post-event</th>
+      </tr>
+      <tr>
+        <td>Product state</td>
+        <td>Short README only</td>
+        <td>
+          Deployed web product with browser extension and native implementation
+          paths
+        </td>
+      </tr>
+      <tr>
+        <td>Input</td>
+        <td>Product idea</td>
+        <td>
+          Public YouTube URL validation, metadata preview, and caption
+          acquisition
+        </td>
+      </tr>
+      <tr>
+        <td>AI</td>
+        <td>No implemented AI flow</td>
+        <td>
+          Learner-owned DeepSeek key used locally for structured question
+          generation
+        </td>
+      </tr>
+      <tr>
+        <td>Learning</td>
+        <td>No quiz experience</td>
+        <td>
+          Multiple-choice, true/false, and short-answer quizzes with immediate
+          feedback
+        </td>
+      </tr>
+      <tr>
+        <td>Progress</td>
+        <td>No persistence or mastery model</td>
+        <td>
+          Authenticated attempts, ordered storage, mastery ranks, review state,
+          and Library
+        </td>
+      </tr>
+      <tr>
+        <td>Reliability</td>
+        <td>No validation or recovery</td>
+        <td>
+          Contract validation, bounded retries, repair, cancellation, timeouts,
+          and idempotency
+        </td>
+      </tr>
+      <tr>
+        <td>UX</td>
+        <td>No interface</td>
+        <td>
+          Responsive UI with light/dark themes, motion, accessibility, and clear
+          states
+        </td>
+      </tr>
+      <tr>
+        <td>Platforms</td>
+        <td>No working client</td>
+        <td>
+          Web, Chrome extension bridge, iOS path, and Android path sharing core
+          logic
+        </td>
+      </tr>
+      <tr>
+        <td>Delivery</td>
+        <td>No deployment</td>
+        <td>
+          Cloudflare Worker and static assets deployed at clipquest.ccwu.cc
+        </td>
+      </tr>
+      <tr>
+        <td>Verification</td>
+        <td>No test suite</td>
+        <td>
+          Automated contract, API, app, engine, extension, UI, build, and asset
+          checks
+        </td>
+      </tr>
+    </table>
+    <div class="break"></div>
+    <h2>Improvement logic and scope</h2>
+    <ol>
+      <li>
+        <strong>Ground the content.</strong> Use public captions rather than
+        invented lesson content. Unsupported or captionless sources fail
+        explicitly.
+      </li>
+      <li>
+        <strong>Protect correctness.</strong> Validate every question before it
+        becomes learner-visible or persistent. Accepted questions are never
+        silently replaced.
+      </li>
+      <li>
+        <strong>Reduce waiting.</strong> Progressive generation makes question 1
+        available quickly while preserving ordered completion.
+      </li>
+      <li>
+        <strong>Make progress meaningful.</strong> Results become mastery,
+        review, and Library state.
+      </li>
+      <li>
+        <strong>Make the product usable.</strong> Responsive layouts, theme
+        parity, accessible controls, visible states, and motion-safe feedback
+        are part of the feature.
+      </li>
+      <li>
+        <strong>Ship with evidence.</strong> Automated checks and production
+        deployment are included; unfinished features remain clearly gated.
+      </li>
+    </ol>
+    <p>
+      The current release intentionally hides the Workplace AI chat navigation
+      for all users while that feature remains in development. The route and
+      source remain behind a release gate for future work.
+    </p>
+    <h2>Team decisions and responsibilities</h2>
+    <ul>
+      <li>Core product concept and UX flow</li>
+      <li>Feature scope and prioritization</li>
+      <li>Project architecture and file structure</li>
+      <li>Caption-only privacy boundary</li>
+      <li>Key algorithms and validation/recovery logic</li>
+      <li>Mastery and review model</li>
+      <li>Testing strategy and CI/release verification</li>
+      <li>
+        Visual direction, interaction design, and accessibility expectations
+      </li>
+    </ul>
+    <h2>AI usage disclosure</h2>
+    <h3>Usage cost</h3>
+    <p><strong>$240 in API-token usage across all tools</strong></p>
+    <h3>Tools used</h3>
+    <ul>
+      <li>GitHub Copilot</li>
+      <li>Claude Code CLI</li>
+    </ul>
+    <p>
+      All implementation code for the event iteration is written in this project
+      repository.
+    </p>
+    <h3>Team decisions and concepts</h3>
+    <ul>
+      <li>Project architecture and file structure</li>
+      <li>Core product concept and UX flow</li>
+      <li>Feature scope and design decisions</li>
+      <li>Key algorithms and logic design</li>
+      <li>Testing strategy and CI pipeline setup</li>
+    </ul>
+    <h3>AI as an auxiliary tool</h3>
+    <p>
+      AI was used only for boilerplate and repetitive code, syntax lookup and
+      autocomplete, refactoring and code formatting, documentation drafting, and
+      debugging assistance.
+    </p>
+    <p>
+      <strong
+        >All key decisions, concepts, and creative direction were developed
+        entirely by the team. AI served as an auxiliary coding tool
+        only.</strong
+      >
+    </p>
+    <h2>Recommended judge submission</h2>
+    <ol>
+      <li><strong>Project name:</strong> ClipQuest</li>
+      <li>
+        <strong>Iteration code:</strong>
+        https://github.com/404-Waifu-Not-Found/HHCC2026
+      </li>
+      <li><strong>Iteration overview:</strong> ITERATION-OVERVIEW.pdf</li>
+      <li><strong>Presentation/demo:</strong> https://clipquest.ccwu.cc</li>
+      <li>
+        <strong>AI disclosure:</strong> Include the AI usage disclosure section
+        above
+      </li>
+    </ol>
+    <p class="footer">
+      The repository contains the complete event implementation. The README and
+      documentation provide additional architecture, privacy, release, and QA
+      context.
+    </p>
+  </body>
+</html>

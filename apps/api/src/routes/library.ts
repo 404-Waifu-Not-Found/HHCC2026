@@ -164,6 +164,7 @@ export function progressiveLibraryStartSettings(input: {
 }): {
   sessionLength: SessionLength;
   questionTypes: QuizQuestionType[];
+  questionCount?: number;
 } | null {
   if (
     input.pipelineVersion !== LOCAL_QUIZ_PIPELINE_VERSION ||
@@ -179,10 +180,15 @@ export function progressiveLibraryStartSettings(input: {
       ? "short"
       : summary.plannedCount === 10
         ? "medium"
-        : "long";
+        : summary.plannedCount === 15
+          ? "long"
+          : "custom";
   if (input.sessionLength !== expectedSessionLength) return null;
   return {
     sessionLength: input.sessionLength,
+    ...(input.sessionLength === "custom"
+      ? { questionCount: summary.plannedCount }
+      : {}),
     questionTypes: [...summary.requestedQuestionTypes],
   };
 }

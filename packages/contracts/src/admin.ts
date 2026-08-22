@@ -142,8 +142,8 @@ export const AdminGenerationSchema = z
       .strict()
       .optional(),
     state: AdminGenerationStateSchema,
-    acceptedQuestions: z.number().int().min(1).max(15),
-    plannedQuestions: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+    acceptedQuestions: z.number().int().min(1).max(50),
+    plannedQuestions: z.number().int().min(5).max(50),
     progress: z.number().min(0).max(1),
     requestedQuestionTypes: z
       .array(z.enum(["multiple_choice", "true_false", "short_answer"]))
