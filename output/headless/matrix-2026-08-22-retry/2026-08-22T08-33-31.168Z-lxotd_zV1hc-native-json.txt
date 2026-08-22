@@ -1,0 +1,202 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.000] SOURCE_STARTED videoId="lxotd_zV1hc"
+[00:03.203] CAPTIONS_COMPLETE videoId="lxotd_zV1hc" title="AP Government UNIT 1 REVIEW [Everything You NEED to Know!]" language="en" durationSeconds=1553 segmentCount=887 sourceSegmentCount=887 characterCount=32696 transcriptFingerprint="afe69bee" acquisition="youtube_local_ytdlp"
+[00:03.204] PLAN_REQUESTED questionCount=10 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:15.446] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:15.463] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:17.438] QUESTION_ACCEPTED ordinal=1 concept="Anti-Federalist critique of large centralized government" prompt="Why did Brutus One argue that a large centralized government could not adequately represent the views of the people?"
+[00:17.439] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1993 inputTokens=9910 outputTokens=194 reasoningTokens=0
+[00:17.439] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:17.449] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=3 status="generating"
+[00:17.466] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:19.923] QUESTION_ACCEPTED ordinal=2 concept="Madison's solution to factions" prompt="Why did Madison reject the option of removing the causes of factions?"
+[00:19.924] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2474 inputTokens=10227 outputTokens=187 reasoningTokens=0
+[00:19.924] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:19.937] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:19.966] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:21.902] QUESTION_ACCEPTED ordinal=3 concept="coexistence of democracy models" prompt="The United States embodies multiple models of democracy, with different models appearing in different contexts."
+[00:21.903] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1965 inputTokens=10136 outputTokens=115 reasoningTokens=0
+[00:21.903] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:21.919] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=3 status="generating"
+[00:21.954] AI_CALL_STARTED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:24.124] QUESTION_ACCEPTED ordinal=4 concept="judicial review mechanism" prompt="How does judicial review operate when the Supreme Court evaluates a law passed by Congress and signed by the president?"
+[00:24.125] AI_CALL_COMPLETED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2205 inputTokens=10415 outputTokens=190 reasoningTokens=0
+[00:24.125] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:24.145] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:24.199] AI_CALL_STARTED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:25.542] AI_CALL_COMPLETED callIndex=4 ordinal=5 ordinalAttempt=1 classification="primary" outcome="retry_question_invalid" acceptedCount=0 retryDelayMs=229 callElapsedMs=1395
+[00:25.542] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=5 ordinalAttempt=2 retryKind="structural" retryDelayMs=229 reasonCode="retry_question_invalid" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:25.794] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=5 ordinalAttempt=2 retryKind="structural" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:25.849] AI_CALL_STARTED callIndex=5 ordinal=5 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:26.926] AI_CALL_COMPLETED callIndex=5 ordinal=5 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="true_false_compound_claim" acceptedCount=0 retryDelayMs=598 callElapsedMs=1131
+[00:26.926] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=5 ordinalAttempt=3 retryKind="structural" retryDelayMs=598 reasonCode="true_false_compound_claim" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:27.547] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=5 ordinalAttempt=3 retryKind="structural" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:27.601] AI_CALL_STARTED callIndex=6 ordinal=5 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:29.373] QUESTION_ACCEPTED ordinal=5 concept="republicanism relationship" prompt="In a republican form of government, people elect leaders to represent them and create laws in their own private interest."
+[00:29.374] AI_CALL_COMPLETED callIndex=6 ordinal=5 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1826 inputTokens=10814 outputTokens=141 reasoningTokens=0
+[00:29.374] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:29.404] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=3 status="generating"
+[00:29.462] AI_CALL_STARTED callIndex=7 ordinal=6 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:30.924] QUESTION_ACCEPTED ordinal=6 concept="resource availability" prompt="What relationship does the packet have to the unit reviews?"
+[00:30.925] AI_CALL_COMPLETED callIndex=7 ordinal=6 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1521 inputTokens=10371 outputTokens=123 reasoningTokens=0
+[00:30.926] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:30.951] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:31.018] AI_CALL_STARTED callIndex=8 ordinal=7 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:32.493] QUESTION_ACCEPTED ordinal=7 concept="condition" prompt="Under what condition did Congress prosecute the Revolutionary War veterans?"
+[00:32.494] AI_CALL_COMPLETED callIndex=8 ordinal=7 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1542 inputTokens=10685 outputTokens=135 reasoningTokens=0
+[00:32.494] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:32.524] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=3 status="generating"
+[00:32.599] AI_CALL_STARTED callIndex=9 ordinal=8 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:34.355] AI_CALL_COMPLETED callIndex=9 ordinal=8 ordinalAttempt=1 classification="primary" outcome="polarity_mismatch" acceptedCount=0 retryDelayMs=232 callElapsedMs=1830
+[00:34.355] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=8 ordinalAttempt=2 retryKind="structural" retryDelayMs=232 reasonCode="polarity_mismatch" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:34.614] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=8 ordinalAttempt=2 retryKind="structural" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:34.687] AI_CALL_STARTED callIndex=10 ordinal=8 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:35.824] QUESTION_ACCEPTED ordinal=8 concept="availability of unit reviews" prompt="All unit reviews are included on YouTube."
+[00:35.825] AI_CALL_COMPLETED callIndex=10 ordinal=8 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1210 inputTokens=11180 outputTokens=97 reasoningTokens=0
+[00:35.825] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:35.850] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:35.924] AI_CALL_STARTED callIndex=11 ordinal=9 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:37.943] QUESTION_ACCEPTED ordinal=9 concept="condition" prompt="Under what condition did Congress prosecute Revolutionary War veterans who were not being paid?"
+[00:37.944] AI_CALL_COMPLETED callIndex=11 ordinal=9 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2093 inputTokens=10856 outputTokens=146 reasoningTokens=0
+[00:37.944] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:37.968] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=3 status="generating"
+[00:38.062] AI_CALL_STARTED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:40.025] QUESTION_ACCEPTED ordinal=10 concept="categorical grants" prompt="A state receives federal funds for highway maintenance only after it agrees to raise its legal drinking age to 21. Which type of federal grant does this arrangement exemplify?"
+[00:40.026] AI_CALL_COMPLETED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2058 inputTokens=10774 outputTokens=194 reasoningTokens=0
+[00:40.026] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="4668dedb-b6ed-49c2-9f63-c92bc245255f"
+[00:40.029] BANK_COMPLETE accepted=10 requested=10 aiCalls=13 retryCount=3 generationElapsedMs=24585 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: Anti-Federalist critique of large centralized government
+Prompt: Why did Brutus One argue that a large centralized government could not adequately represent the views of the people?
+Retry prompt: What was the reason Brutus One gave for why a large centralized government would fail to adequately represent the people's views?
+A. Because it would be controlled by the states.
+B. Because it would lack the necessary and proper clause.
+C. Because it would be too small to address all local concerns.
+D. Because it would be largely separated from the people.
+Correct answer: D. Because it would be largely separated from the people.
+Explanation: Brutus One argued that a large centralized government would be largely separated from the people, and this separation would prevent it from adequately representing their views.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=6f2453843714d1d79db96013b672259297e47ca2a6b42f65bc1fd0fce0f49d68
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — SHORT_ANSWER
+Concept: Madison's solution to factions
+Prompt: Why did Madison reject the option of removing the causes of factions?
+Retry prompt: What was Madison's reason for rejecting the removal of the causes of factions?
+Reference answer: Because removing the causes of factions would require stripping people of their liberty, which Madison considered worse than the problem of factions.
+Rubric ideas: Because removing the causes of factions would require stripping people of their liberty, which Madison considered worse than the problem of factions.
+Short-answer mode: proposition
+Explanation: Removing the causes of factions would require stripping people of their liberty, which Madison judged to be a worse outcome than the problem of factions themselves.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=9e1e8eb1edf6ba5a3c16fcda61ee8202d0a79e71cf8a1975e56e167c9efcc218
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 3 — TRUE_FALSE
+Concept: coexistence of democracy models
+Prompt: The United States embodies multiple models of democracy, with different models appearing in different contexts.
+Retry prompt: Different models of democracy can be found in different parts of the United States government.
+Correct answer: True
+Correction: The United States embodies multiple models of democracy, with different models appearing in different contexts.
+Explanation: The United States does not rely on a single model; participatory, elite, and pluralist elements appear in different institutions and levels of government.
+AI provenance: call=2 attempt=1 classification=primary fingerprint=7cecd9f2efcdd4a664263b49f8ade564d74db34d962ea73e3dde4ee20012c13c
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 4 — SHORT_ANSWER
+Concept: judicial review mechanism
+Prompt: How does judicial review operate when the Supreme Court evaluates a law passed by Congress and signed by the president?
+Retry prompt: What process does the Supreme Court use to determine whether a law passed by Congress and signed by the president can stand?
+Reference answer: The Supreme Court judges the law on the merits of its constitutionality, and if it finds the law unconstitutional, the law is struck down.
+Rubric ideas: The Supreme Court judges the law on the merits of its constitutionality, and if it finds the law unconstitutional, the law is struck down.
+Short-answer mode: proposition
+Explanation: Judicial review is the court's prerogative to judge laws on the merits of their constitutionality; if the court finds a law unconstitutional, the law is struck down.
+AI provenance: call=3 attempt=1 classification=primary fingerprint=98ef32cb9f2e6330ab986606ffd7747fff1ed43bf1a8e4f2a15f97ae675749aa
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 5 — TRUE_FALSE
+Concept: republicanism relationship
+Prompt: In a republican form of government, people elect leaders to represent them and create laws in their own private interest.
+Retry prompt: In a republican form of government, the leaders elected by the people create laws in the public interest.
+Correct answer: False
+Correction: In a republican form of government, people elect leaders to represent them and create laws in the public interest.
+Explanation: Republicanism holds that elected representatives create laws to serve the public interest, not their own private interest.
+AI provenance: call=6 attempt=3 classification=automatic_retry fingerprint=24e21982c8dd97e22b6fc43c21d343f8f42feba95d0599d6f26d6475fc0554d8
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 6 — MULTIPLE_CHOICE
+Concept: resource availability
+Prompt: What relationship does the packet have to the unit reviews?
+Retry prompt: Which statement correctly describes the packet's coverage of unit reviews?
+A. The packet contains all the unit reviews, including those not on YouTube.
+B. The packet contains only the reviews posted on YouTube.
+C. The packet contains none of the unit reviews.
+D. The packet contains reviews for some units but not all.
+Correct answer: A. The packet contains all the unit reviews, including those not on YouTube.
+Explanation: The packet contains all the unit reviews, including those not posted on YouTube.
+AI provenance: call=7 attempt=1 classification=primary fingerprint=6e3c6335b1d48b01fa3b3bb8404813bc3261f072b823583a375292cd36411fb0
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 7 — SHORT_ANSWER
+Concept: condition
+Prompt: Under what condition did Congress prosecute the Revolutionary War veterans?
+Retry prompt: What condition led Congress to prosecute the veterans?
+Reference answer: Congress prosecuted the veterans when they failed to pay their taxes.
+Rubric ideas: Congress prosecuted the veterans when they failed to pay their taxes.
+Short-answer mode: proposition
+Explanation: Congress prosecuted the veterans when they failed to pay their taxes, even though Congress had not paid them for their military service.
+AI provenance: call=8 attempt=1 classification=primary fingerprint=b5d4453b1852568957f5bbb2ecd87a1c1a25f9aebb37c6eee111b977cf59cf2f
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 8 — TRUE_FALSE
+Concept: availability of unit reviews
+Prompt: All unit reviews are included on YouTube.
+Retry prompt: The packet contains every unit review.
+Correct answer: False
+Correction: All unit reviews are included in the packet.
+Explanation: The packet contains all unit reviews, while YouTube includes only some of them.
+AI provenance: call=10 attempt=2 classification=automatic_retry fingerprint=37497001c914d07e17920370ab147f0ffc8431248875d99326378c5be3ae24a1
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=NOTICE | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 9 — SHORT_ANSWER
+Concept: condition
+Prompt: Under what condition did Congress prosecute Revolutionary War veterans who were not being paid?
+Retry prompt: What condition led Congress to prosecute the unpaid Revolutionary War veterans?
+Reference answer: Congress prosecuted the veterans when they failed to pay their taxes.
+Rubric ideas: Congress prosecuted the veterans when they failed to pay their taxes.
+Short-answer mode: proposition
+Explanation: Congress prosecuted the veterans when they failed to pay their taxes, even though Congress had not paid them for their service.
+AI provenance: call=11 attempt=1 classification=primary fingerprint=93578d7e35da5047a6c6f701eae1df662c96be0c0b0724be1f667058042a2996
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 10 — MULTIPLE_CHOICE
+Concept: categorical grants
+Prompt: A state receives federal funds for highway maintenance only after it agrees to raise its legal drinking age to 21. Which type of federal grant does this arrangement exemplify?
+Retry prompt: Which type of grant requires states to meet specific federal conditions, such as raising the drinking age, to receive funding?
+A. An unfunded mandate
+B. A block grant
+C. A categorical grant
+D. A revenue-sharing grant
+Correct answer: C. A categorical grant
+Explanation: Categorical grants are provided to states on the condition that they comply with specific federal standards. In this case, the federal government offered highway funds as an incentive for states to raise the drinking age, demonstrating the conditional nature of categorical grants.
+AI provenance: call=12 attempt=1 classification=primary fingerprint=ddf0fea455c780cba1cb0c1588575ecdc59fd77badd61b76d889e21a5799fd34
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=NOTICE | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:40.029] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="Because it would be largely separated from the people."
+[00:41.805] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="You correctly identified that Brutus One argued a large centralized government would be too far removed from the people to represent their views." matchedIdeas=["Because it would be largely separated from the people."] source="deepseek_local"
+[00:41.806] GRADE_STARTED ordinal=2 questionType="short_answer" response="Because removing the causes of factions would require stripping people of their liberty, which Madison considered worse than the problem of factions."
+[00:43.622] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Your response correctly identifies that Madison rejected removing the causes of factions because doing so would require destroying liberty, which he viewed as worse than the factions themselves." matchedIdeas=["Removing the causes of factions would require stripping people of their liberty, which Madison considered worse than the problem of factions."] source="deepseek_local"
+[00:43.623] GRADE_STARTED ordinal=3 questionType="true_false" response="True"
+[00:46.137] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="Correct — the statement accurately reflects that the U.S. combines various democratic models (e.g., participatory, pluralist, and elite) across different contexts." matchedIdeas=["The United States embodies multiple models of democracy"] source="deepseek_local"
+[00:46.138] GRADE_STARTED ordinal=4 questionType="short_answer" response="The Supreme Court judges the law on the merits of its constitutionality, and if it finds the law unconstitutional, the law is struck down."
+[00:47.888] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your response correctly explains that the Supreme Court evaluates the law's constitutionality and strikes it down if it violates the Constitution." matchedIdeas=["The Supreme Court judges the law on the merits of its constitutionality, and if it finds the law unconstitutional, the law is struck down."] source="deepseek_local"
+[00:47.888] GRADE_STARTED ordinal=5 questionType="true_false" response="False"
+[00:49.438] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="The response correctly identifies that leaders in a republic should create laws in the public interest, not their own private interest." matchedIdeas=["Correctly identifies the statement as false"] source="deepseek_local"
+[00:49.438] GRADE_STARTED ordinal=6 questionType="multiple_choice" response="The packet contains all the unit reviews, including those not on YouTube."
+[00:50.851] GRADE_COMPLETED ordinal=6 correct=true confidence="high" reason="Your response correctly identifies that the packet includes all unit reviews, even those not posted on YouTube." matchedIdeas=["The packet contains all the unit reviews, including those not on YouTube."] source="deepseek_local"
+[00:50.852] GRADE_STARTED ordinal=7 questionType="short_answer" response="Congress prosecuted the veterans when they failed to pay their taxes."
+[00:52.412] GRADE_COMPLETED ordinal=7 correct=true confidence="high" reason="Your response correctly identifies that Congress prosecuted the veterans for failing to pay their taxes." matchedIdeas=["Congress prosecuted the veterans when they failed to pay their taxes."] source="deepseek_local"
+[00:52.413] GRADE_STARTED ordinal=8 questionType="true_false" response="False"
+[00:54.264] GRADE_COMPLETED ordinal=8 correct=true confidence="high" reason="The response correctly identifies that the statement is false, as unit reviews are included in the packet, not on YouTube." matchedIdeas=["Correctly identifies the statement as false"] source="deepseek_local"
+[00:54.264] GRADE_STARTED ordinal=9 questionType="short_answer" response="Congress prosecuted the veterans when they failed to pay their taxes."
+[00:55.841] GRADE_COMPLETED ordinal=9 correct=true confidence="high" reason="Your response correctly identifies that Congress prosecuted the veterans for failing to pay their taxes." matchedIdeas=["Congress prosecuted the veterans when they failed to pay their taxes."] source="deepseek_local"
+[00:55.841] GRADE_STARTED ordinal=10 questionType="multiple_choice" response="A categorical grant"
+[00:57.663] GRADE_COMPLETED ordinal=10 correct=true confidence="high" reason="Your response correctly identifies that this arrangement is a categorical grant, as it involves federal funds with specific conditions attached." matchedIdeas=["Categorical grant"] source="deepseek_local"

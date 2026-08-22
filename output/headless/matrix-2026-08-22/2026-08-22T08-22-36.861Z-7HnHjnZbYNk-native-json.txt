@@ -1,0 +1,204 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.001] SOURCE_STARTED videoId="7HnHjnZbYNk"
+[00:03.846] CAPTIONS_COMPLETE videoId="7HnHjnZbYNk" title="AP Chemistry Unit 1 in 10 Minutes! | Atomic Structure and Properties" language="en" durationSeconds=671 segmentCount=102 sourceSegmentCount=102 characterCount=8862 transcriptFingerprint="8f8e0996" acquisition="youtube_local_ytdlp"
+[00:03.849] PLAN_REQUESTED questionCount=10 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:10.512] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:10.532] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:12.575] QUESTION_ACCEPTED ordinal=1 concept="octet rule and ion charge" prompt="What does the octet rule help predict for atoms of the main-group elements?"
+[00:12.576] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2063 inputTokens=9942 outputTokens=187 reasoningTokens=0
+[00:12.576] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:12.590] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=3 status="generating"
+[00:12.609] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:14.678] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="truncated_json" acceptedCount=0 retryDelayMs=208 callElapsedMs=2087
+[00:14.678] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=2 ordinalAttempt=2 retryKind="structural" retryDelayMs=208 reasonCode="truncated_json" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:14.886] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=2 ordinalAttempt=2 retryKind="structural" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:14.909] AI_CALL_STARTED callIndex=2 ordinal=2 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:16.944] QUESTION_ACCEPTED ordinal=2 concept="molar mass calculation" prompt="How is the molar mass of a compound determined?"
+[00:16.945] AI_CALL_COMPLETED callIndex=2 ordinal=2 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2057 inputTokens=10056 outputTokens=177 reasoningTokens=0
+[00:16.945] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:16.960] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:17.047] AI_CALL_STARTED callIndex=3 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:18.810] AI_CALL_COMPLETED callIndex=3 ordinal=3 ordinalAttempt=1 classification="primary" outcome="true_false_compound_claim" acceptedCount=0 retryDelayMs=238 callElapsedMs=1850
+[00:18.810] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" retryDelayMs=238 reasonCode="true_false_compound_claim" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:19.055] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=2 retryKind="structural" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:19.063] AI_CALL_STARTED callIndex=4 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:20.496] AI_CALL_COMPLETED callIndex=4 ordinal=3 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="retry_question_invalid" acceptedCount=0 retryDelayMs=388 callElapsedMs=1441
+[00:20.497] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=3 retryKind="structural" retryDelayMs=388 reasonCode="retry_question_invalid" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:20.902] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=3 maxAttempts=3 status="retrying" retryOrdinal=3 ordinalAttempt=3 retryKind="structural" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:20.951] AI_CALL_STARTED callIndex=5 ordinal=3 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:22.589] QUESTION_ACCEPTED ordinal=3 concept="periodic trends prediction vs explanation" prompt="The periodic table helps predict trends in atomic properties and explains them."
+[00:22.591] AI_CALL_COMPLETED callIndex=5 ordinal=3 ordinalAttempt=3 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1687 inputTokens=10676 outputTokens=137 reasoningTokens=0
+[00:22.591] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:22.615] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=3 status="generating"
+[00:22.647] AI_CALL_STARTED callIndex=6 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:24.913] QUESTION_ACCEPTED ordinal=4 concept="empirical formula determination" prompt="After converting the masses of the elements to moles, what is the next step to determine the empirical formula?"
+[00:24.914] AI_CALL_COMPLETED callIndex=6 ordinal=4 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2298 inputTokens=10452 outputTokens=211 reasoningTokens=0
+[00:24.914] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:24.944] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:24.970] AI_CALL_STARTED callIndex=7 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:26.719] QUESTION_ACCEPTED ordinal=5 concept="ion charge trends" prompt="What is the typical charge of an ion formed by an element in Group 16?"
+[00:26.720] AI_CALL_COMPLETED callIndex=7 ordinal=5 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1775 inputTokens=10220 outputTokens=104 reasoningTokens=0
+[00:26.720] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:26.761] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=3 status="generating"
+[00:26.800] AI_CALL_STARTED callIndex=8 ordinal=6 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:29.032] QUESTION_ACCEPTED ordinal=6 concept="isotope abundance relationship" prompt="How does the abundance of the isotope with mass 107 compare with that of the isotope with mass 109?"
+[00:29.033] AI_CALL_COMPLETED callIndex=8 ordinal=6 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2271 inputTokens=10664 outputTokens=162 reasoningTokens=0
+[00:29.033] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:29.053] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:29.109] AI_CALL_STARTED callIndex=9 ordinal=7 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:30.910] QUESTION_ACCEPTED ordinal=7 concept="common ion in chloride samples" prompt="When comparing samples of different chlorides, the chloride ion is the common component."
+[00:30.912] AI_CALL_COMPLETED callIndex=9 ordinal=7 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1858 inputTokens=10585 outputTokens=101 reasoningTokens=0
+[00:30.912] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:30.940] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=3 status="generating"
+[00:30.999] AI_CALL_STARTED callIndex=10 ordinal=8 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:32.143] QUESTION_ACCEPTED ordinal=8 concept="Coulomb's law charge-force relationship" prompt="The greater the charge, the stronger the attractive force between charged particles."
+[00:32.144] AI_CALL_COMPLETED callIndex=10 ordinal=8 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1203 inputTokens=10593 outputTokens=106 reasoningTokens=0
+[00:32.144] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:32.175] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:32.258] AI_CALL_STARTED callIndex=11 ordinal=9 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:35.134] QUESTION_ACCEPTED ordinal=9 concept="percent composition analysis" prompt="How does comparing the measured chloride percentage in a sample to the expected percentage for a pure chloride help determine sample purity?"
+[00:35.137] AI_CALL_COMPLETED callIndex=11 ordinal=9 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2959 inputTokens=10688 outputTokens=222 reasoningTokens=0
+[00:35.137] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=1 status="generating" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:35.187] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=3 status="generating"
+[00:35.278] AI_CALL_STARTED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:37.800] QUESTION_ACCEPTED ordinal=10 concept="Coulomb's law distance-force relationship" prompt="How does the attractive force between a nucleus and an electron change as the distance between them increases?"
+[00:37.800] AI_CALL_COMPLETED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2613 inputTokens=10960 outputTokens=205 reasoningTokens=0
+[00:37.801] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="4534cc2c-081d-431d-9f2f-25f18af29bd9"
+[00:37.807] BANK_COMPLETE accepted=10 requested=10 aiCalls=13 retryCount=3 generationElapsedMs=27295 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: octet rule and ion charge
+Prompt: What does the octet rule help predict for atoms of the main-group elements?
+Retry prompt: Which prediction is made using the octet rule for main-group atoms?
+A. The mass number of the atom.
+B. The number of isotopes that exist.
+C. The number of neutrons in the nucleus.
+D. The charge that ions of these atoms will have.
+Correct answer: D. The charge that ions of these atoms will have.
+Explanation: The octet rule predicts the charge that ions of these atoms will have, such as Group 1 elements tending to form +1 ions.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=ababd4192f95f8d9effa3d40869822a95d30e091e9ee3aa4560b430b116023d8
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — MULTIPLE_CHOICE
+Concept: molar mass calculation
+Prompt: How is the molar mass of a compound determined?
+Retry prompt: What is the correct way to find the molar mass of a compound?
+A. It is the sum of the atomic masses of the atoms in the compound.
+B. It is the average of the atomic masses of the elements in the compound.
+C. It is the atomic mass of the heaviest element in the compound.
+D. It is the atomic mass of the first element listed in the formula.
+Correct answer: A. It is the sum of the atomic masses of the atoms in the compound.
+Explanation: The molar mass of a compound is the sum of the atomic masses of all atoms in its chemical formula.
+AI provenance: call=2 attempt=2 classification=automatic_retry fingerprint=e0fc126b6f9b9c5a685768aaba031f16b9a525c744b364313e2575f96804a070
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 3 — TRUE_FALSE
+Concept: periodic trends prediction vs explanation
+Prompt: The periodic table helps predict trends in atomic properties and explains them.
+Retry prompt: The periodic table explains the trends in atomic properties that it helps predict.
+Correct answer: False
+Correction: The periodic table helps predict trends in atomic properties, but it does not explain them.
+Explanation: The periodic table organizes elements so that patterns such as ionization energy and atomic radius can be predicted, but the table itself does not provide the underlying reasons for those patterns.
+AI provenance: call=5 attempt=3 classification=automatic_retry fingerprint=a453224008b5e0c57771b5ad7c124c7c41826ce00d330b503572d0421811df11
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 4 — SHORT_ANSWER
+Concept: empirical formula determination
+Prompt: After converting the masses of the elements to moles, what is the next step to determine the empirical formula?
+Retry prompt: Once the masses of the elements have been converted to moles, what operation is performed on the mole values to obtain the relative subscripts of the empirical formula?
+Reference answer: Divide each mole value by the smallest of the mole values.
+Rubric ideas: Divide each mole value by the smallest of the mole values.
+Short-answer mode: proposition
+Explanation: The mole values are divided by the smallest of those values to obtain the relative subscripts, which are then used to write the empirical formula.
+AI provenance: call=6 attempt=1 classification=primary fingerprint=acf1335175d34d9068f3ab5bf2bea3f26f995a79f12742495dccb051c5a30102
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 5 — MULTIPLE_CHOICE
+Concept: ion charge trends
+Prompt: What is the typical charge of an ion formed by an element in Group 16?
+Retry prompt: Which charge is most commonly taken by a Group 16 ion?
+A. -3
+B. -1
+C. -2
+D. +2
+Correct answer: C. -2
+Explanation: Elements in Group 16 typically gain two electrons to achieve a stable electron configuration, resulting in a -2 charge.
+AI provenance: call=7 attempt=1 classification=primary fingerprint=d1247e61e48e57366f10969135a2f719a8b7200d814fe578734226339d85c51f
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 6 — SHORT_ANSWER
+Concept: isotope abundance relationship
+Prompt: How does the abundance of the isotope with mass 107 compare with that of the isotope with mass 109?
+Retry prompt: Which isotope is more abundant and what are the approximate percentages of each isotope?
+Reference answer: The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%.
+Rubric ideas: The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%.
+Short-answer mode: proposition
+Explanation: The isotope with mass 107 is more abundant, making up about 52% of the atoms, while the isotope with mass 109 makes up about 48%.
+AI provenance: call=8 attempt=1 classification=primary fingerprint=be50e7b6764404f2580d648accf9a8e239697f57ea59e4d9dc90459c5e8cdc4a
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 7 — TRUE_FALSE
+Concept: common ion in chloride samples
+Prompt: When comparing samples of different chlorides, the chloride ion is the common component.
+Retry prompt: The chloride ion is the shared component among different chloride samples.
+Correct answer: True
+Correction: When comparing samples of different chlorides, the chloride ion is the common component.
+Explanation: Each chloride compound contains chloride as the anion, so it is the ion common to all such samples.
+AI provenance: call=9 attempt=1 classification=primary fingerprint=56516bbd1a382b26c8be98f5a93f6a3d759d8f9a825d0faa879e05355a045f9b
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 8 — TRUE_FALSE
+Concept: Coulomb's law charge-force relationship
+Prompt: The greater the charge, the stronger the attractive force between charged particles.
+Retry prompt: A larger charge produces a stronger attractive force between charged particles.
+Correct answer: True
+Correction: The greater the charge, the stronger the attractive force between charged particles.
+Explanation: Coulomb's law states that the force between charged particles depends on both charge and distance, with force increasing as charge increases.
+AI provenance: call=10 attempt=1 classification=primary fingerprint=c39e32db9d3ca103465c9aefd5930bfe7ca60725569ebbf77bec15cd81460cb5
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 9 — MULTIPLE_CHOICE
+Concept: percent composition analysis
+Prompt: How does comparing the measured chloride percentage in a sample to the expected percentage for a pure chloride help determine sample purity?
+Retry prompt: Which statement describes how the measured chloride percentage relative to the pure chloride percentage indicates the amount of impurity?
+A. The measured chloride percentage directly gives the mass of impurity in the sample.
+B. The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity.
+C. The measured chloride percentage is compared to the expected percentage to find the identity of the impurity.
+D. The measured chloride percentage is always equal to the expected percentage regardless of impurities.
+Correct answer: B. The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity.
+Explanation: The measured chloride percentage relative to the expected percentage for the pure compound shows what fraction of the sample is the pure chloride; the remaining fraction is impurity.
+AI provenance: call=11 attempt=1 classification=primary fingerprint=8cdbee18d8fbd78a7dec170ca1149f355f2997593235a513fd21c61ad2817111
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 10 — SHORT_ANSWER
+Concept: Coulomb's law distance-force relationship
+Prompt: How does the attractive force between a nucleus and an electron change as the distance between them increases?
+Retry prompt: As the distance between a nucleus and an electron increases, what happens to the attractive force between them?
+Reference answer: The attractive force weakens.
+Rubric ideas: The attractive force weakens.
+Short-answer mode: proposition
+Explanation: Coulomb's law states that the attractive force between charged particles is inversely related to the square of the distance between them. Therefore, as the distance increases, the attractive force weakens.
+AI provenance: call=12 attempt=1 classification=primary fingerprint=c49bff03db271b69430b2b7ca2d79d149c978bae42eb60ceaf5ce4c9ea2b9442
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:37.809] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="The charge that ions of these atoms will have."
+[00:39.840] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="You correctly identified that the octet rule helps predict the charge that ions of main-group elements will have." matchedIdeas=["The charge that ions of these atoms will have."] source="deepseek_local"
+[00:39.840] GRADE_STARTED ordinal=2 questionType="multiple_choice" response="It is the sum of the atomic masses of the atoms in the compound."
+[00:41.806] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="You correctly identified that molar mass is found by adding up the atomic masses of all the atoms in the compound's formula." matchedIdeas=["Sum of the atomic masses of the atoms in the compound"] source="deepseek_local"
+[00:41.806] GRADE_STARTED ordinal=3 questionType="true_false" response="False"
+[00:43.595] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="The response correctly identifies that the periodic table predicts trends but does not explain them." matchedIdeas=["The periodic table predicts trends but does not explain them"] source="deepseek_local"
+[00:43.595] GRADE_STARTED ordinal=4 questionType="short_answer" response="Divide each mole value by the smallest of the mole values."
+[00:45.315] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="Your response correctly identifies the next step: dividing each mole value by the smallest mole value to find the simplest whole-number ratio." matchedIdeas=["Divide each mole value by the smallest of the mole values."] source="deepseek_local"
+[00:45.316] GRADE_STARTED ordinal=5 questionType="multiple_choice" response="-2"
+[00:47.177] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="The response correctly identifies that Group 16 elements typically gain two electrons to form an ion with a -2 charge." matchedIdeas=["Group 16 elements form ions with a -2 charge"] source="deepseek_local"
+[00:47.178] GRADE_STARTED ordinal=6 questionType="short_answer" response="The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."
+[00:49.128] GRADE_COMPLETED ordinal=6 correct=true confidence="high" reason="Your response correctly identifies that the isotope with mass 107 is more abundant, at about 52%, compared to about 48% for the isotope with mass 109." matchedIdeas=["The isotope with mass 107 is more abundant, about 52% of the atoms, while the isotope with mass 109 is about 48%."] source="deepseek_local"
+[00:49.129] GRADE_STARTED ordinal=7 questionType="true_false" response="True"
+[00:51.047] GRADE_COMPLETED ordinal=7 correct=true confidence="high" reason="The response correctly identifies that the chloride ion is the shared component across different chloride samples." matchedIdeas=["Chloride ion is the common component when comparing different chlorides"] source="deepseek_local"
+[00:51.048] GRADE_STARTED ordinal=8 questionType="true_false" response="True"
+[00:52.950] GRADE_COMPLETED ordinal=8 correct=true confidence="high" reason="You correctly identified that the statement is true, as the attractive force between charged particles increases with greater charge." matchedIdeas=["Greater charge means stronger attractive force"] source="deepseek_local"
+[00:52.950] GRADE_STARTED ordinal=9 questionType="multiple_choice" response="The ratio of the measured chloride percentage to the expected percentage gives the fraction of the sample that is the pure chloride, so the rest is impurity."
+[00:54.850] GRADE_COMPLETED ordinal=9 correct=true confidence="high" reason="Your response correctly identifies that the ratio of measured to expected chloride percentage reveals the fraction of pure chloride, with the remainder being impurity." matchedIdeas=["Ratio of measured to expected chloride percentage gives fraction of pure chloride; rest is impurity"] source="deepseek_local"
+[00:54.851] GRADE_STARTED ordinal=10 questionType="short_answer" response="The attractive force weakens."
+[00:56.620] GRADE_COMPLETED ordinal=10 correct=true confidence="high" reason="The response correctly states that the attractive force weakens as the distance increases." matchedIdeas=["The attractive force weakens."] source="deepseek_local"

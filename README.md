@@ -52,6 +52,7 @@
   <a href="./docs/PRODUCTION-RELEASE.md">Production release</a> ·
   <a href="./docs/ITERATION-OVERVIEW.pdf">Event iteration overview</a> ·
   <a href="./docs/ADMIN-CONSOLE.md">Operations console</a> ·
+  <a href="./docs/QA-HEADLESS-MATRIX-2026-08-22.md">Headless matrix re-run</a> ·
   <a href="./docs/QA-YOUTUBE-BROWSER-10X-2026-08-22.md">Current live QA</a> ·
   <a href="./docs/QA-FIRST-QUESTION-ETA-2026-08-22.md">Progressive generation QA</a> ·
   <a href="./docs/duolingo-ui-research.md">UI research</a>
@@ -127,11 +128,15 @@ the [iteration overview](./docs/ITERATION-OVERVIEW.md).
 
 ### Honest release status
 
-We report what is verified and what is not. The 2026-08-22 ten-video production matrix confirms
-progressive entry, full-length completion, storage-only privacy, and authoritative call accounting,
-but it **does not** clear the evidence-grounded rollout gate — content acceptance failed on prompt
-phrasing, and one attempt needed a restart. Those results are written up in full in the
-[current release status](#release-status) and the linked QA reports rather than omitted. The
+We report what is verified and what is not. Our latest ten-video matrix — re-run against live
+captions and the live DeepSeek API — clears progressive entry (10/10 reached question 1), the
+storage-only privacy boundary, the no-fallback guarantee, content acceptance (the "According to"
+regression fell from 79/100 to 0/80), and deterministic grading (80/80). It **does not** clear the
+zero-intervention completion gate: only 5/10 videos produced a complete bank on the first attempt,
+8/10 after one re-attempt, because a single `question_answer_kind_mismatch` outcome can exhaust its
+bounded retries. Every such failure failed closed without substituting invented content. Full
+numbers are in the [current release status](#release-status) and the
+[headless matrix report](./docs/QA-HEADLESS-MATRIX-2026-08-22.md) rather than omitted. The
 in-development Workplace AI chat route stays hidden behind a release gate instead of being demoed
 as finished.
 
@@ -226,7 +231,20 @@ As of **2026-08-22**, Chrome extension 0.8.32 uses the caption-only local quiz e
 
 The live `/health` response and Wrangler deployment history are the authoritative production checks. Health exposes the model and pipeline versions plus `backendQuizGeneration`, `extensionQuizGeneration`, and `extensionRequired` readiness flags without exposing secrets or relying on a stale version number in this document.
 
-### Verified production snapshot — 2026-08-22
+### Headless generation matrix re-run — 2026-08-22 (current)
+
+Re-run with the headless QA harness (`npm run qa:quiz`) against real public YouTube captions and the live DeepSeek API, ten videos at ten questions each, all three question types, with reference-answer grading enabled. This run exercised the prompt-first `prompt_first_auto_v5_12` profile (prompt `quiz-local-json-stream-v5.12`, validator `validator-minimal-gradeability-v5.3`, import `extension-progressive-import-v8`, protocol `10`, pipeline `9`, model `deepseek-v4-flash`).
+
+- Progressive entry reached question 1 on **10/10** videos; median time to question 1 was 19.9 s (mean 22.0 s, max 41.8 s).
+- Complete ten-question banks: **5/10 on the first attempt, 8/10 after one re-attempt.** 80 questions were stored across the complete banks using 80 model calls and 13 automatic bounded retries.
+- **Zero fallback or invented questions were emitted.** All 80 stored prompts were unique, and `production_validator`, `exact_duplicate`, `fragmentary_prompt`, and `answer_prompt_consistency` each passed 80/80. `absolute_wording` returned 76 PASS and 4 NOTICE.
+- **Content acceptance now passes.** Prompts containing “According to” fell from 79/100 to **0/80**, “According to the lesson” from 26/100 to **0/80**, and the display-time prefix sanitizer corrupted no prompts.
+- Deterministic grading returned **80/80 correct** on reference answers.
+- The remaining failure mode is a single `question_answer_kind_mismatch` outcome exhausting its three bounded structural retries on one ordinal. The engine failed closed every time, preserving the accepted prefix without substituting content. Re-running the five failures recovered three, so the fault is probabilistic; `qP-9wwRrJbg` and `G8zkXA5TXgg` failed both passes and are the reproduction cases.
+
+The re-run therefore **clears** progressive entry, the storage-only privacy boundary, the no-fallback guarantee, content acceptance, and deterministic grading, but **does not clear the zero-intervention full-bank completion gate**. Full write-up and artifacts: [headless matrix report](./docs/QA-HEADLESS-MATRIX-2026-08-22.md) and `output/headless/matrix-2026-08-22/`.
+
+### Previous production snapshot — 2026-08-22 (superseded)
 
 - Active Worker version: `a8d8cda5-ea66-4e87-afae-388b2cf237dd`, tagged from Git SHA `9c1bc3b75929819cc18f1a7bb4a50b7cd954dc03`.
 - Latest applied D1 migration: `0019_grounded_generation_telemetry.sql`.
@@ -234,9 +252,9 @@ The live `/health` response and Wrangler deployment history are the authoritativ
 - All generation rollout variables were disabled. The ten newly created banks therefore persisted `legacy_reasoning_v5_1` and prompt v5.1 despite the current metadata advertised by `/health`.
 - Ten different videos ultimately produced ten complete banks; all 100 planned questions were answered through the visible learner flow. The completed banks used 53 planned model calls with zero recorded retries or non-complete outcomes.
 - First-attempt completion was only 9/10. One excluded 15-question attempt stopped at 11/15 after two schema-invalid calls; its automatic recovery was incorrectly recorded as a legacy `manual_continuation`, and a fresh quiz was required.
-- Content acceptance failed: 26/100 stored prompts used the exact phrase “According to the lesson,” 79/100 included “According to,” and a display-time prefix sanitizer visibly corrupted at least five prompts.
+- Content acceptance failed: 26/100 stored prompts used the exact phrase “According to the lesson,” 79/100 included “According to,” and a display-time prefix sanitizer visibly corrupted at least five prompts. **This regression is resolved by the current matrix above.**
 
-The production matrix therefore verifies progressive entry, full-length completion after restart, storage-only privacy, and authoritative call accounting, but it **does not clear the evidence-grounded rollout or zero-intervention release gate**. See the current [browser QA report](./docs/QA-YOUTUBE-BROWSER-10X-2026-08-22.md).
+That earlier matrix verified progressive entry, full-length completion after restart, storage-only privacy, and authoritative call accounting, but did not clear the evidence-grounded rollout or zero-intervention release gate. See also the [browser QA report](./docs/QA-YOUTUBE-BROWSER-10X-2026-08-22.md).
 
 The 2026-08-22 source gate passed **138 unit, contract, API, app, and extension tests** plus **21 Playwright Chrome journeys**, repository-wide TypeScript and ESLint checks, the web build, extension packaging, Worker bundling, and a Wrangler dry run. This is historical automated evidence, not a substitute for the current production matrix.
 

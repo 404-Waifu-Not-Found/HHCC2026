@@ -1650,53 +1650,122 @@
       packaging, Worker bundling, and a Wrangler dry run.
     </p>
 
-    <h3>15.2 Live production matrix</h3>
+    <h3>15.2 Live production matrix — re-run</h3>
     <p>
-      We also ran a ten-video live production matrix against the deployed
-      product rather than relying on mocks. Ten different videos produced ten
-      complete banks, and all 100 planned questions were answered through the
-      visible learner flow, using 53 planned model calls with zero recorded
-      retries or non-complete outcomes.
+      We re-ran the ten-video matrix on 22 August 2026 against
+      <strong>real public YouTube captions and the real DeepSeek API</strong>
+      using the headless QA harness (<code>npm run qa:quiz</code>) with a local
+      key, ten questions per video, all three question types, and
+      reference-answer grading enabled. Unlike the earlier run, this one
+      actually exercised the prompt-first <code>v5.12</code> profile
+      (<code>quiz-local-json-stream-v5.12</code>, validator
+      <code>validator-minimal-gradeability-v5.3</code>, import
+      <code>extension-progressive-import-v8</code>, protocol 10, pipeline 9).
     </p>
 
+    <table>
+      <tr>
+        <th style="width: 55%">Metric</th>
+        <th>Result</th>
+      </tr>
+      <tr>
+        <td>Videos attempted</td>
+        <td>10</td>
+      </tr>
+      <tr>
+        <td><strong>Reached question 1 (progressive entry)</strong></td>
+        <td><strong>10 / 10</strong></td>
+      </tr>
+      <tr>
+        <td>Complete 10-question banks, first attempt</td>
+        <td>5 / 10</td>
+      </tr>
+      <tr>
+        <td><strong>Complete banks after one re-attempt</strong></td>
+        <td><strong>8 / 10</strong></td>
+      </tr>
+      <tr>
+        <td>Questions stored across complete banks</td>
+        <td>80 (80 unique prompts, zero duplicates)</td>
+      </tr>
+      <tr>
+        <td>Model calls / automatic bounded retries</td>
+        <td>80 / 13</td>
+      </tr>
+      <tr>
+        <td><strong>Fallback or invented questions emitted</strong></td>
+        <td><strong>0</strong></td>
+      </tr>
+      <tr>
+        <td>Time to question 1 — median / mean / max</td>
+        <td>19.9 s / 22.0 s / 41.8 s</td>
+      </tr>
+      <tr>
+        <td><strong>Deterministic grading on reference answers</strong></td>
+        <td><strong>80 / 80 correct</strong></td>
+      </tr>
+      <tr>
+        <td>Validator, duplicate, fragmentary, and consistency audits</td>
+        <td>80 / 80 PASS each</td>
+      </tr>
+    </table>
+
+    <div class="callout">
+      <span class="h">Resolved: the content-acceptance regression</span>
+      <p style="margin-bottom: 0">
+        The defect that blocked our previous release gate is gone. Prompts
+        containing "According to" fell from <strong>79/100 to 0/80</strong>,
+        "According to the lesson" from <strong>26/100 to 0/80</strong>, and the
+        display-time prefix sanitizer that visibly corrupted at least five
+        prompts now corrupts <strong>none</strong>. All 80 stored prompts are
+        unique and pass the production validator.
+      </p>
+    </div>
+
     <div class="callout warn">
-      <span class="h">What we did not pass — reported honestly</span>
+      <span class="h">Still failing — reported honestly</span>
       <p>
-        The same matrix did <strong>not</strong> clear our evidence-grounded
-        rollout gate, and we are reporting that rather than omitting it:
+        Five of ten videos did not produce a complete bank on the first attempt.
+        Both failure messages share a single root cause: a
+        <code>question_answer_kind_mismatch</code> outcome on one ordinal that
+        repeated until its three bounded structural retries were exhausted.
       </p>
       <ul style="margin-bottom: 0">
         <li>
-          First-attempt completion was 9/10, not 10/10. One 15-question attempt
-          stopped at 11/15 after two schema-invalid calls; its automatic
-          recovery was incorrectly recorded as a legacy
-          <code>manual_continuation</code> and a fresh quiz was required.
+          In every failure the engine <strong>failed closed</strong> — the
+          accepted prefix was preserved, no fallback content was substituted,
+          and no invented question was ever exposed or stored. That is the
+          designed behaviour, but the frequency is too high.
         </li>
         <li>
-          Content acceptance failed on phrasing: 26/100 stored prompts used the
-          exact phrase "According to the lesson," 79/100 included "According
-          to," and a display-time prefix sanitizer visibly corrupted at least
-          five prompts.
+          Re-running the five failures recovered three, so the fault is
+          probabilistic rather than deterministic per video. Two videos (AP
+          Physics 1 Kinematics, AP Calculus AB Unit 1) failed both passes and
+          are our best reproduction cases.
         </li>
         <li>
-          Because rollout variables were disabled during the run, the ten new
-          banks persisted the
-          <code>legacy_reasoning_v5_1</code> profile rather than the profile
-          advertised by <code>/health</code>.
+          The
+          <strong
+            >zero-intervention full-bank completion gate therefore remains
+            unmet</strong
+          >, and fixing <code>question_answer_kind_mismatch</code> is our next
+          task.
         </li>
       </ul>
     </div>
 
     <p>
-      The matrix therefore verifies progressive entry, full-length completion
-      after restart, storage-only privacy, and authoritative call accounting —
-      but not the zero-intervention release gate. We consider it more valuable
-      to show judges a real, instrumented, partially-failing production run than
-      a green mock suite. Our Playwright journeys use contract-shaped mocked
-      responses, and we explicitly warn in our own documentation that a green UI
-      suite is
-      <em>not</em> proof of live caption access, DeepSeek availability, or a
-      completed learner flow.
+      Net position: this re-run <em>clears</em> progressive entry, the
+      storage-only privacy boundary, the no-fallback guarantee, content
+      acceptance, and deterministic grading — and
+      <em>does not clear</em> zero-intervention completion. We consider it more
+      valuable to show judges a real, instrumented, partially-failing production
+      run than a green mock suite: our Playwright journeys use contract-shaped
+      mocked responses, and we warn in our own documentation that a green UI
+      suite is <em>not</em> proof of live caption access or a completed learner
+      flow. Full artifacts for every run, including per-call event streams, are
+      committed under <code>output/headless/matrix-2026-08-22/</code>, with the
+      complete write-up in <code>docs/QA-HEADLESS-MATRIX-2026-08-22.md</code>.
     </p>
 
     <h3>15.3 Deliberately gated features</h3>
@@ -1962,20 +2031,27 @@
     <h3>19.2 Immediate next steps</h3>
     <ol>
       <li>
-        Close the content-acceptance gap: eliminate the "According to the
-        lesson" prompt phrasing and remove the display-time prefix sanitizer
-        that corrupted prompts, then re-run the ten-video matrix.
+        <strong>Fix <code>question_answer_kind_mismatch</code>.</strong> This
+        single outcome is now the only thing standing between us and a clean
+        matrix: it exhausted the three bounded structural retries on one ordinal
+        in five of ten first-pass runs. AP Physics 1 Kinematics
+        (<code>qP-9wwRrJbg</code>) and AP Calculus AB Unit 1
+        (<code>G8zkXA5TXgg</code>) failed both passes and are our reproduction
+        cases.
       </li>
       <li>
-        Fix the recovery telemetry that mislabelled an automatic recovery as a
-        legacy
-        <code>manual_continuation</code>, and drive first-attempt completion to
-        10/10.
+        Raise first-attempt full-bank completion from 5/10 to 10/10, then re-run
+        the matrix to confirm the zero-intervention gate is finally met.
       </li>
       <li>
-        Complete the staged rollout of the prompt-first v5.12 profile behind an
-        immutable extension candidate, a canary assignment, and a fresh
-        benchmark.
+        Promote the now-validated prompt-first v5.12 profile through the staged
+        rollout — an immutable extension candidate, a canary assignment, and a
+        fresh benchmark — since the content-acceptance regression that
+        previously blocked it is resolved.
+      </li>
+      <li>
+        Investigate the 4 <code>absolute_wording</code> NOTICE results, which
+        are advisory today but indicate prompt phrasing worth tightening.
       </li>
       <li>
         Finish captionless local transcription on supported hardware, and Resend
@@ -2045,6 +2121,13 @@
       <tr>
         <td><strong>Learning-science brief</strong></td>
         <td><code>docs/HACKATHON.md</code></td>
+      </tr>
+      <tr>
+        <td><strong>Headless matrix re-run</strong></td>
+        <td>
+          <code>docs/QA-HEADLESS-MATRIX-2026-08-22.md</code> — the section 15.2
+          evidence
+        </td>
       </tr>
       <tr>
         <td><strong>Live QA report</strong></td>

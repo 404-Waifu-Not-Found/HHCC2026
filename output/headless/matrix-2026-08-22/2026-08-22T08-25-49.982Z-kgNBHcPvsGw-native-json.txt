@@ -1,0 +1,202 @@
+CLIPQUEST HEADLESS QUIZ QA
+[00:00.000] SOURCE_STARTED videoId="kgNBHcPvsGw"
+[00:04.746] CAPTIONS_COMPLETE videoId="kgNBHcPvsGw" title="AP Biology Review: Unit 1 Chemistry of Life" language="en" durationSeconds=3048 segmentCount=1430 sourceSegmentCount=1430 characterCount=53044 transcriptFingerprint="24d0d685" acquisition="youtube_local_ytdlp"
+[00:04.748] PLAN_REQUESTED questionCount=10 questionTypes=["multiple_choice","true_false","short_answer"] transport="native-json" noFallback=true
+[00:27.844] GENERATION_PROGRESS stage="creating_questions" progress=0.2 attempt=1 maxAttempts=3 status="generating"
+[00:27.871] AI_CALL_STARTED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:29.841] QUESTION_ACCEPTED ordinal=1 concept="pH calculation method" prompt="How is the pH of a solution determined from the hydronium ion concentration?"
+[00:29.842] AI_CALL_COMPLETED callIndex=0 ordinal=1 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1996 inputTokens=10139 outputTokens=164 reasoningTokens=0
+[00:29.842] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:29.861] GENERATION_PROGRESS stage="creating_questions" progress=0.272 attempt=1 maxAttempts=3 status="generating"
+[00:29.898] AI_CALL_STARTED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:31.787] QUESTION_ACCEPTED ordinal=2 concept="saturated vs unsaturated fatty acids" prompt="What structural feature distinguishes an unsaturated fatty acid from a saturated fatty acid?"
+[00:31.788] AI_CALL_COMPLETED callIndex=1 ordinal=2 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1926 inputTokens=10447 outputTokens=165 reasoningTokens=0
+[00:31.789] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:31.814] GENERATION_PROGRESS stage="creating_questions" progress=0.344 attempt=1 maxAttempts=3 status="generating"
+[00:31.861] AI_CALL_STARTED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:33.541] QUESTION_ACCEPTED ordinal=3 concept="crossing over mechanism" prompt="What is the process in which double-strand breaks in chromatids are repaired by the exchange of genetic material between homologous non-sister chromatids?"
+[00:33.541] AI_CALL_COMPLETED callIndex=2 ordinal=3 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=1727 inputTokens=10556 outputTokens=175 reasoningTokens=0
+[00:33.541] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:33.573] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=1 maxAttempts=3 status="generating"
+[00:33.629] AI_CALL_STARTED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:35.083] AI_CALL_COMPLETED callIndex=3 ordinal=4 ordinalAttempt=1 classification="primary" outcome="true_false_compound_claim" acceptedCount=0 retryDelayMs=264 callElapsedMs=1509
+[00:35.083] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=4 ordinalAttempt=2 retryKind="structural" retryDelayMs=264 reasonCode="true_false_compound_claim" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:35.384] GENERATION_PROGRESS stage="creating_questions" progress=0.416 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=4 ordinalAttempt=2 retryKind="structural" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:35.440] AI_CALL_STARTED callIndex=4 ordinal=4 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:37.717] QUESTION_ACCEPTED ordinal=4 concept="steroid hormone receptor binding" prompt="Steroid hormones such as testosterone and estrogen bind to receptors inside the cell because they can pass through the hydrophobic membrane interior."
+[00:37.718] AI_CALL_COMPLETED callIndex=4 ordinal=4 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2333 inputTokens=10478 outputTokens=101 reasoningTokens=0
+[00:37.718] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:37.758] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=1 maxAttempts=3 status="generating"
+[00:37.823] AI_CALL_STARTED callIndex=5 ordinal=5 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:40.149] AI_CALL_COMPLETED callIndex=5 ordinal=5 ordinalAttempt=1 classification="primary" outcome="truncated_json" acceptedCount=0 retryDelayMs=247 callElapsedMs=2390
+[00:40.150] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=5 ordinalAttempt=2 retryKind="structural" retryDelayMs=247 reasonCode="truncated_json" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:40.397] GENERATION_PROGRESS stage="creating_questions" progress=0.488 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=5 ordinalAttempt=2 retryKind="structural" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:40.490] AI_CALL_STARTED callIndex=6 ordinal=5 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:43.502] QUESTION_ACCEPTED ordinal=5 concept="DNA structure determination" prompt="What structural feature of DNA can be directly inferred from an X-ray diffraction image that shows an X-shaped pattern?"
+[00:43.503] AI_CALL_COMPLETED callIndex=6 ordinal=5 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=3104 inputTokens=10536 outputTokens=190 reasoningTokens=0
+[00:43.503] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:43.550] GENERATION_PROGRESS stage="creating_questions" progress=0.56 attempt=1 maxAttempts=3 status="generating"
+[00:43.644] AI_CALL_STARTED callIndex=7 ordinal=6 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:46.224] QUESTION_ACCEPTED ordinal=6 concept="glycosidic linkage type in cellulose" prompt="What type of glycosidic linkage is found in cellulose, and why does this make cellulose difficult for humans to digest?"
+[00:46.225] AI_CALL_COMPLETED callIndex=7 ordinal=6 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2674 inputTokens=10957 outputTokens=161 reasoningTokens=0
+[00:46.225] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:46.273] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=1 maxAttempts=3 status="generating"
+[00:46.358] AI_CALL_STARTED callIndex=8 ordinal=7 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:48.794] AI_CALL_COMPLETED callIndex=8 ordinal=7 ordinalAttempt=1 classification="primary" outcome="retry_question_invalid" acceptedCount=0 retryDelayMs=221 callElapsedMs=2519
+[00:48.794] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=7 ordinalAttempt=2 retryKind="structural" retryDelayMs=221 reasonCode="retry_question_invalid" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:49.072] GENERATION_PROGRESS stage="creating_questions" progress=0.632 attempt=2 maxAttempts=3 status="retrying" retryOrdinal=7 ordinalAttempt=2 retryKind="structural" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:49.185] AI_CALL_STARTED callIndex=9 ordinal=7 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" acceptedCount=0 retryDelayMs=0
+[00:51.738] QUESTION_ACCEPTED ordinal=7 concept="water high specific heat temperature buffer" prompt="Water's high specific heat means it takes a small amount of energy to change its temperature, which helps keep environmental temperatures relatively constant."
+[00:51.739] AI_CALL_COMPLETED callIndex=9 ordinal=7 ordinalAttempt=2 classification="automatic_retry" retryKind="structural" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2666 inputTokens=11375 outputTokens=167 reasoningTokens=0
+[00:51.739] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:51.797] GENERATION_PROGRESS stage="creating_questions" progress=0.704 attempt=1 maxAttempts=3 status="generating"
+[00:51.925] AI_CALL_STARTED callIndex=10 ordinal=8 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:54.627] QUESTION_ACCEPTED ordinal=8 concept="DNA double helix structure" prompt="The DNA molecule consists of three polynucleotide strands that form a triple helix."
+[00:54.628] AI_CALL_COMPLETED callIndex=10 ordinal=8 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2830 inputTokens=11393 outputTokens=124 reasoningTokens=0
+[00:54.628] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:54.660] GENERATION_PROGRESS stage="creating_questions" progress=0.776 attempt=1 maxAttempts=3 status="generating"
+[00:54.791] AI_CALL_STARTED callIndex=11 ordinal=9 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:57.351] QUESTION_ACCEPTED ordinal=9 concept="water density and ice floating" prompt="What property of water causes ice to float on liquid water?"
+[00:57.352] AI_CALL_COMPLETED callIndex=11 ordinal=9 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2692 inputTokens=10954 outputTokens=211 reasoningTokens=0
+[00:57.353] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=1 status="generating" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:57.421] GENERATION_PROGRESS stage="creating_questions" progress=0.848 attempt=1 maxAttempts=3 status="generating"
+[00:57.574] AI_CALL_STARTED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" acceptedCount=0 retryDelayMs=0
+[00:59.897] QUESTION_ACCEPTED ordinal=10 concept="glucose composition" prompt="What atoms and what type of bond are found in a glucose molecule?"
+[00:59.898] AI_CALL_COMPLETED callIndex=12 ordinal=10 ordinalAttempt=1 classification="primary" outcome="complete" acceptedCount=1 retryDelayMs=0 callElapsedMs=2476 inputTokens=11358 outputTokens=136 reasoningTokens=0
+[00:59.898] GENERATION_PROGRESS stage="finalizing_questions" progress=1 attempt=1 maxAttempts=1 status="complete" recoverySessionId="f80b4040-08de-4fe3-bd78-9c7151771ac9"
+[00:59.906] BANK_COMPLETE accepted=10 requested=10 aiCalls=13 retryCount=3 generationElapsedMs=32062 promptVersion="quiz-local-json-stream-v5.12" validatorVersion="validator-minimal-gradeability-v5.3" userActionsRequired=0
+
+QUESTION 1 — MULTIPLE_CHOICE
+Concept: pH calculation method
+Prompt: How is the pH of a solution determined from the hydronium ion concentration?
+Retry prompt: Which operation correctly converts a hydronium ion concentration into a pH value?
+A. Take the positive base-10 logarithm of the hydronium ion concentration.
+B. Divide the hydronium ion concentration by 10.
+C. Take the negative base-10 logarithm of the hydronium ion concentration.
+D. Take the negative natural logarithm of the hydronium ion concentration.
+Correct answer: C. Take the negative base-10 logarithm of the hydronium ion concentration.
+Explanation: PH is defined as the negative base-10 logarithm of the hydronium ion concentration. Thus, for a concentration of 10^-4 M, the pH is 4.
+AI provenance: call=0 attempt=1 classification=primary fingerprint=1b0b9dc66f5abc82fa6537b79bf2dc828acde424361affdc9cc445bd99befe36
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 2 — SHORT_ANSWER
+Concept: saturated vs unsaturated fatty acids
+Prompt: What structural feature distinguishes an unsaturated fatty acid from a saturated fatty acid?
+Retry prompt: How does the presence of a double bond affect the hydrogen saturation of a fatty acid?
+Reference answer: An unsaturated fatty acid contains at least one double bond between carbon atoms, which prevents those carbons from being fully bonded to hydrogen atoms.
+Rubric ideas: An unsaturated fatty acid contains at least one double bond between carbon atoms, which prevents those carbons from being fully bonded to hydrogen atoms.
+Short-answer mode: proposition
+Explanation: An unsaturated fatty acid contains at least one double bond between carbon atoms, which prevents those carbons from being fully bonded to hydrogen atoms. In contrast, a saturated fatty acid has only single bonds, so every carbon is fully saturated with hydrogen.
+AI provenance: call=1 attempt=1 classification=primary fingerprint=f43e911b508ee3ec841432ab258f8edd3303169fe83487d9d18bdacce54cb2ca
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 3 — SHORT_ANSWER
+Concept: crossing over mechanism
+Prompt: What is the process in which double-strand breaks in chromatids are repaired by the exchange of genetic material between homologous non-sister chromatids?
+Retry prompt: Which process involves the exchange of genetic material between homologous non-sister chromatids to repair double-strand breaks?
+Reference answer: Crossing over
+Rubric ideas: Crossing over
+Short-answer mode: atomic_term
+Explanation: During meiosis, double-strand breaks in chromatids can be repaired by exchanging genetic material between homologous non-sister chromatids, a process known as crossing over.
+AI provenance: call=2 attempt=1 classification=primary fingerprint=ef86c9a25cab2193b97bf3eb3b9e96ed4bf891fdf046d90a513d02fba432d1ed
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 4 — TRUE_FALSE
+Concept: steroid hormone receptor binding
+Prompt: Steroid hormones such as testosterone and estrogen bind to receptors inside the cell because they can pass through the hydrophobic membrane interior.
+Retry prompt: Because steroid hormones can cross the hydrophobic membrane interior, they bind to receptors inside the cell.
+Correct answer: True
+Correction: Steroid hormones such as testosterone and estrogen bind to receptors inside the cell because they can pass through the hydrophobic membrane interior.
+Explanation: The hydrophobic core of the membrane blocks many hydrophilic molecules, but steroids are nonpolar and can diffuse through it to reach intracellular receptors.
+AI provenance: call=4 attempt=2 classification=automatic_retry fingerprint=ec11acd6903deb5f799078ff7878c3e5367ba2dd9c2ef35a5c3563ec8a72633a
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 5 — MULTIPLE_CHOICE
+Concept: DNA structure determination
+Prompt: What structural feature of DNA can be directly inferred from an X-ray diffraction image that shows an X-shaped pattern?
+Retry prompt: Which structural characteristic of DNA is directly supported by an X-ray diffraction image displaying an X-shaped pattern?
+A. The DNA molecule has a helical structure.
+B. The ratios of base pairs are constant.
+C. The nucleotide sequence determines genetic information.
+D. The two strands of DNA are anti-parallel.
+Correct answer: A. The DNA molecule has a helical structure.
+Explanation: The X-shaped pattern in the X-ray diffraction image indicates that the DNA molecule has a helical structure. The image does not reveal base pair ratios, nucleotide sequences, or the anti-parallel orientation of the strands.
+AI provenance: call=6 attempt=2 classification=automatic_retry fingerprint=1076a966c08cb3c811e4329caf791b8b4531039d202a182f7d8dd03e54eb19e0
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 6 — SHORT_ANSWER
+Concept: glycosidic linkage type in cellulose
+Prompt: What type of glycosidic linkage is found in cellulose, and why does this make cellulose difficult for humans to digest?
+Retry prompt: Which specific glycosidic bond in cellulose prevents humans from digesting it?
+Reference answer: Cellulose has 1-4 beta linkages, which humans cannot break down.
+Rubric ideas: Cellulose has 1-4 beta linkages, which humans cannot break down.
+Short-answer mode: proposition
+Explanation: Cellulose contains 1-4 beta linkages between glucose monomers. Humans lack enzymes that can break beta linkages, so cellulose cannot be digested and serves as structural support in plant cell walls.
+AI provenance: call=7 attempt=1 classification=primary fingerprint=946a5c04a647c32d6fccb0b40533bcd119fcaa60f8884d816679c3ab070398d6
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 7 — TRUE_FALSE
+Concept: water high specific heat temperature buffer
+Prompt: Water's high specific heat means it takes a small amount of energy to change its temperature, which helps keep environmental temperatures relatively constant.
+Retry prompt: Because water has a high specific heat, a large energy input is required to raise its temperature, allowing it to buffer temperature changes.
+Correct answer: False
+Correction: Water's high specific heat means it takes a large amount of energy to change its temperature, which helps keep environmental temperatures relatively constant.
+Explanation: The false statement reverses the meaning of high specific heat: a high specific heat requires a large energy change to alter temperature, not a small one.
+AI provenance: call=9 attempt=2 classification=automatic_retry fingerprint=b942f16d6dfc3012819da2f53ec018c4fd46e7033c769663604074b64d05f215
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 8 — TRUE_FALSE
+Concept: DNA double helix structure
+Prompt: The DNA molecule consists of three polynucleotide strands that form a triple helix.
+Retry prompt: DNA is composed of three polynucleotide strands arranged in a triple helix.
+Correct answer: False
+Correction: The DNA molecule consists of two polynucleotide strands that form a double helix.
+Explanation: The false statement incorrectly claims three strands; DNA is made of two polynucleotide strands twisted into a double helix.
+AI provenance: call=10 attempt=1 classification=primary fingerprint=b292f34790f6554521746bdaad01dff29b5f070a11552fee1161aa94397b9d15
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE | true_false_polarity=PASS_ENGINE
+
+QUESTION 9 — MULTIPLE_CHOICE
+Concept: water density and ice floating
+Prompt: What property of water causes ice to float on liquid water?
+Retry prompt: Which property of water is responsible for ice floating on liquid water?
+A. Ice is denser than liquid water because the molecules pack more closely when frozen.
+B. Ice floats because it has a lower mass than the same volume of liquid water.
+C. Ice floats because it has a higher specific heat than liquid water.
+D. Ice is less dense than liquid water because the hydrogen bonds in ice hold water molecules farther apart, increasing its volume.
+Correct answer: D. Ice is less dense than liquid water because the hydrogen bonds in ice hold water molecules farther apart, increasing its volume.
+Explanation: When water freezes, hydrogen bonds hold the water molecules apart, increasing the volume of the ice. Since density is mass divided by volume, the same mass occupying more volume results in lower density, so ice floats.
+AI provenance: call=11 attempt=1 classification=primary fingerprint=a262f3da5da71d78280ae243c8e30a81f2650c8b1c78994e0f245a201af34a03
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+QUESTION 10 — SHORT_ANSWER
+Concept: glucose composition
+Prompt: What atoms and what type of bond are found in a glucose molecule?
+Retry prompt: Which elements and what kind of chemical bond make up a glucose molecule?
+Reference answer: Carbon, hydrogen, and oxygen; covalent bonds
+Rubric ideas: Carbon, hydrogen, and oxygen; covalent bonds
+Short-answer mode: atomic_term
+Explanation: Glucose is composed of carbon, hydrogen, and oxygen atoms, and the atoms are joined by covalent bonds.
+AI provenance: call=12 attempt=1 classification=primary fingerprint=77f4562ee682be5e97f776cd0ebc2f5e0b183565efb4a6b7f0bd5a610d8f09dd
+Quality audit: production_validator=PASS | exact_duplicate=PASS | fragmentary_prompt=PASS | absolute_wording=PASS | answer_prompt_consistency=PASS_ENGINE
+
+ANSWER GRADING
+[00:59.911] GRADE_STARTED ordinal=1 questionType="multiple_choice" response="Take the negative base-10 logarithm of the hydronium ion concentration."
+[01:02.376] GRADE_COMPLETED ordinal=1 correct=true confidence="high" reason="Your response correctly identifies that pH is the negative base-10 logarithm of the hydronium ion concentration." matchedIdeas=["Negative base-10 logarithm of hydronium ion concentration"] source="deepseek_local"
+[01:02.376] GRADE_STARTED ordinal=2 questionType="short_answer" response="An unsaturated fatty acid contains at least one double bond between carbon atoms, which prevents those carbons from being fully bonded to hydrogen atoms."
+[01:05.145] GRADE_COMPLETED ordinal=2 correct=true confidence="high" reason="Your response correctly identifies the key structural feature: unsaturated fatty acids contain at least one double bond between carbon atoms, which reduces the number of hydrogen atoms bonded to those carbons." matchedIdeas=["An unsaturated fatty acid contains at least one double bond between carbon atoms, which prevents those carbons from being fully bonded to hydrogen atoms."] source="deepseek_local"
+[01:05.146] GRADE_STARTED ordinal=3 questionType="short_answer" response="Crossing over"
+[01:07.295] GRADE_COMPLETED ordinal=3 correct=true confidence="high" reason="Your response correctly identifies the process as crossing over." matchedIdeas=["Crossing over"] source="deepseek_local"
+[01:07.296] GRADE_STARTED ordinal=4 questionType="true_false" response="True"
+[01:09.900] GRADE_COMPLETED ordinal=4 correct=true confidence="high" reason="You correctly identified that steroid hormones can pass through the hydrophobic membrane to bind to intracellular receptors." matchedIdeas=["Steroid hormones bind to intracellular receptors because they can pass through the hydrophobic membrane"] source="deepseek_local"
+[01:09.901] GRADE_STARTED ordinal=5 questionType="multiple_choice" response="The DNA molecule has a helical structure."
+[01:12.491] GRADE_COMPLETED ordinal=5 correct=true confidence="high" reason="The response correctly identifies that the X-shaped pattern in X-ray diffraction directly indicates DNA's helical structure." matchedIdeas=["The DNA molecule has a helical structure."] source="deepseek_local"
+[01:12.492] GRADE_STARTED ordinal=6 questionType="short_answer" response="Cellulose has 1-4 beta linkages, which humans cannot break down."
+[01:14.942] GRADE_COMPLETED ordinal=6 correct=true confidence="high" reason="Your answer correctly identifies the 1-4 beta linkages in cellulose and explains that humans lack the enzymes to break them down." matchedIdeas=["Cellulose has 1-4 beta linkages, which humans cannot break down."] source="deepseek_local"
+[01:14.942] GRADE_STARTED ordinal=7 questionType="true_false" response="False"
+[01:17.546] GRADE_COMPLETED ordinal=7 correct=true confidence="high" reason="Your response correctly identifies that the statement is false, as water's high specific heat actually requires a large amount of energy to change its temperature." matchedIdeas=["Correctly identifies the statement as false"] source="deepseek_local"
+[01:17.546] GRADE_STARTED ordinal=8 questionType="true_false" response="False"
+[01:19.653] GRADE_COMPLETED ordinal=8 correct=true confidence="high" reason="Correct — DNA is made of two polynucleotide strands forming a double helix, not three." matchedIdeas=["Correctly identifies the statement as false"] source="deepseek_local"
+[01:19.654] GRADE_STARTED ordinal=9 questionType="multiple_choice" response="Ice is less dense than liquid water because the hydrogen bonds in ice hold water molecules farther apart, increasing its volume."
+[01:22.650] GRADE_COMPLETED ordinal=9 correct=true confidence="high" reason="Your response correctly identifies that ice floats because it is less dense than liquid water, due to hydrogen bonds holding water molecules farther apart and increasing its volume." matchedIdeas=["Ice is less dense than liquid water","hydrogen bonds hold water molecules farther apart, increasing volume"] source="deepseek_local"
+[01:22.650] GRADE_STARTED ordinal=10 questionType="short_answer" response="Carbon, hydrogen, and oxygen; covalent bonds"
+[01:25.070] GRADE_COMPLETED ordinal=10 correct=true confidence="high" reason="Your answer correctly identifies the atoms (carbon, hydrogen, and oxygen) and the type of bond (covalent) found in a glucose molecule." matchedIdeas=["Carbon, hydrogen, and oxygen; covalent bonds"] source="deepseek_local"
