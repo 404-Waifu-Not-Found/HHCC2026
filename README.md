@@ -80,6 +80,12 @@
 
 ClipQuest turns public YouTube educational videos into focused learning sessions. A learner pastes a YouTube link, chooses multiple-choice, true/false, and/or short-answer questions, confirms the lesson, and starts a generated quest.
 
+### Community progress features
+
+- **Server-tracked learning time:** each completed video stores a duration snapshot on the server, and profile totals add the duration of each unique completed video.
+- **Public profiles:** click any learner in the leaderboard to view their public avatar, completed-quiz count, total learning time, and GitHub-style activity calendar. Private account details remain hidden.
+- **Activity calendar:** completion history is shown as a year of daily quiz activity on both personal and public profiles.
+
 On the web, the **ClipQuest Local AI** Chrome extension is the generation boundary. It acquires YouTube captions in the browser, converts timestamped segments into normalized plain text, and sends that text directly to DeepSeek using the learner's own API key. DeepSeek returns streamed JSON in profile-sized sequential calls: the current evidence-grounded profile uses one question per primary call, while isolated compatibility profiles can request small consecutive chunks. As each complete question object closes, the extension validates its expected ordinal, requested type, fields, answer mapping, and duplicate invariants before emitting it to the ClipQuest page.
 
 The Cloudflare Worker does **not** generate quizzes. It authenticates the learner and stores validated singleton questions in strict ordinal order. Question 1 creates a generating bank and a full-length attempt immediately; later questions append while the learner is already answering. The bank becomes passed, reviewable, and Library-eligible only after all 5, 10, or 15 requested questions have been stored.
@@ -266,6 +272,12 @@ The completion screen pairs the score and mastery state with a "Right first try"
 
 ![ClipQuest completion recap listing a missed question with the correct answer and reasoning](./docs/screenshots/final/desktop-completion-recap.png)
 
+### Leaderboard and public profiles
+
+Leaderboard entries are interactive. Selecting a learner opens a read-only public profile with their avatar, completed quizzes, total learning time, and daily activity history.
+
+![ClipQuest leaderboard with learner avatars and progress](./docs/screenshots/final/desktop-leaderboard.png)
+
 ### Mobile learning and completion
 
 | Paste a link                                                                     | Answer feedback                                                                   | Quest complete                                                                 |
@@ -293,7 +305,7 @@ The language inventory below comes from the tracked repository, including the na
 | TypeScript and TSX                 | Expo routes and components, Cloudflare Worker API, shared Zod contracts, Playwright, tests, and build configuration                                         |
 | JavaScript and ESM (`.js`, `.mjs`) | Manifest V3 extension runtime, caption processing, local quiz generation, web workers, asset scripts, and packaging                                         |
 | React ecosystem                    | React 19, React DOM 19, React Native 0.86, and Expo Router power the shared web, iOS, and Android product interface                                         |
-| SQL                                | Nineteen ordered D1 migrations for authentication, quiz storage, reliability, administration, progressive imports, safe call telemetry, and recovery claims |
+| SQL                                | Twenty-six ordered D1 migrations for authentication, quiz storage, reliability, administration, progressive imports, safe call telemetry, recovery claims, and profile analytics |
 | Swift                              | iOS implementation of the local audio-decoder Expo module                                                                                                   |
 | Kotlin                             | Android implementation of the local audio-decoder Expo module                                                                                               |
 | HTML                               | Extension popup markup and the checked-in local extension QA harness                                                                                        |
@@ -319,7 +331,7 @@ The primary product runtime is TypeScript/React Native, the browser extension is
 | Web/native app       | Expo 57, Expo Router, React 19, React Native 0.86                | Authentication, paste/share import, Android-local generation, lessons, feedback, mastery, administration, and themes |
 | Browser extension    | Chrome Manifest V3, JavaScript                                   | Web caption access, local streamed DeepSeek generation, retries, and canonical option randomization                  |
 | Edge API             | Cloudflare Workers, Hono, scheduled triggers                     | Better Auth, ordered storage-only question imports, grading, availability, review scheduling, and static assets      |
-| Data and assets      | D1, KV, private R2                                               | Accounts, videos, generating/passed banks, attempts, mastery, rate limits, thumbnails, avatars, and private PDFs     |
+| Data and assets      | D1, KV, private R2                                               | Accounts, videos, generating/passed banks, attempts, mastery, profile analytics, rate limits, thumbnails, avatars, and private PDFs |
 | Local quiz engine    | Shared JavaScript, DeepSeek V4 Flash, Expo fetch                 | Platform-neutral progressive prompts, per-question validation, automatic repair, shuffling, and serialization        |
 | Caption acquisition  | YouTube public caption tracks                                    | Caption-only source text; missing or incomplete captions fail before generation                                      |
 | Shared contracts     | TypeScript, Zod                                                  | Versioned page protocol, quiz schemas, API requests, and server validation                                           |
