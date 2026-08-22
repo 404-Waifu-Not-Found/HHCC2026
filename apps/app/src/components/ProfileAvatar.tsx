@@ -16,6 +16,7 @@ export function ProfileAvatar({
   size?: number;
 }) {
   const { theme } = useSettings();
+  const generatedColor = avatarColor(name);
   const [cookie, setCookie] = useState<string>();
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -38,7 +39,7 @@ export function ProfileAvatar({
           width: size,
           height: size,
           borderRadius: size / 3,
-          backgroundColor: theme.actionSoft,
+          backgroundColor: uri ? theme.actionSoft : generatedColor,
         },
       ]}
     >
@@ -70,6 +71,13 @@ function initials(value: string): string {
       ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`
       : value.slice(0, 2)
   ).toUpperCase();
+}
+
+function avatarColor(value: string): string {
+  const colors = ["#7DD3A8", "#8DB9E8", "#F2C66D", "#D9A4E8", "#F29B8F"];
+  let hash = 0;
+  for (const character of value) hash = (hash * 31 + character.charCodeAt(0)) | 0;
+  return colors[Math.abs(hash) % colors.length] || "#7DD3A8";
 }
 
 const styles = StyleSheet.create({

@@ -10,7 +10,6 @@ import { Surface } from "../../src/components/Surface";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { apiRequest } from "../../src/lib/api";
-import { API_ORIGIN } from "../../src/lib/config";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { radii, spacing, typography } from "../../src/theme/tokens";
 
@@ -72,7 +71,7 @@ export default function LeaderboardScreen() {
               <View style={styles.identity}>
                 <ProfileAvatar
                   name={entry.name}
-                  image={`${API_ORIGIN}/api/profile/leaderboard/avatar/${encodeURIComponent(entry.userId)}`}
+                  image={entry.image}
                   size={40}
                 />
                 <Text

@@ -69,42 +69,30 @@ profileRouter.get("/stats", async (c) => {
 
 profileRouter.get("/leaderboard", async (c) => {
   const rows = await c.env.DB.prepare(
-    `SELECT u.id, u.name,
+    `SELECT u.id, u.name, u.image,
             COUNT(DISTINCT CASE WHEN a.status = 'complete' THEN a.quiz_id END) AS completed_quizzes
        FROM user u
        LEFT JOIN attempts a ON a.user_id = u.id
       GROUP BY u.id, u.name
       ORDER BY completed_quizzes DESC, u.name COLLATE NOCASE ASC
       LIMIT 500`,
-  ).all<{ id: string; name: string | null; completed_quizzes: number | null }>();
+  ).all<{
+    id: string;
+    name: string | null;
+    image: string | null;
+    completed_quizzes: number | null;
+  }>();
   return c.json(
     LeaderboardResponseSchema.parse({
       entries: rows.results.map((row, index) => ({
         userId: row.id,
         rank: index + 1,
         name: row.name?.trim() || "ClipQuest learner",
+        image: row.image,
         completedQuizzes: Number(row.completed_quizzes ?? 0),
       })),
     }),
   );
-});
-
-profileRouter.get("/leaderboard/avatar/:userId", async (c) => {
-  const userId = c.req.param("userId");
-  const fallback = `https://github.com/identicons/${encodeURIComponent(userId)}.png`;
-  const row = await c.env.DB.prepare("SELECT image FROM user WHERE id = ?")
-    .bind(userId)
-    .first<{ image: string | null }>();
-  if (!row?.image?.startsWith(`avatars/${userId}/`)) {
-    return Response.redirect(fallback, 302);
-  }
-  const object = await c.env.PRIVATE_BUCKET.get(row.image);
-  if (!object) return Response.redirect(fallback, 302);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("ETag", object.httpEtag);
-  headers.set("Cache-Control", "public, max-age=300");
-  return new Response(object.body, { headers });
 });
 
 profileRouter.put("/avatar", async (c) => {
