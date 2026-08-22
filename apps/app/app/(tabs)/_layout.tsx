@@ -1,6 +1,10 @@
+import {
+  ProfileLearningStatsResponseSchema,
+  type ProfileLearningStatsResponse,
+} from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
 import { Redirect, Tabs } from "expo-router";
-import { useEffect, type ComponentProps } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -11,6 +15,8 @@ import {
 } from "react-native";
 import { useAppSession } from "../../src/lib/auth-client";
 import { BrandLockup } from "../../src/components/BrandLockup";
+import { ProfileAvatar } from "../../src/components/ProfileAvatar";
+import { apiRequest } from "../../src/lib/api";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { observePendingHandoffUser } from "../../src/state/pending-video-handoff";
 import { workplaceEnabled } from "../../src/config/features";
@@ -35,6 +41,13 @@ type LearningTabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
 >[0];
 
+type SidebarUser = {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+};
+
 export default function TabLayout() {
   const { data, isPending } = useAppSession();
   const { reduceMotion, t, theme } = useSettings();
@@ -57,7 +70,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <LearningTabBar {...props} />}
+      tabBar={(props) => <LearningTabBar {...props} user={data.user} />}
       screenOptions={{
         headerShown: false,
         tabBarPosition: desktop ? "left" : "bottom",
@@ -115,10 +128,29 @@ function LearningTabBar({
   descriptors,
   navigation,
   insets,
-}: LearningTabBarProps) {
-  const { theme } = useSettings();
+  user,
+}: LearningTabBarProps & { user: SidebarUser }) {
+  const { locale, t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const desktop = width >= breakpoints.desktop;
+  const [stats, setStats] = useState<ProfileLearningStatsResponse>();
+
+  useEffect(() => {
+    if (!desktop) return;
+    let active = true;
+    void apiRequest(
+      "/api/profile/stats",
+      {},
+      ProfileLearningStatsResponseSchema,
+    )
+      .then((value) => {
+        if (active) setStats(value);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [desktop, state.index, user.id]);
 
   return (
     <View
@@ -231,8 +263,70 @@ function LearningTabBar({
           );
         })}
       </View>
+      {desktop ? (
+        <View style={[styles.profile, { borderTopColor: theme.divider }]}>
+          <View style={styles.profileIdentity}>
+            <ProfileAvatar name={user.name} image={user.image} size={44} />
+            <View style={styles.profileCopy}>
+              <Text
+                numberOfLines={1}
+                style={[styles.profileName, { color: theme.text }]}
+              >
+                {user.name}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[styles.profileEmail, { color: theme.textMuted }]}
+              >
+                {user.email}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.profileStats}>
+            <View style={styles.profileStat}>
+              <Text style={[styles.profileStatValue, { color: theme.text }]}>
+                {stats?.completedLessons ?? "—"}
+              </Text>
+              <Text
+                style={[styles.profileStatLabel, { color: theme.textMuted }]}
+              >
+                {t("completedLessons")}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.profileStatDivider,
+                { backgroundColor: theme.divider },
+              ]}
+            />
+            <View style={styles.profileStat}>
+              <Text style={[styles.profileStatValue, { color: theme.text }]}>
+                {stats
+                  ? formatLearningDuration(stats.totalDurationSeconds, locale)
+                  : "—"}
+              </Text>
+              <Text
+                style={[styles.profileStatLabel, { color: theme.textMuted }]}
+              >
+                {t("totalDuration")}
+              </Text>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
+}
+
+function formatLearningDuration(
+  totalSeconds: number,
+  locale: "en" | "zh-CN",
+): string {
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  if (locale === "zh-CN")
+    return hours > 0 ? `${hours}小时 ${minutes}分钟` : `${minutes}分钟`;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
 const styles = StyleSheet.create({
@@ -314,5 +408,56 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 14,
     textAlign: "center",
+  },
+  profile: {
+    flexShrink: 0,
+    gap: spacing[4],
+    borderTopWidth: borders.hairline,
+    paddingHorizontal: spacing[2],
+    paddingTop: spacing[5],
+  },
+  profileIdentity: {
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  profileCopy: {
+    minWidth: 0,
+    flex: 1,
+  },
+  profileName: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  profileEmail: {
+    fontFamily: typography.body,
+    fontSize: typography.size.label,
+    lineHeight: typography.lineHeight.label,
+  },
+  profileStats: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  profileStat: {
+    minWidth: 0,
+    flex: 1,
+    justifyContent: "center",
+  },
+  profileStatDivider: {
+    width: borders.hairline,
+    marginHorizontal: spacing[3],
+  },
+  profileStatValue: {
+    fontFamily: typography.displayMedium,
+    fontSize: typography.size.body,
+    lineHeight: typography.lineHeight.body,
+  },
+  profileStatLabel: {
+    fontFamily: typography.body,
+    fontSize: typography.size.caption,
+    lineHeight: typography.lineHeight.caption,
   },
 });
