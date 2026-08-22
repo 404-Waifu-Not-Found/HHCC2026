@@ -22,7 +22,6 @@ DerivedData/
 dist/
 build/
 coverage/
-playwright-report/
 test-results/
 *.log
 *.tsbuildinfo

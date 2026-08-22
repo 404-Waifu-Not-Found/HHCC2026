@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/*.test.mjs",
-    "test:live": "node test/live-browser-smoke.mjs"
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

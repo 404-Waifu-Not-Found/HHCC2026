@@ -21,7 +21,7 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ["apps/app/**/*.{ts,tsx}", "e2e/**/*.ts", "playwright.config.ts"],
+    files: ["apps/app/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-syntax": [
         "error",
