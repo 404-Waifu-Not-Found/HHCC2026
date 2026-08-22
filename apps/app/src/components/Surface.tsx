@@ -52,39 +52,46 @@ export function Surface({
           ? theme.warning
           : theme.border;
 
-  return (
-    <Pressable
-      disabled={!onPress}
-      onPress={onPress}
-      style={[
-        styles.surface,
-        padded && styles.padded,
-        { backgroundColor, borderColor },
-        elevated && Platform.OS === "web"
-          ? {
-              boxShadow:
-                theme.mode === "dark" ? shadows.darkFloating : shadows.floating,
-            }
-          : null,
-        elevated && Platform.OS !== "web"
-          ? {
-              shadowColor:
-                theme.mode === "dark" ? "#000000" : theme.primaryPressed,
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: theme.mode === "dark" ? 0.28 : 0.14,
-              shadowRadius: 14,
-              elevation: 6,
-            }
-          : null,
-        style,
-      ]}
-    >
+  const surfaceStyle = [
+    styles.surface,
+    padded && styles.padded,
+    { backgroundColor, borderColor },
+    elevated && Platform.OS === "web"
+      ? {
+          boxShadow:
+            theme.mode === "dark" ? shadows.darkFloating : shadows.floating,
+        }
+      : null,
+    elevated && Platform.OS !== "web"
+      ? {
+          shadowColor: theme.mode === "dark" ? "#000000" : theme.primaryPressed,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: theme.mode === "dark" ? 0.28 : 0.14,
+          shadowRadius: 14,
+          elevation: 6,
+        }
+      : null,
+    style,
+  ];
+  const content = (
+    <>
       {children}
       {footer ? (
         <View style={[styles.footer, { borderTopColor: theme.divider }]}>
           {footer}
         </View>
       ) : null}
+    </>
+  );
+
+  // A Surface without its own press handler stays a plain View: a disabled
+  // Pressable marks the whole subtree aria-disabled, which would take every
+  // button rendered inside the card out of play.
+  if (!onPress) return <View style={surfaceStyle}>{content}</View>;
+
+  return (
+    <Pressable onPress={onPress} style={surfaceStyle}>
+      {content}
     </Pressable>
   );
 }
