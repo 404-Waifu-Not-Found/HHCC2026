@@ -252,11 +252,35 @@ export function shareStartSettings(bank: {
   );
 }
 
-function claimResponse(bank: ClaimableBank) {
+/**
+ * `shareStartSettings` cannot recover a question count for a bank stored as
+ * `custom` whose summary no longer matches it, and `POST /quizzes/:quizId/start`
+ * rejects `custom` without one. Count the questions of the bank we are handing
+ * back so the recipient can actually start their copy.
+ */
+export async function resolveStartSettings(
+  db: D1Database,
+  bank: ClaimableBank,
+): Promise<QuizShareStartSettings> {
+  const settings = shareStartSettings(bank);
+  if (
+    settings.sessionLength !== "custom" ||
+    settings.questionCount !== undefined
+  ) {
+    return settings;
+  }
+  const counted = await db
+    .prepare("SELECT COUNT(*) AS count FROM questions WHERE quiz_id = ?")
+    .bind(bank.quiz_id)
+    .first<{ count: number }>();
+  return { ...settings, questionCount: Number(counted?.count ?? 0) };
+}
+
+async function claimResponse(db: D1Database, bank: ClaimableBank) {
   return QuizShareClaimResponseSchema.parse({
     quizId: bank.quiz_id,
     videoId: bank.video_id,
-    startSettings: shareStartSettings(bank),
+    startSettings: await resolveStartSettings(db, bank),
   });
 }
 
@@ -282,8 +306,8 @@ sharesRouter.post("/shares/:token/claim", async (c) => {
     .prepare(EXISTING_CLAIM_SQL)
     .bind(share.share_id, user.id)
     .first<ClaimableBank>();
-  if (existing) return c.json(claimResponse(existing));
-  if (share.owner_id === user.id) return c.json(claimResponse(share));
+  if (existing) return c.json(await claimResponse(db, existing));
+  if (share.owner_id === user.id) return c.json(await claimResponse(db, share));
 
   const [source, sourceVideo, questions] = await Promise.all([
     db
@@ -425,7 +449,7 @@ sharesRouter.post("/shares/:token/claim", async (c) => {
       .prepare(EXISTING_CLAIM_SQL)
       .bind(share.share_id, user.id)
       .first<ClaimableBank>();
-    if (raced) return c.json(claimResponse(raced));
+    if (raced) return c.json(await claimResponse(db, raced));
     throw cause;
   }
   const rejected =
@@ -441,7 +465,7 @@ sharesRouter.post("/shares/:token/claim", async (c) => {
     );
   }
   return c.json(
-    claimResponse({
+    await claimResponse(db, {
       quiz_id: quizId,
       video_id: videoId,
       pipeline_version: share.pipeline_version,

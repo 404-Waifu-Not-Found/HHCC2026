@@ -7,6 +7,7 @@ import type { ApiBindings } from "../src/middleware/authenticated";
 import {
   previewConcepts,
   publicSharesRouter,
+  resolveStartSettings,
   shareStartSettings,
   sharesRouter,
 } from "../src/routes/shares";
@@ -536,6 +537,58 @@ describe("POST /shares/:token/claim", () => {
     const claim = await claimShare(adapter, UNKNOWN_TOKEN);
     expect(claim.status).toBe(404);
     expect(claim.body.error?.code).toBe("share_not_found");
+  });
+
+  it("counts the questions of a custom-length bank whose summary no longer matches", async () => {
+    const { adapter } = createDatabase();
+    const bank = {
+      quiz_id: BANK_ID,
+      video_id: OWNER_VIDEO_ID,
+      pipeline_version: 9,
+      session_length: "custom" as const,
+      quality_summary_json: JSON.stringify(readySummary()),
+    };
+    // `readySummary()` plans 15 questions, so a bank stored as `custom` no
+    // longer matches its summary and the pure helper cannot supply a count.
+    expect(shareStartSettings(bank)).toEqual({ sessionLength: "custom" });
+    expect(
+      await resolveStartSettings(adapter as unknown as D1Database, bank),
+    ).toEqual({ sessionLength: "custom", questionCount: 2 });
+  });
+
+  it("hands every claimant a startable custom-length copy", async () => {
+    const { sqlite, adapter } = createDatabase();
+    // `QuizStartRequestSchema` floors custom starts at five questions.
+    const insertQuestion = sqlite.prepare(
+      `INSERT INTO questions (id, quiz_id, ordinal, source_question_id, type, concept_id, prompt, reformulated_prompt, options_json, items_json, correct_answer_json, rubric_json, explanation, evidence_segment_ids_json, difficulty, generation_metadata_json)
+       VALUES (?, ?, ?, ?, 'short_answer', 'c2', ?, ?, NULL, NULL, NULL, '{"requiredIdeas":["spacing"],"acceptableAlternatives":[]}', 'Spacing interrupts forgetting.', '[]', 2, '{"source":"test"}')`,
+    );
+    for (const ordinal of [2, 3, 4]) {
+      insertQuestion.run(
+        `7777777${ordinal}-7777-4777-8777-777777777777`,
+        BANK_ID,
+        ordinal,
+        `q${ordinal + 1}`,
+        `Name another benefit of spacing (${ordinal}).`,
+        `State another benefit of spaced practice (${ordinal}).`,
+      );
+    }
+    sqlite
+      .prepare("UPDATE quiz_banks SET session_length = 'custom' WHERE id = ?")
+      .run(BANK_ID);
+    const { body: share } = await createShare(adapter);
+    const expected = { sessionLength: "custom", questionCount: 5 };
+
+    const cloned = await claimShare(adapter, share.token!);
+    expect(cloned.status).toBe(200);
+    expect(cloned.body.startSettings).toEqual(expected);
+
+    const repeated = await claimShare(adapter, share.token!);
+    expect(repeated.body.startSettings).toEqual(expected);
+
+    const owner = await claimShare(adapter, share.token!, OWNER_ID);
+    expect(owner.body.quizId).toBe(BANK_ID);
+    expect(owner.body.startSettings).toEqual(expected);
   });
 
   it("falls back to the stored session length for legacy banks", () => {
