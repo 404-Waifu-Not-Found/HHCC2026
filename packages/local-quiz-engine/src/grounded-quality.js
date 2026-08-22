@@ -745,6 +745,7 @@ export function questionMatchesQuizLanguage(candidate, quizLanguage) {
     candidate?.supportedFact,
     candidate?.answer,
     candidate?.correction,
+    ...(Array.isArray(candidate?.choices) ? candidate.choices : []),
     ...distractors,
     ...(Array.isArray(candidate?.aliases) ? candidate.aliases : []),
     ...(Array.isArray(candidate?.requiredIdeas) ? candidate.requiredIdeas : []),

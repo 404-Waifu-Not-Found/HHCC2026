@@ -32,6 +32,22 @@ test("Simplified Chinese quizzes reject English learner-visible options", () => 
     true,
   );
 });
+
+test("Simplified Chinese quizzes reject English normalized choices", () => {
+  assert.equal(
+    questionMatchesQuizLanguage(
+      {
+        question: "光合作用如何储存能量？",
+        concept: "光合作用",
+        explanation: "光合作用把光能转化为化学能。",
+        answer: "化学能",
+        choices: ["化学能", "Heat", "Water", "Oxygen"],
+      },
+      "zh-CN",
+    ),
+    false,
+  );
+});
 test("learner-facing quality rejects presentation characterization wording", () => {
   assert.equal(
     questionConceptFailure({

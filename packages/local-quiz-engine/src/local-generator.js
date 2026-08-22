@@ -5298,16 +5298,6 @@ function validateQuiz(quiz, input) {
         repairContextForCandidate(rawQuestion, rawConceptFailure),
       );
     }
-    if (
-      input.conceptFirstV58Mode &&
-      !questionMatchesQuizLanguage(rawConceptCandidate, input.quizLanguage)
-    ) {
-      validationFailure(
-        `Question ${index + 1} contains learner-visible text outside the selected quiz language.`,
-        "quiz_language_mismatch",
-        repairContextForCandidate(rawQuestion, "quiz_language_mismatch"),
-      );
-    }
     const question = normalizeGeneratedQuestion(rawQuestion, {
       expectedId,
       automaticMode: input.automaticMode,
@@ -5324,6 +5314,17 @@ function validateQuiz(quiz, input) {
     });
     if (!question || typeof question !== "object" || Array.isArray(question)) {
       validationFailure(`Question ${index + 1} is not a JSON object.`);
+    }
+    // Validate the normalized object because prompt-first True/False items
+    // derive their learner-facing statement during normalization. Checking
+    // the raw model object misses that field and allowed English questions
+    // through when the learner had selected Simplified Chinese.
+    if (!questionMatchesQuizLanguage(question, input.quizLanguage)) {
+      validationFailure(
+        `Question ${index + 1} contains learner-visible text outside the selected quiz language.`,
+        "quiz_language_mismatch",
+        repairContextForCandidate(question, "quiz_language_mismatch"),
+      );
     }
     const expectedType = input.questionTypePlan[index];
     if (
