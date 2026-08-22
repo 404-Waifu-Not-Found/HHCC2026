@@ -203,6 +203,11 @@ export const messages = {
     preparingNextQuestion: "Preparing your next question",
     quizStillGenerating:
       "You reached the questions that are ready. The rest of your quiz is still generating.",
+    quizTakingLonger: "This is taking longer than expected",
+    quizTakingLongerBody:
+      "The next question is still generating. You can keep waiting or return home.",
+    stayOnQuiz: "Stay here",
+    returnHome: "Return home",
     quizGenerationFailed:
       "The rest of this quiz could not be generated. Start again from the video.",
     answerCheckFailed: "Could not check that answer.",
@@ -509,6 +514,10 @@ export const messages = {
     quizResumeFailed: "无法继续此测验。",
     preparingNextQuestion: "正在准备下一题",
     quizStillGenerating: "你已完成当前准备好的题目，其余题目仍在生成中。",
+    quizTakingLonger: "等待时间比预期更长",
+    quizTakingLongerBody: "下一题仍在生成中。你可以继续等待，也可以返回首页。",
+    stayOnQuiz: "继续等待",
+    returnHome: "返回首页",
     quizGenerationFailed: "其余题目未能生成，请从该视频重新开始。",
     answerCheckFailed: "无法检查此答案。",
     retryingConcept: "换一种方式再练一次",
