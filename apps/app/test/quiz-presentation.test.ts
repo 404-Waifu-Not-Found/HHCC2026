@@ -89,6 +89,10 @@ describe("quiz answer presentation", () => {
   it("shows combo progress in-question and on completion stats", async () => {
     const source = await quizSource();
     expect(source).toContain("summarizeCombo(recapEntries)");
+    expect(source).toContain("<ComboBurst");
+    expect(source).toContain('name="flame"');
+    expect(source).toContain("activeCombo >= 5");
+    expect(source).toContain("Haptics.ImpactFeedbackStyle.Heavy");
     expect(source).toContain('label={t("bestCombo")}');
     expect(source).toContain('label={t("comboBonus")}');
     expect(source).toContain('`${t("combo")} x${activeCombo}`');

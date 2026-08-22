@@ -54,7 +54,7 @@ export type ComboSummary = {
   bonus: number;
 };
 
-function comboBonusForCount(count: number): number {
+export function comboBonusForCount(count: number): number {
   if (count < 2) return 0;
   if (count < 4) return 1;
   if (count < 6) return 2;

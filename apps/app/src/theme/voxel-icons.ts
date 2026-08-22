@@ -16,6 +16,7 @@ export const voxelIconNames = [
   "download",
   "error",
   "expand",
+  "flame",
   "help",
   "home",
   "idea",
