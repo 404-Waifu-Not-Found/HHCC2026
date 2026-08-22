@@ -9,27 +9,16 @@ function source(path: string) {
 }
 
 describe("Workplace tab registration", () => {
-  it("registers the Workplace tab between Library and Settings", () => {
+  it("keeps Workplace hidden behind the release gate", () => {
     const layout = source("app/(tabs)/_layout.tsx");
-    const libraryIndex = layout.indexOf('name="library"');
-    const workplaceIndex = layout.indexOf('name="workplace"');
-    const settingsIndex = layout.indexOf('name="settings"');
-
-    expect(libraryIndex).toBeGreaterThan(-1);
-    expect(workplaceIndex).toBeGreaterThan(-1);
-    expect(settingsIndex).toBeGreaterThan(-1);
-    expect(workplaceIndex).toBeGreaterThan(libraryIndex);
-    expect(workplaceIndex).toBeLessThan(settingsIndex);
+    expect(layout).toContain("workplaceEnabled");
+    expect(layout).toContain("{workplaceEnabled ? (");
   });
 
   it("gives the Workplace tab its own icon and localized title", () => {
     const layout = source("app/(tabs)/_layout.tsx");
-    const workplaceBlock = layout.slice(
-      layout.indexOf('name="workplace"'),
-      layout.indexOf('name="settings"'),
-    );
-    expect(workplaceBlock).toContain('title: t("workplace")');
-    expect(workplaceBlock).toContain('<VoxelIcon name="workplace"');
+    expect(layout).toContain('title: t("workplace")');
+    expect(layout).toContain('<VoxelIcon name="workplace"');
   });
 
   it("gates every tab, including Workplace, behind the shared sign-in redirect", () => {
@@ -42,6 +31,7 @@ describe("Workplace tab registration", () => {
   it("defines the Workplace screen module the tab routes to", () => {
     const workplace = source("app/(tabs)/workplace.tsx");
     expect(workplace).toContain("export default function WorkplaceScreen()");
+    expect(workplace).toContain('Redirect href="/(tabs)/library"');
   });
 
   it("registers the workplace icon in the shared Voxel icon set", () => {

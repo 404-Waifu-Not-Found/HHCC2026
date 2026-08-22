@@ -13,7 +13,7 @@ import type {
   WorkplaceSuggestion,
   WorkplaceThreadSummary,
 } from "@clipquest/contracts";
-import { useFocusEffect, router } from "expo-router";
+import { Redirect, useFocusEffect, router } from "expo-router";
 import * as Network from "expo-network";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -37,6 +37,7 @@ import { EmptyState } from "../../src/components/EmptyState";
 import { IconButton } from "../../src/components/IconButton";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { useSettings } from "../../src/providers/SettingsProvider";
+import { workplaceEnabled } from "../../src/config/features";
 import {
   borders,
   radii,
@@ -86,6 +87,14 @@ import {
 type MobilePane = "rail" | "detail";
 
 export default function WorkplaceScreen() {
+  return workplaceEnabled ? (
+    <WorkplaceEnabledScreen />
+  ) : (
+    <Redirect href="/(tabs)/library" />
+  );
+}
+
+function WorkplaceEnabledScreen() {
   const { t, theme } = useSettings();
   const { width } = useWindowDimensions();
   const layoutMode = workplaceLayoutForWidth(width);

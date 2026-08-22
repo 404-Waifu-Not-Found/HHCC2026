@@ -115,6 +115,23 @@
     }
   }
 
+  // YouTube renders the watch action row asynchronously and can replace it
+  // after the SPA navigation event. Retry while the page settles so users do
+  // not need to reload to get the button.
+  if (typeof setInterval === "function") {
+    setInterval(() => {
+      const videoId = currentVideoId();
+      const link = document.getElementById(BUTTON_ID);
+      const placement = actionPlacement();
+      if (
+        videoId &&
+        (!link || !placement || !isCorrectlyPlaced(link, placement))
+      ) {
+        scheduleSync();
+      }
+    }, 750);
+  }
+
   document.addEventListener("yt-navigate-finish", scheduleSync);
   document.addEventListener("yt-page-data-updated", scheduleSync);
   window.addEventListener("popstate", scheduleSync);
