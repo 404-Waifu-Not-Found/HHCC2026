@@ -25,6 +25,8 @@ const ADMIN_USER_ID = "12121212-1212-4121-8121-121212121212";
 const GENERATION_ID = "abababab-abab-4bab-8bab-abababababab";
 const GENERATION_SESSION_ID = "bcbcbcbc-bcbc-4bcb-8bcb-bcbcbcbcbcbc";
 const GENERATION_IMPORT_KEY = "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd";
+const SHARE_TOKEN = "9a9a9a9a-9a9a-49a9-8a9a-9a9a9a9a9a9a";
+const SHARE_URL = `${BASE_URL}/s/${SHARE_TOKEN}`;
 
 type Scenario = {
   adminMode: "allowed" | "denied";
@@ -54,6 +56,10 @@ type Scenario = {
     | "generation_failed"
     | "ready";
   claimLeased: boolean;
+  signedIn: boolean;
+  resumeQuizContext: boolean;
+  shareCreated: number;
+  shareClaims: number;
   question: PublicQuestion;
 };
 
@@ -141,6 +147,19 @@ const importedVideo = {
   transcriptionMode: "captions" as const,
   capture: { expectedDurationSeconds: 754, requiresUserGesture: false },
   requiresLocalTranscription: false,
+};
+
+const sharePreview = {
+  token: SHARE_TOKEN,
+  title: importedVideo.video.title,
+  originalUrl: "https://www.youtube.com/watch?v=clipquest-learning-science",
+  thumbnailUrl: THUMBNAIL_URL,
+  sharedBy: "Avery Learner",
+  language: "en",
+  sessionLength: "short" as const,
+  questionCount: 5,
+  questionTypes: ["multiple_choice"] as const,
+  concepts: ["Retrieval practice", "Spacing", "Sleep and consolidation"],
 };
 
 const dueCard = {
@@ -1408,6 +1427,93 @@ test("completion recap lists missed questions with the correct answer and retry 
   expect(scenario.answerBodies).toHaveLength(2);
 });
 
+test("shares a finished quest; a signed-out recipient previews it, signs in, and starts it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  const scenario = await installMocks(page);
+  scenario.resumeQuizContext = true;
+  scenario.completedAttempt = true;
+  await page.addInitScript(() => {
+    const copied: string[] = [];
+    (window as unknown as { __copied: string[] }).__copied = copied;
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          copied.push(text);
+        },
+      },
+    });
+  });
+
+  // Owner: the completion screen offers one stable link and copies it.
+  await page.goto(`/quiz/${COMPLETE_ATTEMPT_ID}`);
+  await expect(
+    page.getByRole("heading", { name: "Quest complete!" }),
+  ).toBeVisible();
+  const shareButton = page.getByTestId("share-quest");
+  await expect(shareButton).toContainText("Share this quest");
+  await shareButton.click();
+  await expect(shareButton).toContainText("Link copied");
+  expect(scenario.shareCreated).toBe(1);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __copied: string[] }).__copied,
+    ),
+  ).toEqual([SHARE_URL]);
+  await expect(shareButton).toContainText("Share this quest", {
+    timeout: 5_000,
+  });
+
+  // Recipient: signed out, the public preview renders without questions.
+  scenario.signedIn = false;
+  await page.goto(`/s/${SHARE_TOKEN}`);
+  await expect(
+    page.getByRole("heading", { name: importedVideo.video.title }),
+  ).toBeVisible();
+  await expect(page.getByText("Shared by Avery Learner")).toBeVisible();
+  await expect(page.getByTestId("share-preview-meta")).toHaveText(
+    "5 questions · Multiple choice · English",
+  );
+  await expect(page.getByText("Sleep and consolidation")).toBeVisible();
+  await expect(page.getByTestId("start-shared-quest")).toHaveCount(0);
+  await capture(page, "desktop-shared-quest-preview");
+
+  // Signing in returns to the same preview.
+  await page.getByTestId("sign-in-to-start").click();
+  await expect(page).toHaveURL(/\/sign-in\?next=/);
+  await page.getByLabel("Email / Username").fill("avery@example.com");
+  await page.getByLabel("Password").fill("correct horse battery");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(SHARE_URL);
+
+  // Claim + ordinary start land on the quiz route. Signing in replaced the
+  // sign-in route with the preview, so the pre-sign-in preview stays mounted
+  // beneath the fresh one: act on the topmost screen.
+  const startButton = page.getByTestId("start-shared-quest").last();
+  await expect(startButton).toBeVisible({ timeout: 10_000 });
+  await startButton.click();
+  await expectQuizRoute(page);
+  expect(scenario.shareClaims).toBe(1);
+  expect(scenario.quizStartBodies).toEqual([
+    {
+      mode: "learn",
+      sessionLength: "short",
+      questionTypes: ["multiple_choice"],
+    },
+  ]);
+  expect(
+    scenario.requestedPaths.filter((path) =>
+      path.startsWith(`/api/shares/${SHARE_TOKEN}`),
+    ),
+  ).toEqual([
+    `/api/shares/${SHARE_TOKEN}`,
+    `/api/shares/${SHARE_TOKEN}`,
+    `/api/shares/${SHARE_TOKEN}/claim`,
+  ]);
+});
+
 test("library card actions align with score and mastery status", async ({
   page,
 }) => {
@@ -1882,6 +1988,10 @@ async function installMocks(page: Page): Promise<Scenario> {
     progressiveTotal: 5,
     progressiveState: "ready",
     claimLeased: false,
+    signedIn: true,
+    resumeQuizContext: false,
+    shareCreated: 0,
+    shareClaims: 0,
     question: baseQuestion,
   };
 
@@ -1927,7 +2037,43 @@ async function installMocks(page: Page): Promise<Scenario> {
     scenario.requestedPaths.push(path);
 
     if (path === "/api/auth/get-session") {
-      await json(route, sessionFixture());
+      await json(route, scenario.signedIn ? sessionFixture() : null);
+      return;
+    }
+    if (path === "/api/auth/sign-in/email" && request.method() === "POST") {
+      scenario.signedIn = true;
+      await json(route, {
+        redirect: false,
+        token: "playwright-session",
+        user: sessionFixture().user,
+      });
+      return;
+    }
+    if (
+      path === `/api/quizzes/${QUIZ_ID}/share` &&
+      request.method() === "POST"
+    ) {
+      scenario.shareCreated += 1;
+      await json(route, { token: SHARE_TOKEN, url: SHARE_URL });
+      return;
+    }
+    if (path === `/api/shares/${SHARE_TOKEN}` && request.method() === "GET") {
+      await json(route, sharePreview);
+      return;
+    }
+    if (
+      path === `/api/shares/${SHARE_TOKEN}/claim` &&
+      request.method() === "POST"
+    ) {
+      scenario.shareClaims += 1;
+      await json(route, {
+        quizId: QUIZ_ID,
+        videoId: VIDEO_ID,
+        startSettings: {
+          sessionLength: "short",
+          questionTypes: ["multiple_choice"],
+        },
+      });
       return;
     }
     if (path === "/api/admin/me") {
@@ -2459,6 +2605,13 @@ async function installMocks(page: Page): Promise<Scenario> {
         scenario.completedAttempt || path.includes(COMPLETE_ATTEMPT_ID);
       await json(route, {
         attemptId: completed ? COMPLETE_ATTEMPT_ID : ATTEMPT_ID,
+        ...(scenario.resumeQuizContext
+          ? {
+              quizId: QUIZ_ID,
+              videoId: VIDEO_ID,
+              title: importedVideo.video.title,
+            }
+          : {}),
         question: completed ? null : scenario.question,
         completed,
         score: completed ? 88 : null,
