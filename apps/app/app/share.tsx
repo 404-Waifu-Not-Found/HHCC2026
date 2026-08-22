@@ -11,7 +11,7 @@ import { spacing, typography } from "../src/theme/tokens";
 export default function AndroidShareHandoffScreen() {
   const params = useLocalSearchParams<{ url?: string | string[] }>();
   const { data: session, isPending } = useAppSession();
-  const { locale, theme } = useSettings();
+  const { theme } = useSettings();
   const handled = useRef(false);
 
   useEffect(() => {
