@@ -76,7 +76,8 @@ function initials(value: string): string {
 function avatarColor(value: string): string {
   const colors = ["#7DD3A8", "#8DB9E8", "#F2C66D", "#D9A4E8", "#F29B8F"];
   let hash = 0;
-  for (const character of value) hash = (hash * 31 + character.charCodeAt(0)) | 0;
+  for (const character of value)
+    hash = (hash * 31 + character.charCodeAt(0)) | 0;
   return colors[Math.abs(hash) % colors.length] || "#7DD3A8";
 }
 

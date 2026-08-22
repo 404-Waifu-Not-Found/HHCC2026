@@ -161,7 +161,7 @@ export default function LibraryScreen() {
         setDeletingId(undefined);
       }
     },
-    [deletingId, session?.user.id, t],
+    [deletingId, session, t],
   );
 
   const confirmDeleteQuest = useCallback(
