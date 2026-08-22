@@ -317,6 +317,9 @@ const CONCEPTUAL_QUESTION_PATTERNS = [
   /(?:定义|条件|关系|原因|结果|为什么|如何|机制|过程|方法|公式|计算|推导|应用|比较|作用|功能|性质|原理|定理|导致)/u,
 ];
 
+const EXAMPLE_SPECIFIC_QUESTION_PATTERN =
+  /^\s*(?:in|from|given|using|consider|based on)\b.{0,100}\b(?:example|scenario|case|sample|demonstration|story)\b/iu;
+
 // Presentation vehicles are not assessment concepts. Keep this deliberately
 // narrow so technical uses such as a network link or a DNA strand remain
 // available, while the production metaphors that previously leaked into
@@ -606,6 +609,9 @@ export function questionConceptFailure(candidate) {
   }
   if (PRESENTATION_CHARACTERIZATION_PATTERN.test(question)) {
     return "source_framing_invalid";
+  }
+  if (EXAMPLE_SPECIFIC_QUESTION_PATTERN.test(question)) {
+    return "low_pedagogical_value";
   }
   if (CONTRADICTORY_CHEMISTRY_DEFINITION_PATTERN.test(inspected)) {
     return "source_grounding_invalid";
