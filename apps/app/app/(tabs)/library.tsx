@@ -10,6 +10,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -163,6 +164,13 @@ export default function LibraryScreen() {
 
   const confirmDeleteQuest = useCallback(
     (card: LibraryCard) => {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        const confirmed = window.confirm(
+          `${t("deleteQuest")}\n\n${t("deleteQuestBody")}`,
+        );
+        if (confirmed) void deleteQuest(card);
+        return;
+      }
       Alert.alert(t("deleteQuest"), t("deleteQuestBody"), [
         { text: t("cancel"), style: "cancel" },
         {
