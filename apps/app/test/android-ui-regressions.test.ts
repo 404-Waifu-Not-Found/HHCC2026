@@ -132,6 +132,19 @@ describe("Android UI regressions", () => {
     expect(tabs).toContain("{desktop ? (");
   });
 
+  it("opens the profile from learner identity surfaces", () => {
+    const tabs = source("app/(tabs)/_layout.tsx");
+    const settings = source("app/(tabs)/settings.tsx");
+    const profile = source("app/profile.tsx");
+
+    expect(tabs).toContain('accessibilityLabel={t("openProfile")}');
+    expect(tabs).toContain('router.push("/profile" as never)');
+    expect(settings).toContain('router.push("/profile" as never)');
+    expect(profile).toContain("ProfileLearningStatsResponseSchema");
+    expect(profile).toContain('t("username")');
+    expect(profile).toContain('t("email")');
+  });
+
   it("uses an ordered full-width card stack on compact Home layouts", () => {
     const home = source("app/(tabs)/index.tsx");
 

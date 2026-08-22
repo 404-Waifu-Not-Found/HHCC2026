@@ -28,7 +28,11 @@ import { useSettings } from "../../src/providers/SettingsProvider";
 import { clearPendingVideoHandoffs } from "../../src/state/pending-video-handoff";
 import { clearAccountCreationState } from "../../src/state/creation";
 import { clearAccountAttemptState } from "../../src/state/attempt";
-import { FeedbackMotion, MotionView } from "../../src/motion/Motion";
+import {
+  FeedbackMotion,
+  MotionPressable,
+  MotionView,
+} from "../../src/motion/Motion";
 import { removeLocalGenerationCredential } from "../../src/generation/local-generation-client";
 import { clearNativeGenerationOutboxes } from "../../src/generation/android-generation-outbox";
 import { cancelPreGenerationForAccount } from "../../src/generation/prework";
@@ -264,7 +268,20 @@ export default function SettingsScreen() {
           style={[styles.column, desktop && styles.columnDesktop]}
         >
           <SettingsSection title={t("account")} icon="people">
-            <View style={styles.accountRow}>
+            <MotionPressable
+              accessibilityRole="button"
+              accessibilityLabel={t("openProfile")}
+              onPress={() => router.push("/profile" as never)}
+              style={({ hovered, pressed }) => [
+                styles.accountRow,
+                {
+                  backgroundColor: hovered
+                    ? theme.surfaceSunken
+                    : "transparent",
+                  opacity: pressed ? 0.76 : 1,
+                },
+              ]}
+            >
               <ProfileAvatar
                 name={session?.user.name ?? session?.user.email ?? "CQ"}
                 image={effectiveAvatarRevision}
@@ -278,7 +295,7 @@ export default function SettingsScreen() {
                   {session?.user.email}
                 </Text>
               </View>
-            </View>
+            </MotionPressable>
             <View style={styles.avatarActions}>
               <PrimaryButton
                 variant="secondary"
@@ -401,11 +418,7 @@ export default function SettingsScreen() {
               label={t("appLanguage")}
               value={locale}
               onChange={(value) => setLocale(value as AppLanguage)}
-              options={
-                [
-                  { value: "en", label: t("languageEnglish") },
-                ] as const
-              }
+              options={[{ value: "en", label: t("languageEnglish") }] as const}
             />
             <SettingSwitch
               label={t("reducedMotion")}

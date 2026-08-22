@@ -3,7 +3,7 @@ import {
   type ProfileLearningStatsResponse,
 } from "@clipquest/contracts";
 import { VoxelIcon } from "../../src/components/VoxelIcon";
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, router, Tabs } from "expo-router";
 import { useEffect, useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
@@ -275,7 +275,18 @@ function LearningTabBar({
       </View>
       {desktop ? (
         <View style={[styles.profile, { borderTopColor: theme.divider }]}>
-          <View style={styles.profileIdentity}>
+          <MotionPressable
+            accessibilityRole="button"
+            accessibilityLabel={t("openProfile")}
+            onPress={() => router.push("/profile" as never)}
+            style={({ hovered, pressed }) => [
+              styles.profileIdentity,
+              {
+                backgroundColor: hovered ? theme.surfaceSunken : "transparent",
+                opacity: pressed ? 0.76 : 1,
+              },
+            ]}
+          >
             <ProfileAvatar name={user.name} image={user.image} size={44} />
             <View style={styles.profileCopy}>
               <Text
@@ -291,7 +302,7 @@ function LearningTabBar({
                 {user.email}
               </Text>
             </View>
-          </View>
+          </MotionPressable>
           <View style={styles.profileStats}>
             <View style={styles.profileStat}>
               <Text style={[styles.profileStatValue, { color: theme.text }]}>
