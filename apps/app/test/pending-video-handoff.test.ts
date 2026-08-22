@@ -131,7 +131,8 @@ describe("pending video handoff v2", () => {
     for (const authSource of [signInSource, signUpSource]) {
       expect(authSource).toContain("persistAuthJourneyQuickOpenHandoff");
       expect(authSource).toMatch(/pathname: "\/\(auth\)\/sign-(?:in|up)"/);
-      expect(authSource).toContain("params: quickOpen");
+      expect(authSource).toContain("withNextParam(quickOpen, next)");
+      expect(authSource).toContain("params: authLinkParams");
     }
   });
 });

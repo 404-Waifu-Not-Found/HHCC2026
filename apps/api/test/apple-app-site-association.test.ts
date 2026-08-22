@@ -14,6 +14,7 @@ describe("iOS Universal Links association", () => {
         "/library",
         "/library/*",
         "/quiz/*",
+        "/s/*",
       ],
     });
     expect(appleAppSiteAssociation(undefined)).toBeNull();

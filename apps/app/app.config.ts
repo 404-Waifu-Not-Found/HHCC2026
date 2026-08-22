@@ -58,6 +58,11 @@ const config: ExpoConfig = {
             host: "clipquest.ccwu.cc",
             pathPrefix: "/quiz",
           },
+          {
+            scheme: "https",
+            host: "clipquest.ccwu.cc",
+            pathPrefix: "/s/",
+          },
         ],
       },
     ],

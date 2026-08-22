@@ -11,6 +11,11 @@ import {
   parseQuickOpenRequest,
   type QuickOpenSearchParams,
 } from "../../src/lib/quick-open";
+import {
+  parseNextPath,
+  withNextParam,
+  type AuthNextSearchParams,
+} from "../../src/lib/auth-next";
 import { useSettings } from "../../src/providers/SettingsProvider";
 import { persistAuthJourneyQuickOpenHandoff } from "../../src/state/pending-video-handoff";
 import {
@@ -28,8 +33,12 @@ import {
 
 export default function SignUpScreen() {
   const { t, theme } = useSettings();
-  const params = useLocalSearchParams<QuickOpenSearchParams>();
+  const params = useLocalSearchParams<
+    QuickOpenSearchParams & AuthNextSearchParams
+  >();
   const quickOpen = parseQuickOpenRequest(params);
+  const next = parseNextPath(params);
+  const authLinkParams = withNextParam(quickOpen, next);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,7 +81,9 @@ export default function SignUpScreen() {
       }
       router.replace({
         pathname: "/(auth)/verify-email",
-        params: { email: normalizedEmail },
+        params: next
+          ? { email: normalizedEmail, next }
+          : { email: normalizedEmail },
       });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("signUpFailed"));
@@ -92,8 +103,8 @@ export default function SignUpScreen() {
           </Text>
           <Link
             href={
-              quickOpen
-                ? { pathname: "/(auth)/sign-in", params: quickOpen }
+              authLinkParams
+                ? { pathname: "/(auth)/sign-in", params: authLinkParams }
                 : "/(auth)/sign-in"
             }
             style={[styles.link, styles.footerLink, { color: theme.text }]}

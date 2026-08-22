@@ -22,6 +22,7 @@ export function appleAppSiteAssociation(rawTeamId: string | undefined): {
             "/library",
             "/library/*",
             "/quiz/*",
+            "/s/*",
           ],
         },
       ],
