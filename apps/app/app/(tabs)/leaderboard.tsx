@@ -71,7 +71,10 @@ export default function LeaderboardScreen() {
               <View style={styles.identity}>
                 <ProfileAvatar
                   name={entry.name}
-                  image={entry.image}
+                  image={
+                    entry.image ??
+                    `https://github.com/identicons/${encodeURIComponent(entry.userId)}.png`
+                  }
                   size={40}
                 />
                 <Text

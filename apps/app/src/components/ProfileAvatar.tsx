@@ -27,7 +27,7 @@ export function ProfileAvatar({
     ? image.startsWith("http")
       ? image
       : `${API_ORIGIN}/api/profile/avatar?v=${encodeURIComponent(image)}`
-    : undefined;
+    : `https://github.com/identicons/${encodeURIComponent(name)}.png`;
   return (
     <View
       accessible
