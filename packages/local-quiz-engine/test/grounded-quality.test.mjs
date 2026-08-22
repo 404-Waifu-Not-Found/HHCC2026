@@ -21,6 +21,17 @@ test("quiz questions reject example-specific recall framing", () => {
   );
 });
 
+test("quiz questions reject video-only code trace values", () => {
+  assert.equal(
+    questionConceptFailure({
+      question:
+        "In the traced traversal of the 2D array `arr`, when the inner loop is processing row 1, what are the values output for columns 0, 1, and 2 in order?",
+      answer: "8, 5, 6",
+    }),
+    "low_pedagogical_value",
+  );
+});
+
 test("Simplified Chinese quizzes reject English learner-visible options", () => {
   const candidate = {
     question: "光合作用如何储存能量？",
