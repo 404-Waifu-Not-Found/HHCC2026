@@ -1,5 +1,11 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { Platform, StyleSheet, View, type ViewStyle } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from "react-native";
 import { useSettings } from "../providers/SettingsProvider";
 import { borders, radii, shadows, spacing } from "../theme/tokens";
 
@@ -13,12 +19,14 @@ export function Surface({
   padded = true,
   style,
   footer,
+  onPress,
 }: PropsWithChildren<{
   tone?: SurfaceTone;
   elevated?: boolean;
   padded?: boolean;
   style?: ViewStyle | ViewStyle[];
   footer?: ReactNode;
+  onPress?: () => void;
 }>) {
   const { theme } = useSettings();
   const backgroundColor =
@@ -45,7 +53,9 @@ export function Surface({
           : theme.border;
 
   return (
-    <View
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
       style={[
         styles.surface,
         padded && styles.padded,
@@ -75,7 +85,7 @@ export function Surface({
           {footer}
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 

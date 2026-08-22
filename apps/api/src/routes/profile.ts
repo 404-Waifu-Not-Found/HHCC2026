@@ -4,6 +4,7 @@ import {
   ProfileAvatarResponseSchema,
   LeaderboardResponseSchema,
   ProfileLearningStatsResponseSchema,
+  PublicProfileResponseSchema,
 } from "@clipquest/contracts";
 import { ApiError } from "../lib/errors";
 import { createId, now } from "../lib/ids";
@@ -38,18 +39,14 @@ profileRouter.get("/stats", async (c) => {
         COUNT(*) AS completed_lessons,
         COALESCE(SUM(completed.duration_seconds), 0) AS total_duration_seconds
       FROM (
-        SELECT v.id, MAX(v.duration_seconds) AS duration_seconds
-        FROM videos v
-        WHERE v.owner_id = ?
-          AND EXISTS (
-            SELECT 1
-            FROM quiz_banks qb
-            JOIN attempts a ON a.quiz_id = qb.id
-            WHERE qb.video_id = v.id
-              AND a.user_id = v.owner_id
-              AND a.status = 'complete'
-          )
-        GROUP BY v.id
+        SELECT qb.video_id,
+               MAX(COALESCE(a.video_duration_seconds, v.duration_seconds, 0)) AS duration_seconds
+          FROM attempts a
+          JOIN quiz_banks qb ON qb.id = a.quiz_id
+          JOIN videos v ON v.id = qb.video_id
+         WHERE a.user_id = ?
+           AND a.status = 'complete'
+         GROUP BY qb.video_id
       ) completed`,
     )
       .bind(user.id)
@@ -69,6 +66,54 @@ profileRouter.get("/stats", async (c) => {
         date: entry.completion_date,
         count: Number(entry.completion_count),
       })),
+    }),
+  );
+});
+
+publicProfileRouter.get("/public/:userId", async (c) => {
+  const userId = c.req.param("userId");
+  const profile = await c.env.DB.prepare(
+    `SELECT u.id, u.name, u.image,
+            COUNT(DISTINCT CASE WHEN a.status = 'complete' THEN a.quiz_id END) AS completed_quizzes,
+            COALESCE((
+              SELECT SUM(completed.duration_seconds)
+                FROM (
+                  SELECT qb2.video_id,
+                         MAX(COALESCE(a2.video_duration_seconds, v2.duration_seconds, 0)) AS duration_seconds
+                    FROM attempts a2
+                    JOIN quiz_banks qb2 ON qb2.id = a2.quiz_id
+                    JOIN videos v2 ON v2.id = qb2.video_id
+                   WHERE a2.user_id = u.id
+                     AND a2.status = 'complete'
+                   GROUP BY qb2.video_id
+                ) completed
+            ), 0) AS total_duration_seconds
+       FROM user u
+       LEFT JOIN attempts a ON a.user_id = u.id
+      WHERE u.id = ?
+      GROUP BY u.id, u.name, u.image`,
+  )
+    .bind(userId)
+    .first<{
+      id: string;
+      name: string | null;
+      image: string | null;
+      completed_quizzes: number | null;
+      total_duration_seconds: number | null;
+    }>();
+  if (!profile) {
+    throw new ApiError(404, "profile_not_found", "Profile not found.");
+  }
+  return c.json(
+    PublicProfileResponseSchema.parse({
+      userId: profile.id,
+      name: profile.name?.trim() || "ClipQuest learner",
+      image:
+        profile.image?.startsWith(`avatars/${profile.id}/`) === true
+          ? `/api/profile/avatar/${encodeURIComponent(profile.id)}`
+          : null,
+      completedQuizzes: Number(profile.completed_quizzes ?? 0),
+      totalDurationSeconds: Number(profile.total_duration_seconds ?? 0),
     }),
   );
 });

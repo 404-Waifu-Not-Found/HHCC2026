@@ -3135,6 +3135,17 @@ export const LeaderboardResponseSchema = z
   .strict();
 export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
 
+export const PublicProfileResponseSchema = z
+  .object({
+    userId: z.string().min(1).max(128),
+    name: z.string().min(1).max(120),
+    image: z.string().nullable(),
+    completedQuizzes: z.number().int().nonnegative(),
+    totalDurationSeconds: z.number().int().nonnegative(),
+  })
+  .strict();
+export type PublicProfileResponse = z.infer<typeof PublicProfileResponseSchema>;
+
 export const PushRegisterRequestSchema = z.object({
   token: z.string().min(8).max(1_000),
   platform: z.enum(["ios", "android", "web"]),
