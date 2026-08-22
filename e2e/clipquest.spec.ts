@@ -1968,6 +1968,12 @@ async function installMocks(page: Page): Promise<Scenario> {
       await json(route, {
         totals: { users: 1284, lessons: 3762, activeJobs: 7, failedJobs: 3 },
         activity: { newUsers7d: 86, lessons7d: 412, completedAttempts7d: 1205 },
+        learningMetrics: {
+          questionQualityRate: 98,
+          retryRate: 12,
+          completionRate: 84,
+          correctionRate: 9,
+        },
         recentFailures: [
           {
             id: JOB_ID,

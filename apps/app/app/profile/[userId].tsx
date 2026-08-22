@@ -23,7 +23,6 @@ export default function PublicProfileScreen() {
   useEffect(() => {
     if (!userId) return;
     let active = true;
-    setLoading(true);
     void apiRequest(
       `/api/profile/public/${encodeURIComponent(userId)}`,
       {},
